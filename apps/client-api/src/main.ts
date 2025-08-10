@@ -2,6 +2,7 @@ import { AccessTokenGuard, CustomValidationPipe, GlobalExceptionsFilter, TokenRe
 import { GlobalInterceptor } from '@app/shared/interceptor/global-interceptor.interceptor';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import 'reflect-metadata';
 import { ClientApiModule } from './client-api.module';
 
 async function bootstrap() {

@@ -5,9 +5,10 @@ import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ClientApiController } from './client-api.controller';
 import { ClientApiService } from './client-api.service';
 import { AuthModule } from './domains/auth/auth.module';
+import { StudentModule } from './domains/student/student.module';
 
 @Module({
-    imports: [DatabaseModule, AuthModule, SharedModule],
+    imports: [DatabaseModule, AuthModule, SharedModule, StudentModule],
     controllers: [ClientApiController],
     providers: [ClientApiService],
 })

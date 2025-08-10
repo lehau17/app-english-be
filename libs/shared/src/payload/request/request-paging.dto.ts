@@ -1,28 +1,36 @@
-import { Type } from 'class-transformer';
+// dto
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class RequestPagingDto {
+    @ApiPropertyOptional({ type: Number, example: 1 })
     @IsOptional()
-    @Type(() => Number)
-    @IsInt({ message: 'page must be an integer' })
-    @Min(1, { message: 'page must be greater than 0' })
+    @IsInt()
+    @Min(1)
+    @Transform(({ value }) => (typeof value === 'string' ? parseInt(value) : value))
     page: number = 1;
 
+    @ApiPropertyOptional({ type: Number, example: 10 })
     @IsOptional()
-    @Type(() => Number)
-    @IsInt({ message: 'limit must be an integer' })
-    @Min(1, { message: 'limit must be greater than 0' })
+    @IsInt()
+    @Min(1)
+    @Transform(({ value }) => (typeof value === 'string' ? parseInt(value) : value))
     limit: number = 10;
 
+    @ApiPropertyOptional({ type: String, example: 'createdAt' })
     @IsOptional()
-    @IsString({ message: 'sortBy must be a string' })
+    @IsString()
     sortBy?: string;
 
+    @ApiPropertyOptional({ enum: ['asc', 'desc'], example: 'desc' })
     @IsOptional()
-    @IsString({ message: 'sortOrder must be a string' })
+    @IsString()
     sortOrder?: 'asc' | 'desc' = 'asc';
 
+    @ApiPropertyOptional({ type: String, example: 'john' })
     @IsOptional()
-    @IsString({ message: 'search must be a string' })
+    @IsString()
     search?: string;
 }
+export class FilterStudentRequestDto extends RequestPagingDto { }
