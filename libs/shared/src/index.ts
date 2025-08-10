@@ -4,3 +4,4 @@ export * from './shared.module';
 
 export * from './decorator';
 export * from "./filters";
+export * from "./repositories";

@@ -14,3 +14,9 @@ export interface JwtPayload {
 
     userAgent?: string;
 }
+
+
+export class CreateJwtPayload {
+    sub: string;
+    email?: string;
+}

@@ -1,10 +1,10 @@
+import { PrismaRepository } from '@app/database';
 import { JwtPayload } from '@app/shared';
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SignOptions, sign, verify } from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { PrismaRepository } from '../prisma.repository';
-
+@Injectable()
 export class TokenRepository {
     private readonly jwtSecret: string;
     private readonly accessTokenTtl: string;
