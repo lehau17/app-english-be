@@ -2,7 +2,7 @@ import { CreateJwtPayload, JwtPayload, TokenRepository } from '@app/shared';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { LoginDto, LogoutDto, RefreshTokenDto, RegisterDto } from '../dto';
+import { ChangePasswordDto, ForgotPasswordDto, LoginDto, LogoutDto, RefreshTokenDto, RegisterDto, ResetPasswordDto } from '../dto';
 import { AuthRepository } from '../repository';
 
 @Injectable()
@@ -36,6 +36,15 @@ export class AuthService {
 
 
         return { ...token, user }
+    }
+
+
+    async changePassword(userId: string, dto: ChangePasswordDto) {
+        const existUser = await this.authRepository.findUserForLogin(userId);
+        if (!existUser) throw new BadRequestException('User not found');
+        const isPasswordValid = await bcrypt.compare(dto.currentPassword, existUser.passwordHash);
+        if (!isPasswordValid) throw new BadRequestException('Current password invalid');
+        return this.authRepository.changePassword(userId, dto);
     }
 
     /**
@@ -84,5 +93,13 @@ export class AuthService {
 
         await this.authRepository.revokeRefreshToken(decoded.jti);
         return { success: true };
+    }
+    forgotPassword(dto: ForgotPasswordDto) {
+        return true
+    }
+
+
+    resetPassword(dto: ResetPasswordDto) {
+        return true
     }
 }

@@ -1,4 +1,4 @@
-import { CustomValidationPipe, GlobalExceptionsFilter } from '@app/shared';
+import { AccessTokenGuard, CustomValidationPipe, GlobalExceptionsFilter, TokenRepository } from '@app/shared';
 import { GlobalInterceptor } from '@app/shared/interceptor/global-interceptor.interceptor';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -6,6 +6,8 @@ import { ClientApiModule } from './client-api.module';
 
 async function bootstrap() {
     const app = await NestFactory.create(ClientApiModule);
+    const reflector = app.get(Reflector);
+    const tokenRepository = app.get(TokenRepository);
 
     // Global setup
     app.useGlobalPipes(new CustomValidationPipe());
@@ -15,8 +17,11 @@ async function bootstrap() {
         credentials: true,
     });
     app.useGlobalFilters(new GlobalExceptionsFilter());
-    app.useGlobalInterceptors(new GlobalInterceptor(new Reflector()));
+    app.useGlobalInterceptors(new GlobalInterceptor(reflector));
     app.setGlobalPrefix('api');
+
+
+    app.useGlobalGuards(new AccessTokenGuard(tokenRepository, reflector))
     app.enableShutdownHooks();
 
     // ---------- Swagger ----------

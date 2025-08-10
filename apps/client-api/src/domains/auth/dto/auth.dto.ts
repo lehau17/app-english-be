@@ -91,3 +91,36 @@ export class RefreshTokenDto {
     @IsString()
     refreshToken: string;
 }
+
+
+
+export class ChangePasswordDto {
+    @ApiProperty({ example: 'OldP@ssw0rd!' })
+    @IsString()
+    currentPassword: string;
+
+    @ApiProperty({ example: 'NewP@ssw0rd!' })
+    @IsString()
+    @MinLength(6)
+    newPassword: string;
+}
+
+
+export class ForgotPasswordDto {
+    @ApiProperty({ example: 'kid.parent@example.com' })
+    @IsEmail()
+    email: string;
+}
+
+// dto/reset-password.dto.ts
+
+export class ResetPasswordDto {
+    @ApiProperty({ description: 'Token from email', example: 'reset-token-abc' })
+    @IsString()
+    token: string;
+
+    @ApiProperty({ example: 'NewP@ssw0rd!' })
+    @IsString()
+    @MinLength(6)
+    newPassword: string;
+}

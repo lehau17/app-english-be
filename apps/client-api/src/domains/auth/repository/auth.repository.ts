@@ -3,7 +3,7 @@ import { JwtPayload, TokenRepository } from '@app/shared';
 import { Injectable } from '@nestjs/common';
 
 import * as bcrypt from 'bcrypt';
-import { RegisterDto } from '../dto';
+import { ChangePasswordDto, RegisterDto } from '../dto';
 
 @Injectable()
 export class AuthRepository {
@@ -30,6 +30,17 @@ export class AuthRepository {
         });
 
         return user;
+    }
+
+
+    async changePassword(userId: string, dto: ChangePasswordDto) {
+        const passwordHash = await bcrypt.hash(dto.newPassword, 10);
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                passwordHash,
+            },
+        });
     }
 
     async findUserForLogin(identifier: string) {

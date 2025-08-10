@@ -21,7 +21,6 @@ export class AccessTokenGuard implements CanActivate {
         const authHeader = req.headers['authorization'];
         const token = authHeader?.split(' ')[1] || null;
 
-        // helper: verify + set req.user + set RequestContext.user
         const attachUserFromToken = (jwt: string) => {
             try {
                 const payload = this.tokenRepository.decodeToken(jwt);
