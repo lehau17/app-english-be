@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json.schemastore.org/nest-cli",
+  "collection": "@nestjs/schematics",
+  "sourceRoot": "apps/english-learning/src",
+  "compilerOptions": {
+    "deleteOutDir": true,
+    "webpack": true,
+    "tsConfigPath": "apps/english-learning/tsconfig.app.json"
+  },
+  "monorepo": true,
+  "root": "apps/english-learning",
+  "projects": {
+    "english-learning": {
+      "type": "application",
+      "root": "apps/english-learning",
+      "entryFile": "main",
+      "sourceRoot": "apps/english-learning/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/english-learning/tsconfig.app.json"
+      }
+    },
+    "client-api": {
+      "type": "application",
+      "root": "apps/client-api",
+      "entryFile": "main",
+      "sourceRoot": "apps/client-api/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/client-api/tsconfig.app.json"
+      }
+    },
+    "database": {
+      "type": "library",
+      "root": "libs/database",
+      "entryFile": "index",
+      "sourceRoot": "libs/database/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/database/tsconfig.lib.json"
+      }
+    },
+    "shared": {
+      "type": "library",
+      "root": "libs/shared",
+      "entryFile": "index",
+      "sourceRoot": "libs/shared/src",
+      "compilerOptions": {
+        "tsConfigPath": "libs/shared/tsconfig.lib.json"
+      }
+    }
+  }
+}
