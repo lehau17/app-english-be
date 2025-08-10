@@ -1,5 +1,6 @@
-import { JwtPayload, TokenRepository } from '@app/shared';
+import { CreateJwtPayload, JwtPayload, TokenRepository } from '@app/shared';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { LoginDto, LogoutDto, RefreshTokenDto, RegisterDto } from '../dto';
 import { AuthRepository } from '../repository';
@@ -26,7 +27,8 @@ export class AuthService {
 
         const user = await this.authRepository.register(dto);
 
-        const payload = {
+        const payload: CreateJwtPayload = {
+            role: 'student',
             sub: user.id,
             email: user.email ?? undefined,
         };
@@ -51,6 +53,7 @@ export class AuthService {
         const payload = {
             sub: user.id,
             email: user.email ?? undefined,
+            role: UserRole.student,
         };
 
         const token = await this.tokenRepository.generateToken(payload);

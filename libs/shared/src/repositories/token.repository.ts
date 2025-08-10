@@ -1,5 +1,5 @@
 import { PrismaRepository } from '@app/database';
-import { JwtPayload } from '@app/shared';
+import { CreateJwtPayload, JwtPayload } from '@app/shared';
 import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SignOptions, sign, verify } from 'jsonwebtoken';
@@ -19,7 +19,7 @@ export class TokenRepository {
         this.refreshTokenTtl = this.configService.get<string>('REFRESH_TOKEN_EXPIRES_IN', '7d');
     }
 
-    async generateToken(payload: Omit<JwtPayload, 'jti' | 'iat' | 'exp'>) {
+    async generateToken(payload: CreateJwtPayload) {
         const accessToken = sign(payload, this.jwtSecret, {
             expiresIn: this.accessTokenTtl,
         } as SignOptions);
@@ -85,8 +85,7 @@ export class TokenRepository {
         return this.generateToken({
             sub: payload.sub,
             email: payload.email,
-            deviceToken: payload.deviceToken,
-            userAgent: payload.userAgent,
+            role: payload.role,
         });
     }
 

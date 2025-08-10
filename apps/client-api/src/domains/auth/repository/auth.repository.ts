@@ -83,6 +83,7 @@ export class AuthRepository {
         if (!user) return null;
 
         const payload: JwtPayload = {
+            role: 'student',
             jti,
             sub: user.id,
             email: user.email ?? undefined,
