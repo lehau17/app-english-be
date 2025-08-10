@@ -9,7 +9,7 @@ import { map, Observable } from 'rxjs';
 import { RESPONSE_MESSAGE_KEY } from '../decorator';
 
 @Injectable()
-export class TransformInterceptor implements NestInterceptor {
+export class GlobalInterceptor implements NestInterceptor {
     constructor(private readonly reflector: Reflector) { }
 
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
