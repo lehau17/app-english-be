@@ -6,9 +6,10 @@ import { ClientApiController } from './client-api.controller';
 import { ClientApiService } from './client-api.service';
 import { AuthModule } from './domains/auth/auth.module';
 import { StudentModule } from './domains/student/student.module';
+import { CourseModule } from './domains/course/course.module';
 
 @Module({
-    imports: [DatabaseModule, AuthModule, SharedModule, StudentModule],
+    imports: [DatabaseModule, AuthModule, SharedModule, StudentModule, CourseModule],
     controllers: [ClientApiController],
     providers: [ClientApiService],
 })
