@@ -37,6 +37,41 @@ export class StudentRepository {
         });
     }
 
+
+    async findByEmail(email: string): Promise<User | null> {
+        return this.prisma.user.findFirst({
+            where: { email, role: 'student' },
+        });
+    }
+
+
+    async findByUsername(username: string): Promise<User | null> {
+        return this.prisma.user.findFirst({
+            where: { username, role: 'student' },
+        });
+    }
+
+    async findByPhone(phone: string): Promise<User | null> {
+        return this.prisma.user.findFirst({
+            where: { phone, role: 'student' },
+        });
+    }
+
+    async checkExistContrants(email: string, phone: string, username: string) {
+        const user = await this.prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email },
+                    { phone },
+                    { username },
+                ], role: 'student'
+            },
+        });
+        return !!user;
+    }
+
+
+
     /**
      * Delete student (soft delete có thể dùng status=inative)
      */

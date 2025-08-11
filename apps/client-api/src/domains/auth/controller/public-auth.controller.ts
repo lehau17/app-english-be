@@ -58,4 +58,15 @@ export class PublicAuthController {
     async logout(@Body() payload: LogoutDto) {
         return this.authService.logout(payload);
     }
+
+
+    @Post('admin-login')
+    async adminLogin(@Body() dto: LoginDto) {
+        return this.authService.adminLogin(dto);
+    }
+
+    @Post('admin-register')
+    async adminRegister(@Body() dto: RegisterDto) {
+        return this.authService.adminRegister(dto);
+    }
 }

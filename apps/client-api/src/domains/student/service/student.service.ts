@@ -1,5 +1,5 @@
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { CreateStudentDto, FilterStudentRequestDto, UpdateStudentDto } from '../dto/student.dto';
@@ -17,16 +17,15 @@ export class StudentService {
      */
 
     async create(dto: CreateStudentDto): Promise<User> {
+        const exists = await this.studentRepository.checkExistContrants(dto.email, dto.phone, dto.username);
+        if (exists) {
+            throw new BadRequestException('Email/Phone/Username already exists');
+        }
         const passwordHash = await bcrypt.hash(dto.password, 10);
+        const { password: _, ...rest } = dto
         return this.studentRepository.create({
-            email: dto.email,
-            username: dto.username,
-            firstName: dto.firstName,
-            lastName: dto.lastName,
-            gender: dto.gender,
-            language: dto.language,
-            timezone: dto.timezone,
-            passwordHash,
+            ...rest,
+            passwordHash: passwordHash,
         });
     }
 

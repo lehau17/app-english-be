@@ -1,3 +1,5 @@
+// ===================== PRISMA SCHEMA — SINGLE FILE =====================
+
 generator client {
     provider = "prisma-client-js"
     output   = "../../../node_modules/.prisma/client"
@@ -8,7 +10,8 @@ datasource db {
     url      = env("DATABASE_URL")
 }
 
-// ============ ENUMS ============
+// ===================== ENUMS =====================
+
 enum UserRole {
     student
     parent
@@ -61,14 +64,25 @@ enum ActivityType {
     mini_game
 }
 
-// ✅ Thêm enum cho Progress.state
 enum ProgressState {
     not_started
     in_progress
     done
 }
 
-// ============ MODELS ============
+// -------- B2C extras --------
+enum DevicePlatform {
+    ios
+    android
+    web
+}
+
+enum NotificationChannel {
+    socket
+    fcm
+}
+
+// ===================== MODELS =====================
 
 model User {
     id            String        @id @default(uuid())
@@ -101,16 +115,25 @@ model User {
     Attempts     Attempt[]
     RefreshToken RefreshToken[]
 
+    // B2C extras relations
+    DeviceTokens     DeviceToken[]
+    Notifications    Notification[]
+    UserStats        UserStats?
+    UserBadges       UserBadge[] // badges earned
+    // ParentChild relations are defined in ParentChild model via named relations
+    parentRelations  ParentChild[]      @relation("ParentChildParent")
+    childRelations   ParentChild[]      @relation("ParentChildChild")
+    LeaderboardEntry LeaderboardEntry[]
+
     @@index([status])
     @@index([provider, providerId])
     @@index([lastActiveAt])
 }
 
 model RefreshToken {
-    id     String @id
-    userId String
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+    id        String    @id
+    userId    String
+    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
     expiresAt DateTime
     createdAt DateTime  @default(now())
     revokedAt DateTime?
@@ -124,13 +147,9 @@ model Profile {
     displayName String?
     avatarUrl   String?
     dob         DateTime?
-    guardianId  String? // parent user id (nếu là học sinh)
+    guardianId  String?
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    // Nếu muốn enforce guardian là một User tồn tại:
-    // guardian   User?   @relation("GuardianProfile", fields: [guardianId], references: [id])
-    // @@index([guardianId])
 }
 
 model Course {
@@ -141,7 +160,7 @@ model Course {
 
     lessons Lesson[]
 
-    @@unique([orderNo]) // nếu bạn muốn một thứ tự course toàn cục không trùng
+    @@unique([orderNo])
     @@index([orderNo])
 }
 
@@ -155,7 +174,6 @@ model Lesson {
     course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
     activities Activity[]
 
-    // ✅ Thứ tự lesson trong cùng một course phải duy nhất
     @@unique([courseId, orderNo])
     @@index([courseId, orderNo])
 }
@@ -171,7 +189,6 @@ model Activity {
     progress Progress[]
     attempts Attempt[]
 
-    // ✅ Thứ tự activity trong cùng một lesson phải duy nhất
     @@unique([lessonId, orderNo])
     @@index([lessonId, orderNo])
 }
@@ -180,7 +197,7 @@ model Progress {
     id           String        @id @default(uuid())
     userId       String
     activityId   String
-    state        ProgressState @default(not_started) // ✅ enum hóa state
+    state        ProgressState @default(not_started)
     score        Int?
     timeSpentSec Int           @default(0)
     updatedAt    DateTime      @default(now())
@@ -188,7 +205,7 @@ model Progress {
     user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
-    @@unique([userId, activityId]) // mỗi user – 1 record progress/hoạt động
+    @@unique([userId, activityId])
     @@index([userId, updatedAt])
 }
 
@@ -204,4 +221,91 @@ model Attempt {
     activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
     @@index([userId, createdAt])
+}
+
+// ===================== B2C EXTRAS (PARENT, NOTIFICATIONS, GAMIFICATION) =====================
+
+model ParentChild {
+    parentId  String
+    childId   String
+    createdAt DateTime @default(now())
+
+    parent User @relation("ParentChildParent", fields: [parentId], references: [id], onDelete: Cascade)
+    child  User @relation("ParentChildChild", fields: [childId], references: [id], onDelete: Cascade)
+
+    @@id([parentId, childId])
+    @@index([childId])
+}
+
+model DeviceToken {
+    id         String         @id @default(uuid())
+    userId     String
+    token      String         @unique
+    platform   DevicePlatform
+    lastSeenAt DateTime?
+    createdAt  DateTime       @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId, platform])
+}
+
+model Notification {
+    id        String              @id @default(uuid())
+    userId    String
+    title     String
+    body      String?
+    data      Json?
+    channel   NotificationChannel
+    readAt    DateTime?
+    createdAt DateTime            @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId, createdAt])
+}
+
+model UserStats {
+    userId       String    @id
+    xp           Int       @default(0)
+    streakDays   Int       @default(0)
+    lastStreakAt DateTime?
+    updatedAt    DateTime  @updatedAt
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Badge {
+    id          String      @id @default(uuid())
+    code        String      @unique
+    name        String
+    description String?
+    iconUrl     String?
+    UserBadge   UserBadge[]
+}
+
+model UserBadge {
+    userId   String
+    badgeId  String
+    earnedAt DateTime @default(now())
+
+    user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+    badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+    @@id([userId, badgeId])
+    @@index([badgeId])
+}
+
+model LeaderboardEntry {
+    id          String   @id @default(uuid())
+    periodStart DateTime
+    periodEnd   DateTime
+    userId      String
+    xp          Int      @default(0)
+    rank        Int?
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, periodStart, periodEnd])
+    @@index([periodStart, periodEnd, xp])
 }

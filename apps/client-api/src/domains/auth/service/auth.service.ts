@@ -102,4 +102,44 @@ export class AuthService {
     resetPassword(dto: ResetPasswordDto) {
         return true
     }
+
+
+    async adminLogin(dto: LoginDto) {
+        const user = await this.authRepository.findUserForLogin(dto.email);
+        if (!user || user.role !== UserRole.admin) {
+            throw new UnauthorizedException('Invalid credentials');
+        }
+
+        const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
+        if (!isPasswordValid) {
+            throw new UnauthorizedException('Invalid credentials');
+        }
+
+        const payload = {
+            sub: user.id,
+            email: user.email,
+            role: UserRole.admin,
+        };
+
+        const token = await this.tokenRepository.generateToken(payload);
+
+        return { ...token, user };
+    }
+
+    async adminRegister(dto: RegisterDto) {
+        const user = await this.authRepository.register(dto);
+        if (!user) {
+            throw new BadRequestException('Failed to register admin user');
+        }
+
+        const payload = {
+            sub: user.id,
+            email: user.email,
+            role: UserRole.admin,
+        };
+
+        const token = await this.tokenRepository.generateToken(payload);
+
+        return { ...token, user };
+    }
 }
