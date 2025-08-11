@@ -1,4 +1,5 @@
 import { AccessTokenGuard, CustomValidationPipe, GlobalExceptionsFilter, TokenRepository } from '@app/shared';
+import { SocketIoAdapter } from '@app/shared/adapters/socket-io.adapter';
 import { GlobalInterceptor } from '@app/shared/interceptor/global-interceptor.interceptor';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -24,6 +25,7 @@ async function bootstrap() {
 
     app.useGlobalGuards(new AccessTokenGuard(tokenRepository, reflector))
     app.enableShutdownHooks();
+    app.useWebSocketAdapter(new SocketIoAdapter(app));
 
     // ---------- Swagger ----------
     const config = new DocumentBuilder()
