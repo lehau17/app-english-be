@@ -8,9 +8,10 @@ import { AuthModule } from './domains/auth/auth.module';
 import { StudentModule } from './domains/student/student.module';
 import { CourseModule } from './domains/course/course.module';
 import { EventsModule } from './events/events.module';
+import { DashboardModule } from './domains/dashboard/dashboard.module';
 
 @Module({
-    imports: [DatabaseModule, AuthModule, SharedModule, StudentModule, CourseModule, EventsModule],
+    imports: [DatabaseModule, AuthModule, SharedModule, StudentModule, CourseModule, EventsModule, DashboardModule],
     controllers: [ClientApiController],
     providers: [ClientApiService],
 })
