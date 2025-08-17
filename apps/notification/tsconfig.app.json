@@ -3,10 +3,10 @@
     "compilerOptions": {
         "declaration": false,
         "outDir": "../../dist/apps/notification",
-        "assets": [
-            "templates/**/*"
-        ]
     },
+    "assets": [
+        "templates/**/*"
+    ],
     "include": [
         "src/**/*"
     ],
