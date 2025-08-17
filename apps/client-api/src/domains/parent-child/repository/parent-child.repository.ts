@@ -2,13 +2,13 @@ import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import { Injectable } from '@nestjs/common';
 import { ParentChild, Prisma } from '@prisma/client';
-import { FilterParentChildRequestDto } from '../dto/parent-child.dto';
+import { CreateParentChildDto, FilterParentChildRequestDto } from '../dto/parent-child.dto';
 
 @Injectable()
 export class ParentChildRepository {
     constructor(private readonly prisma: PrismaRepository) { }
 
-    async create(data: Prisma.ParentChildCreateInput): Promise<ParentChild> {
+    async create(data: CreateParentChildDto): Promise<ParentChild> {
         return this.prisma.parentChild.create({ data });
     }
 

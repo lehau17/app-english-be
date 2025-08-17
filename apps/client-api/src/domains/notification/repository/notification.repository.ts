@@ -2,13 +2,13 @@ import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import { Injectable } from '@nestjs/common';
 import { Notification, Prisma } from '@prisma/client';
-import { FilterNotificationRequestDto } from '../dto/notification.dto';
+import { CreateNotificationDto, FilterNotificationRequestDto } from '../dto/notification.dto';
 
 @Injectable()
 export class NotificationRepository {
     constructor(private readonly prisma: PrismaRepository) { }
 
-    async create(data: Prisma.NotificationCreateInput): Promise<Notification> {
+    async create(data: CreateNotificationDto): Promise<Notification> {
         return this.prisma.notification.create({ data });
     }
 

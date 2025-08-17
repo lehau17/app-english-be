@@ -1,14 +1,14 @@
 import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import { Injectable } from '@nestjs/common';
-import { Progress, Prisma } from '@prisma/client';
-import { FilterProgressRequestDto } from '../dto/progress.dto';
+import { Prisma, Progress } from '@prisma/client';
+import { CreateProgressDto, FilterProgressRequestDto } from '../dto/progress.dto';
 
 @Injectable()
 export class ProgressRepository {
     constructor(private readonly prisma: PrismaRepository) { }
 
-    async create(data: Prisma.ProgressCreateInput): Promise<Progress> {
+    async create(data: CreateProgressDto): Promise<Progress> {
         return this.prisma.progress.create({ data });
     }
 

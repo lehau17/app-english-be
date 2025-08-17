@@ -2,13 +2,13 @@ import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import { Injectable } from '@nestjs/common';
 import { DeviceToken, Prisma } from '@prisma/client';
-import { FilterDeviceTokenRequestDto } from '../dto/device-token.dto';
+import { CreateDeviceTokenDto, FilterDeviceTokenRequestDto } from '../dto/device-token.dto';
 
 @Injectable()
 export class DeviceTokenRepository {
     constructor(private readonly prisma: PrismaRepository) { }
 
-    async create(data: Prisma.DeviceTokenCreateInput): Promise<DeviceToken> {
+    async create(data: CreateDeviceTokenDto): Promise<DeviceToken> {
         return this.prisma.deviceToken.create({ data });
     }
 
