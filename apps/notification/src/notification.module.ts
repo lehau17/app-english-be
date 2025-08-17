@@ -1,7 +1,6 @@
 import { MailerModule } from '@nestjs-modules/mailer';
 import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
 import { Module } from '@nestjs/common';
-import { NotificationController } from './notification.controller';
 import { NotificationService } from './notification.service';
 @Module({
     imports: [
@@ -28,7 +27,7 @@ import { NotificationService } from './notification.service';
             }),
         }),
     ],
-    controllers: [NotificationController],
+    controllers: [],
     providers: [NotificationService],
 })
 export class NotificationModule { }
