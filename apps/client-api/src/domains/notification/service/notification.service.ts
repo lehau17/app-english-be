@@ -3,13 +3,16 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Notification } from '@prisma/client';
 import { CreateNotificationDto, FilterNotificationRequestDto, UpdateNotificationDto } from '../dto/notification.dto';
 import { NotificationRepository } from '../repository/notification.repository';
+import { KafkaService } from '@app/shared/kafka/kafka.service';
 
 @Injectable()
 export class NotificationService {
-    constructor(private readonly notificationRepository: NotificationRepository) { }
+    constructor(private readonly notificationRepository: NotificationRepository, private readonly kafkaService: KafkaService) { }
 
     async create(dto: CreateNotificationDto): Promise<Notification> {
-        return this.notificationRepository.create(dto);
+        const notification = await this.notificationRepository.create(dto);
+        this.kafkaService.send('notifications', notification);
+        return notification;
     }
 
     async findById(id: string): Promise<Notification> {
