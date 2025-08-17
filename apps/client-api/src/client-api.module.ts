@@ -10,9 +10,15 @@ import { CourseModule } from './domains/course/course.module';
 import { EventsModule } from './events/events.module';
 import { DashboardModule } from './domains/dashboard/dashboard.module';
 import { LessonModule } from './domains/lesson';
+import { ActivityModule } from './domains/activity';
+import { ProgressModule } from './domains/progress';
+import { AttemptModule } from './domains/attempt';
+import { ParentChildModule } from './domains/parent-child';
+import { DeviceTokenModule } from './domains/device-token';
+import { NotificationModule } from './domains/notification';
 
 @Module({
-    imports: [DatabaseModule, AuthModule, SharedModule, StudentModule, CourseModule, EventsModule, DashboardModule, LessonModule],
+    imports: [DatabaseModule, AuthModule, SharedModule, StudentModule, CourseModule, EventsModule, DashboardModule, LessonModule, ActivityModule, ProgressModule, AttemptModule, ParentChildModule, DeviceTokenModule, NotificationModule],
     controllers: [ClientApiController],
     providers: [ClientApiService],
 })
