@@ -39,4 +39,63 @@ export class TeacherService {
     async list(params: FilterTeacherRequestDto): Promise<PageResponseDto<User>> {
         return this.teacherRepository.list(params);
     }
+
+    async exportTeachers(query: FilterTeacherRequestDto): Promise<string> {
+        const teachers = await this.teacherRepository.listAll(query);
+        if (teachers.length === 0) {
+            return '';
+        }
+
+        const header = 'email,firstName,lastName\n';
+        const rows = teachers.map(t => `${t.email},${t.firstName},${t.lastName}`).join('\n');
+
+        return header + rows;
+    }
+
+    async importTeachers(fileBuffer: Buffer): Promise<{ created: number, errors: any[] }> {
+        const fileContent = fileBuffer.toString('utf-8');
+        const rows = fileContent.split('\n').map(row => row.trim()).filter(row => row);
+        if (rows.length < 2) { // at least one header and one data row
+            throw new BadRequestException('CSV file must have a header and at least one data row.');
+        }
+
+        const header = rows[0].split(',').map(h => h.trim());
+        const emailIndex = header.indexOf('email');
+        const passwordIndex = header.indexOf('password');
+        const firstNameIndex = header.indexOf('firstName');
+        const lastNameIndex = header.indexOf('lastName');
+
+        if (emailIndex === -1 || passwordIndex === -1 || firstNameIndex === -1 || lastNameIndex === -1) {
+            throw new BadRequestException('CSV header must contain email, password, firstName, lastName');
+        }
+
+        const teachersToCreate: CreateTeacherDto[] = [];
+        const errors = [];
+
+        for (let i = 1; i < rows.length; i++) {
+            const values = rows[i].split(',');
+            const email = values[emailIndex]?.trim();
+            const password = values[passwordIndex]?.trim();
+            const firstName = values[firstNameIndex]?.trim();
+            const lastName = values[lastNameIndex]?.trim();
+
+            if (email && password && firstName && lastName) {
+                teachersToCreate.push({ email, password, firstName, lastName });
+            } else {
+                errors.push({ row: i + 1, error: 'Missing required fields' });
+            }
+        }
+
+        let createdCount = 0;
+        for (const teacherDto of teachersToCreate) {
+            try {
+                await this.create(teacherDto);
+                createdCount++;
+            } catch (error) {
+                errors.push({ teacher: teacherDto.email, error: error.message });
+            }
+        }
+
+        return { created: createdCount, errors };
+    }
 }
