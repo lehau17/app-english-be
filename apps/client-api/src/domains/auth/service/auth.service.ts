@@ -21,9 +21,13 @@ export class AuthService {
             this.authRepository.findUserForLogin(dto.phone),
             this.authRepository.findUserForLogin(dto.username),
         ]);
-        if (arrayExist && arrayExist.length > 0) {
+        if (arrayExist && arrayExist.some((user) => !!user)) {
             throw new BadRequestException('Email/Phone/Username already exists');
         }
+
+
+
+
 
         const user = await this.authRepository.register(dto);
 

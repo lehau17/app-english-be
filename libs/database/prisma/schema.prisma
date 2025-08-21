@@ -1,4 +1,4 @@
-// ===================== PRISMA SCHEMA — SINGLE FILE =====================
+// ===================== PRISMA SCHEMA — ENHANCED VERSION =====================
 
 generator client {
     provider = "prisma-client-js"
@@ -17,6 +17,7 @@ enum UserRole {
     parent
     teacher
     admin
+    content_creator // Cho CMS system
 }
 
 enum Status {
@@ -24,6 +25,7 @@ enum Status {
     inactive
     banned
     pending
+    suspended // Tạm khóa
 }
 
 enum AuthProvider {
@@ -37,6 +39,7 @@ enum Gender {
     male
     female
     other
+    prefer_not_to_say // Tùy chọn riêng tư
 }
 
 enum LanguageCode {
@@ -46,6 +49,8 @@ enum LanguageCode {
     jp
     zh
     fr
+    es // Thêm tiếng Tây Ban Nha
+    de // Thêm tiếng Đức
 }
 
 enum TimezoneCode {
@@ -54,91 +59,242 @@ enum TimezoneCode {
     Asia_Seoul
     America_New_York
     Europe_London
+    America_Los_Angeles
+    Australia_Sydney
 }
 
 enum ActivityType {
-    vocab
-    pronunciation
-    listening
-    speaking
-    mini_game
+    vocab // Từ vựng
+    pronunciation // Phát âm
+    listening // Nghe
+    speaking // Nói
+    mini_game // Trò chơi nhỏ
+    reading // Đọc hiểu
+    writing // Viết
+    grammar // Ngữ pháp
+    quiz // Trắc nghiệm
+    flashcard // Thẻ ghi nhớ
+    conversation // Hội thoại
 }
 
 enum ProgressState {
     not_started
     in_progress
     done
+    review_needed // Cần ôn tập
+    mastered // Đã thành thạo
 }
 
-// -------- B2C extras --------
 enum DevicePlatform {
     ios
     android
     web
+    desktop // Ứng dụng desktop
 }
 
 enum NotificationChannel {
-    socket
-    fcm
+    socket // Thông báo thời gian thực
+    fcm // Firebase push notification
+    email // Email thông báo
+    sms // SMS (cho OTP)
+    in_app // Trong ứng dụng
+}
+
+enum NotificationType {
+    achievement // Thành tích
+    reminder // Nhắc nhở
+    system // Hệ thống
+    social // Xã hội
+    assignment // Bài tập
+    streak // Chuỗi học tập
+    parent_child // Phụ huynh-con
+}
+
+enum AssignmentStatus {
+    draft // Bản nháp
+    published // Đã phát hành
+    completed // Hoàn thành
+    overdue // Quá hạn
+    submitted // Đã nộp
+    graded // Đã chấm điểm
+}
+
+enum QuestionType {
+    multiple_choice // Trắc nghiệm
+    fill_blank // Điền vào chỗ trống
+    true_false // Đúng/Sai
+    matching // Ghép đôi
+    ordering // Sắp xếp
+    essay // Tự luận
+    audio_response // Phản hồi bằng âm thanh
+}
+
+enum ContentStatus {
+    draft // Bản nháp
+    review // Đang review
+    approved // Đã duyệt
+    published // Đã xuất bản
+    archived // Đã lưu trữ
+}
+
+enum RewardType {
+    digital // Phần thưởng kỹ thuật số
+    physical // Phần thưởng vật chất
+    screen_time // Thời gian màn hình
+    activity // Hoạt động
+}
+
+enum DifficultyLevel {
+    beginner // Sơ cấp
+    elementary // Cơ bản
+    intermediate // Trung cấp
+    upper_intermediate // Trung cấp cao
+    advanced // Nâng cao
+    expert // Chuyên gia
 }
 
 // ===================== MODELS =====================
 
 model User {
-    id            String        @id @default(uuid())
-    email         String?       @unique
-    phone         String?       @unique
-    username      String?       @unique
-    passwordHash  String?
-    role          UserRole      @default(student)
-    status        Status        @default(active)
-    provider      AuthProvider  @default(local)
-    providerId    String?
-    firstName     String?
-    lastName      String?
-    gender        Gender?
-    dob           DateTime?
-    avatarUrl     String?
-    bio           String?
-    language      LanguageCode?
-    timezone      TimezoneCode?
-    lastLoginAt   DateTime?
-    lastActiveAt  DateTime?
-    emailVerified Boolean       @default(false)
-    phoneVerified Boolean       @default(false)
-    preferences   Json?
-    createdAt     DateTime      @default(now())
-    updatedAt     DateTime      @updatedAt
+    id           String       @id @default(uuid())
+    email        String?      @unique
+    phone        String?      @unique
+    username     String?      @unique
+    passwordHash String?
+    role         UserRole     @default(student)
+    status       Status       @default(active)
+    provider     AuthProvider @default(local)
+    providerId   String?
 
-    Profile      Profile?
-    Progress     Progress[]
-    Attempts     Attempt[]
-    RefreshToken RefreshToken[]
+    // Thông tin cá nhân chi tiết
+    firstName      String?
+    lastName       String?
+    displayName    String? // Tên hiển thị
+    gender         Gender?
+    dob            DateTime? // Ngày sinh
+    nationality    String? // Quốc tịch
+    nativeLanguage LanguageCode? // Ngôn ngữ mẹ đẻ
+    avatarUrl      String?
+    bio            String?
 
-    // B2C extras relations
+    // Cài đặt hệ thống
+    language LanguageCode? @default(en)
+    timezone TimezoneCode? @default(Asia_Ho_Chi_Minh)
+
+    // Thông tin xác thực
+    lastLoginAt      DateTime?
+    lastActiveAt     DateTime?
+    emailVerified    Boolean   @default(false)
+    phoneVerified    Boolean   @default(false)
+    twoFactorEnabled Boolean   @default(false) // Xác thực 2 yếu tố
+
+    // Cài đặt và tùy chọn
+    preferences          Json? // Cài đặt chi tiết
+    privacySettings      Json? // Cài đặt riêng tư
+    notificationSettings Json? // Cài đặt thông báo
+    parentalConsent      Boolean? // Đồng ý của phụ huynh (cho trẻ < 13 tuổi)
+
+    // Metadata
+    profileCompleteness Int      @default(0) // % hoàn thành hồ sơ
+    isOnline            Boolean  @default(false) // Trạng thái online
+    createdAt           DateTime @default(now())
+    updatedAt           DateTime @updatedAt
+
+    // Relations
+    Profile          Profile?
+    Progress         Progress[]
+    Attempts         Attempt[]
+    RefreshToken     RefreshToken[]
     DeviceTokens     DeviceToken[]
     Notifications    Notification[]
     UserStats        UserStats?
-    UserBadges       UserBadge[] // badges earned
-    // ParentChild relations are defined in ParentChild model via named relations
-    parentRelations  ParentChild[]      @relation("ParentChildParent")
-    childRelations   ParentChild[]      @relation("ParentChildChild")
+    UserBadges       UserBadge[]
     LeaderboardEntry LeaderboardEntry[]
+
+    // Parent-Child relations
+    parentRelations ParentChild[] @relation("ParentChildParent")
+    childRelations  ParentChild[] @relation("ParentChildChild")
+
+    // Teacher-Student relations
+    classroomsTeaching    Classroom[]            @relation("TeacherClassrooms")
+    classroomsStudying    ClassroomStudent[]
+    assignmentsCreated    Assignment[]           @relation("TeacherAssignments")
+    assignmentSubmissions AssignmentSubmission[]
+
+    // Social features
+    friendsInitiated Friendship[] @relation("FriendshipInitiator")
+    friendsReceived  Friendship[] @relation("FriendshipReceiver")
+
+    // Communication
+    messagesFrom Message[] @relation("MessageFrom")
+    messagesTo   Message[] @relation("MessageTo")
+
+    // Custom content
+    createdContent Content[] @relation("ContentCreator")
+
+    // Rewards and achievements
+    customRewards CustomReward[] @relation("ParentRewards")
+    rewardClaims  RewardClaim[]
+
+    // Security
+    securityLogs  SecurityLog[]
+    loginSessions LoginSession[]
 
     @@index([status])
     @@index([provider, providerId])
     @@index([lastActiveAt])
+    @@index([role])
+    @@index([email])
+    @@index([phone])
 }
 
 model RefreshToken {
-    id        String    @id
-    userId    String
-    user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-    expiresAt DateTime
-    createdAt DateTime  @default(now())
-    revokedAt DateTime?
+    id         String    @id
+    userId     String
+    user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    deviceId   String? // Định danh thiết bị
+    expiresAt  DateTime
+    createdAt  DateTime  @default(now())
+    revokedAt  DateTime?
+    lastUsedAt DateTime?
 
     @@index([userId])
+    @@index([deviceId])
+}
+
+model LoginSession {
+    id           String   @id @default(uuid())
+    userId       String
+    deviceInfo   Json? // Thông tin thiết bị
+    ipAddress    String? // IP đăng nhập
+    location     String? // Vị trí địa lý
+    userAgent    String? // User agent
+    isActive     Boolean  @default(true)
+    expiresAt    DateTime
+    createdAt    DateTime @default(now())
+    lastActiveAt DateTime @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
+    @@index([isActive])
+}
+
+model SecurityLog {
+    id        String   @id @default(uuid())
+    userId    String
+    action    String // login_success, login_failed, password_change, etc.
+    ipAddress String?
+    userAgent String?
+    location  String?
+    metadata  Json? // Chi tiết bổ sung
+    createdAt DateTime @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
+    @@index([action])
+    @@index([createdAt])
 }
 
 model Profile {
@@ -147,100 +303,359 @@ model Profile {
     displayName String?
     avatarUrl   String?
     dob         DateTime?
-    guardianId  String?
+    guardianId  String? // ID phụ huynh
+
+    // Thông tin học tập
+    currentLevel   String? // Level hiện tại
+    learningGoals  Json? // Mục tiêu học tập
+    studyStreak    Int     @default(0) // Chuỗi học tập
+    totalStudyTime Int     @default(0) // Tổng thời gian học (phút)
+
+    // Cài đặt học tập cá nhân
+    dailyGoalMinutes Int? // Mục tiêu học hàng ngày (phút)
+    reminderTimes    Json? // Thời gian nhắc nhở
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Course {
-    id          String  @id @default(uuid())
-    title       String
-    description String?
-    orderNo     Int
+// ===================== CONTENT MODELS =====================
 
-    lessons Lesson[]
+model Course {
+    id            String          @id @default(uuid())
+    title         String
+    description   String?
+    orderNo       Int
+    difficulty    DifficultyLevel @default(beginner)
+    estimatedTime Int? // Thời gian ước tính (phút)
+    imageUrl      String? // Hình ảnh khóa học
+    tags          String[] // Tags tìm kiếm
+    isPublished   Boolean         @default(false)
+    prerequisites String[] // Khóa học tiên quyết
+
+    // Metadata
+    rating          Float? // Đánh giá trung bình
+    totalRatings    Int    @default(0)
+    enrollmentCount Int    @default(0) // Số lượng học sinh tham gia
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    lessons       Lesson[]
+    courseRatings CourseRating[]
 
     @@unique([orderNo])
     @@index([orderNo])
+    @@index([difficulty])
+    @@index([isPublished])
+}
+
+model CourseRating {
+    id        String   @id @default(uuid())
+    courseId  String
+    userId    String
+    rating    Int // 1-5 sao
+    comment   String?
+    createdAt DateTime @default(now())
+
+    course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+    @@unique([courseId, userId])
+    @@index([courseId])
 }
 
 model Lesson {
-    id          String  @id @default(uuid())
-    courseId    String
-    title       String
-    description String?
-    orderNo     Int
+    id            String          @id @default(uuid())
+    courseId      String
+    title         String
+    description   String?
+    orderNo       Int
+    difficulty    DifficultyLevel @default(beginner)
+    estimatedTime Int? // Thời gian ước tính (phút)
+    isLocked      Boolean         @default(true) // Khóa/mở khóa
+    objectives    String[] // Mục tiêu học tập
 
-    course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-    activities Activity[]
-    LessonDetail LessonDetail[]
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    course        Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+    activities    Activity[]
+    lessonDetails LessonDetail[]
 
     @@unique([courseId, orderNo])
     @@index([courseId, orderNo])
+    @@index([isLocked])
 }
 
 model LessonDetail {
-    id          String  @id @default(uuid())
-    lessonId    String
-    content     Json
-    
-    lesson      Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+    id       String @id @default(uuid())
+    lessonId String
+    type     String // text, video, audio, image
+    content  Json // Nội dung chi tiết
+    orderNo  Int // Thứ tự trong bài học
+
+    lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
     @@index([lessonId])
+    @@index([lessonId, orderNo])
 }
-
 
 model Activity {
     id       String       @id @default(uuid())
     lessonId String
     type     ActivityType
     orderNo  Int
-    content  Json
+    title    String // Tiêu đề hoạt động
+    content  Json // Nội dung hoạt động
 
-    lesson   Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-    progress Progress[]
-    attempts Attempt[]
+    // Cấu hình hoạt động
+    timeLimit    Int? // Giới hạn thời gian (giây)
+    maxAttempts  Int? // Số lần thử tối đa
+    passingScore Int? // Điểm đạt
+    difficulty   DifficultyLevel @default(beginner)
+    points       Int             @default(10) // Điểm XP khi hoàn thành
+
+    // Metadata
+    instructions String? // Hướng dẫn
+    hints        Json? // Gợi ý
+    mediaUrls    Json? // URLs file media
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    lesson    Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+    progress  Progress[]
+    attempts  Attempt[]
+    questions Question[] // Câu hỏi trong hoạt động
 
     @@unique([lessonId, orderNo])
     @@index([lessonId, orderNo])
+    @@index([type])
+    @@index([difficulty])
 }
 
+model Question {
+    id            String       @id @default(uuid())
+    activityId    String
+    type          QuestionType
+    question      String // Nội dung câu hỏi
+    options       Json? // Các lựa chọn (cho multiple choice)
+    correctAnswer String // Đáp án đúng
+    explanation   String? // Giải thích
+    points        Int          @default(1) // Điểm cho câu hỏi này
+    orderNo       Int // Thứ tự trong hoạt động
+    mediaUrl      String? // File âm thanh/hình ảnh đi kèm
+
+    activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+    @@index([activityId])
+    @@index([activityId, orderNo])
+}
+
+// ===================== PROGRESS AND ATTEMPTS =====================
+
 model Progress {
-    id           String        @id @default(uuid())
-    userId       String
-    activityId   String
-    state        ProgressState @default(not_started)
-    score        Int?
-    timeSpentSec Int           @default(0)
-    updatedAt    DateTime      @default(now())
+    id            String        @id @default(uuid())
+    userId        String
+    activityId    String
+    state         ProgressState @default(not_started)
+    score         Int? // Điểm số hiện tại
+    bestScore     Int? // Điểm số cao nhất
+    timeSpentSec  Int           @default(0)
+    attemptsCount Int           @default(0) // Số lần thử
+
+    // Chi tiết tiến trình
+    lastQuestionIndex Int? // Câu hỏi cuối cùng
+    strengths         Json? // Điểm mạnh
+    weaknesses        Json? // Điểm yếu
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @default(now())
 
     user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
     @@unique([userId, activityId])
     @@index([userId, updatedAt])
+    @@index([state])
 }
 
 model Attempt {
-    id         String   @id @default(uuid())
+    id         String  @id @default(uuid())
     userId     String
     activityId String
-    score      Int?
-    detail     Json?
-    createdAt  DateTime @default(now())
+    score      Int? // Điểm số lần thử này
+    maxScore   Int? // Điểm tối đa có thể
+    timeSpent  Int? // Thời gian làm bài (giây)
+    detail     Json? // Chi tiết từng câu trả lời
+    feedback   String? // Phản hồi AI/giáo viên
+
+    // Phân tích chi tiết
+    correctAnswers Int? // Số câu đúng
+    totalQuestions Int? // Tổng số câu
+    averageTime    Int? // Thời gian trung bình mỗi câu
+
+    createdAt DateTime @default(now())
 
     user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
     @@index([userId, createdAt])
+    @@index([activityId])
 }
 
-// ===================== B2C EXTRAS (PARENT, NOTIFICATIONS, GAMIFICATION) =====================
+// ===================== CLASSROOM AND ASSIGNMENTS =====================
+
+model Classroom {
+    id          String  @id @default(uuid())
+    teacherId   String
+    name        String // Tên lớp học
+    description String? // Mô tả lớp học
+    classCode   String  @unique // Mã lớp 8 ký tự
+    isActive    Boolean @default(true)
+    maxStudents Int? // Giới hạn học sinh
+
+    // Cài đặt lớp học
+    settings Json? // Cài đặt chi tiết lớp học
+    schedule Json? // Lịch học
+
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+    expiresAt DateTime? // Hết hạn mã lớp
+
+    teacher       User               @relation("TeacherClassrooms", fields: [teacherId], references: [id], onDelete: Cascade)
+    students      ClassroomStudent[]
+    assignments   Assignment[]
+    announcements Announcement[]
+
+    @@index([teacherId])
+    @@index([classCode])
+    @@index([isActive])
+}
+
+model ClassroomStudent {
+    classroomId String
+    studentId   String
+    joinedAt    DateTime @default(now())
+    isActive    Boolean  @default(true)
+
+    // Metadata
+    notes     String? // Ghi chú của giáo viên
+    groupName String? // Nhóm trong lớp
+
+    classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+    student   User      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+    @@id([classroomId, studentId])
+    @@index([studentId])
+}
+
+model Assignment {
+    id           String  @id @default(uuid())
+    teacherId    String
+    classroomId  String
+    title        String
+    description  String?
+    instructions String? // Hướng dẫn chi tiết
+
+    // Cấu hình bài tập
+    dueDate     DateTime? // Hạn nộp
+    totalPoints Int       @default(100) // Tổng điểm
+    timeLimit   Int? // Giới hạn thời gian (phút)
+    maxAttempts Int       @default(1) // Số lần làm tối đa
+
+    // Trạng thái
+    status      AssignmentStatus @default(draft)
+    isPublished Boolean          @default(false)
+
+    // Targeting
+    assignedTo String[] // Danh sách student IDs (empty = tất cả)
+
+    // Content
+    activities    Json // Danh sách activity IDs
+    customContent Json? // Nội dung tùy chỉnh
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    teacher     User                   @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
+    classroom   Classroom              @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+    submissions AssignmentSubmission[]
+
+    @@index([teacherId])
+    @@index([classroomId])
+    @@index([status])
+    @@index([dueDate])
+}
+
+model AssignmentSubmission {
+    id           String @id @default(uuid())
+    assignmentId String
+    studentId    String
+
+    // Submission details
+    submittedAt DateTime  @default(now())
+    score       Int? // Điểm số
+    feedback    String? // Phản hồi từ giáo viên
+    gradedAt    DateTime? // Thời gian chấm điểm
+
+    // Content
+    answers      Json // Câu trả lời chi tiết
+    timeSpent    Int? // Thời gian làm bài (phút)
+    attemptCount Int  @default(1) // Lần thử thứ mấy
+
+    // Status
+    isLate Boolean @default(false) // Nộp muộn
+    status String  @default("submitted") // submitted, graded, returned
+
+    assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+    student    User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+    @@unique([assignmentId, studentId, attemptCount])
+    @@index([assignmentId])
+    @@index([studentId])
+}
+
+model Announcement {
+    id          String   @id @default(uuid())
+    classroomId String
+    title       String
+    content     String
+    priority    String   @default("normal") // low, normal, high, urgent
+    targetAll   Boolean  @default(true) // Gửi cho tất cả học sinh
+    targetIds   String[] // Danh sách student IDs cụ thể
+
+    // Media attachments
+    attachments Json? // File đính kèm
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+    @@index([classroomId])
+    @@index([priority])
+    @@index([createdAt])
+}
+
+// ===================== PARENT-CHILD FEATURES =====================
 
 model ParentChild {
     parentId  String
     childId   String
     createdAt DateTime @default(now())
+
+    // Cài đặt giám sát
+    canViewProgress Boolean @default(true)
+    canSetGoals     Boolean @default(true)
+    canControlTime  Boolean @default(true)
+    dailyTimeLimit  Int? // Giới hạn thời gian hàng ngày (phút)
+    bedtimeStart    String? // Giờ đi ngủ (HH:mm)
+    bedtimeEnd      String? // Giờ thức dậy (HH:mm)
+
+    // Cài đặt nội dung
+    allowedActivities String[] // Loại hoạt động được phép
+    blockedContent    String[] // Nội dung bị chặn
+    maxDifficulty     DifficultyLevel? // Độ khó tối đa
 
     parent User @relation("ParentChildParent", fields: [parentId], references: [id], onDelete: Cascade)
     child  User @relation("ParentChildChild", fields: [childId], references: [id], onDelete: Cascade)
@@ -249,51 +664,144 @@ model ParentChild {
     @@index([childId])
 }
 
+model CustomReward {
+    id          String     @id @default(uuid())
+    parentId    String
+    childId     String
+    title       String // Tên phần thưởng
+    description String? // Mô tả
+    type        RewardType
+    cost        Int // Số xu cần thiết
+    imageUrl    String? // Hình ảnh
+    isActive    Boolean    @default(true)
+
+    // Cấu hình phần thưởng
+    metadata Json? // Chi tiết thêm (thời gian màn hình, etc.)
+
+    createdAt DateTime @default(now())
+
+    parent User          @relation("ParentRewards", fields: [parentId], references: [id], onDelete: Cascade)
+    claims RewardClaim[]
+
+    @@index([parentId])
+    @@index([childId])
+}
+
+model RewardClaim {
+    id        String   @id @default(uuid())
+    rewardId  String
+    childId   String
+    status    String   @default("pending") // pending, approved, rejected, completed
+    claimedAt DateTime @default(now())
+
+    reward CustomReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+    child  User         @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+    @@index([rewardId])
+    @@index([childId])
+    @@index([status])
+}
+
+// ===================== DEVICE AND NOTIFICATIONS =====================
+
 model DeviceToken {
     id         String         @id @default(uuid())
     userId     String
     token      String         @unique
     platform   DevicePlatform
+    deviceId   String? // Định danh thiết bị
+    deviceName String? // Tên thiết bị
+    appVersion String? // Phiên bản ứng dụng
+    osVersion  String? // Phiên bản hệ điều hành
     lastSeenAt DateTime?
+    isActive   Boolean        @default(true) // Token còn hoạt động
     createdAt  DateTime       @default(now())
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([userId, platform])
+    @@index([token])
 }
 
 model Notification {
-    id        String              @id @default(uuid())
-    userId    String
-    title     String
-    body      String?
-    data      Json?
-    channel   NotificationChannel
+    id      String              @id @default(uuid())
+    userId  String
+    type    NotificationType // Loại thông báo
+    title   String
+    body    String?
+    data    Json? // Dữ liệu bổ sung
+    channel NotificationChannel
+
+    // Targeting và scheduling
+    targetRole   UserRole? // Gửi cho vai trò cụ thể
+    scheduledFor DateTime? // Lên lịch gửi
+
+    // Status
     readAt    DateTime?
-    createdAt DateTime            @default(now())
+    clickedAt DateTime? // Thời gian nhấn
+    delivered Boolean   @default(false) // Đã gửi thành công
+
+    // Metadata
+    priority  String  @default("normal") // low, normal, high
+    actionUrl String? // Link khi nhấn vào thông báo
+    imageUrl  String? // Hình ảnh đi kèm
+
+    createdAt DateTime  @default(now())
+    expiresAt DateTime? // Hết hạn thông báo
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([userId, createdAt])
+    @@index([type])
+    @@index([delivered])
+    @@index([scheduledFor])
 }
 
+// ===================== GAMIFICATION =====================
+
 model UserStats {
-    userId       String    @id
-    xp           Int       @default(0)
-    streakDays   Int       @default(0)
-    lastStreakAt DateTime?
-    updatedAt    DateTime  @updatedAt
+    userId        String    @id
+    xp            Int       @default(0) // Điểm kinh nghiệm
+    level         Int       @default(1) // Cấp độ hiện tại
+    streakDays    Int       @default(0) // Chuỗi học tập (ngày)
+    longestStreak Int       @default(0) // Chuỗi dài nhất từng đạt
+    lastStreakAt  DateTime? // Lần cuối duy trì streak
+
+    // Thống kê học tập
+    totalStudyTime  Int @default(0) // Tổng thời gian học (phút)
+    totalActivities Int @default(0) // Tổng số hoạt động hoàn thành
+    perfectScores   Int @default(0) // Số lần đạt điểm tuyệt đối
+
+    // Thống kê theo loại hoạt động
+    vocabMastered      Int    @default(0) // Từ vựng đã thành thạo
+    pronunciationScore Float? // Điểm phát âm trung bình
+    listeningAccuracy  Float? // Độ chính xác nghe
+    speakingFluency    Float? // Độ trôi chảy nói
+
+    // Coins/Currency system
+    coins      Int @default(0) // Xu ảo để mua reward
+    coinsSpent Int @default(0) // Xu đã tiêu
+
+    updatedAt DateTime @updatedAt
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Badge {
-    id          String      @id @default(uuid())
-    code        String      @unique
+    id          String  @id @default(uuid())
+    code        String  @unique // unique_code_for_badge
+    category    String // vocabulary, pronunciation, streak, achievement
     name        String
     description String?
     iconUrl     String?
-    UserBadge   UserBadge[]
+    rarity      String  @default("common") // common, rare, epic, legendary
+    conditions  Json // Điều kiện để đạt badge
+    points      Int     @default(0) // XP thưởng khi đạt badge
+    isSecret    Boolean @default(false) // Badge bí mật
+
+    createdAt DateTime @default(now())
+
+    UserBadge UserBadge[]
 }
 
 model UserBadge {
@@ -301,23 +809,535 @@ model UserBadge {
     badgeId  String
     earnedAt DateTime @default(now())
 
+    // Progress towards badge (for progressive badges)
+    progress    Int? // Current progress value
+    maxProgress Int? // Max value needed
+
     user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
     badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
 
     @@id([userId, badgeId])
     @@index([badgeId])
+    @@index([earnedAt])
 }
 
 model LeaderboardEntry {
     id          String   @id @default(uuid())
+    periodType  String // daily, weekly, monthly, all_time
     periodStart DateTime
     periodEnd   DateTime
     userId      String
-    xp          Int      @default(0)
-    rank        Int?
+
+    // Metrics
+    xp                  Int @default(0)
+    activitiesCompleted Int @default(0)
+    streakDays          Int @default(0)
+    studyTimeMinutes    Int @default(0)
+
+    // Rankings
+    rank       Int? // Overall rank
+    xpRank     Int? // Rank by XP
+    streakRank Int? // Rank by streak
+
+    // Scope
+    scope   String  @default("global") // global, friends, classroom
+    scopeId String? // classroom_id for classroom leaderboard
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@unique([userId, periodStart, periodEnd])
-    @@index([periodStart, periodEnd, xp])
+    @@unique([userId, periodType, periodStart, scope, scopeId])
+    @@index([periodType, periodStart, periodEnd])
+    @@index([scope, scopeId, xp])
+    @@index([rank])
 }
+
+// ===================== SOCIAL FEATURES =====================
+
+model Friendship {
+    id          String    @id @default(uuid())
+    initiatorId String // Người gửi lời mời
+    receiverId  String // Người nhận lời mời
+    status      String    @default("pending") // pending, accepted, blocked
+    createdAt   DateTime  @default(now())
+    acceptedAt  DateTime? // Thời gian chấp nhận
+
+    initiator User @relation("FriendshipInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+    receiver  User @relation("FriendshipReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+    @@unique([initiatorId, receiverId])
+    @@index([receiverId])
+    @@index([status])
+}
+
+model StudyGroup {
+    id          String  @id @default(uuid())
+    name        String
+    description String?
+    creatorId   String
+    maxMembers  Int     @default(10)
+    isPrivate   Boolean @default(false) // Private group cần lời mời
+    joinCode    String? @unique // Mã tham gia nhóm
+
+    // Group settings
+    settings Json? // Cài đặt nhóm
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    members    StudyGroupMember[]
+    challenges GroupChallenge[]
+
+    @@index([creatorId])
+    @@index([joinCode])
+}
+
+model StudyGroupMember {
+    groupId  String
+    userId   String
+    role     String   @default("member") // member, admin, moderator
+    joinedAt DateTime @default(now())
+    isActive Boolean  @default(true)
+
+    group StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+    @@id([groupId, userId])
+    @@index([userId])
+}
+
+model GroupChallenge {
+    id          String  @id @default(uuid())
+    groupId     String
+    title       String
+    description String?
+
+    // Challenge configuration
+    startDate   DateTime
+    endDate     DateTime
+    targetType  String // xp, activities, streak, study_time
+    targetValue Int // Target value to achieve
+
+    // Rewards
+    rewardXP    Int     @default(0)
+    rewardBadge String? // Badge code to award
+
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+
+    group          StudyGroup               @relation(fields: [groupId], references: [id], onDelete: Cascade)
+    participations ChallengeParticipation[]
+
+    @@index([groupId])
+    @@index([startDate, endDate])
+}
+
+model ChallengeParticipation {
+    challengeId String
+    userId      String
+    progress    Int       @default(0) // Current progress
+    completed   Boolean   @default(false)
+    completedAt DateTime?
+
+    challenge GroupChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+
+    @@id([challengeId, userId])
+    @@index([userId])
+}
+
+// ===================== COMMUNICATION =====================
+
+model Message {
+    id         String @id @default(uuid())
+    fromUserId String
+    toUserId   String
+    content    String
+    type       String @default("text") // text, audio, image, sticker
+
+    // Message metadata
+    mediaUrl String? // URL for audio/image messages
+    isRead   Boolean   @default(false)
+    readAt   DateTime?
+
+    // Parent-child communication
+    isParentChild Boolean @default(false) // Tin nhắn phụ huynh-con
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    fromUser User @relation("MessageFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+    toUser   User @relation("MessageTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
+    @@index([fromUserId])
+    @@index([toUserId])
+    @@index([createdAt])
+    @@index([isParentChild])
+}
+
+model Conversation {
+    id           String   @id @default(uuid())
+    participants String[] // Array of user IDs
+    type         String   @default("direct") // direct, group
+    name         String? // Group name (for group conversations)
+
+    // Last message info
+    lastMessageAt DateTime?
+    lastMessage   String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([participants])
+    @@index([lastMessageAt])
+}
+
+// ===================== CONTENT MANAGEMENT =====================
+
+model Content {
+    id          String  @id @default(uuid())
+    type        String // lesson, activity, vocabulary, audio, video
+    title       String
+    description String?
+
+    // Content data
+    data       Json // Main content data
+    mediaFiles Json? // Associated media files
+    metadata   Json? // Additional metadata
+
+    // Publishing
+    status     ContentStatus @default(draft)
+    creatorId  String
+    reviewerId String? // Who reviewed/approved
+
+    // Organization
+    tags       String[] // Content tags
+    categories String[] // Content categories
+    difficulty DifficultyLevel @default(beginner)
+    language   LanguageCode    @default(en)
+
+    // Usage tracking
+    usageCount Int    @default(0) // Times used
+    rating     Float? // Average rating
+
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+    publishedAt DateTime?
+
+    creator User @relation("ContentCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+    @@index([status])
+    @@index([creatorId])
+    @@index([type])
+    @@index([difficulty])
+    @@index([tags])
+}
+
+model MediaFile {
+    id           String  @id @default(uuid())
+    filename     String
+    originalName String
+    mimeType     String
+    size         Int // File size in bytes
+    url          String // CDN URL
+    thumbnail    String? // Thumbnail URL for images/videos
+
+    // Processing status for audio/video
+    isProcessed Boolean @default(false)
+    duration    Int? // Duration in seconds for audio/video
+
+    // Usage tracking
+    usageCount Int @default(0)
+
+    createdAt DateTime @default(now())
+
+    @@index([mimeType])
+    @@index([isProcessed])
+}
+
+model Vocabulary {
+    id            String  @id @default(uuid())
+    word          String  @unique
+    definition    String
+    pronunciation String? // IPA or phonetic spelling
+    audioUrl      String? // Pronunciation audio
+    imageUrl      String? // Visual representation
+
+    // Learning data
+    difficulty DifficultyLevel @default(beginner)
+    frequency  Int             @default(0) // How often this word appears
+    category   String? // Word category (noun, verb, etc.)
+    tags       String[] // Topic tags
+
+    // Example usage
+    examples Json? // Example sentences with translations
+
+    // Metadata
+    language LanguageCode @default(en)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    userVocabulary UserVocabulary[]
+
+    @@index([difficulty])
+    @@index([category])
+    @@index([frequency])
+}
+
+model UserVocabulary {
+    userId       String
+    vocabularyId String
+
+    // Learning progress
+    status       String   @default("learning") // learning, reviewing, mastered
+    correctCount Int      @default(0) // Times answered correctly
+    wrongCount   Int      @default(0) // Times answered incorrectly
+    lastSeen     DateTime @default(now())
+    nextReview   DateTime // Next spaced repetition review
+
+    // Spaced repetition data
+    easeFactor  Float @default(2.5) // SM-2 algorithm ease factor
+    interval    Int   @default(1) // Days until next review
+    repetitions Int   @default(0) // Number of successful repetitions
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    vocabulary Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
+
+    @@id([userId, vocabularyId])
+    @@index([userId, nextReview])
+    @@index([status])
+}
+
+// ===================== SYSTEM FEATURES =====================
+
+model FeatureFlag {
+    id          String  @id @default(uuid())
+    name        String  @unique
+    description String?
+    isEnabled   Boolean @default(false)
+
+    // Targeting
+    userRoles  UserRole[] // Which roles can see this feature
+    userIds    String[] // Specific user IDs (for testing)
+    percentage Int        @default(0) // Percentage rollout (0-100)
+
+    // A/B Testing
+    variants Json? // Different variants for A/B testing
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([isEnabled])
+}
+
+model SystemSetting {
+    key         String  @id
+    value       Json // Flexible value storage
+    type        String // string, number, boolean, json
+    description String?
+    isPublic    Boolean @default(false) // Can be accessed by clients
+
+    updatedAt DateTime @updatedAt
+    updatedBy String? // Who updated this setting
+}
+
+model ErrorLog {
+    id         String  @id @default(uuid())
+    userId     String? // User who experienced the error
+    error      String // Error message
+    stackTrace String? // Full stack trace
+    context    Json? // Additional context
+    userAgent  String? // Browser/app info
+    url        String? // Page/screen where error occurred
+
+    severity   String    @default("error") // info, warning, error, critical
+    resolved   Boolean   @default(false)
+    resolvedAt DateTime?
+
+    createdAt DateTime @default(now())
+
+    @@index([severity])
+    @@index([resolved])
+    @@index([createdAt])
+}
+
+model Analytics {
+    id         String  @id @default(uuid())
+    userId     String?
+    event      String // Event name
+    properties Json? // Event properties
+    sessionId  String? // User session ID
+
+    // Device/platform info
+    platform   String?
+    appVersion String?
+    osVersion  String?
+
+    createdAt DateTime @default(now())
+
+    @@index([event])
+    @@index([userId])
+    @@index([createdAt])
+    @@index([platform])
+}
+
+model Feedback {
+    id          String  @id @default(uuid())
+    userId      String?
+    type        String // bug, suggestion, general
+    subject     String
+    description String
+    rating      Int? // 1-5 star rating
+
+    // Metadata
+    appVersion String?
+    platform   String?
+    deviceInfo Json?
+
+    // Status
+    status      String    @default("open") // open, in_progress, resolved, closed
+    response    String? // Admin response
+    respondedAt DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([type])
+    @@index([status])
+    @@index([rating])
+}
+
+// ===================== ADVANCED FEATURES =====================
+
+model AIAnalysis {
+    id        String @id @default(uuid())
+    userId    String
+    type      String // pronunciation, writing, speaking_fluency
+    inputData Json // Original audio/text data
+    analysis  Json // AI analysis results
+    score     Float? // Overall score (0-100)
+
+    // Detailed feedback
+    strengths   String[] // What user did well
+    weaknesses  String[] // Areas for improvement
+    suggestions String[] // Specific improvement suggestions
+
+    createdAt DateTime @default(now())
+
+    @@index([userId])
+    @@index([type])
+    @@index([createdAt])
+}
+
+model LearningPath {
+    id     String @id @default(uuid())
+    userId String
+    name   String // Personalized path name
+
+    // Path configuration
+    targetLevel DifficultyLevel
+    focusAreas  String[] // vocabulary, pronunciation, grammar, etc.
+    timeframe   Int? // Target days to complete
+
+    // Content
+    courseIds     String[] // Ordered list of course IDs
+    customContent Json? // Custom activities/lessons
+
+    // Progress
+    currentStep Int       @default(0)
+    isCompleted Boolean   @default(false)
+    completedAt DateTime?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([userId])
+    @@index([isCompleted])
+}
+
+model StudySession {
+    id     String @id @default(uuid())
+    userId String
+
+    // Session data
+    startTime       DateTime  @default(now())
+    endTime         DateTime?
+    durationMinutes Int? // Calculated duration
+
+    // Activities in this session
+    activitiesCompleted Int @default(0)
+    xpEarned            Int @default(0)
+
+    // Performance
+    averageScore     Float?
+    streakMaintained Boolean @default(false)
+
+    // Context
+    devicePlatform DevicePlatform?
+    location       String? // General location for time zone
+
+    @@index([userId])
+    @@index([startTime])
+    @@index([durationMinutes])
+}
+
+model Recommendation {
+    id          String  @id @default(uuid())
+    userId      String
+    type        String // course, activity, vocabulary, break
+    title       String
+    description String?
+
+    // Recommendation data
+    confidence Float // AI confidence score (0-1)
+    reasoning  String? // Why this was recommended
+    targetData Json // What to recommend (course ID, etc.)
+
+    // User interaction
+    viewed    Boolean @default(false)
+    clicked   Boolean @default(false)
+    dismissed Boolean @default(false)
+
+    expiresAt DateTime // When recommendation expires
+    createdAt DateTime @default(now())
+
+    @@index([userId])
+    @@index([type])
+    @@index([expiresAt])
+    @@index([viewed, clicked, dismissed])
+}
+
+// ===================== INDEXES FOR PERFORMANCE =====================
+
+// Additional composite indexes for common queries
+// @@map("User")
+// @@index([User.role, User.status])
+// @@index([User.createdAt, User.status])
+
+// @@map("Progress")
+// @@index([Progress.userId, Progress.state, Progress.updatedAt])
+
+// @@map("Activity")
+// @@index([Activity.type, Activity.difficulty])
+
+// @@map("LeaderboardEntry")
+// @@index([LeaderboardEntry.periodType, LeaderboardEntry.scope, LeaderboardEntry.xp])
+
+// @@map("Notification")
+// @@index([Notification.userId, Notification.type, Notification.readAt])
+
+// @@map("Assignment")
+// @@index([Assignment.classroomId, Assignment.status, Assignment.dueDate])
+
+// @@map("UserStats")
+// @@index([UserStats.xp, UserStats.level])
+
+// @@map("Vocabulary")
+// @@index([Vocabulary.difficulty, Vocabulary.language])
+
+// @@map("Analytics")
+// @@index([Analytics.event, Analytics.createdAt])
+// @@index([Analytics.userId, Analytics.event])

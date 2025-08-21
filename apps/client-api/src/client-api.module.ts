@@ -16,9 +16,10 @@ import { AttemptModule } from './domains/attempt';
 import { ParentChildModule } from './domains/parent-child';
 import { DeviceTokenModule } from './domains/device-token';
 import { NotificationModule } from './domains/notification';
+import { TeacherModule } from './domains/teacher';
 
 @Module({
-    imports: [DatabaseModule, AuthModule, SharedModule, StudentModule, CourseModule, EventsModule, DashboardModule, LessonModule, ActivityModule, ProgressModule, AttemptModule, ParentChildModule, DeviceTokenModule, NotificationModule],
+    imports: [DatabaseModule, AuthModule, SharedModule, StudentModule, CourseModule, EventsModule, DashboardModule, LessonModule, ActivityModule, ProgressModule, AttemptModule, ParentChildModule, DeviceTokenModule, NotificationModule, TeacherModule],
     controllers: [ClientApiController],
     providers: [ClientApiService],
 })
