@@ -165,22 +165,22 @@ async function seedCourse() {
 
         // Activities per lesson
         const acts = lessonActivities(i + 1);
-        for (const a of acts) {
-            // ensure unique (lessonId, orderNo)
-            const existing = await prisma.activity.findFirst({
-                where: { lessonId: lesson.id, orderNo: a.orderNo },
-            });
-            if (!existing) {
-                await prisma.activity.create({
-                    data: {
-                        lessonId: lesson.id,
-                        type: a.type,
-                        orderNo: a.orderNo,
-                        content: a.content,
-                    },
-                });
-            }
-        }
+        // for (const a of acts) {
+        //     // ensure unique (lessonId, orderNo)
+        //     const existing = await prisma.activity.findFirst({
+        //         where: { lessonId: lesson.id, orderNo: a.orderNo },
+        //     });
+        //     if (!existing) {
+        //         await prisma.activity.create({
+        //             data: {
+        //                 lessonId: lesson.id,
+        //                 type: a.type,
+        //                 orderNo: a.orderNo,
+        //                 content: a.content,
+        //             },
+        //         });
+        //     }
+        // }
     }
 
     return course;
