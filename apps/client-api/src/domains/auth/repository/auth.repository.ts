@@ -22,7 +22,6 @@ export class AuthRepository {
             data: {
                 email: data.email,
                 phone: data.phone,
-                username: data.username,
                 passwordHash,
                 firstName: data.firstName,
                 lastName: data.lastName,
@@ -49,7 +48,6 @@ export class AuthRepository {
                 OR: [
                     { email: identifier },
                     { phone: identifier },
-                    { username: identifier },
                 ],
             },
         });

@@ -45,12 +45,6 @@ export class StudentRepository {
     }
 
 
-    async findByUsername(username: string): Promise<User | null> {
-        return this.prisma.user.findFirst({
-            where: { username, role: 'student' },
-        });
-    }
-
     async findByPhone(phone: string): Promise<User | null> {
         return this.prisma.user.findFirst({
             where: { phone, role: 'student' },
@@ -63,7 +57,6 @@ export class StudentRepository {
                 OR: [
                     { email },
                     { phone },
-                    { username },
                 ], role: 'student'
             },
         });
@@ -101,7 +94,6 @@ export class StudentRepository {
                     { firstName: { contains: search, mode: 'insensitive' } },
                     { lastName: { contains: search, mode: 'insensitive' } },
                     { email: { contains: search, mode: 'insensitive' } },
-                    { username: { contains: search, mode: 'insensitive' } },
                 ]
                 : undefined,
         };
@@ -120,7 +112,6 @@ export class StudentRepository {
             'firstName',
             'lastName',
             'email',
-            'username',
             'lastLoginAt',
         ];
         const sortField = allowedSortFields.includes(sortBy as keyof User)

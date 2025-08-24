@@ -2,12 +2,12 @@
 import { ResponseMessage } from '@app/shared';
 import { Body, Controller, Post } from '@nestjs/common';
 import {
-    ApiBadRequestResponse,
-    ApiBody,
-    ApiOkResponse,
-    ApiOperation,
-    ApiTags,
-    ApiUnauthorizedResponse
+  ApiBadRequestResponse,
+  ApiBody,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+  ApiUnauthorizedResponse
 } from '@nestjs/swagger';
 import { LoginDto, LogoutDto, RefreshTokenDto, RegisterDto } from '../dto';
 import { AuthService } from '../service/auth.service';
@@ -19,7 +19,7 @@ import { AuthService } from '../service/auth.service';
 export class PublicAuthController {
     constructor(private readonly authService: AuthService) { }
 
-    @Post('register')
+    @Post('student-register')
     @ApiOperation({ summary: 'Register a new account' })
     @ApiBody({ type: RegisterDto })
 
@@ -29,7 +29,7 @@ export class PublicAuthController {
         return this.authService.register(dto);
     }
 
-    @Post('login')
+    @Post('student-login')
     @ApiOperation({ summary: 'Login with email/phone/username and password' })
     @ApiBody({ type: LoginDto })
 

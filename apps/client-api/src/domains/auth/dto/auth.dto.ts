@@ -42,15 +42,6 @@ export class RegisterDto {
     @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
     phone?: string;
 
-    @ApiProperty({
-        description: 'Username (unique)',
-        example: 'kiddo123',
-        required: false,
-    })
-    @IsOptional()
-    @IsString()
-    @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
-    username?: string;
 
     @ApiProperty({
         description: 'Mật khẩu',
