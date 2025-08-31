@@ -5,6 +5,7 @@ import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import 'reflect-metadata';
 import { ClientApiModule } from './client-api.module';
+import { SwaggerService } from './domains/swagger/swagger.service';
 
 async function bootstrap() {
     const app = await NestFactory.create(ClientApiModule);
@@ -41,7 +42,9 @@ async function bootstrap() {
 
     const document = SwaggerModule.createDocument(app, config, {
         deepScanRoutes: true, // scan cả module import sâu
-    });
+    })
+
+
 
     // UI ở /api/docs, file JSON ở /api/docs-json
     SwaggerModule.setup('api/docs', app, document, {
@@ -52,6 +55,10 @@ async function bootstrap() {
             displayRequestDuration: true,
         },
     });
+
+
+    const swaggerSvc = app.get(SwaggerService);
+  swaggerSvc.setSpec(document);
     // ----------------------------
 
     await app.listen(process.env.PORT ?? 3000); // nên dùng PORT (chữ hoa)

@@ -4,25 +4,26 @@ import { RequestContextMiddleware } from '@app/shared/middleware/request-context
 import { MiddlewareConsumer, Module } from '@nestjs/common';
 import { ClientApiController } from './client-api.controller';
 import { ClientApiService } from './client-api.service';
-import { AuthModule } from './domains/auth/auth.module';
-import { StudentModule } from './domains/student/student.module';
-import { CourseModule } from './domains/course/course.module';
-import { EventsModule } from './events/events.module';
-import { DashboardModule } from './domains/dashboard/dashboard.module';
-import { LessonModule } from './domains/lesson';
 import { ActivityModule } from './domains/activity';
-import { ProgressModule } from './domains/progress';
+import { AgentModule } from './domains/agent/agent.module';
 import { AttemptModule } from './domains/attempt';
-import { ParentChildModule } from './domains/parent-child';
+import { AuthModule } from './domains/auth/auth.module';
+import { ClassroomModule } from './domains/classroom';
+import { CourseModule } from './domains/course/course.module';
+import { DashboardModule } from './domains/dashboard/dashboard.module';
 import { DeviceTokenModule } from './domains/device-token';
+import { LessonModule } from './domains/lesson';
 import { NotificationModule } from './domains/notification';
+import { ParentChildModule } from './domains/parent-child';
+import { ProgressModule } from './domains/progress';
+import { StudentModule } from './domains/student/student.module';
+import { SwaggerLoaderModule } from './domains/swagger/swagger.module';
 import { TeacherModule } from './domains/teacher';
 import { UploadModule } from './domains/upload';
-import { ClassroomModule } from './domains/classroom';
-import { AgentModule } from './domains/agent/agent.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
-    imports: [DatabaseModule, AuthModule, SharedModule, StudentModule, CourseModule, EventsModule, DashboardModule, LessonModule, ActivityModule, ProgressModule, AttemptModule, ParentChildModule, DeviceTokenModule, NotificationModule, TeacherModule, UploadModule, ClassroomModule, AgentModule],
+    imports: [DatabaseModule, AuthModule, SharedModule, StudentModule, CourseModule, EventsModule, DashboardModule, LessonModule, ActivityModule, ProgressModule, AttemptModule, ParentChildModule, DeviceTokenModule, NotificationModule, TeacherModule, UploadModule, ClassroomModule, AgentModule, SwaggerLoaderModule],
     controllers: [ClientApiController],
     providers: [ClientApiService],
 })

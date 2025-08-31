@@ -1,6 +1,3 @@
-// SQL Service: Text-to-SQL (SELECT-only) + thực thi bằng Prisma.$queryRaw
-// Cảnh báo: vẫn phải validate kỹ SQL! (chặn non-SELECT, từ khóa nguy hiểm)
-
 import { PrismaRepository } from '@app/database';
 import { normalizeBigInt, safeStringify } from '@app/shared/utils/json.util';
 import { Injectable, Logger } from '@nestjs/common';
@@ -54,23 +51,25 @@ export class SqlService {
     isValid: boolean;
   }> {
     const prompt = `
-BẠN LÀ CHUYÊN GIA SQL. Hãy tạo câu lệnh PostgreSQL SELECT cho yêu cầu sau.
+Bạn là chuyên gia PostgreSQL.
+DƯỚI ĐÂY LÀ SCHEMA THỰC TẾ (duy nhất đúng). CHỈ ĐƯỢC DÙNG các tên bảng/cột xuất hiện trong phần SCHEMA.
+Nếu thiếu cột/bảng cần thiết → trả về đúng chuỗi: SCHEMA_MISMATCH
 
-DATABASE SCHEMA:
+SCHEMA:
 ${schema}
 
-YÊU CẦU: "${query}"
+YÊU CẦU NGƯỜI DÙNG: "${query}"
 
 QUY TẮC:
-- CHỈ dùng SELECT (không INSERT/UPDATE/DELETE/DDL)
-- PostgreSQL syntax
-- "top"/"cao nhất" -> ORDER BY ... DESC LIMIT
-- "thấp nhất" -> ORDER BY ... ASC LIMIT
-- "tìm", "chứa" -> WHERE name LIKE '%text%' hoặc lớp dùng className
-- Điểm -> cột score hoặc gpa
-- Luôn có LIMIT để tránh quá nhiều kết quả
-- Trả về CHỈ SQL, không giải thích
+- CHỈ viết 1 câu SELECT duy nhất. Luôn có LIMIT.
+- Tất cả tên bảng/cột phải đặt trong "double quotes" đúng chính tả như SCHEMA.
+- Không được bịa tên bảng/cột. Không dùng alias ngoài schema.
+- Nếu câu hỏi nói "học viên/sinh viên" → hiểu là bảng/cột tương ứng trong SCHEMA (ví dụ "User" với role='STUDENT' nếu có).
+- Nếu không thể map được vì schema thiếu, trả "SCHEMA_MISMATCH".
+
+CHỈ TRẢ VỀ SQL (hoặc SCHEMA_MISMATCH), KHÔNG GIẢI THÍCH:
 `;
+
     const out = await this.geminiService.generateResponse(prompt);
     const sql = out.trim().replace(/```sql|```/g, '').trim();
     return { sql, isValid: this.validateSQL(sql) };

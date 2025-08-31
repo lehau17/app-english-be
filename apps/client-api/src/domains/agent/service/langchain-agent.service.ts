@@ -2,6 +2,9 @@ import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { Injectable, Logger } from '@nestjs/common';
 import { AgentExecutor, createToolCallingAgent } from 'langchain/agents';
+import { SwaggerService } from '../../swagger/swagger.service';
+import { ApiSearchTool } from '../tools/api-search.tool';
+import { ApiTool } from '../tools/api.tool';
 import { RagTool } from '../tools/rag.tool';
 import { SqlTool } from '../tools/sql.tool';
 import { RagService } from './rag.service';
@@ -15,6 +18,8 @@ export class LangChainAgentService {
   constructor(
     private ragService: RagService,
     private sqlService: SqlService,
+    private swaggerService: SwaggerService,
+      private apiSearch: ApiSearchTool,
   ) {
     // không await trong ctor: gọi initialize() ở nơi thích hợp nếu cần
     void this.initializeAgent();
@@ -30,29 +35,26 @@ export class LangChainAgentService {
         temperature: 0.1,
       });
 
-      const tools = [new RagTool(this.ragService), new SqlTool(this.sqlService)];
+      const tools = [new RagTool(this.ragService), new SqlTool(this.sqlService), new ApiTool(this.swaggerService), new ApiSearchTool(this.swaggerService)];
 
-      const prompt = ChatPromptTemplate.fromMessages([
-        [
-          'system',
-          `
-Bạn có 2 công cụ:
-- knowledge_search: dùng cho policy/process/faq ("là gì", "quy định", "cách...")
-- database_query: dùng cho thống kê/ranking/danh sách/tìm record (real-time data)
+       const prompt = ChatPromptTemplate.fromMessages([
+    ['system', `
+Bạn có 4 công cụ:
+- api_search: TÌM endpoint phù hợp từ Swagger (không cần operationId).
+- call_api: GỌI endpoint bằng method+path. Tự gắn Bearer token từ request.
+- database_query: SELECT-only cho thống kê nếu không có endpoint phù hợp.
+- knowledge_search: Tra cứu policy/FAQ (RAG).
 
 Quy tắc:
-1) Phân loại câu hỏi → chọn tool phù hợp (có thể dùng nhiều tool).
-2) Ưu tiên trả lời bằng dữ liệu/nguồn cụ thể.
-3) Trả lời ngắn gọn, tiếng Việt.
-MỌI CÂU TRẢ LỜI CHO NGƯỜI DÙNG PHẢI DƯỚI DẠNG **MARKDOWN** CHUẨN,
-dùng ### tiêu đề, danh sách -, và bảng Markdown khi phù hợp.
-`,
-        ],
-        ['placeholder', '{chat_history}'],
-        ['human', '{input}'],
-        ['placeholder', '{agent_scratchpad}'],
-      ]);
-
+1) Khi người dùng muốn dữ liệu từ hệ thống → GỌI api_search với từ khoá (vi/en), ưu tiên vi để lấy candidates.
+2) Chọn candidate phù hợp nhất rồi GỌI call_api(method+path, query/body/pathParams).
+3) Nếu Swagger không có endpoint phù hợp → fallback database_query hoặc knowledge_search.
+4) Trả lời **Markdown** ngắn gọn, nêu rõ dữ liệu đến từ API nào (method path).
+`],
+    ['placeholder', '{chat_history}'],
+    ['human', '{input}'],
+    ['placeholder', '{agent_scratchpad}'],
+  ]);
       const agent = await createToolCallingAgent({
         llm,
         tools,
