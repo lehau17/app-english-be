@@ -36,9 +36,11 @@ export class ClassroomService {
     }
 
     async addStudentToClassroom(classroomId: string, dto: AddStudentToClassroomDto): Promise<void> {
-        await this.findById(classroomId);
-        // You might want to check if the student exists as well
-        await this.classroomRepository.addStudent(classroomId, dto.studentId);
+      await this.findById(classroomId);
+      const { studentIds } = dto;
+
+      const arrPromise = studentIds.map(studentId => this.classroomRepository.addStudent(classroomId, studentId));
+      await Promise.all(arrPromise);
     }
 
     async removeStudentFromClassroom(classroomId: string, studentId: string): Promise<void> {

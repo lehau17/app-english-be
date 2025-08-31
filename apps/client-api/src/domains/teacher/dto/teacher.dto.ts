@@ -1,7 +1,8 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsEmail, MinLength } from 'class-validator';
+import { Gender } from '@prisma/client';
 import { Transform } from 'class-transformer';
+import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateTeacherDto {
     @ApiProperty({
@@ -28,6 +29,21 @@ export class CreateTeacherDto {
     @ApiProperty({ description: 'Last Name', example: 'Doe' })
     @IsString()
     lastName: string;
+
+  @ApiProperty({ description: 'Phone number', example: '+84901234567' })
+  @IsString()
+
+  phone: string;
+
+  @ApiProperty({ description: 'Display Name', example: 'John Doe' })
+  @IsString()
+  displayName?: string | null;
+
+  @ApiProperty({ description: 'Gender', example: 'MALE' })
+  @IsOptional()
+  gender?: Gender | null;
+
+
 }
 
 export class UpdateTeacherDto {

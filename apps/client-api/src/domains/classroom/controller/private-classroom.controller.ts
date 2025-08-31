@@ -1,22 +1,22 @@
 import { ResponseMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    ParseUUIDPipe,
-    Post,
-    Put,
-    Query,
-    Res
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+  Res
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Classroom } from '@prisma/client';
-import { CreateClassroomDto, FilterClassroomRequestDto, UpdateClassroomDto, AddStudentToClassroomDto, AssignTeacherToClassroomDto } from '../dto/classroom.dto';
-import { ClassroomService } from '../service/classroom.service';
 import { Response } from 'express';
+import { AddStudentToClassroomDto, AssignTeacherToClassroomDto, CreateClassroomDto, FilterClassroomRequestDto, UpdateClassroomDto } from '../dto/classroom.dto';
+import { ClassroomService } from '../service/classroom.service';
 
 @ApiTags('Classrooms')
 @ApiBearerAuth('Authorization')

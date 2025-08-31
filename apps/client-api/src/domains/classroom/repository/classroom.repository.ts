@@ -57,6 +57,7 @@ export class ClassroomRepository {
         });
     }
 
+
     async removeStudent(classroomId: string, studentId: string) {
         return this.prisma.classroomStudent.delete({
             where: { classroomId_studentId: { classroomId, studentId } },

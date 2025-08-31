@@ -1,9 +1,9 @@
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { User, UserRole } from '@prisma/client';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Gender, User, UserRole } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
 import { CreateTeacherDto, FilterTeacherRequestDto, UpdateTeacherDto } from '../dto/teacher.dto';
 import { TeacherRepository } from '../repository/teacher.repository';
-import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class TeacherService {
@@ -14,8 +14,10 @@ export class TeacherService {
         if (existingTeacher) {
             throw new BadRequestException('Teacher with this email already exists');
         }
-        const passwordHash = await bcrypt.hash(dto.password, 10);
-        return this.teacherRepository.create({ ...dto, passwordHash, role: UserRole.teacher });
+        const {password , ...rest} = dto;
+
+        const passwordHash = await bcrypt.hash(password, 10);
+        return this.teacherRepository.create({ ...rest, passwordHash, role: UserRole.teacher });
     }
 
     async findById(id: string): Promise<User> {
@@ -63,10 +65,13 @@ export class TeacherService {
         const emailIndex = header.indexOf('email');
         const passwordIndex = header.indexOf('password');
         const firstNameIndex = header.indexOf('firstName');
-        const lastNameIndex = header.indexOf('lastName');
+      const lastNameIndex = header.indexOf('lastName');
+      const genderIndex = header.indexOf('gender');
+      const displayNameIndex = header.indexOf('displayName');
+      const phoneIndex = header.indexOf('phone');
 
-        if (emailIndex === -1 || passwordIndex === -1 || firstNameIndex === -1 || lastNameIndex === -1) {
-            throw new BadRequestException('CSV header must contain email, password, firstName, lastName');
+        if (emailIndex === -1 || passwordIndex === -1 || firstNameIndex === -1 || lastNameIndex === -1 || phoneIndex === -1) {
+            throw new BadRequestException('CSV header must contain email, password, firstName, lastName, phone');
         }
 
         const teachersToCreate: CreateTeacherDto[] = [];
@@ -77,10 +82,13 @@ export class TeacherService {
             const email = values[emailIndex]?.trim();
             const password = values[passwordIndex]?.trim();
             const firstName = values[firstNameIndex]?.trim();
-            const lastName = values[lastNameIndex]?.trim();
+          const lastName = values[lastNameIndex]?.trim();
+          const gender = values[genderIndex]?.trim() as Gender
+          const displayName = values[displayNameIndex]?.trim();
+          const phone = values[phoneIndex]?.trim();
 
-            if (email && password && firstName && lastName) {
-                teachersToCreate.push({ email, password, firstName, lastName });
+            if (email && password && firstName && lastName && phone) {
+                teachersToCreate.push({ email, password, firstName, lastName, gender, displayName, phone });
             } else {
                 errors.push({ row: i + 1, error: 'Missing required fields' });
             }

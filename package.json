@@ -31,6 +31,10 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.872.0",
+    "@google/generative-ai": "^0.24.1",
+    "@langchain/core": "^0.3.72",
+    "@langchain/google-genai": "^0.2.16",
+    "@langchain/langgraph": "^0.4.8",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/common": "^10.0.0",
     "@nestjs/config": "^4.0.2",
@@ -40,6 +44,7 @@
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/platform-socket.io": "^10.4.20",
     "@nestjs/swagger": "^7.3.1",
+    "@nestjs/typeorm": "^11.0.0",
     "@nestjs/websockets": "^10.4.20",
     "@prisma/client": "^6.13.0",
     "bcrypt": "^6.0.0",
@@ -47,12 +52,16 @@
     "class-validator": "^0.14.2",
     "jsonwebtoken": "^9.0.2",
     "kafkajs": "^2.2.4",
+    "langchain": "^0.3.31",
     "nodemailer": "^7.0.5",
+    "pg": "^8.16.3",
     "pug": "^3.0.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1",
-    "uuid": "^11.1.0"
+    "typeorm": "^0.3.26",
+    "uuid": "^11.1.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

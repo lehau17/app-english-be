@@ -17,9 +17,9 @@ export class StudentService {
      */
 
     async create(dto: CreateStudentDto): Promise<User> {
-        const exists = await this.studentRepository.checkExistContrants(dto.email, dto.phone, dto.username);
+        const exists = await this.studentRepository.checkExistContrants(dto.email, dto.phone);
         if (exists) {
-            throw new BadRequestException('Email/Phone/Username already exists');
+            throw new BadRequestException('Email/Phone already exists');
         }
         const passwordHash = await bcrypt.hash(dto.password, 10);
         const { password: _, ...rest } = dto

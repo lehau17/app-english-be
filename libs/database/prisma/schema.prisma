@@ -13,11 +13,12 @@ datasource db {
 // ===================== ENUMS =====================
 
 enum UserRole {
-    student
-    parent
-    teacher
-    admin
-    content_creator // Cho CMS system
+  student         @map("STUDENT")
+  parent          @map("PARENT")
+  teacher         @map("TEACHER")
+  admin           @map("ADMIN")
+  content_creator @map("CONTENT_CREATOR")
+  @@map("UserRole") // tên enum type trong Postgres nếu khác mặc định
 }
 
 enum Status {
@@ -154,6 +155,19 @@ enum DifficultyLevel {
 }
 
 // ===================== MODELS =====================
+model KnowledgeDocument {
+  id           String   @id @default(uuid())
+  title        String
+  content      String
+  embedding    String   // JSON string của mảng float
+  documentType String   // regulation | handbook | curriculum ...
+  source       String
+  createdAt    DateTime @default(now())
+
+  @@map("knowledge_documents")
+}
+
+
 
 model User {
     id           String       @id @default(uuid())

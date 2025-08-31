@@ -1,6 +1,6 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsArray, IsBoolean, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 
 export class CreateClassroomDto {
     @ApiProperty({ example: 'Lop hoc 1' })
@@ -16,6 +16,15 @@ export class CreateClassroomDto {
     @IsUUID()
     teacherId: string;
 
+    @ApiProperty({ example: 30 })
+    @IsInt()
+    @Min(1)
+    maxStudents: number;
+
+    @ApiProperty({ example: true })
+    @IsBoolean()
+    @IsOptional()
+    isActive?:boolean
 
     toCreateTeacherPayloadDB() {
         return {
@@ -26,7 +35,9 @@ export class CreateClassroomDto {
                     id: this.teacherId
                 }
             },
-            classCode: new Date().getTime().toString()
+          classCode: new Date().getTime().toString(),
+          maxStudents: this.maxStudents,
+          isActive: this.isActive || true
         }
     }
 }
@@ -67,9 +78,10 @@ export class FilterClassroomRequestDto extends RequestPagingDto {
 }
 
 export class AddStudentToClassroomDto {
-    @ApiProperty({ example: 'f8a8b8e0-5b7a-4b0e-8b0a-0b8b8b8b8b8b' })
-    @IsUUID()
-    studentId: string;
+  @ApiProperty({ example: 'f8a8b8e0-5b7a-4b0e-8b0a-0b8b8b8b8b8b' })
+  @IsArray()
+  @IsNotEmpty({ each: true })
+    studentIds: string[];
 }
 
 export class AssignTeacherToClassroomDto {

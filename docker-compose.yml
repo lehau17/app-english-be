@@ -1,7 +1,7 @@
 version: '3.8'
 services:
   postgres:
-    image: postgres:13
+    image: pgvector/pgvector:0.8.0-pg17-trixie
     container_name: english_learning_db
     environment:
       POSTGRES_USER: postgres

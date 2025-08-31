@@ -1,20 +1,33 @@
-/*
-  Warnings:
+-- CreateEnum
+CREATE TYPE "public"."UserRole" AS ENUM ('student', 'parent', 'teacher', 'admin', 'content_creator');
 
-  - A unique constraint covering the columns `[userId,periodType,periodStart,scope,scopeId]` on the table `LeaderboardEntry` will be added. If there are existing duplicate values, this will fail.
-  - Added the required column `title` to the `Activity` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `updatedAt` to the `Activity` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `category` to the `Badge` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `conditions` to the `Badge` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `updatedAt` to the `Course` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `periodType` to the `LeaderboardEntry` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `updatedAt` to the `LeaderboardEntry` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `updatedAt` to the `Lesson` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `orderNo` to the `LessonDetail` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `type` to the `LessonDetail` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `type` to the `Notification` table without a default value. This is not possible if the table is not empty.
+-- CreateEnum
+CREATE TYPE "public"."Status" AS ENUM ('active', 'inactive', 'banned', 'pending', 'suspended');
 
-*/
+-- CreateEnum
+CREATE TYPE "public"."AuthProvider" AS ENUM ('local', 'google', 'facebook', 'apple');
+
+-- CreateEnum
+CREATE TYPE "public"."Gender" AS ENUM ('male', 'female', 'other', 'prefer_not_to_say');
+
+-- CreateEnum
+CREATE TYPE "public"."LanguageCode" AS ENUM ('en', 'vi', 'ko', 'jp', 'zh', 'fr', 'es', 'de');
+
+-- CreateEnum
+CREATE TYPE "public"."TimezoneCode" AS ENUM ('Asia_Ho_Chi_Minh', 'Asia_Tokyo', 'Asia_Seoul', 'America_New_York', 'Europe_London', 'America_Los_Angeles', 'Australia_Sydney');
+
+-- CreateEnum
+CREATE TYPE "public"."ActivityType" AS ENUM ('vocab', 'pronunciation', 'listening', 'speaking', 'mini_game', 'reading', 'writing', 'grammar', 'quiz', 'flashcard', 'conversation');
+
+-- CreateEnum
+CREATE TYPE "public"."ProgressState" AS ENUM ('not_started', 'in_progress', 'done', 'review_needed', 'mastered');
+
+-- CreateEnum
+CREATE TYPE "public"."DevicePlatform" AS ENUM ('ios', 'android', 'web', 'desktop');
+
+-- CreateEnum
+CREATE TYPE "public"."NotificationChannel" AS ENUM ('socket', 'fcm', 'email', 'sms', 'in_app');
+
 -- CreateEnum
 CREATE TYPE "public"."NotificationType" AS ENUM ('achievement', 'reminder', 'system', 'social', 'assignment', 'streak', 'parent_child');
 
@@ -33,228 +46,69 @@ CREATE TYPE "public"."RewardType" AS ENUM ('digital', 'physical', 'screen_time',
 -- CreateEnum
 CREATE TYPE "public"."DifficultyLevel" AS ENUM ('beginner', 'elementary', 'intermediate', 'upper_intermediate', 'advanced', 'expert');
 
--- AlterEnum
--- This migration adds more than one value to an enum.
--- With PostgreSQL versions 11 and earlier, this is not possible
--- in a single migration. This can be worked around by creating
--- multiple migrations, each migration adding only one value to
--- the enum.
+-- CreateTable
+CREATE TABLE "public"."knowledge_documents" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "embedding" TEXT NOT NULL,
+    "documentType" TEXT NOT NULL,
+    "source" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
+    CONSTRAINT "knowledge_documents_pkey" PRIMARY KEY ("id")
+);
 
-ALTER TYPE "public"."ActivityType" ADD VALUE 'reading';
-ALTER TYPE "public"."ActivityType" ADD VALUE 'writing';
-ALTER TYPE "public"."ActivityType" ADD VALUE 'grammar';
-ALTER TYPE "public"."ActivityType" ADD VALUE 'quiz';
-ALTER TYPE "public"."ActivityType" ADD VALUE 'flashcard';
-ALTER TYPE "public"."ActivityType" ADD VALUE 'conversation';
+-- CreateTable
+CREATE TABLE "public"."User" (
+    "id" TEXT NOT NULL,
+    "email" TEXT,
+    "phone" TEXT,
+    "passwordHash" TEXT,
+    "role" "public"."UserRole" NOT NULL DEFAULT 'student',
+    "status" "public"."Status" NOT NULL DEFAULT 'active',
+    "provider" "public"."AuthProvider" NOT NULL DEFAULT 'local',
+    "providerId" TEXT,
+    "firstName" TEXT,
+    "lastName" TEXT,
+    "displayName" TEXT,
+    "gender" "public"."Gender",
+    "dob" TIMESTAMP(3),
+    "nationality" TEXT,
+    "nativeLanguage" "public"."LanguageCode",
+    "avatarUrl" TEXT,
+    "bio" TEXT,
+    "language" "public"."LanguageCode" DEFAULT 'en',
+    "timezone" "public"."TimezoneCode" DEFAULT 'Asia_Ho_Chi_Minh',
+    "lastLoginAt" TIMESTAMP(3),
+    "lastActiveAt" TIMESTAMP(3),
+    "emailVerified" BOOLEAN NOT NULL DEFAULT false,
+    "phoneVerified" BOOLEAN NOT NULL DEFAULT false,
+    "twoFactorEnabled" BOOLEAN NOT NULL DEFAULT false,
+    "preferences" JSONB,
+    "privacySettings" JSONB,
+    "notificationSettings" JSONB,
+    "parentalConsent" BOOLEAN,
+    "profileCompleteness" INTEGER NOT NULL DEFAULT 0,
+    "isOnline" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
--- AlterEnum
-ALTER TYPE "public"."DevicePlatform" ADD VALUE 'desktop';
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
 
--- AlterEnum
-ALTER TYPE "public"."Gender" ADD VALUE 'prefer_not_to_say';
+-- CreateTable
+CREATE TABLE "public"."RefreshToken" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "deviceId" TEXT,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "revokedAt" TIMESTAMP(3),
+    "lastUsedAt" TIMESTAMP(3),
 
--- AlterEnum
--- This migration adds more than one value to an enum.
--- With PostgreSQL versions 11 and earlier, this is not possible
--- in a single migration. This can be worked around by creating
--- multiple migrations, each migration adding only one value to
--- the enum.
-
-
-ALTER TYPE "public"."LanguageCode" ADD VALUE 'es';
-ALTER TYPE "public"."LanguageCode" ADD VALUE 'de';
-
--- AlterEnum
--- This migration adds more than one value to an enum.
--- With PostgreSQL versions 11 and earlier, this is not possible
--- in a single migration. This can be worked around by creating
--- multiple migrations, each migration adding only one value to
--- the enum.
-
-
-ALTER TYPE "public"."NotificationChannel" ADD VALUE 'email';
-ALTER TYPE "public"."NotificationChannel" ADD VALUE 'sms';
-ALTER TYPE "public"."NotificationChannel" ADD VALUE 'in_app';
-
--- AlterEnum
--- This migration adds more than one value to an enum.
--- With PostgreSQL versions 11 and earlier, this is not possible
--- in a single migration. This can be worked around by creating
--- multiple migrations, each migration adding only one value to
--- the enum.
-
-
-ALTER TYPE "public"."ProgressState" ADD VALUE 'review_needed';
-ALTER TYPE "public"."ProgressState" ADD VALUE 'mastered';
-
--- AlterEnum
-ALTER TYPE "public"."Status" ADD VALUE 'suspended';
-
--- AlterEnum
--- This migration adds more than one value to an enum.
--- With PostgreSQL versions 11 and earlier, this is not possible
--- in a single migration. This can be worked around by creating
--- multiple migrations, each migration adding only one value to
--- the enum.
-
-
-ALTER TYPE "public"."TimezoneCode" ADD VALUE 'America_Los_Angeles';
-ALTER TYPE "public"."TimezoneCode" ADD VALUE 'Australia_Sydney';
-
--- AlterEnum
-ALTER TYPE "public"."UserRole" ADD VALUE 'content_creator';
-
--- DropIndex
-DROP INDEX "public"."LeaderboardEntry_periodStart_periodEnd_xp_idx";
-
--- DropIndex
-DROP INDEX "public"."LeaderboardEntry_userId_periodStart_periodEnd_key";
-
--- AlterTable
-ALTER TABLE "public"."Activity" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "difficulty" "public"."DifficultyLevel" NOT NULL DEFAULT 'beginner',
-ADD COLUMN     "hints" JSONB,
-ADD COLUMN     "instructions" TEXT,
-ADD COLUMN     "maxAttempts" INTEGER,
-ADD COLUMN     "mediaUrls" JSONB,
-ADD COLUMN     "passingScore" INTEGER,
-ADD COLUMN     "points" INTEGER NOT NULL DEFAULT 10,
-ADD COLUMN     "timeLimit" INTEGER,
-ADD COLUMN     "title" TEXT NOT NULL,
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."Attempt" ADD COLUMN     "averageTime" INTEGER,
-ADD COLUMN     "correctAnswers" INTEGER,
-ADD COLUMN     "feedback" TEXT,
-ADD COLUMN     "maxScore" INTEGER,
-ADD COLUMN     "timeSpent" INTEGER,
-ADD COLUMN     "totalQuestions" INTEGER;
-
--- AlterTable
-ALTER TABLE "public"."Badge" ADD COLUMN     "category" TEXT NOT NULL,
-ADD COLUMN     "conditions" JSONB NOT NULL,
-ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "isSecret" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN     "points" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "rarity" TEXT NOT NULL DEFAULT 'common';
-
--- AlterTable
-ALTER TABLE "public"."Course" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "difficulty" "public"."DifficultyLevel" NOT NULL DEFAULT 'beginner',
-ADD COLUMN     "enrollmentCount" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "estimatedTime" INTEGER,
-ADD COLUMN     "imageUrl" TEXT,
-ADD COLUMN     "isPublished" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN     "prerequisites" TEXT[],
-ADD COLUMN     "rating" DOUBLE PRECISION,
-ADD COLUMN     "tags" TEXT[],
-ADD COLUMN     "totalRatings" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."DeviceToken" ADD COLUMN     "appVersion" TEXT,
-ADD COLUMN     "deviceId" TEXT,
-ADD COLUMN     "deviceName" TEXT,
-ADD COLUMN     "isActive" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN     "osVersion" TEXT;
-
--- AlterTable
-ALTER TABLE "public"."LeaderboardEntry" ADD COLUMN     "activitiesCompleted" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "periodType" TEXT NOT NULL,
-ADD COLUMN     "scope" TEXT NOT NULL DEFAULT 'global',
-ADD COLUMN     "scopeId" TEXT,
-ADD COLUMN     "streakDays" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "streakRank" INTEGER,
-ADD COLUMN     "studyTimeMinutes" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL,
-ADD COLUMN     "xpRank" INTEGER;
-
--- AlterTable
-ALTER TABLE "public"."Lesson" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "difficulty" "public"."DifficultyLevel" NOT NULL DEFAULT 'beginner',
-ADD COLUMN     "estimatedTime" INTEGER,
-ADD COLUMN     "isLocked" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN     "objectives" TEXT[],
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."LessonDetail" ADD COLUMN     "orderNo" INTEGER NOT NULL,
-ADD COLUMN     "type" TEXT NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."Notification" ADD COLUMN     "actionUrl" TEXT,
-ADD COLUMN     "clickedAt" TIMESTAMP(3),
-ADD COLUMN     "delivered" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN     "expiresAt" TIMESTAMP(3),
-ADD COLUMN     "imageUrl" TEXT,
-ADD COLUMN     "priority" TEXT NOT NULL DEFAULT 'normal',
-ADD COLUMN     "scheduledFor" TIMESTAMP(3),
-ADD COLUMN     "targetRole" "public"."UserRole",
-ADD COLUMN     "type" "public"."NotificationType" NOT NULL;
-
--- AlterTable
-ALTER TABLE "public"."ParentChild" ADD COLUMN     "allowedActivities" TEXT[],
-ADD COLUMN     "bedtimeEnd" TEXT,
-ADD COLUMN     "bedtimeStart" TEXT,
-ADD COLUMN     "blockedContent" TEXT[],
-ADD COLUMN     "canControlTime" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN     "canSetGoals" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN     "canViewProgress" BOOLEAN NOT NULL DEFAULT true,
-ADD COLUMN     "dailyTimeLimit" INTEGER,
-ADD COLUMN     "maxDifficulty" "public"."DifficultyLevel";
-
--- AlterTable
-ALTER TABLE "public"."Profile" ADD COLUMN     "currentLevel" TEXT,
-ADD COLUMN     "dailyGoalMinutes" INTEGER,
-ADD COLUMN     "learningGoals" JSONB,
-ADD COLUMN     "reminderTimes" JSONB,
-ADD COLUMN     "studyStreak" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "totalStudyTime" INTEGER NOT NULL DEFAULT 0;
-
--- AlterTable
-ALTER TABLE "public"."Progress" ADD COLUMN     "attemptsCount" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "bestScore" INTEGER,
-ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "lastQuestionIndex" INTEGER,
-ADD COLUMN     "strengths" JSONB,
-ADD COLUMN     "weaknesses" JSONB;
-
--- AlterTable
-ALTER TABLE "public"."RefreshToken" ADD COLUMN     "deviceId" TEXT,
-ADD COLUMN     "lastUsedAt" TIMESTAMP(3);
-
--- AlterTable
-ALTER TABLE "public"."User" ADD COLUMN     "displayName" TEXT,
-ADD COLUMN     "isOnline" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN     "nationality" TEXT,
-ADD COLUMN     "nativeLanguage" "public"."LanguageCode",
-ADD COLUMN     "notificationSettings" JSONB,
-ADD COLUMN     "parentalConsent" BOOLEAN,
-ADD COLUMN     "privacySettings" JSONB,
-ADD COLUMN     "profileCompleteness" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "twoFactorEnabled" BOOLEAN NOT NULL DEFAULT false,
-ALTER COLUMN "language" SET DEFAULT 'en',
-ALTER COLUMN "timezone" SET DEFAULT 'Asia_Ho_Chi_Minh';
-
--- AlterTable
-ALTER TABLE "public"."UserBadge" ADD COLUMN     "maxProgress" INTEGER,
-ADD COLUMN     "progress" INTEGER;
-
--- AlterTable
-ALTER TABLE "public"."UserStats" ADD COLUMN     "coins" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "coinsSpent" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "level" INTEGER NOT NULL DEFAULT 1,
-ADD COLUMN     "listeningAccuracy" DOUBLE PRECISION,
-ADD COLUMN     "longestStreak" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "perfectScores" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "pronunciationScore" DOUBLE PRECISION,
-ADD COLUMN     "speakingFluency" DOUBLE PRECISION,
-ADD COLUMN     "totalActivities" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "totalStudyTime" INTEGER NOT NULL DEFAULT 0,
-ADD COLUMN     "vocabMastered" INTEGER NOT NULL DEFAULT 0;
+    CONSTRAINT "RefreshToken_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "public"."LoginSession" (
@@ -287,6 +141,45 @@ CREATE TABLE "public"."SecurityLog" (
 );
 
 -- CreateTable
+CREATE TABLE "public"."Profile" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "displayName" TEXT,
+    "avatarUrl" TEXT,
+    "dob" TIMESTAMP(3),
+    "guardianId" TEXT,
+    "currentLevel" TEXT,
+    "learningGoals" JSONB,
+    "studyStreak" INTEGER NOT NULL DEFAULT 0,
+    "totalStudyTime" INTEGER NOT NULL DEFAULT 0,
+    "dailyGoalMinutes" INTEGER,
+    "reminderTimes" JSONB,
+
+    CONSTRAINT "Profile_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Course" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "orderNo" INTEGER NOT NULL,
+    "difficulty" "public"."DifficultyLevel" NOT NULL DEFAULT 'beginner',
+    "estimatedTime" INTEGER,
+    "imageUrl" TEXT,
+    "tags" TEXT[],
+    "isPublished" BOOLEAN NOT NULL DEFAULT false,
+    "prerequisites" TEXT[],
+    "rating" DOUBLE PRECISION,
+    "totalRatings" INTEGER NOT NULL DEFAULT 0,
+    "enrollmentCount" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Course_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "public"."CourseRating" (
     "id" TEXT NOT NULL,
     "courseId" TEXT NOT NULL,
@@ -296,6 +189,56 @@ CREATE TABLE "public"."CourseRating" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "CourseRating_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Lesson" (
+    "id" TEXT NOT NULL,
+    "courseId" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "orderNo" INTEGER NOT NULL,
+    "difficulty" "public"."DifficultyLevel" NOT NULL DEFAULT 'beginner',
+    "estimatedTime" INTEGER,
+    "isLocked" BOOLEAN NOT NULL DEFAULT true,
+    "objectives" TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Lesson_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."LessonDetail" (
+    "id" TEXT NOT NULL,
+    "lessonId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "content" JSONB NOT NULL,
+    "orderNo" INTEGER NOT NULL,
+
+    CONSTRAINT "LessonDetail_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Activity" (
+    "id" TEXT NOT NULL,
+    "lessonId" TEXT NOT NULL,
+    "type" "public"."ActivityType" NOT NULL,
+    "orderNo" INTEGER NOT NULL,
+    "title" TEXT NOT NULL,
+    "content" JSONB NOT NULL,
+    "timeLimit" INTEGER,
+    "maxAttempts" INTEGER,
+    "passingScore" INTEGER,
+    "difficulty" "public"."DifficultyLevel" NOT NULL DEFAULT 'beginner',
+    "points" INTEGER NOT NULL DEFAULT 10,
+    "instructions" TEXT,
+    "hints" JSONB,
+    "mediaUrls" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Activity_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -312,6 +255,43 @@ CREATE TABLE "public"."Question" (
     "mediaUrl" TEXT,
 
     CONSTRAINT "Question_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Progress" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "activityId" TEXT NOT NULL,
+    "state" "public"."ProgressState" NOT NULL DEFAULT 'not_started',
+    "score" INTEGER,
+    "bestScore" INTEGER,
+    "timeSpentSec" INTEGER NOT NULL DEFAULT 0,
+    "attemptsCount" INTEGER NOT NULL DEFAULT 0,
+    "lastQuestionIndex" INTEGER,
+    "strengths" JSONB,
+    "weaknesses" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Progress_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Attempt" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "activityId" TEXT NOT NULL,
+    "score" INTEGER,
+    "maxScore" INTEGER,
+    "timeSpent" INTEGER,
+    "detail" JSONB,
+    "feedback" TEXT,
+    "correctAnswers" INTEGER,
+    "totalQuestions" INTEGER,
+    "averageTime" INTEGER,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Attempt_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -402,6 +382,24 @@ CREATE TABLE "public"."Announcement" (
 );
 
 -- CreateTable
+CREATE TABLE "public"."ParentChild" (
+    "parentId" TEXT NOT NULL,
+    "childId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "canViewProgress" BOOLEAN NOT NULL DEFAULT true,
+    "canSetGoals" BOOLEAN NOT NULL DEFAULT true,
+    "canControlTime" BOOLEAN NOT NULL DEFAULT true,
+    "dailyTimeLimit" INTEGER,
+    "bedtimeStart" TEXT,
+    "bedtimeEnd" TEXT,
+    "allowedActivities" TEXT[],
+    "blockedContent" TEXT[],
+    "maxDifficulty" "public"."DifficultyLevel",
+
+    CONSTRAINT "ParentChild_pkey" PRIMARY KEY ("parentId","childId")
+);
+
+-- CreateTable
 CREATE TABLE "public"."CustomReward" (
     "id" TEXT NOT NULL,
     "parentId" TEXT NOT NULL,
@@ -427,6 +425,118 @@ CREATE TABLE "public"."RewardClaim" (
     "claimedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "RewardClaim_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."DeviceToken" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "platform" "public"."DevicePlatform" NOT NULL,
+    "deviceId" TEXT,
+    "deviceName" TEXT,
+    "appVersion" TEXT,
+    "osVersion" TEXT,
+    "lastSeenAt" TIMESTAMP(3),
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "DeviceToken_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Notification" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "type" "public"."NotificationType" NOT NULL,
+    "title" TEXT NOT NULL,
+    "body" TEXT,
+    "data" JSONB,
+    "channel" "public"."NotificationChannel" NOT NULL,
+    "targetRole" "public"."UserRole",
+    "scheduledFor" TIMESTAMP(3),
+    "readAt" TIMESTAMP(3),
+    "clickedAt" TIMESTAMP(3),
+    "delivered" BOOLEAN NOT NULL DEFAULT false,
+    "priority" TEXT NOT NULL DEFAULT 'normal',
+    "actionUrl" TEXT,
+    "imageUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMP(3),
+
+    CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."UserStats" (
+    "userId" TEXT NOT NULL,
+    "xp" INTEGER NOT NULL DEFAULT 0,
+    "level" INTEGER NOT NULL DEFAULT 1,
+    "streakDays" INTEGER NOT NULL DEFAULT 0,
+    "longestStreak" INTEGER NOT NULL DEFAULT 0,
+    "lastStreakAt" TIMESTAMP(3),
+    "totalStudyTime" INTEGER NOT NULL DEFAULT 0,
+    "totalActivities" INTEGER NOT NULL DEFAULT 0,
+    "perfectScores" INTEGER NOT NULL DEFAULT 0,
+    "vocabMastered" INTEGER NOT NULL DEFAULT 0,
+    "pronunciationScore" DOUBLE PRECISION,
+    "listeningAccuracy" DOUBLE PRECISION,
+    "speakingFluency" DOUBLE PRECISION,
+    "coins" INTEGER NOT NULL DEFAULT 0,
+    "coinsSpent" INTEGER NOT NULL DEFAULT 0,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "UserStats_pkey" PRIMARY KEY ("userId")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Badge" (
+    "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "category" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "iconUrl" TEXT,
+    "rarity" TEXT NOT NULL DEFAULT 'common',
+    "conditions" JSONB NOT NULL,
+    "points" INTEGER NOT NULL DEFAULT 0,
+    "isSecret" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Badge_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."UserBadge" (
+    "userId" TEXT NOT NULL,
+    "badgeId" TEXT NOT NULL,
+    "earnedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "progress" INTEGER,
+    "maxProgress" INTEGER,
+
+    CONSTRAINT "UserBadge_pkey" PRIMARY KEY ("userId","badgeId")
+);
+
+-- CreateTable
+CREATE TABLE "public"."LeaderboardEntry" (
+    "id" TEXT NOT NULL,
+    "periodType" TEXT NOT NULL,
+    "periodStart" TIMESTAMP(3) NOT NULL,
+    "periodEnd" TIMESTAMP(3) NOT NULL,
+    "userId" TEXT NOT NULL,
+    "xp" INTEGER NOT NULL DEFAULT 0,
+    "activitiesCompleted" INTEGER NOT NULL DEFAULT 0,
+    "streakDays" INTEGER NOT NULL DEFAULT 0,
+    "studyTimeMinutes" INTEGER NOT NULL DEFAULT 0,
+    "rank" INTEGER,
+    "xpRank" INTEGER,
+    "streakRank" INTEGER,
+    "scope" TEXT NOT NULL DEFAULT 'global',
+    "scopeId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "LeaderboardEntry_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -761,6 +871,36 @@ CREATE TABLE "public"."Recommendation" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "User_email_key" ON "public"."User"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_phone_key" ON "public"."User"("phone");
+
+-- CreateIndex
+CREATE INDEX "User_status_idx" ON "public"."User"("status");
+
+-- CreateIndex
+CREATE INDEX "User_provider_providerId_idx" ON "public"."User"("provider", "providerId");
+
+-- CreateIndex
+CREATE INDEX "User_lastActiveAt_idx" ON "public"."User"("lastActiveAt");
+
+-- CreateIndex
+CREATE INDEX "User_role_idx" ON "public"."User"("role");
+
+-- CreateIndex
+CREATE INDEX "User_email_idx" ON "public"."User"("email");
+
+-- CreateIndex
+CREATE INDEX "User_phone_idx" ON "public"."User"("phone");
+
+-- CreateIndex
+CREATE INDEX "RefreshToken_userId_idx" ON "public"."RefreshToken"("userId");
+
+-- CreateIndex
+CREATE INDEX "RefreshToken_deviceId_idx" ON "public"."RefreshToken"("deviceId");
+
+-- CreateIndex
 CREATE INDEX "LoginSession_userId_idx" ON "public"."LoginSession"("userId");
 
 -- CreateIndex
@@ -776,16 +916,73 @@ CREATE INDEX "SecurityLog_action_idx" ON "public"."SecurityLog"("action");
 CREATE INDEX "SecurityLog_createdAt_idx" ON "public"."SecurityLog"("createdAt");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Profile_userId_key" ON "public"."Profile"("userId");
+
+-- CreateIndex
+CREATE INDEX "Course_orderNo_idx" ON "public"."Course"("orderNo");
+
+-- CreateIndex
+CREATE INDEX "Course_difficulty_idx" ON "public"."Course"("difficulty");
+
+-- CreateIndex
+CREATE INDEX "Course_isPublished_idx" ON "public"."Course"("isPublished");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Course_orderNo_key" ON "public"."Course"("orderNo");
+
+-- CreateIndex
 CREATE INDEX "CourseRating_courseId_idx" ON "public"."CourseRating"("courseId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "CourseRating_courseId_userId_key" ON "public"."CourseRating"("courseId", "userId");
 
 -- CreateIndex
+CREATE INDEX "Lesson_courseId_orderNo_idx" ON "public"."Lesson"("courseId", "orderNo");
+
+-- CreateIndex
+CREATE INDEX "Lesson_isLocked_idx" ON "public"."Lesson"("isLocked");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Lesson_courseId_orderNo_key" ON "public"."Lesson"("courseId", "orderNo");
+
+-- CreateIndex
+CREATE INDEX "LessonDetail_lessonId_idx" ON "public"."LessonDetail"("lessonId");
+
+-- CreateIndex
+CREATE INDEX "LessonDetail_lessonId_orderNo_idx" ON "public"."LessonDetail"("lessonId", "orderNo");
+
+-- CreateIndex
+CREATE INDEX "Activity_lessonId_orderNo_idx" ON "public"."Activity"("lessonId", "orderNo");
+
+-- CreateIndex
+CREATE INDEX "Activity_type_idx" ON "public"."Activity"("type");
+
+-- CreateIndex
+CREATE INDEX "Activity_difficulty_idx" ON "public"."Activity"("difficulty");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Activity_lessonId_orderNo_key" ON "public"."Activity"("lessonId", "orderNo");
+
+-- CreateIndex
 CREATE INDEX "Question_activityId_idx" ON "public"."Question"("activityId");
 
 -- CreateIndex
 CREATE INDEX "Question_activityId_orderNo_idx" ON "public"."Question"("activityId", "orderNo");
+
+-- CreateIndex
+CREATE INDEX "Progress_userId_updatedAt_idx" ON "public"."Progress"("userId", "updatedAt");
+
+-- CreateIndex
+CREATE INDEX "Progress_state_idx" ON "public"."Progress"("state");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Progress_userId_activityId_key" ON "public"."Progress"("userId", "activityId");
+
+-- CreateIndex
+CREATE INDEX "Attempt_userId_createdAt_idx" ON "public"."Attempt"("userId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "Attempt_activityId_idx" ON "public"."Attempt"("activityId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Classroom_classCode_key" ON "public"."Classroom"("classCode");
@@ -833,6 +1030,9 @@ CREATE INDEX "Announcement_priority_idx" ON "public"."Announcement"("priority");
 CREATE INDEX "Announcement_createdAt_idx" ON "public"."Announcement"("createdAt");
 
 -- CreateIndex
+CREATE INDEX "ParentChild_childId_idx" ON "public"."ParentChild"("childId");
+
+-- CreateIndex
 CREATE INDEX "CustomReward_parentId_idx" ON "public"."CustomReward"("parentId");
 
 -- CreateIndex
@@ -846,6 +1046,48 @@ CREATE INDEX "RewardClaim_childId_idx" ON "public"."RewardClaim"("childId");
 
 -- CreateIndex
 CREATE INDEX "RewardClaim_status_idx" ON "public"."RewardClaim"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "DeviceToken_token_key" ON "public"."DeviceToken"("token");
+
+-- CreateIndex
+CREATE INDEX "DeviceToken_userId_platform_idx" ON "public"."DeviceToken"("userId", "platform");
+
+-- CreateIndex
+CREATE INDEX "DeviceToken_token_idx" ON "public"."DeviceToken"("token");
+
+-- CreateIndex
+CREATE INDEX "Notification_userId_createdAt_idx" ON "public"."Notification"("userId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "Notification_type_idx" ON "public"."Notification"("type");
+
+-- CreateIndex
+CREATE INDEX "Notification_delivered_idx" ON "public"."Notification"("delivered");
+
+-- CreateIndex
+CREATE INDEX "Notification_scheduledFor_idx" ON "public"."Notification"("scheduledFor");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Badge_code_key" ON "public"."Badge"("code");
+
+-- CreateIndex
+CREATE INDEX "UserBadge_badgeId_idx" ON "public"."UserBadge"("badgeId");
+
+-- CreateIndex
+CREATE INDEX "UserBadge_earnedAt_idx" ON "public"."UserBadge"("earnedAt");
+
+-- CreateIndex
+CREATE INDEX "LeaderboardEntry_periodType_periodStart_periodEnd_idx" ON "public"."LeaderboardEntry"("periodType", "periodStart", "periodEnd");
+
+-- CreateIndex
+CREATE INDEX "LeaderboardEntry_scope_scopeId_xp_idx" ON "public"."LeaderboardEntry"("scope", "scopeId", "xp");
+
+-- CreateIndex
+CREATE INDEX "LeaderboardEntry_rank_idx" ON "public"."LeaderboardEntry"("rank");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "LeaderboardEntry_userId_periodType_periodStart_scope_scopeI_key" ON "public"."LeaderboardEntry"("userId", "periodType", "periodStart", "scope", "scopeId");
 
 -- CreateIndex
 CREATE INDEX "Friendship_receiverId_idx" ON "public"."Friendship"("receiverId");
@@ -1006,68 +1248,8 @@ CREATE INDEX "Recommendation_expiresAt_idx" ON "public"."Recommendation"("expire
 -- CreateIndex
 CREATE INDEX "Recommendation_viewed_clicked_dismissed_idx" ON "public"."Recommendation"("viewed", "clicked", "dismissed");
 
--- CreateIndex
-CREATE INDEX "Activity_type_idx" ON "public"."Activity"("type");
-
--- CreateIndex
-CREATE INDEX "Activity_difficulty_idx" ON "public"."Activity"("difficulty");
-
--- CreateIndex
-CREATE INDEX "Attempt_activityId_idx" ON "public"."Attempt"("activityId");
-
--- CreateIndex
-CREATE INDEX "Course_difficulty_idx" ON "public"."Course"("difficulty");
-
--- CreateIndex
-CREATE INDEX "Course_isPublished_idx" ON "public"."Course"("isPublished");
-
--- CreateIndex
-CREATE INDEX "DeviceToken_token_idx" ON "public"."DeviceToken"("token");
-
--- CreateIndex
-CREATE INDEX "LeaderboardEntry_periodType_periodStart_periodEnd_idx" ON "public"."LeaderboardEntry"("periodType", "periodStart", "periodEnd");
-
--- CreateIndex
-CREATE INDEX "LeaderboardEntry_scope_scopeId_xp_idx" ON "public"."LeaderboardEntry"("scope", "scopeId", "xp");
-
--- CreateIndex
-CREATE INDEX "LeaderboardEntry_rank_idx" ON "public"."LeaderboardEntry"("rank");
-
--- CreateIndex
-CREATE UNIQUE INDEX "LeaderboardEntry_userId_periodType_periodStart_scope_scopeI_key" ON "public"."LeaderboardEntry"("userId", "periodType", "periodStart", "scope", "scopeId");
-
--- CreateIndex
-CREATE INDEX "Lesson_isLocked_idx" ON "public"."Lesson"("isLocked");
-
--- CreateIndex
-CREATE INDEX "LessonDetail_lessonId_orderNo_idx" ON "public"."LessonDetail"("lessonId", "orderNo");
-
--- CreateIndex
-CREATE INDEX "Notification_type_idx" ON "public"."Notification"("type");
-
--- CreateIndex
-CREATE INDEX "Notification_delivered_idx" ON "public"."Notification"("delivered");
-
--- CreateIndex
-CREATE INDEX "Notification_scheduledFor_idx" ON "public"."Notification"("scheduledFor");
-
--- CreateIndex
-CREATE INDEX "Progress_state_idx" ON "public"."Progress"("state");
-
--- CreateIndex
-CREATE INDEX "RefreshToken_deviceId_idx" ON "public"."RefreshToken"("deviceId");
-
--- CreateIndex
-CREATE INDEX "User_role_idx" ON "public"."User"("role");
-
--- CreateIndex
-CREATE INDEX "User_email_idx" ON "public"."User"("email");
-
--- CreateIndex
-CREATE INDEX "User_phone_idx" ON "public"."User"("phone");
-
--- CreateIndex
-CREATE INDEX "UserBadge_earnedAt_idx" ON "public"."UserBadge"("earnedAt");
+-- AddForeignKey
+ALTER TABLE "public"."RefreshToken" ADD CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."LoginSession" ADD CONSTRAINT "LoginSession_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1076,10 +1258,34 @@ ALTER TABLE "public"."LoginSession" ADD CONSTRAINT "LoginSession_userId_fkey" FO
 ALTER TABLE "public"."SecurityLog" ADD CONSTRAINT "SecurityLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "public"."Profile" ADD CONSTRAINT "Profile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "public"."CourseRating" ADD CONSTRAINT "CourseRating_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "public"."Course"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "public"."Lesson" ADD CONSTRAINT "Lesson_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "public"."Course"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."LessonDetail" ADD CONSTRAINT "LessonDetail_lessonId_fkey" FOREIGN KEY ("lessonId") REFERENCES "public"."Lesson"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Activity" ADD CONSTRAINT "Activity_lessonId_fkey" FOREIGN KEY ("lessonId") REFERENCES "public"."Lesson"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "public"."Question" ADD CONSTRAINT "Question_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "public"."Activity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Progress" ADD CONSTRAINT "Progress_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Progress" ADD CONSTRAINT "Progress_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "public"."Activity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Attempt" ADD CONSTRAINT "Attempt_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Attempt" ADD CONSTRAINT "Attempt_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "public"."Activity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."Classroom" ADD CONSTRAINT "Classroom_teacherId_fkey" FOREIGN KEY ("teacherId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1106,6 +1312,12 @@ ALTER TABLE "public"."AssignmentSubmission" ADD CONSTRAINT "AssignmentSubmission
 ALTER TABLE "public"."Announcement" ADD CONSTRAINT "Announcement_classroomId_fkey" FOREIGN KEY ("classroomId") REFERENCES "public"."Classroom"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "public"."ParentChild" ADD CONSTRAINT "ParentChild_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ParentChild" ADD CONSTRAINT "ParentChild_childId_fkey" FOREIGN KEY ("childId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "public"."CustomReward" ADD CONSTRAINT "CustomReward_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -1113,6 +1325,24 @@ ALTER TABLE "public"."RewardClaim" ADD CONSTRAINT "RewardClaim_rewardId_fkey" FO
 
 -- AddForeignKey
 ALTER TABLE "public"."RewardClaim" ADD CONSTRAINT "RewardClaim_childId_fkey" FOREIGN KEY ("childId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."DeviceToken" ADD CONSTRAINT "DeviceToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."UserStats" ADD CONSTRAINT "UserStats_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."UserBadge" ADD CONSTRAINT "UserBadge_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."UserBadge" ADD CONSTRAINT "UserBadge_badgeId_fkey" FOREIGN KEY ("badgeId") REFERENCES "public"."Badge"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."LeaderboardEntry" ADD CONSTRAINT "LeaderboardEntry_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."Friendship" ADD CONSTRAINT "Friendship_initiatorId_fkey" FOREIGN KEY ("initiatorId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

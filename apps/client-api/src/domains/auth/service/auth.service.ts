@@ -50,12 +50,12 @@ export class AuthService {
      */
     async login(dto: LoginDto) {
         const user = await this.authRepository.findUserForLogin(dto.email);
-        if (!user) throw new UnauthorizedException('Invalid credentials');
+        if (!user) throw new BadRequestException('Invalid credentials');
 
-        if (!user.passwordHash) throw new UnauthorizedException('No password set for this account');
-        if(user.role !== UserRole.student) throw new UnauthorizedException('Invalid credentials');
+        if (!user.passwordHash) throw new BadRequestException('No password set for this account');
+        if(user.role !== UserRole.student) throw new BadRequestException('Invalid credentials');
         const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
-        if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials');
+        if (!isPasswordValid) throw new BadRequestException('Invalid credentials');
 
         const payload = {
             sub: user.id,
@@ -105,12 +105,12 @@ export class AuthService {
     async adminLogin(dto: LoginDto) {
         const user = await this.authRepository.findUserForLogin(dto.email);
         if (!user || user.role !== UserRole.admin) {
-            throw new UnauthorizedException('Invalid credentials');
+            throw new BadRequestException('Invalid credentials');
         }
 
         const isPasswordValid = await bcrypt.compare(dto.password, user.passwordHash);
         if (!isPasswordValid) {
-            throw new UnauthorizedException('Invalid credentials');
+            throw new BadRequestException('Invalid credentials');
         }
 
         const payload = {
@@ -125,7 +125,7 @@ export class AuthService {
     }
 
     async adminRegister(dto: RegisterDto) {
-        const user = await this.authRepository.register(dto);
+        const user = await this.authRepository.register({...dto});
         if (!user) {
             throw new BadRequestException('Failed to register admin user');
         }

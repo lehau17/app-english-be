@@ -51,7 +51,7 @@ export class StudentRepository {
         });
     }
 
-    async checkExistContrants(email: string, phone: string, username: string) {
+    async checkExistContrants(email: string, phone: string) {
         const user = await this.prisma.user.findFirst({
             where: {
                 OR: [
