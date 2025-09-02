@@ -3,7 +3,9 @@ import { BackgroundWorkerService } from './background-worker.service';
 
 @Controller()
 export class BackgroundWorkerController {
-  constructor(private readonly backgroundWorkerService: BackgroundWorkerService) {}
+  constructor(
+    private readonly backgroundWorkerService: BackgroundWorkerService,
+  ) {}
 
   @Get()
   getHello(): string {

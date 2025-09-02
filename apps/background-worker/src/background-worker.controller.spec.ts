@@ -11,7 +11,9 @@ describe('BackgroundWorkerController', () => {
       providers: [BackgroundWorkerService],
     }).compile();
 
-    backgroundWorkerController = app.get<BackgroundWorkerController>(BackgroundWorkerController);
+    backgroundWorkerController = app.get<BackgroundWorkerController>(
+      BackgroundWorkerController,
+    );
   });
 
   describe('root', () => {
