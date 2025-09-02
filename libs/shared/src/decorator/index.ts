@@ -1,2 +1,2 @@
-export * from "./payload-token.decorator";
-export * from "./ResponseMessage.decorator";
+export * from './payload-token.decorator';
+export * from './ResponseMessage.decorator';

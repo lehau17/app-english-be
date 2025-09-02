@@ -10,6 +10,14 @@ import { ApiSearchTool } from './tools/api-search.tool';
 
 @Module({
   controllers: [IntelligentController],
-  providers: [AgentService, LangChainAgentService, RagService, SqlService, GeminiService, ApiSearchTool, SwaggerService],
+  providers: [
+    AgentService,
+    LangChainAgentService,
+    RagService,
+    SqlService,
+    GeminiService,
+    ApiSearchTool,
+    SwaggerService,
+  ],
 })
 export class AgentModule {}

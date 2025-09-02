@@ -5,10 +5,7 @@ import { AuthService } from './service/auth.service';
 import { PrivateAuthController } from './controller/private-auth.controller';
 
 @Module({
-    controllers: [PublicAuthController, PrivateAuthController],
-    providers: [AuthService, AuthRepository],
+  controllers: [PublicAuthController, PrivateAuthController],
+  providers: [AuthService, AuthRepository],
 })
-export class AuthModule { }
-
-
-
+export class AuthModule {}

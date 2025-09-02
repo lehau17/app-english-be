@@ -61,9 +61,7 @@ export class RagService {
     }
 
     const context = relevantDocs
-      .map(
-        (d) => `📋 ${d.title} (${d.documentType}):\n${d.content}`,
-      )
+      .map((d) => `📋 ${d.title} (${d.documentType}):\n${d.content}`)
       .join('\n\n');
 
     const prompt = `
@@ -95,10 +93,7 @@ YÊU CẦU:
     };
   }
 
-  private async findSimilarDocuments(
-    queryEmbedding: number[],
-    topK = 3,
-  ) {
+  private async findSimilarDocuments(queryEmbedding: number[], topK = 3) {
     const allDocs = await this.prisma.knowledgeDocument.findMany();
     // tính cosine trong RAM (nhỏ gọn cho MVP)
     const scored = allDocs.map((d) => {

@@ -1,1 +1,1 @@
-export * from "./public-auth.controller";
+export * from './public-auth.controller';

@@ -10,7 +10,7 @@ export class SqlService {
   constructor(
     private prisma: PrismaRepository,
     private geminiService: GeminiService,
-  ) { }
+  ) {}
 
   async generateAndExecuteSQL(naturalQuery: string): Promise<{
     answer: string;
@@ -22,7 +22,7 @@ export class SqlService {
 
     const schema = await this.getDatabaseSchema(); // lấy cấu trúc DB
     const sqlResult = await this.generateSQL(naturalQuery, schema);
-    this.logger.log("Check sql:", sqlResult.sql)
+    this.logger.log('Check sql:', sqlResult.sql);
     // if (!sqlResult.isValid) {
     //   throw new Error(`SQL không hợp lệ cho query: ${naturalQuery}`);
     // }
@@ -43,10 +43,12 @@ export class SqlService {
       rowCount: dataParsed.length,
       rawData: dataParsed,
     };
-
   }
 
-  private async generateSQL(query: string, schema: string): Promise<{
+  private async generateSQL(
+    query: string,
+    schema: string,
+  ): Promise<{
     sql: string;
     isValid: boolean;
   }> {
@@ -71,7 +73,10 @@ CHỈ TRẢ VỀ SQL (hoặc SCHEMA_MISMATCH), KHÔNG GIẢI THÍCH:
 `;
 
     const out = await this.geminiService.generateResponse(prompt);
-    const sql = out.trim().replace(/```sql|```/g, '').trim();
+    const sql = out
+      .trim()
+      .replace(/```sql|```/g, '')
+      .trim();
     return { sql, isValid: this.validateSQL(sql) };
   }
 
@@ -118,8 +123,17 @@ CHỈ TRẢ VỀ SQL (hoặc SCHEMA_MISMATCH), KHÔNG GIẢI THÍCH:
     if (!upper.startsWith('SELECT')) return false;
 
     const banned = [
-      'DROP', 'DELETE', 'UPDATE', 'INSERT', 'ALTER', 'CREATE',
-      'TRUNCATE', 'EXEC', 'EXECUTE', '--', ';--'
+      'DROP',
+      'DELETE',
+      'UPDATE',
+      'INSERT',
+      'ALTER',
+      'CREATE',
+      'TRUNCATE',
+      'EXEC',
+      'EXECUTE',
+      '--',
+      ';--',
     ];
     if (banned.some((kw) => upper.includes(kw))) return false;
 
@@ -134,7 +148,7 @@ CHỈ TRẢ VỀ SQL (hoặc SCHEMA_MISMATCH), KHÔNG GIẢI THÍCH:
     data: any[],
     sql: string,
   ): Promise<string> {
-    const preview = safeStringify(data.slice(0, 10), 2)
+    const preview = safeStringify(data.slice(0, 10), 2);
     const prompt = `
 Người dùng hỏi: "${query}"
 SQL đã thực thi: ${sql}

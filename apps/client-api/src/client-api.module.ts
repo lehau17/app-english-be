@@ -21,15 +21,36 @@ import { SwaggerLoaderModule } from './domains/swagger/swagger.module';
 import { TeacherModule } from './domains/teacher';
 import { UploadModule } from './domains/upload';
 import { EventsModule } from './events/events.module';
+import { RoomModule } from './domains/room';
 
 @Module({
-    imports: [DatabaseModule, AuthModule, SharedModule, StudentModule, CourseModule, EventsModule, DashboardModule, LessonModule, ActivityModule, ProgressModule, AttemptModule, ParentChildModule, DeviceTokenModule, NotificationModule, TeacherModule, UploadModule, ClassroomModule, AgentModule, SwaggerLoaderModule],
-    controllers: [ClientApiController],
-    providers: [ClientApiService],
+  imports: [
+    DatabaseModule,
+    AuthModule,
+    SharedModule,
+    StudentModule,
+    CourseModule,
+    EventsModule,
+    DashboardModule,
+    LessonModule,
+    ActivityModule,
+    ProgressModule,
+    AttemptModule,
+    ParentChildModule,
+    DeviceTokenModule,
+    NotificationModule,
+    TeacherModule,
+    UploadModule,
+    ClassroomModule,
+    AgentModule,
+    SwaggerLoaderModule,
+    RoomModule,
+  ],
+  controllers: [ClientApiController],
+  providers: [ClientApiService],
 })
 export class ClientApiModule {
-    configure(consumer: MiddlewareConsumer) {
-        consumer.apply(RequestContextMiddleware).forRoutes('*');
-    }
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RequestContextMiddleware).forRoutes('*');
+  }
 }
-

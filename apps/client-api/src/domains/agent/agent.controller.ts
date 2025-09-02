@@ -17,7 +17,7 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiResponse,
-  ApiTags
+  ApiTags,
 } from '@nestjs/swagger';
 // Nếu bạn đã tạo response DTO ở bước (3)
 
@@ -41,7 +41,9 @@ export class IntelligentController {
   @ApiBody({
     type: QueryDto,
     examples: {
-      rag: { value: { question: 'Điều kiện để được xếp loại tốt nghiệp xuất sắc?' } },
+      rag: {
+        value: { question: 'Điều kiện để được xếp loại tốt nghiệp xuất sắc?' },
+      },
       sql: { value: { question: 'Top 5 học sinh có GPA cao nhất lớp 12A1' } },
       hybrid: {
         value: { question: 'Trong 12A1, ai đủ điều kiện tốt nghiệp xuất sắc?' },
@@ -50,7 +52,9 @@ export class IntelligentController {
   })
   async query(@Body() queryDto: QueryDto) {
     this.logger.log(`📥 Nhận câu hỏi: ${queryDto.question}`);
-    const result = await this.langchainAgent.processUserQuery(queryDto.question);
+    const result = await this.langchainAgent.processUserQuery(
+      queryDto.question,
+    );
     return result;
   }
 

@@ -4,7 +4,7 @@ import { StudentRepository } from './repository';
 import { StudentService } from './service/student.service';
 
 @Module({
-    controllers: [StudentController,],
-    providers: [StudentService, StudentRepository],
+  controllers: [StudentController],
+  providers: [StudentService, StudentRepository],
 })
-export class StudentModule { }
+export class StudentModule {}

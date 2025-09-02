@@ -2,56 +2,64 @@ import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import { Injectable } from '@nestjs/common';
 import { Prisma, Progress } from '@prisma/client';
-import { CreateProgressDto, FilterProgressRequestDto } from '../dto/progress.dto';
+import {
+  CreateProgressDto,
+  FilterProgressRequestDto,
+} from '../dto/progress.dto';
 
 @Injectable()
 export class ProgressRepository {
-    constructor(private readonly prisma: PrismaRepository) { }
+  constructor(private readonly prisma: PrismaRepository) {}
 
-    async create(data: CreateProgressDto): Promise<Progress> {
-        return this.prisma.progress.create({ data });
-    }
+  async create(data: CreateProgressDto): Promise<Progress> {
+    return this.prisma.progress.create({ data });
+  }
 
-    async findById(id: string): Promise<Progress | null> {
-        return this.prisma.progress.findUnique({ where: { id } });
-    }
+  async findById(id: string): Promise<Progress | null> {
+    return this.prisma.progress.findUnique({ where: { id } });
+  }
 
-    async update(id: string, data: Prisma.ProgressUpdateInput): Promise<Progress> {
-        return this.prisma.progress.update({ where: { id }, data });
-    }
+  async update(
+    id: string,
+    data: Prisma.ProgressUpdateInput,
+  ): Promise<Progress> {
+    return this.prisma.progress.update({ where: { id }, data });
+  }
 
-    async delete(id: string): Promise<Progress> {
-        return this.prisma.progress.delete({ where: { id } });
-    }
+  async delete(id: string): Promise<Progress> {
+    return this.prisma.progress.delete({ where: { id } });
+  }
 
-    async list(params: FilterProgressRequestDto): Promise<PageResponseDto<Progress>> {
-        const {
-            page = 1,
-            limit = 10,
-            sortBy = 'updatedAt',
-            sortOrder = 'desc',
-            userId,
-            activityId,
-            state,
-        } = params;
+  async list(
+    params: FilterProgressRequestDto,
+  ): Promise<PageResponseDto<Progress>> {
+    const {
+      page = 1,
+      limit = 10,
+      sortBy = 'updatedAt',
+      sortOrder = 'desc',
+      userId,
+      activityId,
+      state,
+    } = params;
 
-        const where: Prisma.ProgressWhereInput = {
-            userId,
-            activityId,
-            state,
-        };
+    const where: Prisma.ProgressWhereInput = {
+      userId,
+      activityId,
+      state,
+    };
 
-        const totalItems = await this.prisma.progress.count({ where });
-        const totalPages = Math.max(1, Math.ceil(totalItems / limit));
-        const safePage = Math.min(Math.max(page, 1), totalPages);
+    const totalItems = await this.prisma.progress.count({ where });
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+    const safePage = Math.min(Math.max(page, 1), totalPages);
 
-        const data = await this.prisma.progress.findMany({
-            where,
-            skip: (safePage - 1) * limit,
-            take: limit,
-            orderBy: { [sortBy]: sortOrder },
-        });
+    const data = await this.prisma.progress.findMany({
+      where,
+      skip: (safePage - 1) * limit,
+      take: limit,
+      orderBy: { [sortBy]: sortOrder },
+    });
 
-        return PageResponseDto.of(data, safePage, limit, totalItems);
-    }
+    return PageResponseDto.of(data, safePage, limit, totalItems);
+  }
 }

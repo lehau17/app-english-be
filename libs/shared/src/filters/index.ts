@@ -1,1 +1,1 @@
-export * from "./global-exeption.filter";
+export * from './global-exeption.filter';

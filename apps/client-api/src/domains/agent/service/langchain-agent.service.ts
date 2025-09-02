@@ -19,7 +19,7 @@ export class LangChainAgentService {
     private ragService: RagService,
     private sqlService: SqlService,
     private swaggerService: SwaggerService,
-      private apiSearch: ApiSearchTool,
+    private apiSearch: ApiSearchTool,
   ) {
     // không await trong ctor: gọi initialize() ở nơi thích hợp nếu cần
     void this.initializeAgent();
@@ -35,10 +35,17 @@ export class LangChainAgentService {
         temperature: 0.1,
       });
 
-      const tools = [new RagTool(this.ragService), new SqlTool(this.sqlService), new ApiTool(this.swaggerService), new ApiSearchTool(this.swaggerService)];
+      const tools = [
+        new RagTool(this.ragService),
+        new SqlTool(this.sqlService),
+        new ApiTool(this.swaggerService),
+        new ApiSearchTool(this.swaggerService),
+      ];
 
-       const prompt = ChatPromptTemplate.fromMessages([
-    ['system', `
+      const prompt = ChatPromptTemplate.fromMessages([
+        [
+          'system',
+          `
 Bạn có 4 công cụ:
 - api_search: TÌM endpoint phù hợp từ Swagger (không cần operationId).
 - call_api: GỌI endpoint bằng method+path. Tự gắn Bearer token từ request.
@@ -50,11 +57,12 @@ Quy tắc:
 2) Chọn candidate phù hợp nhất rồi GỌI call_api(method+path, query/body/pathParams).
 3) Nếu Swagger không có endpoint phù hợp → fallback database_query hoặc knowledge_search.
 4) Trả lời **Markdown** ngắn gọn, nêu rõ dữ liệu đến từ API nào (method path).
-`],
-    ['placeholder', '{chat_history}'],
-    ['human', '{input}'],
-    ['placeholder', '{agent_scratchpad}'],
-  ]);
+`,
+        ],
+        ['placeholder', '{chat_history}'],
+        ['human', '{input}'],
+        ['placeholder', '{agent_scratchpad}'],
+      ]);
       const agent = await createToolCallingAgent({
         llm,
         tools,
@@ -75,7 +83,7 @@ Quy tắc:
       throw e;
     }
   }
-s
+  s;
   async processUserQuery(question: string) {
     const start = Date.now();
     const result = await this.agent.invoke({

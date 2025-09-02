@@ -1,28 +1,25 @@
-import { UserRole } from "@prisma/client";
+import { UserRole } from '@prisma/client';
 
 export interface JwtPayload {
-    jti: string;
+  jti: string;
 
+  role: UserRole;
 
-    role: UserRole
+  sub: string;
 
-    sub: string;
+  email?: string;
 
-    email?: string;
+  deviceToken?: string;
 
-    deviceToken?: string;
+  iat?: number;
 
-    iat?: number;
+  exp?: number;
 
-    exp?: number;
-
-
-    userAgent?: string;
+  userAgent?: string;
 }
 
-
 export class CreateJwtPayload {
-    role: UserRole
-    sub: string;
-    email?: string;
+  role: UserRole;
+  sub: string;
+  email?: string;
 }

@@ -26,7 +26,9 @@ export class GeminiService {
       return result?.embedding?.values || [];
     } catch (error) {
       this.logger.error('Lỗi tạo embedding:', error);
-      throw new BadRequestException('Không thể tạo embedding cho văn bản đã cho.');
+      throw new BadRequestException(
+        'Không thể tạo embedding cho văn bản đã cho.',
+      );
     }
   }
 
@@ -41,7 +43,9 @@ export class GeminiService {
       return result.response.text();
     } catch (error) {
       this.logger.error('Lỗi sinh response:', error);
-      throw new BadRequestException('Không thể sinh response cho prompt đã cho.');
+      throw new BadRequestException(
+        'Không thể sinh response cho prompt đã cho.',
+      );
     }
   }
 
