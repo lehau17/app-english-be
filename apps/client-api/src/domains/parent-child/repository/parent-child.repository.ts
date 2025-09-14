@@ -60,4 +60,11 @@ export class ParentChildRepository {
 
     return PageResponseDto.of(data, safePage, limit, totalItems);
   }
+  async findManyByParentId(parentId: string): Promise<ParentChild[]> {
+    return this.prisma.parentChild.findMany({ where: { parentId } });
+  }
+
+  async findManyByChildId(childId: string): Promise<ParentChild[]> {
+    return this.prisma.parentChild.findMany({ where: { childId } });
+  }
 }

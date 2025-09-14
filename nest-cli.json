@@ -4,8 +4,9 @@
   "sourceRoot": "apps/english-learning/src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "webpack": false,
-    "tsConfigPath": "apps/english-learning/tsconfig.app.json"
+    "webpack": true,
+    "tsConfigPath": "apps/english-learning/tsconfig.app.json",
+    "webpackConfigPath": "webpack-hmr.config.js"
   },
   "monorepo": true,
   "root": "apps/english-learning",

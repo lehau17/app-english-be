@@ -15,6 +15,30 @@ export class ParentChildService {
     return this.parentChildRepository.create(dto);
   }
 
+  async linkParentToChild(parentId: string, childId: string): Promise<ParentChild> {
+    // Prevent duplicate link
+    const existing = await this.parentChildRepository.findById(parentId, childId);
+    if (existing) {
+      return existing;
+    }
+    return this.parentChildRepository.create({ parentId, childId });
+  }
+
+  async unlinkParentFromChild(parentId: string, childId: string): Promise<ParentChild> {
+    await this.ensureExists(parentId, childId);
+    return this.parentChildRepository.delete(parentId, childId);
+  }
+
+  async getChildrenOfParent(parentId: string): Promise<ParentChild[]> {
+    // List all children for a parent
+    return this.parentChildRepository.findManyByParentId(parentId);
+  }
+
+  async getParentsOfChild(childId: string): Promise<ParentChild[]> {
+    // List all parents for a child
+    return this.parentChildRepository.findManyByChildId(childId);
+  }
+
   async findById(parentId: string, childId: string): Promise<ParentChild> {
     const parentChild = await this.parentChildRepository.findById(
       parentId,
