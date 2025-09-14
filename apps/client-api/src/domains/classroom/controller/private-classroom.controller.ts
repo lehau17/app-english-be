@@ -1,34 +1,45 @@
-import { ResponseMessage } from '@app/shared';
+import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Post,
-  Put,
-  Query,
-  Res,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    ParseUUIDPipe,
+    Post,
+    Put,
+    Query,
+    Res,
+    UploadedFile,
+    UseInterceptors
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Classroom } from '@prisma/client';
 import { Response } from 'express';
 import {
-  AddStudentToClassroomDto,
-  AssignTeacherToClassroomDto,
-  CreateClassroomDto,
-  FilterClassroomRequestDto,
-  UpdateClassroomDto,
+    AddStudentToClassroomDto,
+    AssignTeacherToClassroomDto,
+    CreateClassroomDto,
+    FilterClassroomRequestDto,
+    ImportStudentsResultDto,
+    UpdateClassroomDto,
 } from '../dto/classroom.dto';
 import { ClassroomService } from '../service/classroom.service';
 
 @ApiTags('Classrooms')
 @ApiBearerAuth('Authorization')
-@Controller('/private/v1/classrooms')
+  @Controller('/private/v1/classrooms')
 export class PrivateClassroomController {
   constructor(private readonly classroomService: ClassroomService) {}
+
+  @Get('my-classrooms')
+  @ApiOperation({ summary: 'Get my classrooms' })
+  @ResponseMessage('My classrooms fetched successfully')
+  myClassrooms(@PayloadToken() payload: JwtPayload) {
+    return this.classroomService.myClassrooms(payload.sub);
+  }
 
   @Post()
   @ApiOperation({ summary: 'Create a classroom' })
@@ -110,5 +121,38 @@ export class PrivateClassroomController {
     @Body() dto: AssignTeacherToClassroomDto,
   ) {
     return this.classroomService.assignTeacherToClassroom(classroomId, dto);
+  }
+
+  @Get(':id/detail')
+  @ApiOperation({ summary: 'Get full classroom detail (students, assignments, announcements, lessons, activities)' })
+  @ResponseMessage('Classroom detail fetched successfully')
+  async getClassroomDetail(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.classroomService.getClassroomDetail(id);
+  }
+
+  @Post(':id/import-students')
+  @ApiOperation({ summary: 'Import students from Excel file' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    description: 'Excel file containing student data',
+    type: 'multipart/form-data',
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Excel file (.xlsx, .xls)',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  @ResponseMessage('Students imported successfully')
+  async importStudentsFromExcel(
+    @Param('id', new ParseUUIDPipe()) classroomId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<ImportStudentsResultDto> {
+    return this.classroomService.importStudentsFromExcel(classroomId, file);
   }
 }

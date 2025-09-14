@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PrivateClassroomController } from './controller';
-import { ClassroomService } from './service';
 import { ClassroomRepository } from './repository';
+import { ClassroomService } from './service';
 
 @Module({
   controllers: [PrivateClassroomController],

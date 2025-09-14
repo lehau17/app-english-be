@@ -2,16 +2,16 @@ import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  IsArray,
-  IsBoolean,
-  IsDate,
-  IsInt,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Min,
+    IsArray,
+    IsBoolean,
+    IsDate,
+    IsInt,
+    IsNotEmpty,
+    IsNumber,
+    IsOptional,
+    IsString,
+    IsUUID,
+    Min,
 } from 'class-validator';
 
 export class CreateClassroomDto {
@@ -110,4 +110,81 @@ export class AssignTeacherToClassroomDto {
   @ApiProperty({ example: 'f8a8b8e0-5b7a-4b0e-8b0a-0b8b8b8b8b8b' })
   @IsUUID()
   teacherId: string;
+}
+
+export class ImportStudentFromExcelDto {
+  @ApiProperty({ example: 'f8a8b8e0-5b7a-4b0e-8b0a-0b8b8b8b8b8b' })
+  @IsUUID()
+  classroomId: string;
+
+  @ApiProperty({ type: 'string', format: 'binary', description: 'Excel file containing student data' })
+  file: Express.Multer.File;
+}
+
+export class StudentExcelDataDto {
+  @ApiProperty({ example: 'student@example.com' })
+  @IsString()
+  email: string;
+
+  @ApiProperty({ example: '0901234567' })
+  @IsString()
+  phone: string;
+
+  @ApiProperty({ example: 'Nguyen' })
+  @IsString()
+  firstName: string;
+
+  @ApiProperty({ example: 'Van A' })
+  @IsString()
+  lastName: string;
+
+  @ApiPropertyOptional({ example: 'John Doe' })
+  @IsOptional()
+  @IsString()
+  displayName?: string;
+
+  @ApiPropertyOptional({ example: 'male' })
+  @IsOptional()
+  @IsString()
+  gender?: string;
+}
+
+export class ImportStudentsResultDto {
+  @ApiProperty({ example: 10 })
+  @IsInt()
+  totalProcessed: number;
+
+  @ApiProperty({ example: 8 })
+  @IsInt()
+  successfullyImported: number;
+
+  @ApiProperty({ example: 2 })
+  @IsInt()
+  failedImports: number;
+
+  @ApiProperty({ type: [Object] })
+  @IsArray()
+  errors: Array<{
+    row: number;
+    email: string;
+    error: string;
+  }>;
+
+  @ApiProperty({ type: [Object] })
+  @IsArray()
+  createdStudents: Array<{
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  }>;
+
+  @ApiProperty({ type: [Object] })
+  @IsArray()
+  existingStudents: Array<{
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+  }>;
 }
