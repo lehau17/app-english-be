@@ -32,12 +32,24 @@ export class RagService {
     const embedding = await this.geminiService.generateEmbedding(
       addDocumentDto.content,
     );
+    // Lưu cả bản JSON (backward compat) và cột vector (pgvector) để ANN query
     const doc = await this.prisma.knowledgeDocument.create({
       data: {
         ...addDocumentDto,
         embedding: JSON.stringify(embedding),
       },
     });
+
+    // Ghi vector vào cột embedding_vector (kiểu pgvector) bằng raw SQL cast
+    try {
+      const vectorText = `[${embedding.join(',')}]`;
+      // Sử dụng $executeRawUnsafe vì Prisma hiện không hỗ trợ pgvector type trực tiếp
+      await this.prisma.$executeRawUnsafe(
+        `UPDATE knowledge_document SET embedding_vector = '${vectorText}'::vector WHERE id = '${doc.id}'`,
+      );
+    } catch (e) {
+      this.logger.warn('Không thể lưu embedding_vector (pgvector) cho doc ' + doc.id, e as any);
+    }
     this.logger.log(`✅ Đã lưu tài liệu ID: ${doc.id}`);
     return doc;
   }
@@ -94,18 +106,42 @@ YÊU CẦU:
   }
 
   private async findSimilarDocuments(queryEmbedding: number[], topK = 3) {
-    const allDocs = await this.prisma.knowledgeDocument.findMany();
-    // tính cosine trong RAM (nhỏ gọn cho MVP)
-    const scored = allDocs.map((d) => {
-      const emb = JSON.parse(d.embedding) as number[];
-      return { doc: d, sim: this.cosineSimilarity(queryEmbedding, emb) };
-    });
+    // Nếu cột embedding_vector đã có dữ liệu, dùng truy vấn ANN của Postgres (pgvector)
+    try {
+      const vectorText = `[${queryEmbedding.join(',')}]`;
+      const rows = await this.prisma.$queryRawUnsafe<any[]>(
+        `SELECT id, title, content, document_type, source, embedding
+         FROM knowledge_document
+         WHERE embedding_vector IS NOT NULL
+         ORDER BY embedding_vector <-> '${vectorText}'::vector
+         LIMIT ${Number(topK)}`,
+      );
 
-    return scored
-      .filter((x) => x.sim > 0.6)
-      .sort((a, b) => b.sim - a.sim)
-      .slice(0, topK)
-      .map((x) => x.doc);
+      // Normalize column names so caller gets { id, title, documentType, content, source }
+      const normalized = (rows || []).map((r: any) => ({
+        id: r.id,
+        title: r.title || r.name || r.heading,
+        documentType: r.document_type || r.documentType,
+        content: r.content,
+        source: r.source,
+        embedding: r.embedding,
+      }));
+      return normalized;
+    } catch (e) {
+      // Fallback: nếu có lỗi (ví dụ pgvector chưa có), dùng cách cũ
+      this.logger.warn('ANN query failed, falling back to in-memory similarity: ' + (e as any)?.message);
+      const allDocs = await this.prisma.knowledgeDocument.findMany();
+      const scored = allDocs.map((d) => {
+        const emb = d.embedding ? (JSON.parse(d.embedding) as number[]) : [];
+        return { doc: d, sim: this.cosineSimilarity(queryEmbedding, emb) };
+      });
+
+      return scored
+        .filter((x) => x.sim > 0.6)
+        .sort((a, b) => b.sim - a.sim)
+        .slice(0, topK)
+        .map((x) => x.doc);
+    }
   }
 
   private cosineSimilarity(a: number[], b: number[]) {

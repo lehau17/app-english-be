@@ -83,7 +83,7 @@ Quy tắc:
       throw e;
     }
   }
-  s;
+
   async processUserQuery(question: string) {
     const start = Date.now();
     const result = await this.agent.invoke({
