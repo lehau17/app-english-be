@@ -18,7 +18,9 @@ class RequestContext {
    * Gọi hàm này ở middleware để khởi tạo context cho request mới
    */
   static run(context: IRequestContext, callback: () => void) {
-    RequestContext.storage.run(context, callback);
+    // Create shallow copy to prevent memory leaks from object retention
+    const safeCopiedContext = { ...context };
+    RequestContext.storage.run(safeCopiedContext, callback);
   }
 
   /**
@@ -43,6 +45,18 @@ class RequestContext {
    */
   static getValue<T = any>(key: keyof IRequestContext): T | undefined {
     return RequestContext.storage.getStore()?.[key] as T | undefined;
+  }
+
+  /**
+   * Clear context to prevent memory leaks (call at end of request)
+   */
+  static clear() {
+    const store = RequestContext.storage.getStore();
+    if (store) {
+      Object.keys(store).forEach(key => {
+        delete store[key];
+      });
+    }
   }
 }
 

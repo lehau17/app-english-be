@@ -41,7 +41,7 @@ async function bootstrap() {
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       'Authorization',
     ) // tên security scheme: Authorization
-    .addServer('http://localhost:3000', 'Local')
+    .addServer('http://localhost:3333', 'Local')
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
@@ -62,6 +62,6 @@ async function bootstrap() {
   swaggerSvc.setSpec(document);
   // ----------------------------
 
-  await app.listen(process.env.PORT ?? 3000); // nên dùng PORT (chữ hoa)
+  await app.listen(process.env.CLIENT_API_PORT ?? 3334); // Changed from 3000 to 3334 to avoid conflicts
 }
 bootstrap();

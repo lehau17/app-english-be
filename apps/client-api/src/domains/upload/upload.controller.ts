@@ -1,16 +1,10 @@
-import {
-  Controller,
-  Post,
-  UploadedFile,
-  UseInterceptors,
-  BadRequestException,
-} from '@nestjs/common';
+import { Controller, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UploadService } from './upload.service';
 
 @ApiTags('Upload')
-@Controller('/private/v1/upload')
+@Controller('/public/v1/upload')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
@@ -28,10 +22,9 @@ export class UploadController {
       },
     },
   })
+  @ApiResponse({ status: 201, description: 'File uploaded', schema: { example: { url: 'https://...' } } })
   async uploadFile(@UploadedFile() file: Express.Multer.File) {
-    if (!file) {
-      throw new BadRequestException('File is required');
-    }
-    return this.uploadService.uploadFile(file);
+    const url = await this.uploadService.uploadFile(file);
+    return { url };
   }
 }

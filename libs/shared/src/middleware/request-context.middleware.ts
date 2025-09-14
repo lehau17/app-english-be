@@ -6,7 +6,7 @@ import { RequestContext } from '../request-context';
 
 @Injectable()
 export class RequestContextMiddleware implements NestMiddleware {
-  use(req: Request, _res: Response, next: () => void) {
+  use(req: Request, res: Response, next: () => void) {
     const requestId = (req.headers['x-request-id'] as string) || uuid();
     const auth = (req.headers['authorization'] as string) || ''; // dạng "Bearer xxx"
     const ip =
@@ -22,7 +22,19 @@ export class RequestContextMiddleware implements NestMiddleware {
         ip,
         authorization: auth,
       },
-      () => next(),
+      () => {
+        // Add cleanup on response finish to prevent memory leaks
+        res.on('finish', () => {
+          RequestContext.clear();
+        });
+
+        // Also cleanup on error
+        res.on('error', () => {
+          RequestContext.clear();
+        });
+
+        next();
+      },
     );
   }
 }

@@ -24,11 +24,11 @@ export class TokenRepository {
     );
     this.accessTokenTtl = this.configService.get<string>(
       'ACCESS_TOKEN_EXPIRES_IN',
-      '15m',
+      '15d',
     );
     this.refreshTokenTtl = this.configService.get<string>(
       'REFRESH_TOKEN_EXPIRES_IN',
-      '7d',
+      '7m',
     );
   }
 
