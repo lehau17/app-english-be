@@ -7,45 +7,21 @@ export class DashboardService {
   constructor(private readonly prisma: PrismaRepository) {}
 
   async getDashboardData(): Promise<DashboardDto> {
-    const totalStudents = await this.prisma.user.count({
-      where: { role: 'student' },
-    });
-    const totalCourses = await this.prisma.course.count();
-    const totalLessons = await this.prisma.lesson.count();
-    const totalActivities = await this.prisma.activity.count();
-
-    const recentStudents = await this.prisma.user.findMany({
-      where: { role: 'student' },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        createdAt: true,
-      }, // Select only public fields
+    const dashboard = await this.prisma.dashboard.findFirst({
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
 
-    // Mocking registration trend data for the last 7 days
-    const registrationTrend = Array.from({ length: 7 })
-      .map((_, i) => {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        return {
-          date: date.toISOString().split('T')[0],
-          count: Math.floor(Math.random() * 20) + 5, // Random count between 5 and 25
-        };
-      })
-      .reverse();
+    if (!dashboard) {
+      // throw new NotFoundException('Dashboard data not found. Please run the background worker first.');
+      return DashboardDto.defaultValueResponse();
+    }
 
     return {
-      totalStudents,
-      totalCourses,
-      totalLessons,
-      totalActivities,
-      recentStudents,
-      registrationTrend,
+        ...dashboard,
+        recentStudents: JSON.parse(dashboard.recentStudents as string),
+        registrationTrend: JSON.parse(dashboard.registrationTrend as string),
     };
   }
 }
