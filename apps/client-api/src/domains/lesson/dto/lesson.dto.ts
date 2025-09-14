@@ -2,6 +2,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DifficultyLevel, ProgressState } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsEnum,
@@ -11,44 +13,36 @@ import {
   IsString,
   IsUUID,
   Max,
-  Min,
-  ValidateNested,
-  ArrayMinSize,
-  ArrayMaxSize,
+  Min
 } from 'class-validator';
 import { CreateActivityDto } from '../../activity/dto/activity.dto';
 
 export class CreateLessonDto {
-  @ApiProperty() @IsString() title!: string;
+  @ApiProperty() @IsString()
+  title!: string;
 
-  @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString()
+  description?: string;
 
-  @ApiProperty() @IsInt() @Type(() => Number) orderNo!: number;
+  @ApiProperty() @IsInt() @Min(1) @Type(() => Number)
+  orderNo!: number;
 
   @ApiPropertyOptional({ enum: DifficultyLevel })
-  @IsOptional()
-  @IsEnum(DifficultyLevel)
+  @IsOptional() @IsEnum(DifficultyLevel)
   difficulty?: DifficultyLevel;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsInt()
-  @Type(() => Number)
-  estimatedTime?: number;
+  @ApiPropertyOptional() @IsOptional() @IsInt() @Type(() => Number)
+  estimatedTime?: number; // minutes
 
-  @ApiPropertyOptional() @IsOptional() @IsBoolean() isLocked?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean()
+  isLocked?: boolean;
 
   @ApiPropertyOptional({ type: [String] })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
+  @IsOptional() @IsArray() @IsString({ each: true })
   objectives?: string[];
 
-  @ApiProperty({ type: [CreateActivityDto] })
-  @IsArray()
-  @ArrayMinSize(1)
-  @ArrayMaxSize(100)
-  @ValidateNested({ each: true })
+  @ApiProperty({ type: () => [CreateActivityDto] })
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100)
   @Type(() => CreateActivityDto)
   activities!: CreateActivityDto[];
 }
@@ -216,4 +210,60 @@ export class CompleteActivityResponseDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() score?: number | null;
   @ApiPropertyOptional() @IsOptional() @IsNumber() bestScore?: number | null;
   @ApiProperty() attemptsCount!: number;
+}
+
+/** ======= Next Lesson with Activity ======= */
+
+export class NextLessonWithActivityResponseDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  id?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  courseId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  title?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  orderNo?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  difficulty?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  estimatedTime?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  isLocked?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  objectives?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  createdAt?: Date;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  updatedAt?: Date;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  activities?: any[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  activity?: any; // Activity with progress
 }

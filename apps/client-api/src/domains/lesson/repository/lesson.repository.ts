@@ -13,7 +13,7 @@ export class LessonRepository {
   // ============ CRUD cơ bản ============
 
   async create(data: CreateLessonDto): Promise<Lesson> {
-    return this.prisma.lesson.create({ data });
+      return this.prisma.lesson.create({ data: data as any });
   }
 
   async findById(id: string): Promise<Lesson | null> {
@@ -74,7 +74,7 @@ export class LessonRepository {
         activities: {
           orderBy: { orderNo: 'asc' },
           include: {
-            _count: { select: { questions: true } },
+            _count: { select: { attempts: true } }, // Sử dụng attempts thay vì questions
           },
         },
         lessonDetails: {
@@ -89,11 +89,10 @@ export class LessonRepository {
    * và tổng số câu hỏi (để FE biết bài có bao nhiêu items).
    */
   async getActivitiesWithProgress(lessonId: string, userId?: string) {
-    return this.prisma.activity.findMany({
+    const activities = await this.prisma.activity.findMany({
       where: { lessonId },
       orderBy: { orderNo: 'asc' },
       include: {
-        _count: { select: { questions: true } },
         ...(userId
           ? {
               progress: {
@@ -112,6 +111,23 @@ export class LessonRepository {
           : {}),
       },
     });
+
+    // Thêm question count cho mỗi activity
+    if (userId) {
+      return await Promise.all(
+        activities.map(async (activity) => {
+          const questionCount = await this.prisma.question.count({
+            where: { activityId: activity.id }
+          });
+          return {
+            ...activity,
+            _count: { questions: questionCount }
+          };
+        })
+      );
+    }
+
+    return activities;
   }
 
   /**
@@ -176,7 +192,7 @@ export class LessonRepository {
     let inProgress = 0;
 
     for (const a of acts) {
-      const p = a.progress?.[0];
+      const p = (a as any).progress?.[0]; // Type assertion
       if (!p) continue;
       if (p.state === 'mastered') mastered++;
       if (p.state === 'done') done++;
@@ -216,7 +232,7 @@ export class LessonRepository {
     });
 
     for (const a of acts) {
-      const p = a.progress[0];
+      const p = (a as any).progress?.[0]; // Type assertion để tránh lỗi TypeScript
       const passed = this.isPassed(a, p);
       if (!passed) {
         return a;
@@ -249,12 +265,17 @@ export class LessonRepository {
     // Check previous activity pass (linear gating)
     if (act.orderNo > 1) {
       const prev = await this.prisma.activity.findFirst({
-        where: { lessonId: act.lessonId, orderNo: act.orderNo - 1 },
+        where: {
+          lessonId: act.lessonId,
+          orderNo: act.orderNo - 1
+        },
         select: { id: true, passingScore: true },
       });
       if (prev) {
         const prevProg = await this.prisma.progress.findUnique({
-          where: { userId_activityId: { userId, activityId: prev.id } },
+          where: {
+            userId_activityId: { userId, activityId: prev.id }
+          },
           select: { state: true, score: true, bestScore: true },
         });
         const prevPassed = this.isPassed(
@@ -315,6 +336,9 @@ export class LessonRepository {
       return { allowed: false, reason: 'unmet_prerequisites', unmet };
     return { allowed: true };
   }
+
+
+
 
   /**
    * Khởi động/đánh dấu user "bắt đầu" activity (tạo Progress nếu chưa có).
@@ -405,5 +429,146 @@ export class LessonRepository {
       return best >= activity.passingScore;
     }
     return true;
+  }
+
+  /**
+   * Lấy danh sách khoá học mà user đang học (qua bảng ClassroomStudent)
+   */
+  async listCoursesOfUser(userId: string) {
+    const enrollments = await this.prisma.classroomStudent.findMany({
+      where: { studentId: userId, isActive: true },
+      include: {
+        classroom: {
+          include: {
+            course: true
+          }
+        }
+      }
+    });
+
+    // Lọc ra những course duy nhất và loại bỏ null
+    const courses = enrollments
+      .map(e => e.classroom?.course)
+      .filter(course => course != null);
+
+    // Loại bỏ duplicate courses
+    const uniqueCourses = courses.filter((course, index, self) =>
+      index === self.findIndex(c => c.id === course.id)
+    );
+
+    return uniqueCourses;
+  }
+
+  /**
+   * Lấy thống kê tổng quan của một lesson
+   */
+  async getLessonStats(lessonId: string) {
+    const [lesson, activitiesCount, questionsCount] = await Promise.all([
+      this.prisma.lesson.findUnique({
+        where: { id: lessonId },
+        select: {
+          id: true,
+          title: true,
+          difficulty: true,
+          estimatedTime: true,
+          createdAt: true,
+        },
+      }),
+      this.prisma.activity.count({ where: { lessonId } }),
+      this.prisma.question.count({
+        where: {
+          activityId: { in: await this.prisma.activity.findMany({
+            where: { lessonId },
+            select: { id: true }
+          }).then(acts => acts.map(a => a.id)) }
+        }
+      }),
+    ]);
+
+    if (!lesson) return null;
+
+    return {
+      ...lesson,
+      totalActivities: activitiesCount,
+      totalQuestions: questionsCount,
+    };
+  }
+
+  /**
+   * Lấy danh sách lesson thuộc một khoá học kèm progress của user
+   */
+  async listLessonsOfCourseWithProgress(courseId: string, userId?: string) {
+    const lessons = await this.prisma.lesson.findMany({
+      where: { courseId },
+      orderBy: { orderNo: 'asc' },
+      include: {
+        activities: {
+          select: {
+            id: true,
+            type: true,
+            passingScore: true,
+            ...(userId ? {
+              progress: {
+                where: { userId },
+                select: {
+                  state: true,
+                  score: true,
+                  bestScore: true,
+                },
+              },
+            } : {}),
+          },
+        },
+        _count: {
+          select: { activities: true },
+        },
+      },
+    });
+
+    // Tính progress cho từng lesson nếu có userId
+    if (userId) {
+      return lessons.map(lesson => {
+        const activities = lesson.activities;
+        const totalActivities = activities.length;
+        let completedActivities = 0;
+
+        for (const activity of activities) {
+          const progress = (activity as any).progress?.[0];
+          if (progress && (progress.state === 'done' || progress.state === 'mastered')) {
+            completedActivities++;
+          }
+        }
+
+        const completion = totalActivities > 0 ? Math.round((completedActivities * 100) / totalActivities) : 0;
+
+        return {
+          ...lesson,
+          progress: {
+            totalActivities,
+            completedActivities,
+            completion,
+          },
+        };
+      });
+    }
+
+    return lessons;
+  }
+
+  /**
+   * Lấy danh sách lesson thuộc một khoá học
+   */
+  async listLessonsOfCourse(courseId: string) {
+    return this.prisma.lesson.findMany({
+      where: { courseId },
+      orderBy: { orderNo: 'asc' }
+    });
+  }
+
+
+  async getProgressByUserIdAndActivityId(userId: string, activityId: string) {
+    return this.prisma.progress.findUnique({
+      where: { userId_activityId: { userId, activityId } },
+    });
   }
 }
