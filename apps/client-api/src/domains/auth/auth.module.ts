@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
+import { GamificationModule } from '../gamification/gamification.module';
+import { PrivateAuthController } from './controller/private-auth.controller';
 import { PublicAuthController } from './controller/public-auth.controller';
 import { AuthRepository } from './repository';
 import { AuthService } from './service/auth.service';
-import { PrivateAuthController } from './controller/private-auth.controller';
 
 @Module({
+  imports: [GamificationModule],
   controllers: [PublicAuthController, PrivateAuthController],
   providers: [AuthService, AuthRepository],
 })

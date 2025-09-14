@@ -96,4 +96,13 @@ export class AuthRepository {
 
     return this.tokenRepository.generateToken(payload);
   }
+
+  async findById(id: string) {
+    return this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        UserStats: true,
+      },
+    });
+  }
 }

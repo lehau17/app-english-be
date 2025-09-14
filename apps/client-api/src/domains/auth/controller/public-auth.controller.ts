@@ -61,6 +61,11 @@ export class PublicAuthController {
     return this.authService.adminLogin(dto);
   }
 
+  @Post('parent-login')
+  async parentLogin(@Body() dto: LoginDto) {
+    return this.authService.parentLogin(dto);
+  }
+
   @Post('admin-register')
   async adminRegister(@Body() dto: RegisterDto) {
     return this.authService.adminRegister(dto);

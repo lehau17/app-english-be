@@ -1,6 +1,6 @@
 // private-auth.controller.ts
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBearerAuth,
@@ -18,6 +18,15 @@ import { AuthService } from '../service/auth.service';
 @Controller('/private/v1/auth')
 export class PrivateAuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Get('me')
+  @ApiOperation({ summary: 'Get current user info' })
+  @ApiOkResponse({ description: 'User info fetched successfully' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ResponseMessage('User info fetched successfully')
+  async me(@PayloadToken() tokenPayload: JwtPayload) {
+    return this.authService.me(tokenPayload.sub);
+  }
 
   @Post('change-password')
   @ApiOperation({ summary: 'Change password (authenticated user)' })
@@ -44,7 +53,7 @@ export class PrivateAuthController {
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     // Gửi email: hiện tại chỉ return true theo yêu cầu
     // Bạn có thể implement queue/mail sau này
-    return this.authService.forgotPassword(dto); // hoặc `return true;` nếu chưa có service
+    return this.authService.forgotPassword(); // hoặc `return true;` nếu chưa có service
   }
 
   @Post('reset-password')
@@ -54,6 +63,6 @@ export class PrivateAuthController {
   @ApiBadRequestResponse({ description: 'Invalid or expired reset token' })
   @ResponseMessage('Password reset successfully')
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.authService.resetPassword(dto); // tạm thời có thể return true bên service
+    return this.authService.resetPassword(); // tạm thời có thể return true bên service
   }
 }
