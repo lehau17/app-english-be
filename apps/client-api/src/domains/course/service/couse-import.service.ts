@@ -451,28 +451,76 @@ export class CoursesImportService {
           explanation: r.explanation || '',
         };
       case ActivityType.vocab:
-        const vocabContent = {
-          word: r.word || '',
-          definition: r.definition || '',
-          examples: r.examples?.length ? r.examples : [],
-          imageUrl: r.imageUrl || null,
-          audioUrl: r.audioUrl || null,
-        };
+        // Desired shape: { items: [ { word, definition, examples, imageUrl, audioUrl } ] }
+        // Priority: contentJson (if contains items) -> items + aligned items_* columns (pipe-separated) -> legacy word column
+        try {
+          if (r.contentJson) {
+            const parsed = JSON.parse(r.contentJson);
+            if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
+              for (const it of parsed.items) {
+                it.examples = Array.isArray(it.examples) ? it.examples : (it.examples ? String(it.examples).split(/[|,]/).map(s => s.trim()).filter(Boolean) : []);
+              }
+              for (const it of parsed.items) {
+                if (!it.audioUrl && it.word) {
+                  try {
+                    const { url } = await this.googleTranslateFreeService.createAudioWithUrl(it.word, 'en');
+                    it.audioUrl = url;
+                  } catch (e) {
+                    console.error(`Failed to generate audio for vocab "${it.word}":`, e);
+                  }
+                }
+              }
+              return parsed;
+            }
+          }
+        } catch {}
 
-        // Tự động tạo audio nếu không có audioUrl và có word
-        if (!vocabContent.audioUrl && vocabContent.word) {
-          try {
-            console.log(`Generating audio for vocab: ${vocabContent.word}`);
-            const { url } = await this.googleTranslateFreeService.createAudioWithUrl(vocabContent.word, 'en');
-            vocabContent.audioUrl = url;
-            console.log(`Audio generated successfully: ${url}`);
-          } catch (error) {
-            console.error(`Failed to generate audio for vocab "${vocabContent.word}":`, error);
-            // Không throw error, tiếp tục với audioUrl = null
+        const items: Array<any> = [];
+
+        // If there is an `items` column (pipe-separated words), parse aligned columns
+        if (r.items) {
+          const words = String(r.items || '').split(/\|/).map((s) => s.trim()).filter(Boolean);
+          const defs = String(r.items_definitions || '').split(/\|/).map((s) => s.trim());
+          const examplesGroups = String(r.items_examples || '').split(/\|/).map((s) => s.trim());
+          const images = String(r.items_imageUrls || '').split(/\|/).map((s) => s.trim());
+          const audios = String(r.items_audioUrls || '').split(/\|/).map((s) => s.trim());
+
+          for (let i = 0; i < words.length; i++) {
+            const word = words[i];
+            const def = defs[i] || '';
+            const examplesRaw = examplesGroups[i] || '';
+            const examples = examplesRaw ? String(examplesRaw).split(/\|\|/).map((x: string) => x.trim()).filter(Boolean) : [];
+            const imageUrl = images[i] || null;
+            const audioUrl = audios[i] || null;
+            items.push({ word, definition: def, examples, imageUrl, audioUrl });
           }
         }
 
-        return vocabContent;
+        // legacy single-word column (supports pipe-separated multiple words)
+        if (!items.length && r.word) {
+          if (typeof r.word === 'string' && r.word.includes('|')) {
+            const parts = String(r.word).split(/\|/).map((p) => p.trim()).filter(Boolean);
+            for (const w of parts) {
+              items.push({ word: w, definition: r.definition || '', examples: r.examples?.length ? r.examples : [], imageUrl: r.imageUrl || null, audioUrl: null });
+            }
+          } else {
+            items.push({ word: r.word || '', definition: r.definition || '', examples: r.examples?.length ? r.examples : [], imageUrl: r.imageUrl || null, audioUrl: r.audioUrl || null });
+          }
+        }
+
+        // Generate audio per item if missing
+        for (const it of items) {
+          if (!it.audioUrl && it.word) {
+            try {
+              const { url } = await this.googleTranslateFreeService.createAudioWithUrl(it.word, 'en');
+              it.audioUrl = url;
+            } catch (e) {
+              console.error(`Failed to generate audio for vocab "${it.word}":`, e);
+            }
+          }
+        }
+
+        return { items };
       case ActivityType.listening:
         return {
           audioUrl: r.audioUrl || '',
@@ -549,20 +597,23 @@ export class CoursesImportService {
    * Import nhiều file Excel cùng lúc
    */
   async importMultipleExcels(files: Express.Multer.File[], dto: Partial<ImportCoursesDto>) {
-    const results = [];
+    if (!files || files.length === 0) {
+      throw new BadRequestException('Không có file nào được upload');
+    }
 
+    if (files.length > 10) {
+      throw new BadRequestException('Tối đa 10 file cùng lúc');
+    }
+
+    // Process files sequentially and throw BadRequestException immediately on first error
+    const results: any[] = [];
     for (const file of files) {
-      try {
-        // Validate file type
-        if (!file.originalname.endsWith('.xlsx') && !file.originalname.endsWith('.xls')) {
-          results.push({
-            fileName: file.originalname,
-            success: false,
-            error: 'Chỉ hỗ trợ file .xlsx hoặc .xls'
-          });
-          continue;
-        }
+      // Validate file type
+      if (!file.originalname.endsWith('.xlsx') && !file.originalname.endsWith('.xls')) {
+        throw new BadRequestException(`File ${file.originalname}: Chỉ hỗ trợ file .xlsx hoặc .xls`);
+      }
 
+      try {
         // Import trực tiếp từ buffer
         const singleDto = { ...dto, buffer: file.buffer } as any;
         const result = await this.importFromExcel(singleDto);
@@ -570,23 +621,19 @@ export class CoursesImportService {
         results.push({
           fileName: file.originalname,
           success: true,
-          data: result
+          data: result,
         });
-
       } catch (error) {
-        results.push({
-          fileName: file.originalname,
-          success: false,
-          error: error.message || 'Lỗi không xác định'
-        });
+        // Immediately throw BadRequestException with the underlying error message
+        throw new BadRequestException(`File ${file.originalname}: ${error.message || 'Lỗi không xác định'}`);
       }
     }
 
     return {
       totalFiles: files.length,
-      successfulImports: results.filter(r => r.success).length,
-      failedImports: results.filter(r => !r.success).length,
-      results
+      successfulImports: results.length,
+      failedImports: 0,
+      results,
     };
   }
 }

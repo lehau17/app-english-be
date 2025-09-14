@@ -5,10 +5,11 @@ import { CourseController } from './controller/private-course.controller';
 import { CourseRepository } from './repository/course.repository';
 import { CourseService } from './service/course.service';
 import { CoursesImportService } from './service/couse-import.service';
+import { UploadService } from '../upload/upload.service';
 
 @Module({
   imports: [GoogleTranslateModule],
   controllers: [CourseController, ],
-  providers: [CourseService, CourseRepository, CoursesImportService, GoogleTranslateFreeService],
+  providers: [CourseService, CourseRepository, CoursesImportService, GoogleTranslateFreeService, UploadService],
 })
 export class CourseModule {}

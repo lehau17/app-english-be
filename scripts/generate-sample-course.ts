@@ -31,7 +31,20 @@ function buildLessonRows(lessonNo: number, title: string, estimatedTime = 20) {
   base.push({ lessonNo, lessonTitle: title, lessonDescription: `${title} - practice all skills`, lessonEstimatedTime: estimatedTime, lessonObjectives: 'Vocabulary|Listening|Speaking|Reading|Writing|Grammar|Pronunciation|Quiz' });
 
   // 8 activities: vocab, quiz, listening, pronunciation, speaking, reading, writing, grammar
-  base.push({ lessonNo, activityNo: 1, activityType: 'vocab', activityTitle: 'Vocab: family members', word: 'mother', definition: 'Your female parent', examples: 'My mother is kind|Her mother cooks well' });
+  // Vocab activity now uses contentJson with items array (multiple words per activity)
+  // Provide pipe-separated vocab columns: items, items_definitions, items_examples, items_imageUrls, items_audioUrls
+  base.push({
+    lessonNo,
+    activityNo: 1,
+    activityType: 'vocab',
+    activityTitle: 'Vocab: family members',
+    items: 'mother|father|sister',
+    items_definitions: 'mẹ|cha|chị/em gái',
+    // for examples per item we use double-pipe to separate multiple examples within an item
+    items_examples: 'My mother is kind.||I love my mother.|My father goes to work.||His father is a teacher.|I have one sister.',
+    items_imageUrls: 'https://cdn.example.com/img/mother.png|https://cdn.example.com/img/father.png|https://cdn.example.com/img/sister.png',
+    items_audioUrls: 'https://cdn.example.com/audio/mother.mp3||'
+  });
   base.push({ lessonNo, activityNo: 2, activityType: 'quiz', activityTitle: 'Quiz: family vocab', question: 'Who is your father?', options: 'mother|father|sister', correctIndex: 1, explanation: 'father is male parent' });
   base.push({ lessonNo, activityNo: 3, activityType: 'listening', activityTitle: 'Listening: family dialogue', audioUrl: '', prompt: 'What relation do they have?', options: 'siblings|parents|friends', correctIndex: 1 });
   base.push({ lessonNo, activityNo: 4, activityType: 'pronunciation', activityTitle: 'Pronunciation: sibling', phrase: 'sibling', hints: 'stress on first syllable' });

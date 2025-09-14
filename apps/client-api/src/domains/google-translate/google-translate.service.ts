@@ -2,8 +2,10 @@ import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 import { Translate } from '@google-cloud/translate/build/src/v2';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createWriteStream } from 'fs';
+import { createWriteStream, readFileSync, unlinkSync } from 'fs';
+import * as path from 'path';
 import fetch from 'node-fetch';
+import { UploadService } from '../upload/upload.service';
 import { join } from 'path';
 
 @Injectable()
@@ -162,6 +164,8 @@ export class GoogleTranslateService {
 export class GoogleTranslateFreeService {
   private readonly logger = new Logger(GoogleTranslateFreeService.name);
 
+  constructor(private readonly uploadService?: UploadService) {}
+
   /**
    * Tạo audio từ văn bản sử dụng Google Translate TTS miễn phí
    */
@@ -188,9 +192,9 @@ export class GoogleTranslateFreeService {
       // Tạo tên file an toàn
       const safeText = text.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
       const fileName = `${safeText}-${Date.now()}.mp3`;
-      const filePath = join(process.cwd(), 'uploads', 'audio', fileName);
+  const filePath = join(process.cwd(), 'uploads', 'audio', fileName);
 
-      const writer = createWriteStream(filePath);
+  const writer = createWriteStream(filePath);
 
       return new Promise((resolve, reject) => {
         if (!response.body) {
@@ -248,7 +252,34 @@ export class GoogleTranslateFreeService {
   async createAudioWithUrl(text: string, language: string = 'en'): Promise<{ filePath: string; url: string }> {
     const filePath = await this.createAudioFile(text, language);
 
-    // Chuyển đổi file path thành URL công khai
+    // If UploadService is available, upload the generated file to S3 (MinIO) and return that URL
+    try {
+      if (this.uploadService) {
+        // Read file into buffer
+        const buffer = readFileSync(filePath);
+        // Create a Multer-like object for uploadService.uploadFile
+        const fileObj: any = {
+          buffer,
+          mimetype: 'audio/mpeg',
+          originalname: path.basename(filePath),
+        };
+
+        const s3Url = await this.uploadService.uploadFile(fileObj);
+
+        // Cleanup local file
+        try {
+          unlinkSync(filePath);
+        } catch (e) {
+          this.logger.warn('Failed to remove temp audio file:', e);
+        }
+
+        return { filePath, url: s3Url };
+      }
+    } catch (e) {
+      this.logger.error('Failed to upload audio to S3:', e);
+    }
+
+    // Fallback: return local URL
     const relativePath = filePath.replace(process.cwd(), '');
     const url = `${process.env.APP_URL || 'http://localhost:3000'}${relativePath.replace(/\\/g, '/')}`;
 
