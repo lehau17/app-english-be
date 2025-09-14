@@ -6,7 +6,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Course, Prisma, UserRole } from '@prisma/client';
+import { Course, UserRole } from '@prisma/client';
+import { GoogleTranslateFreeService } from '../../google-translate/google-translate.service';
 import {
   CreateCourseDto,
   FilterCourseRequestDto,
@@ -19,108 +20,231 @@ function normalizeCurrency(code?: string): string | undefined {
   return code.trim().toUpperCase();
 }
 
+
+
+
 @Injectable()
 export class CourseService {
   constructor(
     private readonly courseRepository: CourseRepository,
     private readonly prisma: PrismaRepository,
-  ) {}
+  private readonly googleTranslateFreeService: GoogleTranslateFreeService,
+  ) { }
 
+  // service.ts (đoạn create)
   async create(dto: CreateCourseDto): Promise<Course> {
-    // Validate instructor
-    const instructor = await this.prisma.user.findUnique({
-      where: { id: dto.instructorId },
-    });
+    // 1) Validate instructor
+    const instructor = await this.prisma.user.findUnique({ where: { id: dto.instructorId } });
     if (!instructor) throw new BadRequestException('Instructor không tồn tại');
-    if (instructor.role !== UserRole.teacher) {
-      throw new BadRequestException('Instructor phải có vai trò TEACHER');
+    if (instructor.role !== UserRole.teacher && instructor.role !== UserRole.admin) {
+      throw new BadRequestException('Instructor phải có vai trò TEACHER hoặc ADMIN');
     }
     if (dto.price != null && dto.price < 0) {
       throw new BadRequestException('Giá không được âm');
     }
 
-    // Optional check: orderNo unique (business rule)
+    // 2) Optional: orderNo unique ở cấp Course
     if (dto.orderNo != null) {
-      const sameOrder = await this.prisma.course.findFirst({
-        where: { orderNo: dto.orderNo },
-      });
-      if (sameOrder) {
-        throw new ConflictException('orderNo đã được dùng cho khóa học khác');
+      const sameOrder = await this.prisma.course.findFirst({ where: { orderNo: dto.orderNo } });
+      if (sameOrder) throw new ConflictException('orderNo đã được dùng cho khóa học khác');
+    }
+
+    // 3) Validate trùng order trong lesson/activity (trước khi ghi DB)
+    const lessonOrders = new Set<number>();
+    for (const ls of dto.lessons) {
+      if (lessonOrders.has(ls.orderNo)) {
+        throw new BadRequestException(`Trùng orderNo giữa các lesson: ${ls.orderNo}`);
+      }
+      lessonOrders.add(ls.orderNo);
+
+      const actOrders = new Set<number>();
+      for (const ac of ls.activities) {
+        if (actOrders.has(ac.orderNo)) {
+          throw new BadRequestException(`Trùng orderNo trong activities của lesson "${ls.title}": ${ac.orderNo}`);
+        }
+        actOrders.add(ac.orderNo);
       }
     }
 
-    const courseData: Prisma.CourseCreateInput = {
-      title: dto.title,
-      description: dto.description,
-      orderNo: dto.orderNo,
-      difficulty: dto.difficulty,
-      estimatedHours: dto.estimatedHours,
-      imageUrl: dto.imageUrl,
-      tags: dto.tags ?? [],
-      instructor: { connect: { id: dto.instructorId } },
-      price: dto.price ?? 0,
-      currency: normalizeCurrency(dto.currency) ?? 'VND',
-      maxStudents: dto.maxStudents ?? 20,
-      language: dto.language ?? undefined,
-      prerequisites: dto.prerequisites ?? [],
-      isPublished: dto.isPublished ?? false,
-    };
+    // 4) Convert minutes -> hours cho course
+    const estimatedHours =
+      dto.estimatedTime != null ? Math.round((dto.estimatedTime / 60) * 100) / 100 : undefined;
 
-    const createdCourse = await this.prisma.course.create({
-      data: courseData,
-    });
+    // 5) Transaction
+    // We'll collect audio generation tasks during the transaction and run them after commit
+    const pendingAudioTasks: Array<{
+      activityId: string;
+      itemsIndex: number[]; // indices of items needing audio
+      language?: string;
+    }> = [];
 
-    let totalLessons = 0;
-    let totalDuration = 0;
-
-    for (const lessonDto of dto.lessons) {
-      const lesson = await this.prisma.lesson.create({
+    const result = await this.prisma.$transaction(async (tx) => {
+      const course = await tx.course.create({
         data: {
-          course: { connect: { id: createdCourse.id } },
-          title: lessonDto.title,
-          description: lessonDto.description,
-          orderNo: lessonDto.orderNo,
-          difficulty: lessonDto.difficulty,
-          estimatedTime: lessonDto.estimatedTime,
-          isLocked: lessonDto.isLocked,
-          objectives: lessonDto.objectives ?? [],
+          title: dto.title,
+          description: dto.description ?? undefined,
+          orderNo: dto.orderNo ?? undefined,
+          difficulty: dto.difficulty,
+          estimatedHours, // DB field là hours
+          imageUrl: dto.imageUrl ?? undefined,
+          tags: dto.tags ?? [],
+          instructor: { connect: { id: dto.instructorId } },
+          price: dto.price ?? 0,
+          currency: normalizeCurrency(dto.currency) ?? 'VND',
+          maxStudents: dto.maxStudents ?? 20,
+          language: dto.language ?? undefined,
+          prerequisites: dto.prerequisites ?? [],
+          isPublished: dto.isPublished ?? false,
         },
       });
 
-      totalLessons++;
-      totalDuration += lessonDto.estimatedTime ?? 0;
+      let totalLessons = 0;
+      let totalDuration = 0; // minutes
 
-      for (const activityDto of lessonDto.activities) {
-        await this.prisma.activity.create({
+      for (const lessonDto of dto.lessons) {
+        const lesson = await tx.lesson.create({
           data: {
-            lesson: { connect: { id: lesson.id } },
-            type: activityDto.type,
-            orderNo: activityDto.orderNo,
-            title: activityDto.title,
-            content: activityDto.content,
-            timeLimit: activityDto.timeLimit,
-            maxAttempts: activityDto.maxAttempts,
-            passingScore: activityDto.passingScore,
-            difficulty: activityDto.difficulty,
-            points: activityDto.points,
-            instructions: activityDto.instructions,
-            hints: activityDto.hints,
-            mediaUrls: activityDto.mediaUrls,
+            course: { connect: { id: course.id } },
+            title: lessonDto.title,
+            description: lessonDto.description ?? undefined,
+            orderNo: lessonDto.orderNo,
+            difficulty: lessonDto.difficulty ?? dto.difficulty,
+            estimatedTime: lessonDto.estimatedTime ?? undefined, // minutes
+            isLocked: lessonDto.isLocked ?? true,
+            objectives: lessonDto.objectives ?? [],
           },
         });
-      }
-    }
 
-    await this.prisma.course.update({
-      where: { id: createdCourse.id },
-      data: {
-        totalLessons,
-        totalDuration,
-      },
+        totalLessons++;
+        totalDuration += lessonDto.estimatedTime ?? 0;
+
+        for (const activityDto of lessonDto.activities) {
+          // --- Normalize content cho vocab: cho phép dữ liệu cũ 1 từ -> items[] ---
+          const normalizedContent =
+            activityDto.type === 'vocab'
+              ? this.normalizeVocabContent(activityDto.content)
+              : activityDto.content;
+
+          const createdActivity = await tx.activity.create({
+            data: {
+              lesson: { connect: { id: lesson.id } },
+              type: activityDto.type as any, // nếu Prisma enum trùng literal
+              orderNo: activityDto.orderNo,
+              title: activityDto.title,
+              content: normalizedContent,  // JSONB
+              timeLimit: activityDto.timeLimit ?? undefined,
+              maxAttempts: activityDto.maxAttempts ?? undefined,
+              passingScore: activityDto.passingScore ?? undefined,
+              difficulty: activityDto.difficulty ?? lessonDto.difficulty ?? dto.difficulty,
+              points: activityDto.points ?? 10,
+              instructions: activityDto.instructions ?? undefined,
+              hints: activityDto.hints ?? [],
+              mediaUrls: activityDto.mediaUrls ?? [],
+            },
+
+          });
+
+          // If this is a vocab activity, check items without audioUrl and schedule generation
+          if (normalizedContent && normalizedContent.kind === 'vocab') {
+            const items = normalizedContent.data?.items || [];
+            const indices: number[] = [];
+            for (let i = 0; i < items.length; i++) {
+              const it = items[i];
+              if (!it.audioUrl || it.audioUrl === '') indices.push(i);
+            }
+            if (indices.length > 0) {
+              pendingAudioTasks.push({
+                activityId: createdActivity.id,
+                itemsIndex: indices,
+                language: dto.language ?? 'en',
+              });
+            }
+          }
+        }
+      }
+
+      await tx.course.update({
+        where: { id: course.id },
+        data: {
+          totalLessons,
+          totalDuration, // minutes
+        },
+      });
+
+      return course;
     });
 
-    return createdCourse;
+    // After transaction commit, process pending audio tasks (generate audio and update activities)
+    // Use setImmediate to prevent memory accumulation and ensure proper cleanup
+    if (pendingAudioTasks.length > 0) {
+      setImmediate(async () => {
+        for (const task of pendingAudioTasks) {
+          try {
+            // fetch latest activity content
+            const act = await this.prisma.activity.findUnique({ where: { id: task.activityId } });
+            if (!act) continue;
+            const content: any = act.content ?? {};
+            if (content.kind !== 'vocab') continue;
+            const items: any[] = (content.data && content.data.items) || [];
+
+            for (const idx of task.itemsIndex) {
+              const word = items[idx]?.word;
+              if (!word) continue;
+              try {
+                const { url } = await this.googleTranslateFreeService.createAudioWithUrl(word, task.language?.split('-')[0] ?? 'en');
+                items[idx].audioUrl = url;
+              } catch (e) {
+                // log and continue
+                console.error('Failed to generate audio for word', word, e);
+              }
+            }
+
+            // Persist updated content
+            await this.prisma.activity.update({ where: { id: task.activityId }, data: { content } });
+          } catch (e) {
+            console.error('Error processing audio task', task, e);
+          }
+        }
+        // Explicitly clear task array to prevent memory retention
+        pendingAudioTasks.length = 0;
+      });
+    }
+
+    return result;
   }
+
+/**
+ * Hỗ trợ cả 2 shape:
+ *  - MỚI: { kind:'vocab', data:{ items:[ {word,definition,...}, ...] } }
+ *  - CŨ : { kind:'vocab', data:{ word, definition, examples?, imageUrl?, audioUrl? } }
+ * Trả về luôn shape MỚI.
+ */  normalizeVocabContent(content: any) {
+    if (!content || content.kind !== 'vocab') return content;
+
+    const data = content.data ?? {};
+    if (Array.isArray(data.items)) return content;
+
+    if (data.word && data.definition) {
+      return {
+        kind: 'vocab',
+        data: {
+          items: [
+            {
+              word: data.word,
+              definition: data.definition,
+              examples: data.examples ?? [],
+              imageUrl: data.imageUrl ?? undefined,
+              audioUrl: data.audioUrl ?? undefined,
+            },
+          ],
+        },
+      };
+    }
+    // fallback giữ nguyên nếu không match
+    return content;
+  }
+
+
 
   async findById(id: string): Promise<Course> {
     const course = await this.courseRepository.findById(id);
@@ -150,7 +274,6 @@ export class CourseService {
       ...(dto.description != null && { description: dto.description }),
       ...(dto.orderNo != null && { orderNo: dto.orderNo }),
       ...(dto.difficulty != null && { difficulty: dto.difficulty }),
-      ...(dto.estimatedHours != null && { estimatedHours: dto.estimatedHours }),
       ...(dto.imageUrl != null && { imageUrl: dto.imageUrl }),
       ...(dto.tags != null && { tags: dto.tags }),
       ...(dto.currency != null && {

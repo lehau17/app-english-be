@@ -2,7 +2,9 @@ import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ActivityType, DifficultyLevel } from '@prisma/client';
 import {
+  IsArray,
   IsEnum,
+  IsIn,
   IsInt,
   IsJSON,
   IsOptional,
@@ -11,56 +13,38 @@ import {
 } from 'class-validator';
 
 import { IsNotEmpty, IsObject, Min } from 'class-validator';
+import { ACTIVITY_TYPES, ActivityTypeValue } from '../../course/dto';
+
 
 export class CreateActivityDto {
-  @ApiProperty({
-    enum: ActivityType,
-    description: 'Type of the activity.',
-  })
-  @IsEnum(ActivityType)
-  @IsNotEmpty()
-  type: ActivityType;
+  // NESTED theo lesson => KHÔNG cần lessonId
+  @ApiProperty({ enum: ACTIVITY_TYPES, description: 'Type of the activity.' })
+  @IsString()
+  @IsIn(ACTIVITY_TYPES as unknown as string[])
+  type!: ActivityTypeValue;
 
   @ApiProperty({ description: 'Order of the activity within the lesson.' })
-  @IsInt()
-  @Min(0)
-  orderNo: number;
+  @IsInt() @Min(1)
+  orderNo!: number;
 
   @ApiProperty({ description: 'Title of the activity.' })
-  @IsString()
-  @IsNotEmpty()
-  title: string;
+  @IsString() @IsNotEmpty()
+  title!: string;
 
-  @ApiProperty({
-    type: 'object',
-    description: 'JSON content for the activity.',
-  })
+  @ApiProperty({ type: 'object', description: 'JSON content (shape phụ thuộc type).' })
   @IsObject()
-  @IsNotEmpty()
-  content: any;
+  content!: Record<string, any>; // ví dụ: vocab => { kind:'vocab', data:{ items:[...] } }
 
-  @ApiPropertyOptional({
-    description: 'Time limit for the activity in seconds.',
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
+  @ApiPropertyOptional({ description: 'Time limit (minutes).' })
+  @IsOptional() @IsInt() @Min(1)
   timeLimit?: number;
 
-  @ApiPropertyOptional({
-    description: 'Maximum number of attempts allowed.',
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(1)
+  @ApiPropertyOptional({ description: 'Maximum number of attempts.' })
+  @IsOptional() @IsInt() @Min(1)
   maxAttempts?: number;
 
-  @ApiPropertyOptional({
-    description: 'Passing score required for the activity.',
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
+  @ApiPropertyOptional({ description: 'Passing score (0–100).' })
+  @IsOptional() @IsInt() @Min(0)
   passingScore?: number;
 
   @ApiPropertyOptional({
@@ -69,40 +53,24 @@ export class CreateActivityDto {
     default: DifficultyLevel.beginner,
   })
   @IsOptional()
-  @IsEnum(DifficultyLevel)
   difficulty?: DifficultyLevel;
 
-  @ApiPropertyOptional({
-    description: 'XP points awarded for completing the activity.',
-    default: 10,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
+  @ApiPropertyOptional({ description: 'XP points', default: 10 })
+  @IsOptional() @IsInt() @Min(0)
   points?: number;
 
   @ApiPropertyOptional({ description: 'Instructions for the activity.' })
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
   instructions?: string;
 
-  @ApiPropertyOptional({
-    type: 'object',
-    description: 'JSON object containing hints.',
-  })
-  @IsOptional()
-  @IsObject()
-  hints?: any;
+  @ApiPropertyOptional({ type: [String], description: 'Hints (plain text list).' })
+  @IsOptional() @IsArray() @IsString({ each: true })
+  hints?: string[];
 
-  @ApiPropertyOptional({
-    type: 'object',
-    description: 'JSON object containing media URLs.',
-  })
-  @IsOptional()
-  @IsObject()
-  mediaUrls?: any;
+  @ApiPropertyOptional({ type: [String], description: 'Attached media URLs.' })
+  @IsOptional() @IsArray() @IsString({ each: true })
+  mediaUrls?: string[];
 }
-
 export class UpdateActivityDto {
   @ApiPropertyOptional({ enum: ActivityType, example: ActivityType.listening })
   @IsOptional()
