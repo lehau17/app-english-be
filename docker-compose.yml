@@ -82,6 +82,30 @@ services:
     volumes:
       - minio_data:/data
 
+
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: minio-init
+    depends_on:
+      - minio
+    # Khai báo alias 'local' qua biến môi trường (gọn hơn)
+    environment:
+      MC_HOST_local: http://minio:minio123@minio:9000
+    entrypoint: >
+      /bin/sh -c '
+      echo ">> Waiting for MinIO...";
+      until mc ls local >/dev/null 2>&1; do sleep 2; done;
+      echo ">> Creating bucket (idempotent)...";
+      mc mb -p local/english-learning-bucket || true;
+      echo ">> Set anonymous READ (public-download) on bucket...";
+      mc anonymous set download local/english-learning-bucket || true;
+      # fallback cho mc phiên bản cũ:
+      mc policy set public local/english-learning-bucket || true;
+      echo ">> Done.";
+      '
+    restart: "no"
+
 volumes:
   pg_data:
   redis_data:
