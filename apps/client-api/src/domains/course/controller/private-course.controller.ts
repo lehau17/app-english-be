@@ -1,6 +1,7 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -104,11 +105,11 @@ export class CourseController {
     @PayloadToken() payload : JwtPayload
   ) {
     if (!files || files.length === 0) {
-      throw new Error('Không có file nào được upload');
+      throw new BadRequestException('Không có file nào được upload');
     }
 
     if (files.length > 10) {
-      throw new Error('Tối đa 10 file cùng lúc');
+      throw new BadRequestException('Tối đa 10 file cùng lúc');
     }
 
     // Lấy instructorId từ JWT token nếu không có trong DTO
