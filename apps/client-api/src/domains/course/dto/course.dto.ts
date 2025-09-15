@@ -3,26 +3,27 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DifficultyLevel, LanguageCode } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
-  ArrayMaxSize,
-  ArrayMinSize,
-  ArrayUnique,
-  IsArray,
-  IsBoolean,
-  IsEnum,
-  IsInt,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  IsUrl,
-  Matches,
-  MaxLength,
-  Min,
-  MinLength
+    ArrayMaxSize,
+    ArrayMinSize,
+    ArrayUnique,
+    IsArray,
+    IsBoolean,
+    IsEnum,
+    IsInt,
+    IsNumber,
+    IsOptional,
+    IsString,
+    IsUUID,
+    IsUrl,
+    Matches,
+    MaxLength,
+    Min,
+    MinLength
 } from 'class-validator';
 import { CreateLessonDto } from '../../lesson/dto/lesson.dto';
 export const ACTIVITY_TYPES = [
   'vocab','pronunciation','listening','speaking','mini_game',
+  'fill_blank','dictation','matching',
   'reading','writing','grammar','quiz','flashcard','conversation'
 ] as const;
 export type ActivityTypeValue = typeof ACTIVITY_TYPES[number];

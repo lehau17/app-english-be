@@ -1,4 +1,5 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
+import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
   Body,
   Controller,
@@ -15,7 +16,8 @@ import {
   GetActivitiesQueryDto,
   UpdateActivityDto,
 } from '../dto/podcast-activity.dto';
-import { SubmitAttemptDto } from '../dto/user-activity-attempt.dto';
+import { GetAttemptsQueryDto, SubmitAttemptDto } from '../dto/user-activity-attempt.dto';
+import { PodcastActivityEntity } from '../entities/podcast-activity.entity';
 import { PodcastActivityService } from '../service/podcast-activity.service';
 
 @ApiTags('Podcast Activities')
@@ -30,7 +32,7 @@ export class PodcastActivityController {
   async getActivitiesByPodcast(
     @Query() query: GetActivitiesQueryDto,
     @PayloadToken() payload: JwtPayload,
-  ) {
+  ): Promise<PageResponseDto<PodcastActivityEntity>> {
     return this.activityService.findByPodcast(query.podcastId, payload.sub, query);
   }
 
@@ -87,7 +89,11 @@ export class PodcastActivityController {
   @ApiOperation({ summary: 'Get user attempts for activity' })
   @ApiParam({ name: 'id', description: 'Activity ID' })
   @ResponseMessage('Attempts retrieved successfully')
-  async getUserAttempts(@Param('id', ParseUUIDPipe) id: string, @PayloadToken() payload: JwtPayload) {
-    return this.activityService.getAttempts(id, payload.sub, {});
+  async getUserAttempts(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: GetAttemptsQueryDto,
+    @PayloadToken() payload: JwtPayload
+  ): Promise<PageResponseDto<any>> {
+    return this.activityService.getAttempts(id, payload.sub, query);
   }
 }

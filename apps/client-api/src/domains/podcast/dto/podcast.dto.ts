@@ -1,39 +1,19 @@
+import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  IsArray,
-  IsBoolean,
-  IsEnum,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUrl,
-  Max,
-  Min
+    IsArray,
+    IsBoolean,
+    IsEnum,
+    IsNumber,
+    IsOptional,
+    IsString,
+    IsUrl,
+    Min
 } from 'class-validator';
 import { PodcastCategory, PodcastDifficulty, PodcastSource, PodcastStatus } from '../entities/podcast.entity';
 
-export class GetPodcastsQueryDto {
-  @ApiPropertyOptional({ description: 'Page number', default: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  page?: number = 1;
-
-  @ApiPropertyOptional({ description: 'Items per page', default: 20 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  @Max(100)
-  limit?: number = 20;
-
-  @ApiPropertyOptional({ description: 'Search query' })
-  @IsOptional()
-  @IsString()
-  search?: string;
-
+export class GetPodcastsQueryDto extends RequestPagingDto {
   @ApiPropertyOptional({ enum: PodcastCategory, description: 'Filter by category' })
   @IsOptional()
   @IsEnum(PodcastCategory)
@@ -53,16 +33,6 @@ export class GetPodcastsQueryDto {
   @IsOptional()
   @IsString()
   duration?: 'short' | 'medium' | 'long';
-
-  @ApiPropertyOptional({ description: 'Sort by field', default: 'newest' })
-  @IsOptional()
-  @IsString()
-  sortBy?: 'newest' | 'popular' | 'duration' | 'rating' | 'title' = 'newest';
-
-  @ApiPropertyOptional({ description: 'Sort direction', default: 'desc' })
-  @IsOptional()
-  @IsString()
-  sortOrder?: 'asc' | 'desc' = 'desc';
 
   @ApiPropertyOptional({ description: 'Show only recommended podcasts' })
   @IsOptional()

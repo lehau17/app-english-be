@@ -28,7 +28,7 @@ const courses = [
 function buildLessonRows(lessonNo: number, title: string, estimatedTime = 20) {
   const base: any[] = [];
   // Lesson header row
-  base.push({ lessonNo, lessonTitle: title, lessonDescription: `${title} - practice all skills`, lessonEstimatedTime: estimatedTime, lessonObjectives: 'Vocabulary|Listening|Speaking|Reading|Writing|Grammar|Pronunciation|Quiz' });
+  base.push({ lessonNo, lessonTitle: title, lessonDescription: `${title} - practice all skills`, lessonEstimatedTime: estimatedTime, lessonObjectives: 'Vocabulary|Listening|Speaking|Reading|Writing|Grammar|Pronunciation|Quiz|FillBlank|Dictation|Matching' });
 
   // 8 activities: vocab, quiz, listening, pronunciation, speaking, reading, writing, grammar
   // Vocab activity now uses contentJson with items array (multiple words per activity)
@@ -52,6 +52,38 @@ function buildLessonRows(lessonNo: number, title: string, estimatedTime = 20) {
   base.push({ lessonNo, activityNo: 6, activityType: 'reading', activityTitle: 'Reading: family story', passage: 'This is the Nguyen family. They live together and help each other.', question: 'Who lives together?', options: 'The family|The neighbors|The friends', correctIndex: 0 });
   base.push({ lessonNo, activityNo: 7, activityType: 'writing', activityTitle: 'Writing: letter to a family member', prompt: 'Write a short letter to a family member thanking them', minWords: 50 });
   base.push({ lessonNo, activityNo: 8, activityType: 'grammar', activityTitle: 'Grammar: possessive nouns', rule: 'Use apostrophe-s for possessive: Mother\'s book', question: 'Which shows possession?', options: "mothers book|mother's book|mother book", correctIndex: 1 });
+
+  // New activity types: fill_blank, dictation, matching
+  // 9 - fill_blank: provide passage and blanks (pipe-separated answers)
+  base.push({
+    lessonNo,
+    activityNo: 9,
+    activityType: 'fill_blank',
+    activityTitle: 'Fill in the blanks: Family passage',
+    passage: 'My ___ loves me. I have a ___ and a ___.',
+    blanks: 'mother|sister|brother'
+  });
+
+  // 10 - dictation: provide transcript (or audioUrl) and minWords
+  base.push({
+    lessonNo,
+    activityNo: 10,
+    activityType: 'dictation',
+    activityTitle: 'Dictation: Short sentence',
+    audioUrl: '',
+    passage: 'She went to the market to buy fruits and vegetables.',
+    minWords: 5
+  });
+
+  // 11 - matching: provide leftItems and rightItems pipe-separated
+  base.push({
+    lessonNo,
+    activityNo: 11,
+    activityType: 'matching',
+    activityTitle: 'Matching: English - Vietnamese',
+    leftItems: 'mother|father|sister',
+    rightItems: 'mẹ|cha|chị/em gái'
+  });
 
   return base;
 }

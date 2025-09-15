@@ -3,6 +3,7 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
 import * as path from 'path';
+import { PodcastActivityType } from '../dto/podcast-activity.dto';
 import { CreatePodcastFromTextDto, GenerateActivitiesDto } from '../dto/text-to-podcast.dto';
 import { PodcastActivityService } from './podcast-activity.service';
 import { PodcastService } from './podcast.service';
@@ -28,9 +29,10 @@ export class TextToPodcastService {
     try {
       this.logger.log(`Creating podcast from text for user: ${userId}`);
 
-      // 1. Generate audio from text
+      // 1. Generate audio from text (clean version without markup)
+      const cleanTextForAudio = dto.textContent.replace(/\[([^\]]+)\]/g, '$1'); // Remove brackets but keep words
       const audioResult = await this.generateAudioFromText(
-        dto.textContent,
+        cleanTextForAudio,
         dto.voiceType,
         dto.speechSpeed
       );
@@ -38,43 +40,32 @@ export class TextToPodcastService {
       // 2. Create podcast entry
       const podcastData = {
         title: dto.title,
-        description: dto.description || `Auto-generated from text content`,
+        description: dto.description || `Auto-generated listening practice from text content`,
         audioUrl: audioResult.audioUrl,
         duration: audioResult.duration,
-        transcript: dto.textContent,
+        transcript: cleanTextForAudio, // Store clean version
         category: dto.category,
         difficulty: dto.difficulty,
         source: 'text_to_speech' as any,
         tags: dto.tags || [],
         status: 'published' as any,
+        code : new Date().getTime().toString(),
       };
 
       const podcast = await this.podcastService.create(podcastData, userId);
 
-      // 3. Generate activities if requested
-      if (dto.autoGenerateActivities) {
-        const activitiesResult = await this.generateActivitiesForPodcast(
-          podcast.id,
-          dto.textContent,
-          dto.activityTypes,
-          dto.numberOfBlanks,
-          dto.questionDifficulty,
-          userId
-        );
-
-        return {
-          podcast,
-          activities: activitiesResult,
-          audioGeneration: {
-            success: true,
-            audioUrl: audioResult.audioUrl,
-            duration: audioResult.duration,
-          },
-        };
-      }
+      // 3. Auto-generate fill blank activity (only type supported)
+      const activity = await this.generateFillBlankActivity(
+        podcast.id,
+        dto.textContent,
+        dto.numberOfBlanks || 5,
+        dto.questionDifficulty || 'medium',
+        userId
+      );
 
       return {
         podcast,
+        activity,
         audioGeneration: {
           success: true,
           audioUrl: audioResult.audioUrl,
@@ -92,20 +83,19 @@ export class TextToPodcastService {
       // Get podcast to extract transcript
       const podcast = await this.podcastService.findOne(dto.podcastId, userId);
 
-      if (!podcast.transcript) {
+      if (!podcast.transcriptUrl) {
         throw new BadRequestException('Podcast must have transcript to generate activities');
       }
 
-      const activities = await this.generateActivitiesForPodcast(
+      const activity = await this.generateFillBlankActivity(
         dto.podcastId,
-        podcast.transcript,
-        dto.activityTypes,
-        dto.numberOfQuestions,
-        dto.questionDifficulty,
+        podcast.transcriptUrl,
+        dto.numberOfQuestions || 5,
+        dto.questionDifficulty || 'medium',
         userId
       );
 
-      return { activities };
+      return { activity };
     } catch (error) {
       this.logger.error('Error generating activities:', error);
       throw new BadRequestException('Failed to generate activities');
@@ -146,60 +136,91 @@ export class TextToPodcastService {
     }
   }
 
-  private async generateActivitiesForPodcast(
+  private async generateFillBlankActivity(
     podcastId: string,
     transcript: string,
-    activityTypes: string[],
-    numberOfQuestions: number,
+    numberOfBlanks: number,
     difficulty: 'easy' | 'medium' | 'hard',
     userId: string
   ) {
-    const activities = [];
+    const activityData = await this.generateFillBlank(transcript, numberOfBlanks, difficulty);
 
-    for (const activityType of activityTypes) {
-      let activityData;
+    const activity = await this.activityService.create({
+      title: activityData.title,
+      description: activityData.description,
+      podcastId,
+      type: PodcastActivityType.FILL_BLANK,
+      content: activityData.content,
+      points: this.getPointsByDifficulty(difficulty),
+    }, userId);
 
-      switch (activityType) {
-        case 'fill_in_blanks':
-          activityData = await this.generateFillInBlanks(transcript, numberOfQuestions, difficulty);
-          break;
-        case 'multiple_choice':
-          activityData = await this.generateMultipleChoice(transcript, numberOfQuestions, difficulty);
-          break;
-        case 'true_false':
-          activityData = await this.generateTrueFalse(transcript, numberOfQuestions, difficulty);
-          break;
-        case 'comprehension':
-          activityData = await this.generateComprehension(transcript, numberOfQuestions, difficulty);
-          break;
-        default:
-          continue;
-      }
-
-      if (activityData) {
-        const activity = await this.activityService.create({
-          title: activityData.title,
-          description: activityData.description,
-          podcastId,
-          type: activityType as any,
-          content: activityData.content,
-          points: this.getPointsByDifficulty(difficulty),
-          isRequired: activityType === 'fill_in_blanks', // Make fill-in-blanks required
-        }, userId);
-
-        activities.push(activity);
-      }
-    }
-
-    return activities;
+    return activity;
   }
 
-  private async generateFillInBlanks(
+  private async generateFillBlank(
     transcript: string,
     numberOfBlanks: number,
     difficulty: 'easy' | 'medium' | 'hard'
   ) {
-    // Split transcript into sentences
+    // Check if user manually marked words for blanking using [word] syntax
+    const hasManualBlanks = /\[([^\]]+)\]/g.test(transcript);
+
+    if (hasManualBlanks) {
+      return this.generateManualFillBlank(transcript);
+    } else {
+      return this.generateAutoFillBlank(transcript, numberOfBlanks, difficulty);
+    }
+  }
+
+  private async generateManualFillBlank(transcript: string) {
+    const questions = [];
+    const sentences = transcript.split(/[.!?]+/).filter(s => s.trim().length > 5);
+    let questionId = 1;
+
+    for (const sentence of sentences) {
+      const trimmedSentence = sentence.trim();
+      if (!trimmedSentence.includes('[')) continue;
+
+      // Extract words marked for blanking: [word] -> word
+      const blankedWords = [];
+      let sentenceWithBlanks = trimmedSentence;
+
+      // Find all [word] patterns
+      const matches = trimmedSentence.match(/\[([^\]]+)\]/g);
+      if (!matches) continue;
+
+      matches.forEach(match => {
+        const word = match.slice(1, -1); // Remove [ and ]
+        blankedWords.push(word);
+        sentenceWithBlanks = sentenceWithBlanks.replace(match, '___');
+      });
+
+      if (blankedWords.length > 0) {
+        questions.push({
+          id: `blank_${questionId++}`,
+          sentence: sentenceWithBlanks,
+          correctAnswers: blankedWords,
+        });
+      }
+    }
+
+    return {
+      title: `Fill in the Blanks - User Selected`,
+      description: `Listen to the audio and fill in the missing words (${questions.length} questions)`,
+      content: {
+        type: 'fill_blank' as const,
+        totalQuestions: questions.length,
+        questions,
+      },
+    };
+  }
+
+  private async generateAutoFillBlank(
+    transcript: string,
+    numberOfBlanks: number,
+    difficulty: 'easy' | 'medium' | 'hard'
+  ) {
+    // Original auto-generation logic
     const sentences = transcript.split(/[.!?]+/).filter(s => s.trim().length > 10);
 
     if (sentences.length < numberOfBlanks) {
@@ -225,26 +246,23 @@ export class TextToPodcastService {
       if (words.length < 4) continue;
 
       // Select word(s) to blank out based on difficulty
-      const blanksInSentence = difficulty === 'easy' ? 1 : difficulty === 'medium' ? 2 : 3;
+      const blanksInSentence = difficulty === 'easy' ? 1 : difficulty === 'medium' ? 1 : 2;
       const blankPositions = this.selectBlankPositions(words, blanksInSentence);
 
       const correctAnswers = blankPositions.map(pos => words[pos]);
       let sentenceWithBlanks = sentence.trim();
 
       // Replace from right to left to maintain positions
-      blankPositions.sort((a, b) => b - a).forEach((pos, index) => {
+      blankPositions.sort((a, b) => b - a).forEach(() => {
+        const pos = blankPositions[0]; // Simple: just blank the first selected word
         const wordToReplace = words[pos];
-        sentenceWithBlanks = sentenceWithBlanks.replace(
-          wordToReplace,
-          `___${blankPositions.length - index}___`
-        );
+        sentenceWithBlanks = sentenceWithBlanks.replace(wordToReplace, '___');
       });
 
       questions.push({
         id: `blank_${i + 1}`,
         sentence: sentenceWithBlanks,
-        correctAnswers,
-        blanks: blankPositions.length,
+        correctAnswers: [correctAnswers[0]], // Single answer for simplicity
       });
     }
 
@@ -252,64 +270,9 @@ export class TextToPodcastService {
       title: `Fill in the Blanks - ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`,
       description: `Listen to the audio and fill in the missing words (${numberOfBlanks} questions)`,
       content: {
-        type: 'fill_in_blanks',
-        instructions: 'Listen carefully and fill in the missing words in each sentence.',
-        questions,
+        type: 'fill_blank' as const,
         totalQuestions: questions.length,
-      },
-    };
-  }
-
-  private async generateMultipleChoice(
-    transcript: string,
-    numberOfQuestions: number,
-    difficulty: 'easy' | 'medium' | 'hard'
-  ) {
-    // TODO: Implement multiple choice generation
-    return {
-      title: `Multiple Choice - ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`,
-      description: `Answer multiple choice questions about the audio content`,
-      content: {
-        type: 'multiple_choice',
-        instructions: 'Listen to the audio and choose the correct answer.',
-        questions: [],
-        totalQuestions: 0,
-      },
-    };
-  }
-
-  private async generateTrueFalse(
-    transcript: string,
-    numberOfQuestions: number,
-    difficulty: 'easy' | 'medium' | 'hard'
-  ) {
-    // TODO: Implement true/false generation
-    return {
-      title: `True or False - ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`,
-      description: `Determine if statements about the audio are true or false`,
-      content: {
-        type: 'true_false',
-        instructions: 'Listen to the audio and decide if each statement is true or false.',
-        questions: [],
-        totalQuestions: 0,
-      },
-    };
-  }
-
-  private async generateComprehension(
-    transcript: string,
-    numberOfQuestions: number,
-    difficulty: 'easy' | 'medium' | 'hard'
-  ) {
-    // TODO: Implement comprehension questions
-    return {
-      title: `Comprehension Questions - ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`,
-      description: `Answer questions about the main ideas and details`,
-      content: {
-        type: 'comprehension',
-        instructions: 'Listen to the audio and answer the comprehension questions.',
-        questions: [],
-        totalQuestions: 0,
+        questions,
       },
     };
   }

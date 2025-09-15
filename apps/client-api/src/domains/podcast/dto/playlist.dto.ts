@@ -1,14 +1,11 @@
+import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 import {
-  IsBoolean,
-  IsEnum,
-  IsInt,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
-  MinLength,
+    IsBoolean,
+    IsEnum,
+    IsOptional,
+    IsString,
+    MinLength,
 } from 'class-validator';
 
 export class CreatePlaylistDto {
@@ -46,44 +43,9 @@ export class UpdatePlaylistDto {
   isPublic?: boolean;
 }
 
-export class GetPlaylistsQueryDto {
-  @ApiPropertyOptional({ description: 'Page number', minimum: 1, default: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number = 1;
-
-  @ApiPropertyOptional({ description: 'Items per page', minimum: 1, maximum: 100, default: 20 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  limit?: number = 20;
-
-  @ApiPropertyOptional({ description: 'Search query' })
-  @IsOptional()
-  @IsString()
-  search?: string;
-
-  @ApiPropertyOptional({
-    description: 'Sort by field',
-    enum: ['newest', 'name'],
-    default: 'newest'
-  })
-  @IsOptional()
-  @IsEnum(['newest', 'name'])
-  sortBy?: 'newest' | 'name' = 'newest';
-
-  @ApiPropertyOptional({
-    description: 'Sort order',
-    enum: ['asc', 'desc'],
-    default: 'desc'
-  })
-  @IsOptional()
-  @IsEnum(['asc', 'desc'])
-  sortOrder?: 'asc' | 'desc' = 'desc';
+export class GetPlaylistsQueryDto extends RequestPagingDto {
+  // Inherits: page, limit, search, sortBy, sortOrder from RequestPagingDto
+  // sortBy can be used for 'newest', 'name' sorting
 
   @ApiPropertyOptional({
     description: 'Privacy filter',

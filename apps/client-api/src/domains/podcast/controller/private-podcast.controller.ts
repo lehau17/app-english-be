@@ -1,26 +1,28 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
+import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    ParseUUIDPipe,
-    Patch,
-    Post,
-    Put,
-    Query,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Put,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { CreatePodcastDto, GetPodcastsQueryDto, UpdatePodcastDto } from '../dto/podcast.dto';
 import { CreatePodcastFromTextDto, GenerateActivitiesDto } from '../dto/text-to-podcast.dto';
 import {
-    CreateRatingDto,
-    GetRatingsQueryDto,
-    ToggleLikeDto,
-    ToggleSaveDto,
-    UpdateProgressDto,
+  CreateRatingDto,
+  GetRatingsQueryDto,
+  ToggleLikeDto,
+  ToggleSaveDto,
+  UpdateProgressDto,
 } from '../dto/user-interaction.dto';
+import { PodcastEntity } from '../entities/podcast.entity';
 import { PodcastService } from '../service/podcast.service';
 import { TextToPodcastService } from '../service/text-to-podcast.service';
 
@@ -36,7 +38,7 @@ export class PodcastController {
   @Get()
   @ApiOperation({ summary: 'Get all podcasts with filtering and pagination' })
   @ResponseMessage('Podcasts retrieved successfully')
-  async findAll(@PayloadToken() payload: JwtPayload, @Query() query: GetPodcastsQueryDto) {
+  async findAll(@PayloadToken() payload: JwtPayload, @Query() query: GetPodcastsQueryDto): Promise<PageResponseDto<PodcastEntity>> {
     const userId = payload.sub;
     return this.podcastService.findAll(userId, query);
   }
@@ -147,7 +149,7 @@ export class PodcastController {
   @ApiOperation({ summary: 'Get ratings for podcast' })
   @ApiParam({ name: 'id', description: 'Podcast ID' })
   @ResponseMessage('Ratings retrieved successfully')
-  async getRatings(@Param('id', ParseUUIDPipe) id: string, @Query() query: GetRatingsQueryDto) {
+  async getRatings(@Param('id', ParseUUIDPipe) id: string, @Query() query: GetRatingsQueryDto): Promise<PageResponseDto<any>> {
     return this.podcastService.getRatings(id, query);
   }
 

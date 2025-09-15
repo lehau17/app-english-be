@@ -1,24 +1,53 @@
+import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
-  IsEnum,
-  IsInt,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Max,
-  Min,
-  MinLength
+    IsArray,
+    IsEnum,
+    IsNumber,
+    IsObject,
+    IsOptional,
+    IsString,
+    IsUUID,
+    Min,
+    MinLength,
+    ValidateNested
 } from 'class-validator';
 
 export enum PodcastActivityType {
-  VOCABULARY = 'vocabulary',
-  LISTENING = 'listening',
-  PRONUNCIATION = 'pronunciation',
-  COMPREHENSION = 'comprehension',
-  SUMMARY = 'summary',
-  DISCUSSION = 'discussion',
+  FILL_BLANK = 'fill_blank',
+}
+
+class FillBlankQuestionDto {
+  @ApiProperty({ description: 'Question ID' })
+  @IsString()
+  id: string;
+
+  @ApiProperty({ description: 'Sentence with blank' })
+  @IsString()
+  sentence: string;
+
+  @ApiProperty({ description: 'Correct answer options', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  correctAnswers: string[];
+}
+
+class FillBlankContentDto {
+  @ApiProperty({ description: 'Activity type', enum: ['fill_blank'] })
+  @IsString()
+  type: 'fill_blank';
+
+  @ApiProperty({ description: 'Total number of questions' })
+  @IsNumber()
+  @Min(1)
+  totalQuestions: number;
+
+  @ApiProperty({ description: 'Fill blank questions', type: [FillBlankQuestionDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => FillBlankQuestionDto)
+  questions: FillBlankQuestionDto[];
 }
 
 export class CreateActivityDto {
@@ -38,92 +67,46 @@ export class CreateActivityDto {
   podcastId: string;
 
   @ApiProperty({
-    description: 'Activity type',
+    description: 'Activity type (only fill_blank supported)',
     enum: PodcastActivityType
   })
   @IsEnum(PodcastActivityType)
   type: PodcastActivityType;
 
-  @ApiProperty({ description: 'Activity content (JSON format)' })
-  content: any;
+  @ApiProperty({ description: 'Fill blank activity content' })
+  @IsObject()
+  @ValidateNested()
+  @Type(() => FillBlankContentDto)
+  content: FillBlankContentDto;
 
-  @ApiPropertyOptional({ description: 'Start time in seconds', minimum: 0 })
+  @ApiPropertyOptional({ description: 'Time limit in seconds', minimum: 0 })
   @IsOptional()
   @IsNumber()
   @Min(0)
-  startTime?: number;
-
-  @ApiPropertyOptional({ description: 'End time in seconds', minimum: 0 })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  endTime?: number;
+  timeLimit?: number;
 
   @ApiPropertyOptional({ description: 'Points awarded', minimum: 0, default: 10 })
   @IsOptional()
   @IsNumber()
   @Min(0)
   points?: number = 10;
-
-  @ApiPropertyOptional({ description: 'Maximum attempts allowed', minimum: 1 })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  maxAttempts?: number;
-
-  @ApiPropertyOptional({ description: 'Whether activity is required', default: false })
-  @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
-  isRequired?: boolean = false;
 }
 
 export class UpdateActivityDto extends PartialType(CreateActivityDto) {
-  @ApiPropertyOptional({ description: 'Activity status', enum: ['active', 'inactive'] })
+  @ApiPropertyOptional({ description: 'Activity status' })
   @IsOptional()
-  @IsEnum(['active', 'inactive'])
-  status?: 'active' | 'inactive';
+  @Transform(({ value }) => value === 'true' || value === true)
+  isActive?: boolean;
 }
 
-export class GetActivitiesQueryDto {
+export class GetActivitiesQueryDto extends RequestPagingDto {
   @ApiProperty({ description: 'Podcast ID to get activities for' })
   @IsString()
   @IsUUID()
   podcastId: string;
 
-  @ApiPropertyOptional({ description: 'Page number', minimum: 1, default: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number = 1;
-
-  @ApiPropertyOptional({ description: 'Items per page', minimum: 1, maximum: 100, default: 20 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  limit?: number = 20;
-
-  @ApiPropertyOptional({
-    description: 'Filter by activity type',
-    enum: PodcastActivityType
-  })
-  @IsOptional()
-  @IsEnum(PodcastActivityType)
-  type?: PodcastActivityType;
-
-  @ApiPropertyOptional({ description: 'Filter by required status' })
+  @ApiPropertyOptional({ description: 'Show only active activities' })
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
-  isRequired?: boolean;
-
-  @ApiPropertyOptional({
-    description: 'Sort by field',
-    enum: ['newest', 'oldest', 'startTime'],
-    default: 'startTime'
-  })
-  @IsOptional()
-  @IsEnum(['newest', 'oldest', 'startTime'])
-  sortBy?: 'newest' | 'oldest' | 'startTime' = 'startTime';
+  activeOnly?: boolean = true;
 }

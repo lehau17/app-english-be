@@ -96,6 +96,9 @@ enum ActivityType {
   listening
   speaking
   mini_game
+    fill_blank
+    dictation
+    matching
   reading
   writing
   grammar
@@ -103,6 +106,7 @@ enum ActivityType {
   flashcard
   conversation
 }
+
 
 enum ProgressState {
     not_started
@@ -1691,14 +1695,7 @@ enum PodcastDifficulty {
 }
 
 enum ListeningActivityType {
-    quick_quiz      @map("Quiz nhanh")
-    dictation       @map("Chính tả")
-    comprehension   @map("Hiểu nghĩa")
-    pronunciation   @map("Phát âm")
-    vocabulary      @map("Từ vựng")
-    speaking_ai     @map("Nói với AI")
-    writing         @map("Luyện viết")
-    summary         @map("Tóm tắt")
+    fill_blank      @map("Điền vào chỗ trống")
 }
 
 // ===================== CORE PODCAST MODELS =====================
@@ -1781,26 +1778,18 @@ model Podcast {
 model PodcastActivity {
     id           String                @id @default(uuid())
     podcastId    String
-    type         ListeningActivityType
+    type         ListeningActivityType @default(fill_blank)
     title        String
     description  String?
     orderNo      Int                   @default(1)
 
-    // Activity configuration
-    timeLimit    Int?                  // seconds
-    maxAttempts  Int?                  @default(3)
-    passingScore Int?                  @default(70) // percentage
+    // Simplified configuration for fill_blank only
+    timeLimit    Int?                  // seconds (optional)
     points       Int                   @default(10)
 
-    // Content (flexible JSON for different activity types)
-    content      Json                  // Questions, options, instructions
-    instructions String?
-    hints        String[]              @default([])
-
-    // Access control
-    isLocked     Boolean               @default(false)
-    unlockAfter  String?               // Activity ID cần hoàn thành trước
-    isPremium    Boolean               @default(false)
+    // Content structure for fill_blank:
+    // { type: 'fill_blank', totalQuestions: number, questions: [{ id, sentence, correctAnswers: string[] }] }
+    content      Json
 
     // Status
     isActive     Boolean               @default(true)
@@ -1813,7 +1802,7 @@ model PodcastActivity {
     attempts     PodcastActivityAttempt[]
 
     @@unique([podcastId, orderNo])
-    @@index([podcastId, type])
+    @@index([podcastId])
     @@index([isActive])
     @@map("podcast_activities")
 }
@@ -1862,32 +1851,25 @@ model UserPodcastProgress {
 }
 
 model PodcastActivityAttempt {
-    id           String    @id @default(uuid())
-    userId       String
-    activityId   String
-    attemptNo    Int       @default(1)
+    id             String    @id @default(uuid())
+    userId         String
+    activityId     String
+    attemptNo      Int       @default(1)
 
-    // Results
-    score        Int?      // 0-100
-    maxScore     Int?      @default(100)
-    isCorrect    Boolean?
-    isPassed     Boolean   @default(false)
+    // Simplified scoring: count correct answers and calculate percentage
+    correctCount   Int       @default(0)
+    totalQuestions Int       @default(0)
+    scorePercent   Float     @default(0) // 0-100 percentage
 
-    // Performance
-    timeSpent    Int?      // seconds
-    answers      Json      // User's answers
-    feedback     Json?     // Detailed feedback
+    // Performance tracking
+    timeSpent      Int?      // seconds
+    answers        Json      // User's answers for each question
 
-    // Analysis
-    strengths    String[]  @default([])
-    weaknesses   String[]  @default([])
-    suggestions  String[]  @default([])
-
-    createdAt    DateTime  @default(now())
+    createdAt      DateTime  @default(now())
 
     // Relations
-    user         User      @relation("UserPodcastAttempts", fields: [userId], references: [id], onDelete: Cascade)
-    activity     PodcastActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+    user           User      @relation("UserPodcastAttempts", fields: [userId], references: [id], onDelete: Cascade)
+    activity       PodcastActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
     @@unique([userId, activityId, attemptNo])
     @@index([userId, createdAt])

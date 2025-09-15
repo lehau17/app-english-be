@@ -1,9 +1,10 @@
 import { PrismaRepository } from '@app/database';
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import {
-  CreateActivityDto,
-  GetActivitiesQueryDto,
-  UpdateActivityDto,
+    CreateActivityDto,
+    GetActivitiesQueryDto,
+    UpdateActivityDto,
 } from '../dto/podcast-activity.dto';
 import { GetAttemptsQueryDto, SubmitAttemptDto } from '../dto/user-activity-attempt.dto';
 import { PodcastActivityEntity } from '../entities/podcast-activity.entity';
@@ -14,8 +15,9 @@ export class PodcastActivityService {
 
   // ===================== ACTIVITY CRUD =====================
 
-  async findByPodcast(podcastId: string, userId: string, query: GetActivitiesQueryDto) {
-    const { type, includeProgress = false, activeOnly = true } = query;
+  async findByPodcast(podcastId: string, userId: string, query: GetActivitiesQueryDto): Promise<PageResponseDto<any>> {
+    const { page = 1, limit = 20, type, includeProgress = false, activeOnly = true } = query;
+    const skip = (page - 1) * limit;
 
     const where: any = {
       podcastId,
@@ -23,37 +25,44 @@ export class PodcastActivityService {
       ...(activeOnly && { isActive: true }),
     };
 
-    const activities = await this.prisma.podcastActivity.findMany({
-      where,
-      orderBy: { orderNo: 'asc' },
-      include: {
-        attempts: includeProgress && userId
-          ? {
-              where: { userId },
-              orderBy: { createdAt: 'desc' },
-              select: {
-                id: true,
-                score: true,
-                isPassed: true,
-                attemptNo: true,
-                timeSpent: true,
-                createdAt: true,
-              },
-            }
-          : false,
-        _count: {
-          select: {
-            attempts: true,
+    const [activities, total] = await Promise.all([
+      this.prisma.podcastActivity.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { orderNo: 'asc' },
+        include: {
+          attempts: includeProgress && userId
+            ? {
+                where: { userId },
+                orderBy: { createdAt: 'desc' },
+                select: {
+                  id: true,
+                  score: true,
+                  isPassed: true,
+                  attemptNo: true,
+                  timeSpent: true,
+                  answers: true,
+                  feedback: true,
+                  createdAt: true,
+                },
+              }
+            : false,
+          _count: {
+            select: {
+              attempts: true,
+            },
           },
         },
-      },
-    });
+      }),
+      this.prisma.podcastActivity.count({ where }),
+    ]);
 
     // Transform response with user progress
-    return activities.map(activity => {
-      const userAttempts = activity.attempts || [];
+    const transformed = activities.map((activity) => {
+      const userAttempts = (activity as any).attempts || [];
       const bestAttempt = userAttempts.length > 0
-        ? userAttempts.reduce((best, current) =>
+        ? userAttempts.reduce((best: any, current: any) =>
             (current.score || 0) > (best.score || 0) ? current : best
           )
         : null;
@@ -67,39 +76,31 @@ export class PodcastActivityService {
           attemptCount: userAttempts.length,
           lastAttempt: bestAttempt?.createdAt,
         } : undefined,
-        totalAttempts: activity._count.attempts,
+        totalAttempts: (activity as any)._count?.attempts || 0,
       };
     });
+
+    return PageResponseDto.of(transformed, page, limit, total);
   }
 
-  async findOne(id: string, userId?: string): Promise<PodcastActivityEntity> {
+  async findOne(id: string, userId: string): Promise<any> {
     const activity = await this.prisma.podcastActivity.findUnique({
       where: { id },
       include: {
-        podcast: {
+        attempts: userId ? {
+          where: { userId },
+          orderBy: { createdAt: 'desc' },
           select: {
             id: true,
-            title: true,
-            code: true,
-            isPremium: true,
+            score: true,
+            isPassed: true,
+            attemptNo: true,
+            timeSpent: true,
+            answers: true,
+            feedback: true,
+            createdAt: true,
           },
-        },
-        attempts: userId
-          ? {
-              where: { userId },
-              orderBy: { createdAt: 'desc' },
-              select: {
-                id: true,
-                score: true,
-                isPassed: true,
-                attemptNo: true,
-                timeSpent: true,
-                answers: true,
-                feedback: true,
-                createdAt: true,
-              },
-            }
-          : false,
+        } : false,
         _count: {
           select: {
             attempts: true,
@@ -120,9 +121,9 @@ export class PodcastActivityService {
       }
     }
 
-    const userAttempts = activity.attempts || [];
+    const userAttempts = (activity as any).attempts || [];
     const bestAttempt = userAttempts.length > 0
-      ? userAttempts.reduce((best, current) =>
+      ? userAttempts.reduce((best: any, current: any) =>
           (current.score || 0) > (best.score || 0) ? current : best
         )
       : null;
@@ -136,8 +137,8 @@ export class PodcastActivityService {
         attemptCount: userAttempts.length,
         lastAttempt: bestAttempt?.createdAt,
       } : undefined,
-      totalAttempts: activity._count.attempts,
-    } as any;
+      totalAttempts: (activity as any)._count.attempts,
+    };
   }
 
   async create(createActivityDto: CreateActivityDto, userId: string): Promise<PodcastActivityEntity> {
@@ -154,20 +155,25 @@ export class PodcastActivityService {
       throw new ForbiddenException('You can only create activities for your own podcasts');
     }
 
-    // Check if orderNo already exists
-    const existingActivity = await this.prisma.podcastActivity.findFirst({
-      where: {
-        podcastId: createActivityDto.podcastId,
-        orderNo: createActivityDto.orderNo,
-      },
+    // Get next order number
+    const maxOrderActivity = await this.prisma.podcastActivity.findFirst({
+      where: { podcastId: createActivityDto.podcastId },
+      orderBy: { orderNo: 'desc' },
     });
 
-    if (existingActivity) {
-      throw new BadRequestException('Activity order number already exists');
-    }
+    const orderNo = maxOrderActivity ? maxOrderActivity.orderNo + 1 : 1;
 
     const activity = await this.prisma.podcastActivity.create({
-      data: createActivityDto,
+      data: {
+        title: createActivityDto.title,
+        description: createActivityDto.description,
+        podcastId: createActivityDto.podcastId,
+        type: createActivityDto.type,
+        content: createActivityDto.content,
+        orderNo,
+        timeLimit: createActivityDto.timeLimit,
+        points: createActivityDto.points || 10,
+      },
     });
 
     // Update podcast hasActivities flag
@@ -197,7 +203,18 @@ export class PodcastActivityService {
 
     const updatedActivity = await this.prisma.podcastActivity.update({
       where: { id },
-      data: updateActivityDto,
+      data: {
+        ...(updateActivityDto.title && { title: updateActivityDto.title }),
+        ...(updateActivityDto.description !== undefined && { description: updateActivityDto.description }),
+        ...(updateActivityDto.type && { type: updateActivityDto.type }),
+        ...(updateActivityDto.content && { content: updateActivityDto.content }),
+        ...(updateActivityDto.startTime !== undefined && { startTime: updateActivityDto.startTime }),
+        ...(updateActivityDto.endTime !== undefined && { endTime: updateActivityDto.endTime }),
+        ...(updateActivityDto.points !== undefined && { points: updateActivityDto.points }),
+        ...(updateActivityDto.maxAttempts !== undefined && { maxAttempts: updateActivityDto.maxAttempts }),
+        ...(updateActivityDto.isRequired !== undefined && { isRequired: updateActivityDto.isRequired }),
+        ...(updateActivityDto.status && { status: updateActivityDto.status }),
+      },
     });
 
     return updatedActivity as PodcastActivityEntity;
@@ -250,33 +267,9 @@ export class PodcastActivityService {
       throw new NotFoundException('Activity not found');
     }
 
-    // Check if user can access this activity
-    if (activity.isLocked) {
-      const canAccess = await this.checkActivityAccess(activity, userId);
-      if (!canAccess) {
-        throw new ForbiddenException('Activity is locked. Complete prerequisite activities first.');
-      }
-    }
-
-    // Check if user has exceeded max attempts
-    if (activity.maxAttempts) {
-      const attemptCount = await this.prisma.podcastActivityAttempt.count({
-        where: {
-          activityId,
-          userId,
-        },
-      });
-
-      if (attemptCount >= activity.maxAttempts) {
-        throw new BadRequestException('Maximum attempts exceeded');
-      }
-    }
-
-    // Calculate score based on activity type and answers
-    const { score, isCorrect, feedback, strengths, weaknesses, suggestions } =
-      await this.evaluateAttempt(activity, submitAttemptDto.answers);
-
-    const isPassed = activity.passingScore ? score >= activity.passingScore : isCorrect;
+    // Calculate percentage score based on answers
+    const { correctCount, totalQuestions, scorePercent } =
+      await this.evaluateFillBlankAttempt(activity, submitAttemptDto.answers);
 
     // Get next attempt number
     const lastAttempt = await this.prisma.podcastActivityAttempt.findFirst({
@@ -286,26 +279,19 @@ export class PodcastActivityService {
 
     const attemptNo = lastAttempt ? lastAttempt.attemptNo + 1 : 1;
 
-    // Create attempt record
+    // Create attempt record with percentage scoring
     const attempt = await this.prisma.podcastActivityAttempt.create({
       data: {
         userId,
         activityId,
         attemptNo,
-        score,
-        isCorrect,
-        isPassed,
+        correctCount,
+        totalQuestions,
+        scorePercent,
         timeSpent: submitAttemptDto.timeSpent,
         answers: submitAttemptDto.answers,
-        feedback,
-        strengths,
-        weaknesses,
-        suggestions,
       },
     });
-
-    // Update user progress if this is the best attempt
-    await this.updateUserProgress(userId, activityId, attempt);
 
     return attempt;
   }
@@ -327,7 +313,7 @@ export class PodcastActivityService {
         break;
     }
 
-    const [attempts, total] = await Promise.all([
+  const [attempts, total] = await Promise.all([
       this.prisma.podcastActivityAttempt.findMany({
         where: { activityId, userId },
         skip,
@@ -339,15 +325,7 @@ export class PodcastActivityService {
       }),
     ]);
 
-    return {
-      data: attempts,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+  return PageResponseDto.of(attempts as any, page, limit, total);
   }
 
   // ===================== HELPER METHODS =====================
@@ -373,88 +351,35 @@ export class PodcastActivityService {
     return !!prerequisiteAttempt;
   }
 
-  private async evaluateAttempt(activity: any, answers: any): Promise<{
-    score: number;
-    isCorrect: boolean;
-    feedback: any;
-    strengths: string[];
-    weaknesses: string[];
-    suggestions: string[];
+  private async evaluateFillBlankAttempt(activity: any, answers: Record<string, string>): Promise<{
+    correctCount: number;
+    totalQuestions: number;
+    scorePercent: number;
   }> {
-    // This is a simplified evaluation - in a real implementation,
-    // you would have specific evaluation logic for each activity type
-
     const content = activity.content;
-    let score = 0;
+
+    if (!content.questions) {
+      return { correctCount: 0, totalQuestions: 0, scorePercent: 0 };
+    }
+
     let correctCount = 0;
-    let totalQuestions = 0;
-    const feedback: any = {};
-    const strengths: string[] = [];
-    const weaknesses: string[] = [];
-    const suggestions: string[] = [];
+    const totalQuestions = content.questions.length;
 
-    switch (activity.type) {
-      case 'quick_quiz':
-        if (content.questions) {
-          totalQuestions = content.questions.length;
-          content.questions.forEach((question: any, index: number) => {
-            const userAnswer = answers[`question_${index}`];
-            const isCorrect = userAnswer === question.correctAnswer;
+    content.questions.forEach((question: any) => {
+      const userAnswer = answers[question.id]?.toLowerCase().trim();
+      const correctAnswers = question.correctAnswers.map((ans: string) => ans.toLowerCase().trim());
 
-            if (isCorrect) {
-              correctCount++;
-            }
+      if (userAnswer && correctAnswers.includes(userAnswer)) {
+        correctCount++;
+      }
+    });
 
-            feedback[`question_${index}`] = {
-              correct: isCorrect,
-              userAnswer,
-              correctAnswer: question.correctAnswer,
-              explanation: question.explanation,
-            };
-          });
-
-          score = Math.round((correctCount / totalQuestions) * 100);
-        }
-        break;
-
-      case 'dictation':
-        // Simple text similarity scoring
-        const originalText = content.text?.toLowerCase() || '';
-        const userText = answers.text?.toLowerCase() || '';
-
-        // Very basic similarity calculation
-        const similarity = this.calculateTextSimilarity(originalText, userText);
-        score = Math.round(similarity * 100);
-
-        feedback.similarity = similarity;
-        feedback.originalText = originalText;
-        feedback.userText = userText;
-        break;
-
-      default:
-        // Default scoring - could be enhanced per activity type
-        score = Math.random() * 100; // Placeholder
-    }
-
-    // Add strengths and weaknesses based on score
-    if (score >= 80) {
-      strengths.push('Excellent understanding');
-    } else if (score >= 60) {
-      strengths.push('Good comprehension');
-      suggestions.push('Practice similar exercises to improve');
-    } else {
-      weaknesses.push('Needs more practice');
-      suggestions.push('Review the content again');
-      suggestions.push('Try easier exercises first');
-    }
+    const scorePercent = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
 
     return {
-      score,
-      isCorrect: score >= (activity.passingScore || 60),
-      feedback,
-      strengths,
-      weaknesses,
-      suggestions,
+      correctCount,
+      totalQuestions,
+      scorePercent,
     };
   }
 
@@ -501,7 +426,8 @@ export class PodcastActivityService {
     });
 
     // Get user's passed activities
-    const passedActivities = await this.prisma.podcastActivityAttempt.count({
+    const passedActivities = await this.prisma.podcastActivityAttempt.groupBy({
+      by: ['activityId'],
       where: {
         userId,
         isPassed: true,
@@ -510,7 +436,6 @@ export class PodcastActivityService {
           isActive: true,
         },
       },
-      distinct: ['activityId'],
     });
 
     // Update progress
@@ -522,7 +447,7 @@ export class PodcastActivityService {
         },
       },
       data: {
-        activitiesCompleted: passedActivities,
+        activitiesCompleted: passedActivities.length,
         totalActivities: allActivities,
         lastListenAt: new Date(),
       },

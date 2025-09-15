@@ -2,14 +2,13 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
     IsArray,
-    IsBoolean,
     IsEnum,
     IsNumber,
     IsOptional,
     IsString,
     Max,
     Min,
-    MinLength,
+    MinLength
 } from 'class-validator';
 import { PodcastCategory, PodcastDifficulty } from '../entities/podcast.entity';
 
@@ -23,11 +22,7 @@ export enum VoiceType {
 }
 
 export enum ActivityGenerationType {
-  FILL_IN_BLANKS = 'fill_in_blanks',
-  MULTIPLE_CHOICE = 'multiple_choice',
-  TRUE_FALSE = 'true_false',
-  COMPREHENSION = 'comprehension',
-  ALL = 'all',
+  FILL_BLANK = 'fill_blank',
 }
 
 export class CreatePodcastFromTextDto {
@@ -41,7 +36,11 @@ export class CreatePodcastFromTextDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ description: 'Text content to convert to audio', minLength: 10 })
+  @ApiProperty({
+    description: 'Text content to convert to audio. Use [word] to manually select words for fill-blank, e.g., "Today we will [learn] about [weather]". If no [word] is used, system will auto-select words.',
+    minLength: 10,
+    example: 'Today we will [learn] about the [weather]. The sun is shining [brightly].'
+  })
   @IsString()
   @MinLength(10)
   textContent: string;
@@ -90,22 +89,6 @@ export class CreatePodcastFromTextDto {
   tags?: string[];
 
   @ApiProperty({
-    description: 'Auto-generate activities',
-    default: true
-  })
-  @IsBoolean()
-  autoGenerateActivities: boolean = true;
-
-  @ApiProperty({
-    description: 'Types of activities to generate',
-    enum: ActivityGenerationType,
-    isArray: true
-  })
-  @IsArray()
-  @IsEnum(ActivityGenerationType, { each: true })
-  activityTypes: ActivityGenerationType[] = [ActivityGenerationType.FILL_IN_BLANKS];
-
-  @ApiProperty({
     description: 'Number of fill-in-blank questions to generate',
     minimum: 1,
     maximum: 20,
@@ -132,16 +115,7 @@ export class GenerateActivitiesDto {
   podcastId: string;
 
   @ApiProperty({
-    description: 'Types of activities to generate',
-    enum: ActivityGenerationType,
-    isArray: true
-  })
-  @IsArray()
-  @IsEnum(ActivityGenerationType, { each: true })
-  activityTypes: ActivityGenerationType[];
-
-  @ApiProperty({
-    description: 'Number of questions to generate per type',
+    description: 'Number of fill-blank questions to generate',
     minimum: 1,
     maximum: 15,
     default: 5

@@ -1,4 +1,5 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
+import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
   Body,
   Controller,
@@ -17,6 +18,7 @@ import {
   GetPlaylistsQueryDto,
   UpdatePlaylistDto,
 } from '../dto/playlist.dto';
+import { PlaylistEntity } from '../entities/playlist.entity';
 import { PlaylistService } from '../service/playlist.service';
 
 @ApiTags('Playlists')
@@ -31,7 +33,7 @@ export class PlaylistController {
   async getUserPlaylists(
     @PayloadToken() payload: JwtPayload,
     @Query() query: GetPlaylistsQueryDto,
-  ) {
+  ): Promise<PageResponseDto<PlaylistEntity>> {
     return this.playlistService.getUserPlaylists(payload.sub, query);
   }
 
@@ -102,7 +104,7 @@ export class PlaylistController {
   @ApiOperation({ summary: 'Get playlist items' })
   @ApiParam({ name: 'id', description: 'Playlist ID' })
   @ResponseMessage('Playlist items retrieved successfully')
-  async getPlaylistItems(@Param('id', ParseUUIDPipe) id: string, @PayloadToken() payload: JwtPayload) {
+  async getPlaylistItems(@Param('id', ParseUUIDPipe) id: string, @PayloadToken() payload: JwtPayload): Promise<any> {
     return this.playlistService.getPlaylistItems(id, payload.sub);
   }
 }

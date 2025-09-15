@@ -1,4 +1,5 @@
 import { PrismaRepository } from '@app/database';
+import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreatePodcastDto, GetPodcastsQueryDto, UpdatePodcastDto } from '../dto/podcast.dto';
 import {
@@ -170,15 +171,7 @@ export class PodcastService {
       activities: undefined, // Remove activities from main response for performance
     }));
 
-    return {
-      data: transformedPodcasts,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+  return PageResponseDto.of(transformedPodcasts as any, page, limit, total);
   }
 
   async findOne(id: string, userId?: string): Promise<PodcastEntity> {
@@ -349,7 +342,7 @@ export class PodcastService {
         lastListenAt: new Date(),
         sessionCount: { increment: 1 },
         totalStudyTime: sessionStudyTime ? { increment: sessionStudyTime } : undefined,
-        completedAt: isCompleted && !progress?.isCompleted ? new Date() : undefined,
+        completedAt: isCompleted && new Date(),
       },
       create: {
         userId,
@@ -464,11 +457,25 @@ export class PodcastService {
           podcastId,
         },
       },
-      update: createRatingDto,
+      update: {
+        overallRating: createRatingDto.overallRating,
+        difficultyRating: createRatingDto.difficultyRating ?? 3,
+        qualityRating: createRatingDto.qualityRating ?? 3,
+        comment: createRatingDto.review,
+        title: createRatingDto.title,
+      },
       create: {
-        ...createRatingDto,
-        userId,
-        podcastId,
+        overallRating: createRatingDto.overallRating,
+        difficultyRating: createRatingDto.difficultyRating ?? 0,
+        qualityRating: createRatingDto.qualityRating ?? 0,
+        comment: createRatingDto.review,
+        title: createRatingDto.title,
+        user: {
+          connect: { id: userId },
+        },
+        podcast: {
+          connect: { id: podcastId },
+        },
       },
       include: {
         user: {
@@ -530,15 +537,7 @@ export class PodcastService {
       this.prisma.podcastRating.count({ where: { podcastId } }),
     ]);
 
-    return {
-      data: ratings,
-      meta: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
+  return PageResponseDto.of(ratings as any, page, limit, total);
   }
 
   private async updatePodcastRatingsCache(podcastId: string) {

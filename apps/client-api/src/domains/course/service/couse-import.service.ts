@@ -408,8 +408,10 @@ export class CoursesImportService {
       }
 
       if (row.activityNo) {
-        const typeKey = (row.activityType as keyof typeof ActivityType) || 'quiz';
-        const type = ActivityType[typeKey] ?? ActivityType.quiz;
+        // normalize incoming activity type strings (allow aliases from Excel)
+        const rawType = String(row.activityType || '').trim();
+        const typeKey = this.normalizeActivityKey(rawType);
+        const type = (ActivityType as any)[typeKey] ?? ActivityType.quiz;
         const content = await this.buildContent(type, row);
         lesson.activities.push({
           type,
@@ -442,7 +444,8 @@ export class CoursesImportService {
       }
     } catch {}
 
-    switch (type) {
+  const typeKey = String(type);
+  switch (typeKey) {
       case ActivityType.quiz:
         return {
           question: r.question || '',
@@ -528,6 +531,59 @@ export class CoursesImportService {
           options: r.options?.length ? r.options : ['', ''],
           correctIndex: r.correctIndex ?? 0,
         };
+  case 'fill_blank':
+        // Expect either contentJson with { passage, blanks } or columns: passage, blanks (pipe-separated)
+        try {
+          if (r.contentJson) {
+            const parsed = JSON.parse(r.contentJson);
+            if (parsed && typeof parsed === 'object') return parsed;
+          }
+        } catch {}
+        return {
+          passage: r.passage || r.question || r.prompt || '',
+          // blanks: array of answers for the blanks in order. Accept pipe-separated 'blanks' column or 'answers'
+          blanks: (r.blanks && r.blanks.length) ? String(r.blanks).split(/[|,]/).map((s:any)=>s.trim()).filter(Boolean) : (r.answers && r.answers.length ? String(r.answers).split(/[|,]/).map((s:any)=>s.trim()).filter(Boolean) : []),
+        };
+  case 'dictation':
+        // Simple dictation activity shape
+        try {
+          if (r.contentJson) {
+            const parsed = JSON.parse(r.contentJson);
+            if (parsed && typeof parsed === 'object') return parsed;
+          }
+        } catch {}
+        return {
+          audioUrl: r.audioUrl || '',
+          transcript: r.passage || r.prompt || r.question || '',
+          minWords: r.minWords ?? 0,
+        };
+  case 'matching':
+        // Expect either contentJson with { pairs: [{left,right}, ...] } or leftItems/rightItems pipe-separated columns
+        try {
+          if (r.contentJson) {
+            const parsed = JSON.parse(r.contentJson);
+            if (parsed && typeof parsed === 'object') return parsed;
+          }
+        } catch {}
+        // try leftItems / rightItems
+        if (r.leftItems || r.rightItems) {
+          const left = String(r.leftItems || '').split(/[|,]/).map((s) => s.trim()).filter(Boolean);
+          const right = String(r.rightItems || '').split(/[|,]/).map((s) => s.trim()).filter(Boolean);
+          const pairs: Array<{ left?: string; right?: string }> = [];
+          const max = Math.max(left.length, right.length);
+          for (let i = 0; i < max; i++) pairs.push({ left: left[i] || '', right: right[i] || '' });
+          return { pairs };
+        }
+        // fallback: parse options as pairs separated by :: (e.g. "apple::táo|banana::chuối")
+        if (r.options && typeof r.options === 'string') {
+          const parts = String(r.options).split(/[|]/).map((s) => s.trim()).filter(Boolean);
+          const pairs = parts.map((p) => {
+            const [l, rgt] = p.split(/::|:\s|--|->/).map((x:any) => String(x||'').trim());
+            return { left: l || '', right: rgt || '' };
+          });
+          return { pairs };
+        }
+        return { pairs: [] };
       case ActivityType.pronunciation:
         return { phrase: r.phrase || '', tips: r.hints || [], sampleUrl: r.audioUrl || '' };
       case ActivityType.speaking:
@@ -591,6 +647,44 @@ export class CoursesImportService {
       .split(sep)
       .map((s) => s.trim())
       .filter(Boolean);
+  }
+
+  // Normalize various human-friendly activity type strings from Excel into keys matching ActivityType
+  private normalizeActivityKey(raw: string) {
+    const s = String(raw || '').trim().toLowerCase().replace(/[_\s]+/g, '_');
+    // common aliases mapping
+    const map: Record<string, string> = {
+      'fill_blank': 'fill_blank',
+      'fillinblank': 'fill_blank',
+      'fill_in_blank': 'fill_blank',
+      'fill in the blank': 'fill_blank',
+      'fill in blanks': 'fill_blank',
+      'fill_in_blanks': 'fill_blank',
+      'dictation': 'dictation',
+      'dictate': 'dictation',
+      'matching': 'matching',
+      'match': 'matching',
+      'matchings': 'matching',
+      // keep known types as-is
+      'quiz': 'quiz',
+      'vocab': 'vocab',
+      'listening': 'listening',
+      'pronunciation': 'pronunciation',
+      'speaking': 'speaking',
+      'mini_game': 'mini_game',
+      'reading': 'reading',
+      'writing': 'writing',
+      'grammar': 'grammar',
+      'flashcard': 'flashcard',
+      'conversation': 'conversation',
+    };
+    // try direct match
+    if (map[s]) return map[s];
+    // try removing punctuation
+    const normalized = s.replace(/[^a-z0-9_]/g, '_');
+    if (map[normalized]) return map[normalized];
+    // fallback: return raw lowercased token
+    return s;
   }
 
   /**

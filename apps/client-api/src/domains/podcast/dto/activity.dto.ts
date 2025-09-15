@@ -1,17 +1,50 @@
+import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-  IsArray,
-  IsBoolean,
-  IsEnum,
-  IsNumber,
-  IsObject,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
+    IsArray,
+    IsBoolean,
+    IsEnum,
+    IsNumber,
+    IsObject,
+    IsOptional,
+    IsString,
+    Min,
+    ValidateNested,
 } from 'class-validator';
 import { ListeningActivityType } from '../entities/podcast-activity.entity';
+
+class FillBlankQuestionDto {
+  @ApiProperty({ description: 'Question ID' })
+  @IsString()
+  id: string;
+
+  @ApiProperty({ description: 'Sentence with blank' })
+  @IsString()
+  sentence: string;
+
+  @ApiProperty({ description: 'Correct answer options', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  correctAnswers: string[];
+}
+
+class FillBlankContentDto {
+  @ApiProperty({ description: 'Activity type', enum: ['fill_blank'] })
+  @IsString()
+  type: 'fill_blank';
+
+  @ApiProperty({ description: 'Total number of questions' })
+  @IsNumber()
+  @Min(1)
+  totalQuestions: number;
+
+  @ApiProperty({ description: 'Fill blank questions', type: [FillBlankQuestionDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => FillBlankQuestionDto)
+  questions: FillBlankQuestionDto[];
+}
 
 export class CreateActivityDto {
   @ApiProperty({ description: 'Podcast ID' })
@@ -42,54 +75,17 @@ export class CreateActivityDto {
   @Min(1)
   timeLimit?: number;
 
-  @ApiPropertyOptional({ description: 'Maximum attempts allowed', default: 3 })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  maxAttempts?: number = 3;
-
-  @ApiPropertyOptional({ description: 'Passing score percentage', default: 70 })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  passingScore?: number = 70;
-
   @ApiPropertyOptional({ description: 'Points awarded', default: 10 })
   @IsOptional()
   @IsNumber()
   @Min(1)
   points?: number = 10;
 
-  @ApiProperty({ description: 'Activity content (JSON)', type: 'object' })
+  @ApiProperty({ description: 'Fill blank activity content' })
   @IsObject()
-  content: any;
-
-  @ApiPropertyOptional({ description: 'Instructions' })
-  @IsOptional()
-  @IsString()
-  instructions?: string;
-
-  @ApiPropertyOptional({ type: [String], description: 'Hints' })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  hints?: string[] = [];
-
-  @ApiPropertyOptional({ description: 'Is activity locked', default: false })
-  @IsOptional()
-  @IsBoolean()
-  isLocked?: boolean = false;
-
-  @ApiPropertyOptional({ description: 'Activity ID that must be completed first' })
-  @IsOptional()
-  @IsString()
-  unlockAfter?: string;
-
-  @ApiPropertyOptional({ description: 'Is premium content', default: false })
-  @IsOptional()
-  @IsBoolean()
-  isPremium?: boolean = false;
+  @ValidateNested()
+  @Type(() => FillBlankContentDto)
+  content: FillBlankContentDto;
 }
 
 export class UpdateActivityDto {
@@ -115,55 +111,18 @@ export class UpdateActivityDto {
   @Min(1)
   timeLimit?: number;
 
-  @ApiPropertyOptional({ description: 'Maximum attempts allowed' })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  maxAttempts?: number;
-
-  @ApiPropertyOptional({ description: 'Passing score percentage' })
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  passingScore?: number;
-
   @ApiPropertyOptional({ description: 'Points awarded' })
   @IsOptional()
   @IsNumber()
   @Min(1)
   points?: number;
 
-  @ApiPropertyOptional({ description: 'Activity content (JSON)', type: 'object' })
+  @ApiPropertyOptional({ description: 'Fill blank activity content' })
   @IsOptional()
   @IsObject()
-  content?: any;
-
-  @ApiPropertyOptional({ description: 'Instructions' })
-  @IsOptional()
-  @IsString()
-  instructions?: string;
-
-  @ApiPropertyOptional({ type: [String], description: 'Hints' })
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  hints?: string[];
-
-  @ApiPropertyOptional({ description: 'Is activity locked' })
-  @IsOptional()
-  @IsBoolean()
-  isLocked?: boolean;
-
-  @ApiPropertyOptional({ description: 'Activity ID that must be completed first' })
-  @IsOptional()
-  @IsString()
-  unlockAfter?: string;
-
-  @ApiPropertyOptional({ description: 'Is premium content' })
-  @IsOptional()
-  @IsBoolean()
-  isPremium?: boolean;
+  @ValidateNested()
+  @Type(() => FillBlankContentDto)
+  content?: FillBlankContentDto;
 
   @ApiPropertyOptional({ description: 'Is activity active' })
   @IsOptional()
@@ -172,34 +131,18 @@ export class UpdateActivityDto {
 }
 
 export class SubmitAttemptDto {
-  @ApiProperty({ description: 'User answers (JSON)', type: 'object' })
+  @ApiProperty({ description: 'User answers for each question', type: 'object' })
   @IsObject()
-  answers: any;
+  answers: Record<string, string>; // questionId -> userAnswer
 
   @ApiPropertyOptional({ description: 'Time spent in seconds' })
   @IsOptional()
   @IsNumber()
   @Min(0)
   timeSpent?: number;
-
-  @ApiPropertyOptional({ description: 'Additional metadata', type: 'object' })
-  @IsOptional()
-  @IsObject()
-  metadata?: any;
 }
 
 export class GetActivitiesQueryDto {
-  @ApiPropertyOptional({ description: 'Filter by type' })
-  @IsOptional()
-  @IsEnum(ListeningActivityType)
-  type?: ListeningActivityType;
-
-  @ApiPropertyOptional({ description: 'Include user progress', default: false })
-  @IsOptional()
-  @Type(() => Boolean)
-  @IsBoolean()
-  includeProgress?: boolean = false;
-
   @ApiPropertyOptional({ description: 'Show only active activities', default: true })
   @IsOptional()
   @Type(() => Boolean)
@@ -207,24 +150,7 @@ export class GetActivitiesQueryDto {
   activeOnly?: boolean = true;
 }
 
-export class GetAttemptsQueryDto {
-  @ApiPropertyOptional({ description: 'Page number', default: 1 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  page?: number = 1;
-
-  @ApiPropertyOptional({ description: 'Items per page', default: 10 })
-  @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  @Max(50)
-  limit?: number = 10;
-
-  @ApiPropertyOptional({ description: 'Sort by', default: 'newest' })
-  @IsOptional()
-  @IsString()
-  sortBy?: 'newest' | 'oldest' | 'score' = 'newest';
+export class GetAttemptsQueryDto extends RequestPagingDto {
+  // Inherits: page, limit, search, sortBy, sortOrder from RequestPagingDto
+  // sortBy can be used for 'newest', 'oldest', 'score' sorting
 }

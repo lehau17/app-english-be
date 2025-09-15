@@ -41,7 +41,7 @@ async function bootstrap() {
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       'Authorization',
     ) // tên security scheme: Authorization
-    .addServer('http://localhost:3333', 'Local')
+    .addServer('http://localhost:3000', 'Local')
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {

@@ -1,14 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export enum ListeningActivityType {
-  QUICK_QUIZ = 'quick_quiz',
-  DICTATION = 'dictation',
-  COMPREHENSION = 'comprehension',
-  PRONUNCIATION = 'pronunciation',
-  VOCABULARY = 'vocabulary',
-  SPEAKING_AI = 'speaking_ai',
-  WRITING = 'writing',
-  SUMMARY = 'summary',
+  FILL_BLANK = 'fill_blank',
 }
 
 export class PodcastActivityEntity {
@@ -33,32 +26,19 @@ export class PodcastActivityEntity {
   @ApiProperty({ required: false })
   timeLimit?: number; // seconds
 
-  @ApiProperty({ required: false })
-  maxAttempts?: number;
-
-  @ApiProperty({ required: false })
-  passingScore?: number; // percentage
-
   @ApiProperty()
   points: number;
 
-  @ApiProperty({ type: 'object' })
-  content: any; // JSON content
-
-  @ApiProperty({ required: false })
-  instructions?: string;
-
-  @ApiProperty({ type: [String] })
-  hints: string[];
-
-  @ApiProperty()
-  isLocked: boolean;
-
-  @ApiProperty({ required: false })
-  unlockAfter?: string; // Activity ID
-
-  @ApiProperty()
-  isPremium: boolean;
+  @ApiProperty({ type: 'object', description: 'Fill blank content structure' })
+  content: {
+    type: 'fill_blank';
+    totalQuestions: number;
+    questions: Array<{
+      id: string;
+      sentence: string;
+      correctAnswers: string[];
+    }>;
+  };
 
   @ApiProperty()
   isActive: boolean;
@@ -68,15 +48,6 @@ export class PodcastActivityEntity {
 
   @ApiProperty()
   updatedAt: Date;
-
-  // Virtual fields for user interaction
-  @ApiProperty({ required: false })
-  userProgress?: {
-    bestScore?: number;
-    isPassed: boolean;
-    attemptCount: number;
-    lastAttempt?: Date;
-  };
 }
 
 export class PodcastActivityAttemptEntity {
@@ -92,35 +63,20 @@ export class PodcastActivityAttemptEntity {
   @ApiProperty()
   attemptNo: number;
 
-  @ApiProperty({ required: false })
-  score?: number;
+  @ApiProperty({ description: 'Number of correct answers' })
+  correctCount: number;
 
-  @ApiProperty({ required: false })
-  maxScore?: number;
+  @ApiProperty({ description: 'Total number of questions' })
+  totalQuestions: number;
 
-  @ApiProperty({ required: false })
-  isCorrect?: boolean;
-
-  @ApiProperty()
-  isPassed: boolean;
+  @ApiProperty({ description: 'Score as percentage (0-100)' })
+  scorePercent: number;
 
   @ApiProperty({ required: false })
   timeSpent?: number; // seconds
 
-  @ApiProperty({ type: 'object' })
-  answers: any; // JSON
-
-  @ApiProperty({ type: 'object', required: false })
-  feedback?: any; // JSON
-
-  @ApiProperty({ type: [String] })
-  strengths: string[];
-
-  @ApiProperty({ type: [String] })
-  weaknesses: string[];
-
-  @ApiProperty({ type: [String] })
-  suggestions: string[];
+  @ApiProperty({ type: 'object', description: 'User answers for each question' })
+  answers: any;
 
   @ApiProperty()
   createdAt: Date;

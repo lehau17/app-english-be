@@ -3,10 +3,10 @@ import { Translate } from '@google-cloud/translate/build/src/v2';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createWriteStream, readFileSync, unlinkSync } from 'fs';
-import * as path from 'path';
 import fetch from 'node-fetch';
-import { UploadService } from '../upload/upload.service';
+import * as path from 'path';
 import { join } from 'path';
+import { UploadService } from '../upload/upload.service';
 
 @Injectable()
 export class GoogleTranslateService {

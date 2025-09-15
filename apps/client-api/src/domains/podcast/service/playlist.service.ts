@@ -1,10 +1,11 @@
 import { PrismaRepository } from '@app/database';
+import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AddToPlaylistDto, RemoveFromPlaylistDto } from '../dto/playlist-item.dto';
 import {
-  CreatePlaylistDto,
-  GetPlaylistsQueryDto,
-  UpdatePlaylistDto,
+    CreatePlaylistDto,
+    GetPlaylistsQueryDto,
+    UpdatePlaylistDto,
 } from '../dto/playlist.dto';
 
 @Injectable()
@@ -24,15 +25,7 @@ export class PlaylistService {
     } = query;
 
     // TODO: Implement when playlist models are added to database
-    return {
-      data: [],
-      meta: {
-        page,
-        limit,
-        total: 0,
-        totalPages: 0,
-      },
-    };
+  return PageResponseDto.of([], page, limit, 0);
   }
 
   async findOne(id: string, userId: string) {

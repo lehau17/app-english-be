@@ -25,6 +25,7 @@ import { TeacherModule } from './domains/teacher';
 import { UploadModule } from './domains/upload';
 import { UploadService } from './domains/upload/upload.service';
 import { EventsModule } from './events/events.module';
+import { PodcastModule } from './domains/podcast/podcast.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { EventsModule } from './events/events.module';
     AgentModule,
     SwaggerLoaderModule,
     RoomModule,
+    PodcastModule
   ],
   controllers: [ClientApiController],
   providers: [ClientApiService, UploadService],
