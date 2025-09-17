@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "public"."podcasts" ADD COLUMN     "averageRating" DOUBLE PRECISION DEFAULT 0,
+ADD COLUMN     "difficultyRating" DOUBLE PRECISION DEFAULT 0,
+ADD COLUMN     "qualityRating" DOUBLE PRECISION DEFAULT 0,
+ADD COLUMN     "totalRatings" INTEGER NOT NULL DEFAULT 0;

@@ -24,8 +24,8 @@ export class PageResponseDto<T> {
       limit,
       totalItems,
       totalPages,
-      hasNextPage: page < totalPages,
-      hasPrevPage: page > 1,
+      hasNextPage: page < totalPages || false,
+      hasPrevPage: page > 1 || false,
     });
   }
 }

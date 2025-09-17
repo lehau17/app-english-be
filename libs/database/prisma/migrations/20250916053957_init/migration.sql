@@ -1,8 +1,17 @@
 -- CreateEnum
-CREATE TYPE "public"."UserRole" AS ENUM ('student', 'parent', 'teacher', 'admin', 'content_creator');
+CREATE TYPE "public"."UserRole" AS ENUM ('STUDENT', 'PARENT', 'TEACHER', 'ADMIN', 'CONTENT_CREATOR');
 
 -- CreateEnum
 CREATE TYPE "public"."Status" AS ENUM ('active', 'inactive', 'banned', 'pending', 'suspended');
+
+-- CreateEnum
+CREATE TYPE "public"."SessionStatus" AS ENUM ('scheduled', 'ongoing', 'completed', 'cancelled', 'postponed');
+
+-- CreateEnum
+CREATE TYPE "public"."SessionType" AS ENUM ('online', 'offline', 'hybrid');
+
+-- CreateEnum
+CREATE TYPE "public"."Weekday" AS ENUM ('mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun');
 
 -- CreateEnum
 CREATE TYPE "public"."AuthProvider" AS ENUM ('local', 'google', 'facebook', 'apple');
@@ -17,7 +26,7 @@ CREATE TYPE "public"."LanguageCode" AS ENUM ('en', 'vi', 'ko', 'jp', 'zh', 'fr',
 CREATE TYPE "public"."TimezoneCode" AS ENUM ('Asia_Ho_Chi_Minh', 'Asia_Tokyo', 'Asia_Seoul', 'America_New_York', 'Europe_London', 'America_Los_Angeles', 'Australia_Sydney');
 
 -- CreateEnum
-CREATE TYPE "public"."ActivityType" AS ENUM ('vocab', 'pronunciation', 'listening', 'speaking', 'mini_game', 'reading', 'writing', 'grammar', 'quiz', 'flashcard', 'conversation');
+CREATE TYPE "public"."ActivityType" AS ENUM ('vocab', 'pronunciation', 'listening', 'speaking', 'mini_game', 'fill_blank', 'dictation', 'matching', 'reading', 'writing', 'grammar', 'quiz', 'flashcard', 'conversation');
 
 -- CreateEnum
 CREATE TYPE "public"."ProgressState" AS ENUM ('not_started', 'in_progress', 'done', 'review_needed', 'mastered');
@@ -46,6 +55,30 @@ CREATE TYPE "public"."RewardType" AS ENUM ('digital', 'physical', 'screen_time',
 -- CreateEnum
 CREATE TYPE "public"."DifficultyLevel" AS ENUM ('beginner', 'elementary', 'intermediate', 'upper_intermediate', 'advanced', 'expert');
 
+-- CreateEnum
+CREATE TYPE "public"."ClassStatus" AS ENUM ('scheduled', 'ongoing', 'completed', 'cancelled', 'postponed');
+
+-- CreateEnum
+CREATE TYPE "public"."ClassType" AS ENUM ('online', 'offline', 'hybrid');
+
+-- CreateEnum
+CREATE TYPE "public"."EnrollmentStatus" AS ENUM ('pending', 'active', 'completed', 'dropped', 'suspended');
+
+-- CreateEnum
+CREATE TYPE "public"."PodcastStatus" AS ENUM ('draft', 'published', 'archived', 'scheduled');
+
+-- CreateEnum
+CREATE TYPE "public"."PodcastCategory" AS ENUM ('Du học', 'Kinh doanh', 'Công nghệ', 'Lối sống', 'Giải trí', 'Giáo dục', 'Tin tức', 'Văn hóa', 'Khoa học', 'Du lịch');
+
+-- CreateEnum
+CREATE TYPE "public"."PodcastSource" AS ENUM ('WELE Partners', 'TED Talks', 'BBC', 'CNN', 'Voice of America', 'British Council', 'Nội bộ');
+
+-- CreateEnum
+CREATE TYPE "public"."PodcastDifficulty" AS ENUM ('Người mới bắt đầu', 'Sơ cấp', 'Trung cấp', 'Trung cấp cao', 'Nâng cao');
+
+-- CreateEnum
+CREATE TYPE "public"."ListeningActivityType" AS ENUM ('Điền vào chỗ trống');
+
 -- CreateTable
 CREATE TABLE "public"."knowledge_documents" (
     "id" TEXT NOT NULL,
@@ -65,7 +98,7 @@ CREATE TABLE "public"."User" (
     "email" TEXT,
     "phone" TEXT,
     "passwordHash" TEXT,
-    "role" "public"."UserRole" NOT NULL DEFAULT 'student',
+    "role" "public"."UserRole" NOT NULL DEFAULT 'STUDENT',
     "status" "public"."Status" NOT NULL DEFAULT 'active',
     "provider" "public"."AuthProvider" NOT NULL DEFAULT 'local',
     "providerId" TEXT,
@@ -95,6 +128,146 @@ CREATE TABLE "public"."User" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Course" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "orderNo" INTEGER,
+    "difficulty" "public"."DifficultyLevel" NOT NULL DEFAULT 'beginner',
+    "estimatedHours" DOUBLE PRECISION,
+    "imageUrl" TEXT,
+    "tags" TEXT[],
+    "isPublished" BOOLEAN NOT NULL DEFAULT false,
+    "prerequisites" TEXT[],
+    "instructorId" TEXT NOT NULL,
+    "price" DOUBLE PRECISION DEFAULT 0,
+    "currency" TEXT DEFAULT 'VND',
+    "maxStudents" INTEGER DEFAULT 20,
+    "language" "public"."LanguageCode" NOT NULL DEFAULT 'vi',
+    "totalLessons" INTEGER DEFAULT 0,
+    "totalDuration" INTEGER DEFAULT 0,
+    "rating" DOUBLE PRECISION,
+    "totalRatings" INTEGER NOT NULL DEFAULT 0,
+    "enrollmentCount" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Course_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."CourseEnrollment" (
+    "id" TEXT NOT NULL,
+    "courseId" TEXT NOT NULL,
+    "studentId" TEXT NOT NULL,
+    "status" "public"."EnrollmentStatus" NOT NULL DEFAULT 'pending',
+    "enrolledAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "completedAt" TIMESTAMP(3),
+    "droppedAt" TIMESTAMP(3),
+    "amountPaid" DOUBLE PRECISION DEFAULT 0,
+    "paymentId" TEXT,
+    "progress" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "lastActivity" TIMESTAMP(3),
+
+    CONSTRAINT "CourseEnrollment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Room" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "location" TEXT,
+    "capacity" INTEGER NOT NULL DEFAULT 30,
+    "description" TEXT,
+    "equipment" JSONB,
+    "facilities" JSONB,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Room_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."CourseRating" (
+    "id" TEXT NOT NULL,
+    "courseId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "rating" INTEGER NOT NULL,
+    "comment" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "CourseRating_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Lesson" (
+    "id" TEXT NOT NULL,
+    "courseId" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "orderNo" INTEGER NOT NULL,
+    "difficulty" "public"."DifficultyLevel" NOT NULL DEFAULT 'beginner',
+    "estimatedTime" INTEGER,
+    "isLocked" BOOLEAN NOT NULL DEFAULT true,
+    "objectives" TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Lesson_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."LessonDetail" (
+    "id" TEXT NOT NULL,
+    "lessonId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "content" JSONB NOT NULL,
+    "orderNo" INTEGER NOT NULL,
+
+    CONSTRAINT "LessonDetail_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Activity" (
+    "id" TEXT NOT NULL,
+    "lessonId" TEXT NOT NULL,
+    "type" "public"."ActivityType" NOT NULL,
+    "orderNo" INTEGER NOT NULL,
+    "title" TEXT NOT NULL,
+    "content" JSONB NOT NULL,
+    "timeLimit" INTEGER,
+    "maxAttempts" INTEGER,
+    "passingScore" INTEGER,
+    "difficulty" "public"."DifficultyLevel" NOT NULL DEFAULT 'beginner',
+    "points" INTEGER NOT NULL DEFAULT 10,
+    "instructions" TEXT,
+    "hints" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "mediaUrls" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Activity_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."Question" (
+    "id" TEXT NOT NULL,
+    "activityId" TEXT NOT NULL,
+    "type" "public"."QuestionType" NOT NULL,
+    "question" TEXT NOT NULL,
+    "options" JSONB,
+    "correctAnswer" TEXT NOT NULL,
+    "explanation" TEXT,
+    "points" INTEGER NOT NULL DEFAULT 1,
+    "orderNo" INTEGER NOT NULL,
+    "mediaUrl" TEXT,
+
+    CONSTRAINT "Question_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -159,105 +332,6 @@ CREATE TABLE "public"."Profile" (
 );
 
 -- CreateTable
-CREATE TABLE "public"."Course" (
-    "id" TEXT NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT,
-    "orderNo" INTEGER NOT NULL,
-    "difficulty" "public"."DifficultyLevel" NOT NULL DEFAULT 'beginner',
-    "estimatedTime" INTEGER,
-    "imageUrl" TEXT,
-    "tags" TEXT[],
-    "isPublished" BOOLEAN NOT NULL DEFAULT false,
-    "prerequisites" TEXT[],
-    "rating" DOUBLE PRECISION,
-    "totalRatings" INTEGER NOT NULL DEFAULT 0,
-    "enrollmentCount" INTEGER NOT NULL DEFAULT 0,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Course_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "public"."CourseRating" (
-    "id" TEXT NOT NULL,
-    "courseId" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "rating" INTEGER NOT NULL,
-    "comment" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "CourseRating_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "public"."Lesson" (
-    "id" TEXT NOT NULL,
-    "courseId" TEXT NOT NULL,
-    "title" TEXT NOT NULL,
-    "description" TEXT,
-    "orderNo" INTEGER NOT NULL,
-    "difficulty" "public"."DifficultyLevel" NOT NULL DEFAULT 'beginner',
-    "estimatedTime" INTEGER,
-    "isLocked" BOOLEAN NOT NULL DEFAULT true,
-    "objectives" TEXT[],
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Lesson_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "public"."LessonDetail" (
-    "id" TEXT NOT NULL,
-    "lessonId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "content" JSONB NOT NULL,
-    "orderNo" INTEGER NOT NULL,
-
-    CONSTRAINT "LessonDetail_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "public"."Activity" (
-    "id" TEXT NOT NULL,
-    "lessonId" TEXT NOT NULL,
-    "type" "public"."ActivityType" NOT NULL,
-    "orderNo" INTEGER NOT NULL,
-    "title" TEXT NOT NULL,
-    "content" JSONB NOT NULL,
-    "timeLimit" INTEGER,
-    "maxAttempts" INTEGER,
-    "passingScore" INTEGER,
-    "difficulty" "public"."DifficultyLevel" NOT NULL DEFAULT 'beginner',
-    "points" INTEGER NOT NULL DEFAULT 10,
-    "instructions" TEXT,
-    "hints" JSONB,
-    "mediaUrls" JSONB,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "Activity_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "public"."Question" (
-    "id" TEXT NOT NULL,
-    "activityId" TEXT NOT NULL,
-    "type" "public"."QuestionType" NOT NULL,
-    "question" TEXT NOT NULL,
-    "options" JSONB,
-    "correctAnswer" TEXT NOT NULL,
-    "explanation" TEXT,
-    "points" INTEGER NOT NULL DEFAULT 1,
-    "orderNo" INTEGER NOT NULL,
-    "mediaUrl" TEXT,
-
-    CONSTRAINT "Question_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "public"."Progress" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -297,19 +371,83 @@ CREATE TABLE "public"."Attempt" (
 -- CreateTable
 CREATE TABLE "public"."Classroom" (
     "id" TEXT NOT NULL,
+    "courseId" TEXT NOT NULL,
     "teacherId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "description" TEXT,
     "classCode" TEXT NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "maxStudents" INTEGER,
+    "periodStart" TIMESTAMP(3) NOT NULL,
+    "periodEnd" TIMESTAMP(3) NOT NULL,
+    "timezone" "public"."TimezoneCode" NOT NULL DEFAULT 'Asia_Ho_Chi_Minh',
+    "plannedHours" DOUBLE PRECISION NOT NULL,
+    "sessionDurationHours" DOUBLE PRECISION NOT NULL,
+    "plannedSessions" INTEGER,
     "settings" JSONB,
-    "schedule" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "expiresAt" TIMESTAMP(3),
 
     CONSTRAINT "Classroom_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."ClassroomSlot" (
+    "id" TEXT NOT NULL,
+    "classroomId" TEXT NOT NULL,
+    "dayOfWeek" "public"."Weekday" NOT NULL,
+    "startMinuteOfDay" INTEGER NOT NULL,
+    "endMinuteOfDay" INTEGER NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "sessionDurationHours" DOUBLE PRECISION,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ClassroomSlot_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."ClassroomSession" (
+    "id" TEXT NOT NULL,
+    "classroomId" TEXT NOT NULL,
+    "instructorId" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "description" TEXT,
+    "startTime" TIMESTAMP(3) NOT NULL,
+    "endTime" TIMESTAMP(3) NOT NULL,
+    "timezone" "public"."TimezoneCode" NOT NULL DEFAULT 'Asia_Ho_Chi_Minh',
+    "durationHours" DOUBLE PRECISION NOT NULL,
+    "type" "public"."SessionType" NOT NULL DEFAULT 'offline',
+    "status" "public"."SessionStatus" NOT NULL DEFAULT 'scheduled',
+    "maxStudents" INTEGER,
+    "roomId" TEXT,
+    "meetingUrl" TEXT,
+    "location" TEXT,
+    "agenda" JSONB,
+    "materials" JSONB,
+    "homework" JSONB,
+    "notes" TEXT,
+    "recordingUrl" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ClassroomSession_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."SessionAttendance" (
+    "id" TEXT NOT NULL,
+    "sessionId" TEXT NOT NULL,
+    "studentId" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'present',
+    "checkInTime" TIMESTAMP(3),
+    "checkOutTime" TIMESTAMP(3),
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SessionAttendance_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -800,6 +938,21 @@ CREATE TABLE "public"."Feedback" (
 );
 
 -- CreateTable
+CREATE TABLE "public"."dashboards" (
+    "id" TEXT NOT NULL,
+    "totalStudents" INTEGER NOT NULL,
+    "totalCourses" INTEGER NOT NULL,
+    "totalLessons" INTEGER NOT NULL,
+    "totalActivities" INTEGER NOT NULL,
+    "recentStudents" JSONB NOT NULL,
+    "registrationTrend" JSONB NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "dashboards_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "public"."AIAnalysis" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
@@ -870,6 +1023,213 @@ CREATE TABLE "public"."Recommendation" (
     CONSTRAINT "Recommendation_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "public"."DailyQuest" (
+    "id" TEXT NOT NULL,
+    "text" TEXT NOT NULL,
+    "description" TEXT,
+    "points" INTEGER NOT NULL DEFAULT 10,
+    "category" TEXT,
+    "difficulty" "public"."DifficultyLevel" NOT NULL DEFAULT 'beginner',
+    "targetValue" INTEGER,
+    "targetType" TEXT,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "isDaily" BOOLEAN NOT NULL DEFAULT true,
+    "validFrom" TIMESTAMP(3),
+    "validUntil" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "DailyQuest_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."QuestProgress" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "questId" TEXT NOT NULL,
+    "done" BOOLEAN NOT NULL DEFAULT false,
+    "progress" INTEGER,
+    "currentValue" INTEGER NOT NULL DEFAULT 0,
+    "targetValue" INTEGER,
+    "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "completedAt" TIMESTAMP(3),
+    "attempts" INTEGER NOT NULL DEFAULT 0,
+    "lastAttempt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "QuestProgress_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."podcasts" (
+    "id" TEXT NOT NULL,
+    "code" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "subtitle" TEXT,
+    "description" TEXT NOT NULL,
+    "audioUrl" TEXT NOT NULL,
+    "thumbnailUrl" TEXT,
+    "transcript" TEXT,
+    "fillBlankContent" JSONB,
+    "category" "public"."PodcastCategory" NOT NULL,
+    "source" "public"."PodcastSource" NOT NULL,
+    "difficulty" "public"."PodcastDifficulty" NOT NULL DEFAULT 'Trung cấp',
+    "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "duration" INTEGER NOT NULL,
+    "durationFormatted" TEXT,
+    "viewCount" INTEGER NOT NULL DEFAULT 0,
+    "status" "public"."PodcastStatus" NOT NULL DEFAULT 'draft',
+    "publishedAt" TIMESTAMP(3),
+    "slug" TEXT,
+    "keywords" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "isRecommended" BOOLEAN NOT NULL DEFAULT false,
+    "isPremium" BOOLEAN NOT NULL DEFAULT false,
+    "authorId" TEXT,
+    "authorName" TEXT,
+    "averageRating" DOUBLE PRECISION DEFAULT 0,
+    "totalRatings" INTEGER NOT NULL DEFAULT 0,
+    "difficultyRating" DOUBLE PRECISION DEFAULT 0,
+    "qualityRating" DOUBLE PRECISION DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "podcasts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."podcast_attempts" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "podcastId" TEXT NOT NULL,
+    "attemptNo" INTEGER NOT NULL DEFAULT 1,
+    "correctCount" INTEGER NOT NULL DEFAULT 0,
+    "totalQuestions" INTEGER NOT NULL DEFAULT 0,
+    "scorePercent" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "timeSpent" INTEGER,
+    "answers" JSONB NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "podcast_attempts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."user_podcast_progress" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "podcastId" TEXT NOT NULL,
+    "currentPosition" INTEGER NOT NULL DEFAULT 0,
+    "totalListened" INTEGER NOT NULL DEFAULT 0,
+    "completionRate" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "bestScore" DOUBLE PRECISION,
+    "attemptCount" INTEGER NOT NULL DEFAULT 0,
+    "isLiked" BOOLEAN NOT NULL DEFAULT false,
+    "isSaved" BOOLEAN NOT NULL DEFAULT false,
+    "isCompleted" BOOLEAN NOT NULL DEFAULT false,
+    "firstListenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastListenAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "completedAt" TIMESTAMP(3),
+    "sessionCount" INTEGER NOT NULL DEFAULT 1,
+    "totalStudyTime" INTEGER NOT NULL DEFAULT 0,
+
+    CONSTRAINT "user_podcast_progress_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."podcast_ratings" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "podcastId" TEXT NOT NULL,
+    "overallRating" INTEGER NOT NULL,
+    "difficultyRating" INTEGER NOT NULL,
+    "qualityRating" INTEGER NOT NULL,
+    "contentRating" INTEGER,
+    "audioRating" INTEGER,
+    "title" TEXT,
+    "comment" TEXT,
+    "pros" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "cons" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "isVerified" BOOLEAN NOT NULL DEFAULT false,
+    "isModerated" BOOLEAN NOT NULL DEFAULT false,
+    "helpfulCount" INTEGER NOT NULL DEFAULT 0,
+    "unhelpfulCount" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "podcast_ratings_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."podcast_comments" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "podcastId" TEXT NOT NULL,
+    "parentId" TEXT,
+    "content" TEXT NOT NULL,
+    "isEdited" BOOLEAN NOT NULL DEFAULT false,
+    "isReported" BOOLEAN NOT NULL DEFAULT false,
+    "isModerated" BOOLEAN NOT NULL DEFAULT false,
+    "likeCount" INTEGER NOT NULL DEFAULT 0,
+    "replyCount" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "podcast_comments_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."playlists" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "isPublic" BOOLEAN NOT NULL DEFAULT false,
+    "isSystem" BOOLEAN NOT NULL DEFAULT false,
+    "thumbnailUrl" TEXT,
+    "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "category" TEXT,
+    "podcastCount" INTEGER NOT NULL DEFAULT 0,
+    "totalDuration" INTEGER NOT NULL DEFAULT 0,
+    "playCount" INTEGER NOT NULL DEFAULT 0,
+    "likeCount" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "playlists_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."playlist_podcasts" (
+    "playlistId" TEXT NOT NULL,
+    "podcastId" TEXT NOT NULL,
+    "orderNo" INTEGER NOT NULL DEFAULT 1,
+    "addedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "playlist_podcasts_pkey" PRIMARY KEY ("playlistId","podcastId")
+);
+
+-- CreateTable
+CREATE TABLE "public"."podcast_analytics" (
+    "id" TEXT NOT NULL,
+    "podcastId" TEXT NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "views" INTEGER NOT NULL DEFAULT 0,
+    "uniqueViews" INTEGER NOT NULL DEFAULT 0,
+    "completions" INTEGER NOT NULL DEFAULT 0,
+    "likes" INTEGER NOT NULL DEFAULT 0,
+    "saves" INTEGER NOT NULL DEFAULT 0,
+    "shares" INTEGER NOT NULL DEFAULT 0,
+    "comments" INTEGER NOT NULL DEFAULT 0,
+    "avgWatchTime" DOUBLE PRECISION,
+    "bounceRate" DOUBLE PRECISION,
+    "retentionRate" DOUBLE PRECISION,
+    "sourceData" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "podcast_analytics_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "public"."User"("email");
 
@@ -895,28 +1255,7 @@ CREATE INDEX "User_email_idx" ON "public"."User"("email");
 CREATE INDEX "User_phone_idx" ON "public"."User"("phone");
 
 -- CreateIndex
-CREATE INDEX "RefreshToken_userId_idx" ON "public"."RefreshToken"("userId");
-
--- CreateIndex
-CREATE INDEX "RefreshToken_deviceId_idx" ON "public"."RefreshToken"("deviceId");
-
--- CreateIndex
-CREATE INDEX "LoginSession_userId_idx" ON "public"."LoginSession"("userId");
-
--- CreateIndex
-CREATE INDEX "LoginSession_isActive_idx" ON "public"."LoginSession"("isActive");
-
--- CreateIndex
-CREATE INDEX "SecurityLog_userId_idx" ON "public"."SecurityLog"("userId");
-
--- CreateIndex
-CREATE INDEX "SecurityLog_action_idx" ON "public"."SecurityLog"("action");
-
--- CreateIndex
-CREATE INDEX "SecurityLog_createdAt_idx" ON "public"."SecurityLog"("createdAt");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Profile_userId_key" ON "public"."Profile"("userId");
+CREATE INDEX "Course_instructorId_idx" ON "public"."Course"("instructorId");
 
 -- CreateIndex
 CREATE INDEX "Course_orderNo_idx" ON "public"."Course"("orderNo");
@@ -928,7 +1267,28 @@ CREATE INDEX "Course_difficulty_idx" ON "public"."Course"("difficulty");
 CREATE INDEX "Course_isPublished_idx" ON "public"."Course"("isPublished");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Course_orderNo_key" ON "public"."Course"("orderNo");
+CREATE INDEX "Course_price_idx" ON "public"."Course"("price");
+
+-- CreateIndex
+CREATE INDEX "CourseEnrollment_studentId_idx" ON "public"."CourseEnrollment"("studentId");
+
+-- CreateIndex
+CREATE INDEX "CourseEnrollment_status_idx" ON "public"."CourseEnrollment"("status");
+
+-- CreateIndex
+CREATE INDEX "CourseEnrollment_enrolledAt_idx" ON "public"."CourseEnrollment"("enrolledAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "CourseEnrollment_courseId_studentId_key" ON "public"."CourseEnrollment"("courseId", "studentId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Room_code_key" ON "public"."Room"("code");
+
+-- CreateIndex
+CREATE INDEX "Room_code_idx" ON "public"."Room"("code");
+
+-- CreateIndex
+CREATE INDEX "Room_isActive_idx" ON "public"."Room"("isActive");
 
 -- CreateIndex
 CREATE INDEX "CourseRating_courseId_idx" ON "public"."CourseRating"("courseId");
@@ -970,6 +1330,30 @@ CREATE INDEX "Question_activityId_idx" ON "public"."Question"("activityId");
 CREATE INDEX "Question_activityId_orderNo_idx" ON "public"."Question"("activityId", "orderNo");
 
 -- CreateIndex
+CREATE INDEX "RefreshToken_userId_idx" ON "public"."RefreshToken"("userId");
+
+-- CreateIndex
+CREATE INDEX "RefreshToken_deviceId_idx" ON "public"."RefreshToken"("deviceId");
+
+-- CreateIndex
+CREATE INDEX "LoginSession_userId_idx" ON "public"."LoginSession"("userId");
+
+-- CreateIndex
+CREATE INDEX "LoginSession_isActive_idx" ON "public"."LoginSession"("isActive");
+
+-- CreateIndex
+CREATE INDEX "SecurityLog_userId_idx" ON "public"."SecurityLog"("userId");
+
+-- CreateIndex
+CREATE INDEX "SecurityLog_action_idx" ON "public"."SecurityLog"("action");
+
+-- CreateIndex
+CREATE INDEX "SecurityLog_createdAt_idx" ON "public"."SecurityLog"("createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Profile_userId_key" ON "public"."Profile"("userId");
+
+-- CreateIndex
 CREATE INDEX "Progress_userId_updatedAt_idx" ON "public"."Progress"("userId", "updatedAt");
 
 -- CreateIndex
@@ -988,6 +1372,9 @@ CREATE INDEX "Attempt_activityId_idx" ON "public"."Attempt"("activityId");
 CREATE UNIQUE INDEX "Classroom_classCode_key" ON "public"."Classroom"("classCode");
 
 -- CreateIndex
+CREATE INDEX "Classroom_courseId_idx" ON "public"."Classroom"("courseId");
+
+-- CreateIndex
 CREATE INDEX "Classroom_teacherId_idx" ON "public"."Classroom"("teacherId");
 
 -- CreateIndex
@@ -995,6 +1382,42 @@ CREATE INDEX "Classroom_classCode_idx" ON "public"."Classroom"("classCode");
 
 -- CreateIndex
 CREATE INDEX "Classroom_isActive_idx" ON "public"."Classroom"("isActive");
+
+-- CreateIndex
+CREATE INDEX "Classroom_periodStart_idx" ON "public"."Classroom"("periodStart");
+
+-- CreateIndex
+CREATE INDEX "Classroom_periodEnd_idx" ON "public"."Classroom"("periodEnd");
+
+-- CreateIndex
+CREATE INDEX "ClassroomSlot_classroomId_idx" ON "public"."ClassroomSlot"("classroomId");
+
+-- CreateIndex
+CREATE INDEX "ClassroomSlot_dayOfWeek_idx" ON "public"."ClassroomSlot"("dayOfWeek");
+
+-- CreateIndex
+CREATE INDEX "ClassroomSession_classroomId_idx" ON "public"."ClassroomSession"("classroomId");
+
+-- CreateIndex
+CREATE INDEX "ClassroomSession_instructorId_idx" ON "public"."ClassroomSession"("instructorId");
+
+-- CreateIndex
+CREATE INDEX "ClassroomSession_startTime_idx" ON "public"."ClassroomSession"("startTime");
+
+-- CreateIndex
+CREATE INDEX "ClassroomSession_endTime_idx" ON "public"."ClassroomSession"("endTime");
+
+-- CreateIndex
+CREATE INDEX "SessionAttendance_sessionId_idx" ON "public"."SessionAttendance"("sessionId");
+
+-- CreateIndex
+CREATE INDEX "SessionAttendance_studentId_idx" ON "public"."SessionAttendance"("studentId");
+
+-- CreateIndex
+CREATE INDEX "SessionAttendance_status_idx" ON "public"."SessionAttendance"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "SessionAttendance_sessionId_studentId_key" ON "public"."SessionAttendance"("sessionId", "studentId");
 
 -- CreateIndex
 CREATE INDEX "ClassroomStudent_studentId_idx" ON "public"."ClassroomStudent"("studentId");
@@ -1248,17 +1671,128 @@ CREATE INDEX "Recommendation_expiresAt_idx" ON "public"."Recommendation"("expire
 -- CreateIndex
 CREATE INDEX "Recommendation_viewed_clicked_dismissed_idx" ON "public"."Recommendation"("viewed", "clicked", "dismissed");
 
--- AddForeignKey
-ALTER TABLE "public"."RefreshToken" ADD CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- CreateIndex
+CREATE INDEX "DailyQuest_isActive_idx" ON "public"."DailyQuest"("isActive");
+
+-- CreateIndex
+CREATE INDEX "DailyQuest_isDaily_idx" ON "public"."DailyQuest"("isDaily");
+
+-- CreateIndex
+CREATE INDEX "DailyQuest_category_idx" ON "public"."DailyQuest"("category");
+
+-- CreateIndex
+CREATE INDEX "DailyQuest_validFrom_validUntil_idx" ON "public"."DailyQuest"("validFrom", "validUntil");
+
+-- CreateIndex
+CREATE INDEX "QuestProgress_userId_idx" ON "public"."QuestProgress"("userId");
+
+-- CreateIndex
+CREATE INDEX "QuestProgress_questId_idx" ON "public"."QuestProgress"("questId");
+
+-- CreateIndex
+CREATE INDEX "QuestProgress_done_idx" ON "public"."QuestProgress"("done");
+
+-- CreateIndex
+CREATE INDEX "QuestProgress_startedAt_idx" ON "public"."QuestProgress"("startedAt");
+
+-- CreateIndex
+CREATE INDEX "QuestProgress_completedAt_idx" ON "public"."QuestProgress"("completedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "QuestProgress_userId_questId_key" ON "public"."QuestProgress"("userId", "questId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "podcasts_code_key" ON "public"."podcasts"("code");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "podcasts_slug_key" ON "public"."podcasts"("slug");
+
+-- CreateIndex
+CREATE INDEX "podcasts_status_publishedAt_idx" ON "public"."podcasts"("status", "publishedAt");
+
+-- CreateIndex
+CREATE INDEX "podcasts_category_idx" ON "public"."podcasts"("category");
+
+-- CreateIndex
+CREATE INDEX "podcasts_source_idx" ON "public"."podcasts"("source");
+
+-- CreateIndex
+CREATE INDEX "podcasts_difficulty_idx" ON "public"."podcasts"("difficulty");
+
+-- CreateIndex
+CREATE INDEX "podcasts_isRecommended_idx" ON "public"."podcasts"("isRecommended");
+
+-- CreateIndex
+CREATE INDEX "podcasts_viewCount_idx" ON "public"."podcasts"("viewCount");
+
+-- CreateIndex
+CREATE INDEX "podcasts_code_idx" ON "public"."podcasts"("code");
+
+-- CreateIndex
+CREATE INDEX "podcast_attempts_userId_createdAt_idx" ON "public"."podcast_attempts"("userId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "podcast_attempts_podcastId_idx" ON "public"."podcast_attempts"("podcastId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "podcast_attempts_userId_podcastId_attemptNo_key" ON "public"."podcast_attempts"("userId", "podcastId", "attemptNo");
+
+-- CreateIndex
+CREATE INDEX "user_podcast_progress_userId_lastListenAt_idx" ON "public"."user_podcast_progress"("userId", "lastListenAt");
+
+-- CreateIndex
+CREATE INDEX "user_podcast_progress_podcastId_idx" ON "public"."user_podcast_progress"("podcastId");
+
+-- CreateIndex
+CREATE INDEX "user_podcast_progress_isCompleted_idx" ON "public"."user_podcast_progress"("isCompleted");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_podcast_progress_userId_podcastId_key" ON "public"."user_podcast_progress"("userId", "podcastId");
+
+-- CreateIndex
+CREATE INDEX "podcast_ratings_podcastId_overallRating_idx" ON "public"."podcast_ratings"("podcastId", "overallRating");
+
+-- CreateIndex
+CREATE INDEX "podcast_ratings_createdAt_idx" ON "public"."podcast_ratings"("createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "podcast_ratings_userId_podcastId_key" ON "public"."podcast_ratings"("userId", "podcastId");
+
+-- CreateIndex
+CREATE INDEX "podcast_comments_podcastId_createdAt_idx" ON "public"."podcast_comments"("podcastId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "podcast_comments_userId_idx" ON "public"."podcast_comments"("userId");
+
+-- CreateIndex
+CREATE INDEX "podcast_comments_parentId_idx" ON "public"."podcast_comments"("parentId");
+
+-- CreateIndex
+CREATE INDEX "playlists_userId_idx" ON "public"."playlists"("userId");
+
+-- CreateIndex
+CREATE INDEX "playlists_isPublic_idx" ON "public"."playlists"("isPublic");
+
+-- CreateIndex
+CREATE INDEX "playlist_podcasts_playlistId_orderNo_idx" ON "public"."playlist_podcasts"("playlistId", "orderNo");
+
+-- CreateIndex
+CREATE INDEX "podcast_analytics_podcastId_idx" ON "public"."podcast_analytics"("podcastId");
+
+-- CreateIndex
+CREATE INDEX "podcast_analytics_date_idx" ON "public"."podcast_analytics"("date");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "podcast_analytics_podcastId_date_key" ON "public"."podcast_analytics"("podcastId", "date");
 
 -- AddForeignKey
-ALTER TABLE "public"."LoginSession" ADD CONSTRAINT "LoginSession_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."Course" ADD CONSTRAINT "Course_instructorId_fkey" FOREIGN KEY ("instructorId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."SecurityLog" ADD CONSTRAINT "SecurityLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."CourseEnrollment" ADD CONSTRAINT "CourseEnrollment_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "public"."Course"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."Profile" ADD CONSTRAINT "Profile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."CourseEnrollment" ADD CONSTRAINT "CourseEnrollment_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."CourseRating" ADD CONSTRAINT "CourseRating_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "public"."Course"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1273,7 +1807,16 @@ ALTER TABLE "public"."LessonDetail" ADD CONSTRAINT "LessonDetail_lessonId_fkey" 
 ALTER TABLE "public"."Activity" ADD CONSTRAINT "Activity_lessonId_fkey" FOREIGN KEY ("lessonId") REFERENCES "public"."Lesson"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "public"."Question" ADD CONSTRAINT "Question_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "public"."Activity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "public"."RefreshToken" ADD CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."LoginSession" ADD CONSTRAINT "LoginSession_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."SecurityLog" ADD CONSTRAINT "SecurityLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."Profile" ADD CONSTRAINT "Profile_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."Progress" ADD CONSTRAINT "Progress_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1288,7 +1831,28 @@ ALTER TABLE "public"."Attempt" ADD CONSTRAINT "Attempt_userId_fkey" FOREIGN KEY 
 ALTER TABLE "public"."Attempt" ADD CONSTRAINT "Attempt_activityId_fkey" FOREIGN KEY ("activityId") REFERENCES "public"."Activity"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "public"."Classroom" ADD CONSTRAINT "Classroom_courseId_fkey" FOREIGN KEY ("courseId") REFERENCES "public"."Course"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "public"."Classroom" ADD CONSTRAINT "Classroom_teacherId_fkey" FOREIGN KEY ("teacherId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ClassroomSlot" ADD CONSTRAINT "ClassroomSlot_classroomId_fkey" FOREIGN KEY ("classroomId") REFERENCES "public"."Classroom"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ClassroomSession" ADD CONSTRAINT "ClassroomSession_classroomId_fkey" FOREIGN KEY ("classroomId") REFERENCES "public"."Classroom"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ClassroomSession" ADD CONSTRAINT "ClassroomSession_instructorId_fkey" FOREIGN KEY ("instructorId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."ClassroomSession" ADD CONSTRAINT "ClassroomSession_roomId_fkey" FOREIGN KEY ("roomId") REFERENCES "public"."Room"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."SessionAttendance" ADD CONSTRAINT "SessionAttendance_sessionId_fkey" FOREIGN KEY ("sessionId") REFERENCES "public"."ClassroomSession"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."SessionAttendance" ADD CONSTRAINT "SessionAttendance_studentId_fkey" FOREIGN KEY ("studentId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "public"."ClassroomStudent" ADD CONSTRAINT "ClassroomStudent_classroomId_fkey" FOREIGN KEY ("classroomId") REFERENCES "public"."Classroom"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1370,3 +1934,48 @@ ALTER TABLE "public"."Content" ADD CONSTRAINT "Content_creatorId_fkey" FOREIGN K
 
 -- AddForeignKey
 ALTER TABLE "public"."UserVocabulary" ADD CONSTRAINT "UserVocabulary_vocabularyId_fkey" FOREIGN KEY ("vocabularyId") REFERENCES "public"."Vocabulary"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."QuestProgress" ADD CONSTRAINT "QuestProgress_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."QuestProgress" ADD CONSTRAINT "QuestProgress_questId_fkey" FOREIGN KEY ("questId") REFERENCES "public"."DailyQuest"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."podcasts" ADD CONSTRAINT "podcasts_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "public"."User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."podcast_attempts" ADD CONSTRAINT "podcast_attempts_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."podcast_attempts" ADD CONSTRAINT "podcast_attempts_podcastId_fkey" FOREIGN KEY ("podcastId") REFERENCES "public"."podcasts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."user_podcast_progress" ADD CONSTRAINT "user_podcast_progress_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."user_podcast_progress" ADD CONSTRAINT "user_podcast_progress_podcastId_fkey" FOREIGN KEY ("podcastId") REFERENCES "public"."podcasts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."podcast_ratings" ADD CONSTRAINT "podcast_ratings_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."podcast_ratings" ADD CONSTRAINT "podcast_ratings_podcastId_fkey" FOREIGN KEY ("podcastId") REFERENCES "public"."podcasts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."podcast_comments" ADD CONSTRAINT "podcast_comments_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."podcast_comments" ADD CONSTRAINT "podcast_comments_podcastId_fkey" FOREIGN KEY ("podcastId") REFERENCES "public"."podcasts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."podcast_comments" ADD CONSTRAINT "podcast_comments_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "public"."podcast_comments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."playlists" ADD CONSTRAINT "playlists_userId_fkey" FOREIGN KEY ("userId") REFERENCES "public"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."playlist_podcasts" ADD CONSTRAINT "playlist_podcasts_playlistId_fkey" FOREIGN KEY ("playlistId") REFERENCES "public"."playlists"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."playlist_podcasts" ADD CONSTRAINT "playlist_podcasts_podcastId_fkey" FOREIGN KEY ("podcastId") REFERENCES "public"."podcasts"("id") ON DELETE CASCADE ON UPDATE CASCADE;
