@@ -6,6 +6,7 @@ import { ClientApiController } from './client-api.controller';
 import { ClientApiService } from './client-api.service';
 import { ActivityModule } from './domains/activity';
 import { AgentModule } from './domains/agent/agent.module';
+import { AssignmentModule } from './domains/assignment';
 import { AttemptModule } from './domains/attempt';
 import { AuthModule } from './domains/auth/auth.module';
 import { ClassroomModule } from './domains/classroom';
@@ -17,6 +18,9 @@ import { LessonModule } from './domains/lesson';
 import { NotificationModule } from './domains/notification';
 import { ParentModule } from './domains/parent';
 import { ParentChildModule } from './domains/parent-child';
+import { PodcastCommentModule } from './domains/podcast-comment/podcast-comment.module';
+import { PodcastRatingModule } from './domains/podcast-rating/podcast-rating.module';
+import { PodcastModule } from './domains/podcast/podcast.module';
 import { ProgressModule } from './domains/progress';
 import { RoomModule } from './domains/room';
 import { StudentModule } from './domains/student/student.module';
@@ -25,7 +29,6 @@ import { TeacherModule } from './domains/teacher';
 import { UploadModule } from './domains/upload';
 import { UploadService } from './domains/upload/upload.service';
 import { EventsModule } from './events/events.module';
-import { PodcastModule } from './domains/podcast/podcast.module';
 
 @Module({
   imports: [
@@ -47,11 +50,14 @@ import { PodcastModule } from './domains/podcast/podcast.module';
     TeacherModule,
     UploadModule,
     ClassroomModule,
+    AssignmentModule,
     GoogleTranslateModule,
     AgentModule,
     SwaggerLoaderModule,
     RoomModule,
-    PodcastModule
+    PodcastModule,
+    PodcastCommentModule,
+    PodcastRatingModule
   ],
   controllers: [ClientApiController],
   providers: [ClientApiService, UploadService],
