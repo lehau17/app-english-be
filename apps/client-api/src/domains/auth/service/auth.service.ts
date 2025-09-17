@@ -1,12 +1,11 @@
 import { CreateJwtPayload, JwtPayload, TokenRepository } from '@app/shared';
 import {
-    BadRequestException,
-    Injectable,
-    UnauthorizedException,
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { GamificationService } from '../../gamification/service/gamification.service';
 import { ChangePasswordDto, LoginDto, LogoutDto, RefreshTokenDto, RegisterDto } from '../dto';
 import { AuthRepository } from '../repository';
 
@@ -15,7 +14,6 @@ export class AuthService {
   constructor(
     private readonly authRepository: AuthRepository,
     private readonly tokenRepository: TokenRepository,
-    private readonly gamificationService: GamificationService,
   ) {}
 
   /**
@@ -185,42 +183,9 @@ export class AuthService {
   async me(userId: string) {
     const user = await this.authRepository.findById(userId);
 
-    // Get gamification stats from UserStats (already included in findById)
-    const gamificationStats = user?.UserStats || {
-      xp: 0,
-      level: 1,
-      coins: 0,
-      streakDays: 0,
-    };
 
-    // Get daily quests and leaderboard for the user
-    let dailyQuests = [];
-    let leaderboard = [];
-    try {
-      dailyQuests = await this.gamificationService.getDailyQuests(userId);
-      // Get current week's leaderboard
-      const now = new Date();
-      const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-      const weekEnd = new Date(weekStart);
-      weekEnd.setDate(weekStart.getDate() + 6);
-      leaderboard = await this.gamificationService.getLeaderboard('weekly', weekStart, weekEnd);
-    } catch (error) {
-      console.log('Error fetching gamification data:', error.message);
-    }
-
-    // Return user with gamification stats
     return {
       ...user,
-      ...gamificationStats,
-      // Map streakDays to streak for frontend compatibility
-      streak: gamificationStats.streakDays,
-      // Include gamification data
-      dailyQuests,
-      leaderboard: leaderboard.map(entry => ({
-        id: entry.userId,
-        displayName: entry.user.displayName || `${entry.user.firstName} ${entry.user.lastName}`.trim(),
-        xp: entry.xp,
-      })),
     };
   }
 }

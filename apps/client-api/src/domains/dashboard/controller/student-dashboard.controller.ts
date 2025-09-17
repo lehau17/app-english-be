@@ -16,6 +16,6 @@ export class StudentDashboardController {
   @ApiOperation({ summary: 'Get student dashboard data (quests, leaderboard, streak, ...)' })
   async getStudentDashboard(@PayloadToken() payload : JwtPayload) {
     const userId = payload.sub
-    return this.dashboardStudentService.getStudentDashboard(userId);
+    return this.dashboardStudentService.getDashboard(userId);
   }
 }

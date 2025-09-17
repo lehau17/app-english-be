@@ -15,7 +15,6 @@ export class ParentService {
           child: {
             include: {
               Profile: true,
-              UserStats: true,
               Progress: {
                 where: {
                   createdAt: {
@@ -32,7 +31,6 @@ export class ParentService {
       const children = parentChildRelations.map((relation) => {
         const child = relation.child;
         const profile = child.Profile;
-        const stats = child.UserStats;
         const todayProgress = child.Progress || [];
 
         const completedActivities = todayProgress.filter(p => p.state === 'done').length;
@@ -42,12 +40,12 @@ export class ParentService {
           id: child.id,
           name: child.displayName || child.firstName || child.email || 'Unknown',
           avatar: child.avatarUrl || undefined,
-          level: stats?.level || 1,
-          xp: stats?.xp || 0,
-          xpToNext: (stats?.level || 1) * 1000, // Simple calculation
-          streak: stats?.streakDays || 0,
-          coins: stats?.coins || 0,
-          todayStudyTime: stats?.totalStudyTime || 0,
+          level: parseInt(profile?.currentLevel) || 1,
+          xp: 0, // Gamification removed
+          xpToNext: 1000, // Placeholder
+          streak: profile?.studyStreak || 0,
+          coins: 0, // Gamification removed
+          todayStudyTime: profile?.totalStudyTime || 0,
           completedActivities,
           totalActivities,
           recentActivity: 'Đang học tiếng Anh', // Placeholder
