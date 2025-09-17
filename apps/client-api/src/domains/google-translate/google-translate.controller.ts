@@ -1,7 +1,9 @@
 import { BadRequestException, Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBody, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { GoogleTranslateFreeService, GoogleTranslateService } from './google-translate.service';
 
-@Controller('google-translate')
+@ApiTags('Google Translate')
+@Controller('/public/v1/google-translate')
 export class GoogleTranslateController {
   constructor(
     private readonly googleTranslateService: GoogleTranslateService,
@@ -9,6 +11,20 @@ export class GoogleTranslateController {
   ) {}
 
   @Post('translate')
+  @ApiOperation({ summary: 'Dịch văn bản', description: 'Dịch văn bản từ ngôn ngữ nguồn sang ngôn ngữ đích' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Văn bản cần dịch', example: 'Hello world' },
+        targetLanguage: { type: 'string', description: 'Ngôn ngữ đích', example: 'vi' },
+        sourceLanguage: { type: 'string', description: 'Ngôn ngữ nguồn (tùy chọn)', example: 'en' }
+      },
+      required: ['text', 'targetLanguage']
+    }
+  })
+  @ApiResponse({ status: 200, description: 'Dịch thành công' })
+  @ApiResponse({ status: 400, description: 'Thiếu thông tin bắt buộc' })
   async translateText(
     @Body() body: { text: string; targetLanguage: string; sourceLanguage?: string }
   ) {
@@ -22,6 +38,29 @@ export class GoogleTranslateController {
   }
 
   @Post('translate-with-audio')
+  @ApiOperation({ summary: 'Dịch văn bản kèm audio', description: 'Dịch văn bản và tạo file âm thanh cho bản dịch' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Văn bản cần dịch', example: 'Hello world' },
+        targetLanguage: { type: 'string', description: 'Ngôn ngữ đích', example: 'vi' },
+        sourceLanguage: { type: 'string', description: 'Ngôn ngữ nguồn (tùy chọn)', example: 'en' }
+      },
+      required: ['text', 'targetLanguage']
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Dịch và tạo audio thành công',
+    schema: {
+      type: 'object',
+      properties: {
+        translatedText: { type: 'string', description: 'Văn bản đã dịch' },
+        audioContent: { type: 'string', description: 'Audio dưới dạng base64' }
+      }
+    }
+  })
   async translateAndGenerateAudio(
     @Body() body: { text: string; targetLanguage: string; sourceLanguage?: string }
   ) {
@@ -37,7 +76,6 @@ export class GoogleTranslateController {
       sourceLanguage
     );
 
-    // Trả về base64 encoded audio
     return {
       ...result,
       audioContent: result.audioContent.toString('base64'),
@@ -45,6 +83,28 @@ export class GoogleTranslateController {
   }
 
   @Post('text-to-speech')
+  @ApiOperation({ summary: 'Chuyển văn bản thành giọng nói', description: 'Tạo file âm thanh từ văn bản' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Văn bản cần chuyển đổi', example: 'Hello world' },
+        languageCode: { type: 'string', description: 'Mã ngôn ngữ, mặc định en-US', example: 'en-US' },
+        voiceName: { type: 'string', description: 'Tên giọng đọc (tùy chọn)', example: 'en-US-Wavenet-D' }
+      },
+      required: ['text']
+    }
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Audio được trả về dưới dạng base64',
+    schema: {
+      type: 'object',
+      properties: {
+        audioContent: { type: 'string', description: 'Audio base64' }
+      }
+    }
+  })
   async textToSpeech(
     @Body() body: { text: string; languageCode?: string; voiceName?: string }
   ) {
@@ -63,6 +123,17 @@ export class GoogleTranslateController {
   }
 
   @Post('detect-language')
+  @ApiOperation({ summary: 'Nhận diện ngôn ngữ', description: 'Xác định ngôn ngữ của đoạn văn bản' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Văn bản cần xác định ngôn ngữ', example: 'Xin chào' }
+      },
+      required: ['text']
+    }
+  })
+  @ApiResponse({ status: 200, description: 'Ngôn ngữ được phát hiện' })
   async detectLanguage(@Body() body: { text: string }) {
     const { text } = body;
 
@@ -74,20 +145,32 @@ export class GoogleTranslateController {
   }
 
   @Get('supported-languages')
+  @ApiOperation({ summary: 'Danh sách ngôn ngữ hỗ trợ (Google Translate API)' })
+  @ApiResponse({ status: 200, description: 'Danh sách ngôn ngữ' })
   async getSupportedLanguages() {
     return this.googleTranslateService.getSupportedLanguages();
   }
 
   @Get('available-voices')
+  @ApiOperation({ summary: 'Danh sách giọng đọc hỗ trợ', description: 'Lấy danh sách giọng đọc cho Text-to-Speech' })
+  @ApiQuery({ name: 'languageCode', required: false, description: 'Mã ngôn ngữ (tùy chọn)', example: 'en-US' })
   async getAvailableVoices(@Query('languageCode') languageCode?: string) {
     return this.googleTranslateService.getAvailableVoices(languageCode);
   }
 
-  // Free TTS endpoints
   @Post('free/text-to-speech')
-  async createFreeAudioFile(
-    @Body() body: { text: string; language?: string }
-  ) {
+  @ApiOperation({ summary: 'Chuyển văn bản thành giọng nói (Free)', description: 'Dùng free TTS, trả về file audio' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Văn bản cần chuyển đổi', example: 'Hello world' },
+        language: { type: 'string', description: 'Ngôn ngữ', example: 'en' }
+      },
+      required: ['text']
+    }
+  })
+  async createFreeAudioFile(@Body() body: { text: string; language?: string }) {
     const { text, language = 'en' } = body;
 
     if (!text) {
@@ -98,25 +181,33 @@ export class GoogleTranslateController {
       throw new BadRequestException(`Language '${language}' is not supported`);
     }
 
-    const result = await this.googleTranslateFreeService.createAudioWithUrl(text, language);
-    return result;
+    return this.googleTranslateFreeService.createAudioWithUrl(text, language);
   }
 
   @Post('free/text-to-speech-multiple')
-  async createFreeAudioMultipleLanguages(
-    @Body() body: { text: string; languages?: string[] }
-  ) {
+  @ApiOperation({ summary: 'Chuyển văn bản thành giọng nói nhiều ngôn ngữ (Free)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Văn bản cần chuyển đổi', example: 'Hello world' },
+        languages: { type: 'array', items: { type: 'string' }, description: 'Danh sách ngôn ngữ', example: ['en', 'vi', 'es'] }
+      },
+      required: ['text']
+    }
+  })
+  async createFreeAudioMultipleLanguages(@Body() body: { text: string; languages?: string[] }) {
     const { text, languages = ['en', 'vi', 'es'] } = body;
 
     if (!text) {
       throw new BadRequestException('Text is required');
     }
 
-    const result = await this.googleTranslateFreeService.createAudioForMultipleLanguages(text, languages);
-    return result;
+    return this.googleTranslateFreeService.createAudioForMultipleLanguages(text, languages);
   }
 
   @Get('free/supported-languages')
+  @ApiOperation({ summary: 'Danh sách ngôn ngữ hỗ trợ (Free TTS)' })
   async getFreeSupportedLanguages() {
     const supportedLanguages = [
       'af', 'ar', 'bn', 'bs', 'ca', 'cs', 'cy', 'da', 'de', 'el', 'en', 'eo', 'es', 'et', 'fi', 'fr',
