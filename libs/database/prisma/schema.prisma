@@ -30,6 +30,12 @@ enum Status {
 }
 
 
+enum AttemptStatus {
+  in_progress   // User đang làm
+  submitted     // User đã nộp (chấm điểm xong)
+  completed     // Đã xem lại/kết thúc
+}
+
 enum SessionStatus {
   scheduled
   ongoing
@@ -270,9 +276,6 @@ model User {
     RefreshToken     RefreshToken[]
     DeviceTokens     DeviceToken[]
     Notifications    Notification[]
-    UserStats        UserStats?
-    UserBadges       UserBadge[]
-    LeaderboardEntry LeaderboardEntry[]
 
     // Parent-Child relations
     parentRelations ParentChild[] @relation("ParentChildParent")
@@ -305,17 +308,13 @@ model User {
     customRewards CustomReward[] @relation("ParentRewards")
     rewardClaims  RewardClaim[]
 
-    // Daily quests
-    questProgress QuestProgress[]
-
     // Security
     securityLogs  SecurityLog[]
     loginSessions LoginSession[]
 
     // Podcast & Listening Practice
     podcastsCreated       Podcast[]                @relation("PodcastAuthor")
-    podcastProgress       UserPodcastProgress[]    @relation("UserPodcastProgress")
-    podcastAttempts       PodcastActivityAttempt[] @relation("UserPodcastAttempts")
+    podcastAttempts       PodcastAttempt[]         @relation("UserPodcastAttempts")
     podcastRatings        PodcastRating[]          @relation("UserPodcastRatings")
     podcastComments       PodcastComment[]         @relation("UserPodcastComments")
     playlists             Playlist[]               @relation("UserPlaylists")
@@ -1016,103 +1015,6 @@ model Notification {
     @@index([scheduledFor])
 }
 
-// ===================== GAMIFICATION =====================
-
-model UserStats {
-    userId        String    @id
-    xp            Int       @default(0)
-    level         Int       @default(1)
-    streakDays    Int       @default(0)
-    longestStreak Int       @default(0)
-    lastStreakAt  DateTime?
-
-    // Thống kê học tập
-    totalStudyTime  Int @default(0)
-    totalActivities Int @default(0)
-    perfectScores   Int @default(0)
-
-    // Thống kê theo loại hoạt động
-    vocabMastered      Int    @default(0)
-    pronunciationScore Float?
-    listeningAccuracy  Float?
-    speakingFluency    Float?
-
-    // Coins/Currency system
-    coins      Int @default(0)
-    coinsSpent Int @default(0)
-
-    updatedAt DateTime @updatedAt
-
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Badge {
-    id          String  @id @default(uuid())
-    code        String  @unique
-    category    String
-    name        String
-    description String?
-    iconUrl     String?
-    rarity      String  @default("common")
-    conditions  Json
-    points      Int     @default(0)
-    isSecret    Boolean @default(false)
-
-    createdAt DateTime @default(now())
-
-    UserBadge UserBadge[]
-}
-
-model UserBadge {
-    userId   String
-    badgeId  String
-    earnedAt DateTime @default(now())
-
-    // Progress towards badge
-    progress    Int?
-    maxProgress Int?
-
-    user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-    badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
-
-    @@id([userId, badgeId])
-    @@index([badgeId])
-    @@index([earnedAt])
-}
-
-model LeaderboardEntry {
-    id          String   @id @default(uuid())
-    periodType  String
-    periodStart DateTime
-    periodEnd   DateTime
-    userId      String
-
-    // Metrics
-    xp                  Int @default(0)
-    activitiesCompleted Int @default(0)
-    streakDays          Int @default(0)
-    studyTimeMinutes    Int @default(0)
-
-    // Rankings
-    rank       Int?
-    xpRank     Int?
-    streakRank Int?
-
-    // Scope
-    scope   String  @default("global")
-    scopeId String?
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    @@unique([userId, periodType, periodStart, scope, scopeId])
-    @@index([periodType, periodStart, periodEnd])
-    @@index([scope, scopeId, xp])
-    @@index([rank])
-}
-
 // ===================== SOCIAL FEATURES =====================
 
 model Friendship {
@@ -1586,73 +1488,7 @@ model Recommendation {
     @@index([viewed, clicked, dismissed])
 }
 
-// ===================== DAILY QUESTS SYSTEM =====================
 
-model DailyQuest {
-    id          String   @id @default(uuid())
-    text        String   // Nội dung quest
-    description String?  // Mô tả chi tiết
-    points      Int      @default(10) // Điểm thưởng khi hoàn thành
-    category    String?  // Phân loại quest (vocab, listening, etc.)
-    difficulty  DifficultyLevel @default(beginner)
-
-    // Cấu hình quest
-    targetValue Int?     // Giá trị mục tiêu (số bài tập, thời gian, etc.)
-    targetType  String?  // Loại mục tiêu (activities, time, score, etc.)
-
-    // Trạng thái
-    isActive    Boolean  @default(true)
-    isDaily     Boolean  @default(true) // Có phải quest hàng ngày không
-
-    // Thời gian
-    validFrom   DateTime? // Thời gian bắt đầu hiệu lực
-    validUntil  DateTime? // Thời gian kết thúc hiệu lực
-
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
-
-    // Relations
-    progress QuestProgress[]
-
-    @@index([isActive])
-    @@index([isDaily])
-    @@index([category])
-    @@index([validFrom, validUntil])
-}
-
-model QuestProgress {
-    id        String   @id @default(uuid())
-    userId    String
-    questId   String
-    done      Boolean  @default(false) // Đã hoàn thành chưa
-
-    // Progress tracking
-    progress    Int?     // Tiến độ hiện tại (0-100%)
-    currentValue Int     @default(0) // Giá trị hiện tại
-    targetValue  Int?    // Giá trị mục tiêu
-
-    // Thời gian
-    startedAt   DateTime @default(now())
-    completedAt DateTime?
-
-    // Metadata
-    attempts    Int      @default(0) // Số lần thử
-    lastAttempt DateTime @default(now())
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    // Relations
-    user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-    quest DailyQuest @relation(fields: [questId], references: [id], onDelete: Cascade)
-
-    @@unique([userId, questId])
-    @@index([userId])
-    @@index([questId])
-    @@index([done])
-    @@index([startedAt])
-    @@index([completedAt])
-}
 
 // ===================== PODCAST & LISTENING PRACTICE SYSTEM =====================
 
@@ -1699,162 +1535,70 @@ enum ListeningActivityType {
 }
 
 // ===================== CORE PODCAST MODELS =====================
-
 model Podcast {
-    id                String            @id @default(uuid())
-    code              String            @unique // ESL 11002541
-    title             String
-    subtitle          String?
-    description       String
-    storyTitle        String?           // Tiêu đề câu chuyện chính
-    storyContent      String?           // Nội dung câu chuyện
+  id          String         @id @default(uuid())
+  code        String         @unique
+  title       String
+  description String
 
-    // Media files
-    audioUrl          String
-    thumbnailUrl      String?
-    transcriptUrl     String?
+  // Media files
+  audioUrl    String
+  thumbnailUrl String?
 
-    // Classification
-    category          PodcastCategory
-    source            PodcastSource
-    difficulty        PodcastDifficulty @default(intermediate)
-    tags              String[]          @default([])
+  // Transcript & Test
+  transcript  String         // Toàn bộ transcript gốc
+  gaps        PodcastGap[]   // Danh sách chỗ đục lỗ (bài kiểm)
+  averageRating  Float?        @default(0)
+  difficultyRating  Float?        @default(0)
+  qualityRating  Float?        @default(0)
+  totalRatings  Int         @default(0)
 
-    // Duration và stats
-    duration          Int               // seconds
-    durationFormatted String?           // "12:34"
-    viewCount         Int               @default(0)
-    likeCount         Int               @default(0)
-    saveCount         Int               @default(0)
+  // Metadata
+  category    PodcastCategory
+  difficulty  PodcastDifficulty @default(intermediate)
+  duration    Int             // seconds
+  viewCount   Int             @default(0)
+  authorId  String
 
-    // Publishing
-    status            PodcastStatus     @default(draft)
-    publishedAt       DateTime?
-    scheduledAt       DateTime?
+  author User? @relation("PodcastAuthor", fields: [authorId], references: [id])
 
-    // SEO & Discovery
-    slug              String?           @unique
-    keywords          String[]          @default([])
+  playlistPodcasts PlaylistPodcast[]
 
-    // Content metadata
-    hasTranscript     Boolean           @default(false)
-    hasActivities     Boolean           @default(false)
-    isRecommended     Boolean           @default(false)
-    isPremium         Boolean           @default(false)
+  // Ratings & Comments
+  ratings     PodcastRating[]
+  comments    PodcastComment[]
 
-    // Author info
-    authorId          String?
-    authorName        String?           // Có thể khác User nếu external
+  // Attempts (bài làm)
+  attempts    PodcastAttempt[]
 
-    // Ratings cache (để query nhanh)
-    averageRating     Float?            @default(0)
-    totalRatings      Int               @default(0)
-    difficultyRating  Float?            @default(0)
-    qualityRating     Float?            @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
-    createdAt         DateTime          @default(now())
-    updatedAt         DateTime          @updatedAt
-
-    // Relations
-    author            User?             @relation("PodcastAuthor", fields: [authorId], references: [id])
-    activities        PodcastActivity[]
-    userProgress      UserPodcastProgress[]
-    ratings           PodcastRating[]
-    comments          PodcastComment[]
-    playlists         PlaylistPodcast[]
-
-    @@index([status, publishedAt])
-    @@index([category])
-    @@index([source])
-    @@index([difficulty])
-    @@index([isRecommended])
-    @@index([viewCount])
-    @@index([code])
-    @@map("podcasts")
+  @@map("podcasts")
 }
 
-// ===================== PODCAST ACTIVITIES =====================
+// ===================== GAP (Blank trong transcript) =====================
+model PodcastGap {
+  id         String   @id @default(uuid())
+  podcastId  String
+  startIndex Int      // Vị trí ký tự bắt đầu trong transcript
+  endIndex   Int      // Vị trí ký tự kết thúc trong transcript
+  answer     String   // Đáp án đúng (từ/cụm từ bị che)
+  orderNo    Int      @default(1)
 
-model PodcastActivity {
-    id           String                @id @default(uuid())
-    podcastId    String
-    type         ListeningActivityType @default(fill_blank)
-    title        String
-    description  String?
-    orderNo      Int                   @default(1)
+  podcast    Podcast  @relation(fields: [podcastId], references: [id], onDelete: Cascade)
 
-    // Simplified configuration for fill_blank only
-    timeLimit    Int?                  // seconds (optional)
-    points       Int                   @default(10)
-
-    // Content structure for fill_blank:
-    // { type: 'fill_blank', totalQuestions: number, questions: [{ id, sentence, correctAnswers: string[] }] }
-    content      Json
-
-    // Status
-    isActive     Boolean               @default(true)
-
-    createdAt    DateTime              @default(now())
-    updatedAt    DateTime              @updatedAt
-
-    // Relations
-    podcast      Podcast               @relation(fields: [podcastId], references: [id], onDelete: Cascade)
-    attempts     PodcastActivityAttempt[]
-
-    @@unique([podcastId, orderNo])
-    @@index([podcastId])
-    @@index([isActive])
-    @@map("podcast_activities")
+  @@index([podcastId])
+  @@map("podcast_gaps")
 }
 
-// ===================== USER INTERACTION MODELS =====================
+// ===================== SIMPLIFIED ATTEMPT MODEL =====================
 
-model UserPodcastProgress {
-    id              String    @id @default(uuid())
-    userId          String
-    podcastId       String
-
-    // Listening progress
-    currentPosition Int       @default(0)  // seconds
-    totalListened   Int       @default(0)  // total seconds listened
-    completionRate  Float     @default(0)  // 0-100%
-
-    // Activity progress
-    activitiesCompleted Int   @default(0)
-    totalActivities     Int   @default(0)
-    bestScore          Int?
-    averageScore       Float?
-
-    // Interaction
-    isLiked         Boolean   @default(false)
-    isSaved         Boolean   @default(false)
-    isCompleted     Boolean   @default(false)
-
-    // Timestamps
-    firstListenAt   DateTime  @default(now())
-    lastListenAt    DateTime  @default(now())
-    completedAt     DateTime?
-
-    // Session tracking
-    sessionCount    Int       @default(1)
-    totalStudyTime  Int       @default(0)  // minutes
-
-    // Relations
-    user            User      @relation("UserPodcastProgress", fields: [userId], references: [id], onDelete: Cascade)
-    podcast         Podcast   @relation(fields: [podcastId], references: [id], onDelete: Cascade)
-
-    @@unique([userId, podcastId])
-    @@index([userId, lastListenAt])
-    @@index([podcastId])
-    @@index([isCompleted])
-    @@map("user_podcast_progress")
-}
-
-model PodcastActivityAttempt {
+model PodcastAttempt {
     id             String    @id @default(uuid())
     userId         String
-    activityId     String
-    attemptNo      Int       @default(1)
+    podcastId      String
+    attemptNo      Int       @default(1)  // Có thể làm nhiều lần
 
     // Simplified scoring: count correct answers and calculate percentage
     correctCount   Int       @default(0)
@@ -1863,19 +1607,22 @@ model PodcastActivityAttempt {
 
     // Performance tracking
     timeSpent      Int?      // seconds
-    answers        Json      // User's answers for each question
-
+    answers        Json      // User's answers: { "q1": "answer1", "q2": "answer2", ... }
+ status         AttemptStatus  @default(in_progress)
     createdAt      DateTime  @default(now())
 
     // Relations
     user           User      @relation("UserPodcastAttempts", fields: [userId], references: [id], onDelete: Cascade)
-    activity       PodcastActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+    podcast        Podcast   @relation(fields: [podcastId], references: [id], onDelete: Cascade)
 
-    @@unique([userId, activityId, attemptNo])
+    @@unique([userId, podcastId, attemptNo])
     @@index([userId, createdAt])
-    @@index([activityId])
-    @@map("podcast_activity_attempts")
+    @@index([podcastId])
+    @@map("podcast_attempts")
 }
+
+// ===================== USER PODCAST PROGRESS =====================
+
 
 // ===================== RATING & FEEDBACK =====================
 
@@ -1974,7 +1721,7 @@ model Playlist {
 
     // Relations
     user        User      @relation("UserPlaylists", fields: [userId], references: [id], onDelete: Cascade)
-    podcasts    PlaylistPodcast[]
+    playlistPodcasts PlaylistPodcast[]
 
     @@index([userId])
     @@index([isPublic])
