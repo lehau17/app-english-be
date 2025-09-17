@@ -1,17 +1,19 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { PodcastCategory, PodcastDifficulty, PodcastSource, PodcastStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
-    IsArray,
-    IsBoolean,
-    IsEnum,
-    IsNumber,
-    IsOptional,
-    IsString,
-    IsUrl,
-    Min
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Min,
+  ValidateNested
 } from 'class-validator';
-import { PodcastCategory, PodcastDifficulty, PodcastSource, PodcastStatus } from '../entities/podcast.entity';
 
 export class GetPodcastsQueryDto extends RequestPagingDto {
   @ApiPropertyOptional({ enum: PodcastCategory, description: 'Filter by category' })
@@ -40,12 +42,6 @@ export class GetPodcastsQueryDto extends RequestPagingDto {
   @IsBoolean()
   recommended?: boolean;
 
-  @ApiPropertyOptional({ description: 'Show only podcasts with activities' })
-  @IsOptional()
-  @Type(() => Boolean)
-  @IsBoolean()
-  hasActivities?: boolean;
-
   @ApiPropertyOptional({ description: 'Show only premium content' })
   @IsOptional()
   @Type(() => Boolean)
@@ -58,112 +54,79 @@ export class GetPodcastsQueryDto extends RequestPagingDto {
   tab?: 'all' | 'recommended' | 'listening' | 'completed';
 }
 
-export class CreatePodcastDto {
-  @ApiProperty()
-  @IsString()
-  code: string;
+export class CreatePodcastGapDto {
+  @ApiProperty({ description: 'Vị trí ký tự bắt đầu trong transcript' })
+  @IsInt()
+  startIndex: number;
 
-  @ApiProperty()
+  @ApiProperty({ description: 'Vị trí ký tự kết thúc trong transcript' })
+  @IsInt()
+  endIndex: number;
+
+  @ApiProperty({ description: 'Đáp án đúng' })
+  @IsString()
+  answer: string;
+
+  @ApiPropertyOptional({ description: 'Thứ tự câu hỏi' })
+  @IsOptional()
+  @IsInt()
+  orderNo?: number;
+}
+
+export class CreatePodcastDto {
+  @ApiProperty({ description: 'Tiêu đề podcast' })
   @IsString()
   title: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  subtitle?: string;
-
-  @ApiProperty()
+  @ApiProperty({ description: 'Mô tả podcast' })
   @IsString()
   description: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ description: 'Nội dung podcast - transcript cho upload hoặc text cho generate' })
   @IsString()
-  storyTitle?: string;
+  content: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
+  @ApiProperty({ description: 'URL audio - từ upload hoặc generated' })
   @IsString()
-  storyContent?: string;
-
-  @ApiProperty()
-  @IsUrl()
   audioUrl: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'URL thumbnail' })
   @IsOptional()
-  @IsUrl()
+  @IsString()
   thumbnailUrl?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsUrl()
-  transcriptUrl?: string;
-
-  @ApiProperty({ enum: PodcastCategory })
+  @ApiProperty({ enum: PodcastCategory, description: 'Danh mục' })
   @IsEnum(PodcastCategory)
   category: PodcastCategory;
 
-  @ApiProperty({ enum: PodcastSource })
-  @IsEnum(PodcastSource)
-  source: PodcastSource;
-
-  @ApiProperty({ enum: PodcastDifficulty, default: PodcastDifficulty.INTERMEDIATE })
-  @IsOptional()
+  @ApiProperty({ enum: PodcastDifficulty, description: 'Độ khó' })
   @IsEnum(PodcastDifficulty)
-  difficulty?: PodcastDifficulty = PodcastDifficulty.INTERMEDIATE;
+  difficulty: PodcastDifficulty;
 
-  @ApiPropertyOptional({ type: [String] })
+  @ApiProperty({ description: 'Chế độ audio', enum: ['upload', 'generate'] })
+  @IsEnum(['upload', 'generate'])
+  audioMode: 'upload' | 'generate';
+
+  @ApiPropertyOptional({ description: 'Loại giọng đọc (cho generate mode)' })
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  tags?: string[] = [];
+  @IsString()
+  voiceType?: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ description: 'Tốc độ đọc (cho generate mode)' })
+  @IsOptional()
   @IsNumber()
-  @Min(1)
-  duration: number; // seconds
+  speechSpeed?: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Thời lượng audio (giây)' })
   @IsOptional()
-  @IsString()
-  durationFormatted?: string;
+  @IsInt()
+  duration?: number;
 
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  slug?: string;
-
-  @ApiPropertyOptional({ type: [String] })
-  @IsOptional()
+  @ApiPropertyOptional({ description: 'Gaps cho fill-in-the-blank (tùy chọn, sẽ auto-generate từ content nếu có [word])' })
   @IsArray()
-  @IsString({ each: true })
-  keywords?: string[] = [];
-
-  @ApiPropertyOptional({ default: false })
-  @IsOptional()
-  @IsBoolean()
-  hasTranscript?: boolean = false;
-
-  @ApiPropertyOptional({ default: false })
-  @IsOptional()
-  @IsBoolean()
-  hasActivities?: boolean = false;
-
-  @ApiPropertyOptional({ default: false })
-  @IsOptional()
-  @IsBoolean()
-  isRecommended?: boolean = false;
-
-  @ApiPropertyOptional({ default: false })
-  @IsOptional()
-  @IsBoolean()
-  isPremium?: boolean = false;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  authorName?: string;
+  @ValidateNested({ each: true })
+  @Type(() => CreatePodcastGapDto)
+  gaps: CreatePodcastGapDto[];
 }
 
 export class UpdatePodcastDto {
@@ -184,16 +147,6 @@ export class UpdatePodcastDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsString()
-  storyTitle?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  storyContent?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
   @IsUrl()
   audioUrl?: string;
 
@@ -204,8 +157,8 @@ export class UpdatePodcastDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @IsUrl()
-  transcriptUrl?: string;
+  @IsString()
+  transcript?: string;
 
   @ApiPropertyOptional({ enum: PodcastCategory })
   @IsOptional()
@@ -249,16 +202,6 @@ export class UpdatePodcastDto {
   @IsArray()
   @IsString({ each: true })
   keywords?: string[];
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsBoolean()
-  hasTranscript?: boolean;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsBoolean()
-  hasActivities?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()

@@ -4,12 +4,8 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { CreatePodcastDto, GetPodcastsQueryDto, UpdatePodcastDto } from '../dto/podcast.dto';
 import {
   CreateRatingDto,
-  GetRatingsQueryDto,
-  ToggleLikeDto,
-  ToggleSaveDto,
-  UpdateProgressDto,
+  GetRatingsQueryDto
 } from '../dto/user-interaction.dto';
-import { PodcastEntity } from '../entities/podcast.entity';
 
 @Injectable()
 export class PodcastService {
@@ -26,17 +22,15 @@ export class PodcastService {
       source,
       difficulty,
       duration,
-      sortBy = 'newest',
+      sortBy = 'createdAt',
       sortOrder = 'desc',
       recommended,
-      hasActivities,
       premium,
       tab,
     } = query;
 
     const skip = (page - 1) * limit;
     const where: any = {
-      status: 'published',
     };
 
     // Search
@@ -44,10 +38,8 @@ export class PodcastService {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
-        { storyTitle: { contains: search, mode: 'insensitive' } },
+        { transcript: { contains: search, mode: 'insensitive' } },
         { code: { contains: search, mode: 'insensitive' } },
-        { tags: { has: search } },
-        { keywords: { has: search } },
       ];
     }
 
@@ -56,7 +48,6 @@ export class PodcastService {
     if (source) where.source = source;
     if (difficulty) where.difficulty = difficulty;
     if (recommended !== undefined) where.isRecommended = recommended;
-    if (hasActivities !== undefined) where.hasActivities = hasActivities;
     if (premium !== undefined) where.isPremium = premium;
 
     // Duration filter
@@ -104,7 +95,7 @@ export class PodcastService {
     let orderBy: any = {};
     switch (sortBy) {
       case 'newest':
-        orderBy = { publishedAt: sortOrder };
+        orderBy = { createdAt: sortOrder };
         break;
       case 'popular':
         orderBy = { viewCount: sortOrder };
@@ -119,7 +110,7 @@ export class PodcastService {
         orderBy = { title: sortOrder };
         break;
       default:
-        orderBy = { publishedAt: 'desc' };
+        orderBy = { createdAt: 'desc' };
     }
 
     const [podcasts, total] = await Promise.all([
@@ -129,27 +120,6 @@ export class PodcastService {
         take: limit,
         orderBy,
         include: {
-          activities: {
-            select: {
-              id: true,
-              type: true,
-              isLocked: true,
-              isPremium: true,
-            },
-          },
-          userProgress: userId
-            ? {
-                where: { userId },
-                select: {
-                  currentPosition: true,
-                  completionRate: true,
-                  isLiked: true,
-                  isSaved: true,
-                  isCompleted: true,
-                  lastListenAt: true,
-                },
-              }
-            : false,
           author: {
             select: {
               id: true,
@@ -166,114 +136,117 @@ export class PodcastService {
     // Transform response
     const transformedPodcasts = podcasts.map((podcast) => ({
       ...podcast,
-      userProgress: userId && podcast.userProgress?.[0] ? podcast.userProgress[0] : undefined,
-      activitiesCount: podcast.activities.length,
-      activities: undefined, // Remove activities from main response for performance
     }));
 
   return PageResponseDto.of(transformedPodcasts as any, page, limit, total);
   }
 
-  async findOne(id: string, userId?: string): Promise<PodcastEntity> {
+  async getPodcastById(id: string) {
     const podcast = await this.prisma.podcast.findUnique({
       where: { id },
-      include: {
-        activities: {
-          orderBy: { orderNo: 'asc' },
-          include: {
-            attempts: userId
-              ? {
-                  where: { userId },
-                  orderBy: { createdAt: 'desc' },
-                  take: 1,
-                  select: {
-                    score: true,
-                    isPassed: true,
-                    createdAt: true,
-                  },
-                }
-              : false,
-          },
-        },
-        userProgress: userId
-          ? {
-              where: { userId },
-            }
-          : false,
-        author: {
-          select: {
-            id: true,
-            displayName: true,
-            firstName: true,
-            lastName: true,
-            avatarUrl: true,
-          },
-        },
-        ratings: {
-          take: 5,
-          orderBy: { createdAt: 'desc' },
-          include: {
-            user: {
-              select: {
-                id: true,
-                displayName: true,
-                firstName: true,
-                lastName: true,
-                avatarUrl: true,
-              },
-            },
-          },
-        },
-        _count: {
-          select: {
-            ratings: true,
-            comments: true,
-          },
-        },
-      },
+      include: { gaps: true },
     });
-
-    if (!podcast) {
-      throw new NotFoundException('Podcast not found');
-    }
-
-    // Increment view count (async, don't wait)
-    this.prisma.podcast
-      .update({
-        where: { id },
-        data: { viewCount: { increment: 1 } },
-      })
-      .catch(() => {}); // Ignore errors
-
-    return {
-      ...podcast,
-      userProgress: userId && podcast.userProgress?.[0] ? podcast.userProgress[0] : undefined,
-      totalRatings: podcast._count.ratings,
-      totalComments: podcast._count.comments,
-    } as any;
+    if (!podcast) throw new NotFoundException('Podcast not found');
+    return podcast;
   }
 
-  async create(createPodcastDto: CreatePodcastDto, userId: string): Promise<PodcastEntity> {
-    const existingPodcast = await this.prisma.podcast.findUnique({
-      where: { code: createPodcastDto.code },
-    });
+  async createPodcast(dto: CreatePodcastDto, authorId: string) {
+    // Generate code from title
+    const code = dto.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now();
 
-    if (existingPodcast) {
-      throw new BadRequestException('Podcast code already exists');
+    // Create base podcast data
+    const podcastData = {
+      code,
+      title: dto.title,
+      description: dto.description,
+      audioUrl: dto.audioUrl,
+      thumbnailUrl: dto.thumbnailUrl,
+      transcript: dto.content, // Use unified content as transcript
+      category: dto.category,
+      difficulty: dto.difficulty,
+      duration: dto.duration,
+      authorId: authorId,
+    };
+
+    // Determine gaps to create
+    let gapsToCreate: any[] = [];
+
+    if (dto.gaps && dto.gaps.length > 0) {
+      // Use provided gaps
+      gapsToCreate = dto.gaps.map((g: any) => ({
+        startIndex: g.startIndex,
+        endIndex: g.endIndex,
+        answer: g.answer,
+        orderNo: g.orderNo || 1,
+      }));
     }
-
-    const podcast = await this.prisma.podcast.create({
+    // Create podcast with gaps and fillBlankContent
+    return this.prisma.podcast.create({
       data: {
-        ...createPodcastDto,
-        authorId: userId,
-        status: 'draft',
+        ...podcastData,
+        gaps: gapsToCreate.length > 0 ? { create: gapsToCreate } : undefined,
+      },
+      include: {
+        gaps: true,
+        author: { select: { id: true, firstName: true, lastName: true } }
       },
     });
-
-    return podcast as PodcastEntity;
   }
 
-  async update(id: string, updatePodcastDto: UpdatePodcastDto, userId: string): Promise<PodcastEntity> {
+  // Helper method to extract blanks from content format: [word]
+  private extractBlanksFromContent(content: string): Array<{
+    sentence: string;
+    word: string;
+    startIndex: number;
+    endIndex: number;
+  }> {
+    const blanks: Array<{ sentence: string; word: string; startIndex: number; endIndex: number }> = [];
+    const regex = /\[([^\]]+)\]/g;
+    let match;
+    let currentIndex = 0;
+
+    // Process entire content to find [word] patterns
+    const processedContent = content;
+
+    while ((match = regex.exec(processedContent)) !== null) {
+      const word = match[1];
+      const matchStart = match.index;
+      const matchEnd = match.index + match[0].length;
+
+      // Find the sentence containing this match
+      const beforeMatch = processedContent.substring(0, matchStart);
+      const afterMatch = processedContent.substring(matchEnd);
+
+      // Simple sentence extraction (could be improved)
+      const sentenceStart = Math.max(
+        beforeMatch.lastIndexOf('.'),
+        beforeMatch.lastIndexOf('!'),
+        beforeMatch.lastIndexOf('?')
+      ) + 1;
+
+      const nextSentenceEnd = Math.min(
+        afterMatch.indexOf('.') !== -1 ? afterMatch.indexOf('.') + matchEnd : Infinity,
+        afterMatch.indexOf('!') !== -1 ? afterMatch.indexOf('!') + matchEnd : Infinity,
+        afterMatch.indexOf('?') !== -1 ? afterMatch.indexOf('?') + matchEnd : Infinity
+      );
+
+      const sentenceEnd = nextSentenceEnd === Infinity ? processedContent.length : nextSentenceEnd + 1;
+
+      const fullSentence = processedContent.substring(sentenceStart, sentenceEnd).trim();
+      const sentenceWithBlank = fullSentence.replace(`[${word}]`, '___');
+
+      blanks.push({
+        sentence: sentenceWithBlank,
+        word: word,
+        startIndex: matchStart,
+        endIndex: matchEnd - 1,
+      });
+    }
+
+    return blanks;
+  }
+
+  async update(id: string, updatePodcastDto: UpdatePodcastDto, userId: string){
     const podcast = await this.prisma.podcast.findUnique({
       where: { id },
     });
@@ -291,7 +264,7 @@ export class PodcastService {
       data: updatePodcastDto,
     });
 
-    return updatedPodcast as PodcastEntity;
+    return updatedPodcast
   }
 
   async remove(id: string, userId: string): Promise<void> {
@@ -312,134 +285,9 @@ export class PodcastService {
     });
   }
 
-  // ===================== USER PROGRESS =====================
 
-  async updateProgress(podcastId: string, userId: string, updateProgressDto: UpdateProgressDto) {
-    const podcast = await this.prisma.podcast.findUnique({
-      where: { id: podcastId },
-    });
 
-    if (!podcast) {
-      throw new NotFoundException('Podcast not found');
-    }
 
-    const { currentPosition, totalListened, sessionStudyTime } = updateProgressDto;
-    const completionRate = (currentPosition / podcast.duration) * 100;
-    const isCompleted = completionRate >= 95; // 95% = completed
-
-    const progress = await this.prisma.userPodcastProgress.upsert({
-      where: {
-        userId_podcastId: {
-          userId,
-          podcastId,
-        },
-      },
-      update: {
-        currentPosition,
-        totalListened: totalListened ? { increment: totalListened } : undefined,
-        completionRate,
-        isCompleted,
-        lastListenAt: new Date(),
-        sessionCount: { increment: 1 },
-        totalStudyTime: sessionStudyTime ? { increment: sessionStudyTime } : undefined,
-        completedAt: isCompleted && new Date(),
-      },
-      create: {
-        userId,
-        podcastId,
-        currentPosition,
-        totalListened: totalListened || 0,
-        completionRate,
-        isCompleted,
-        totalStudyTime: sessionStudyTime || 0,
-        completedAt: isCompleted ? new Date() : undefined,
-      },
-    });
-
-    return progress;
-  }
-
-  async toggleLike(podcastId: string, userId: string, toggleLikeDto: ToggleLikeDto) {
-    const podcast = await this.prisma.podcast.findUnique({
-      where: { id: podcastId },
-    });
-
-    if (!podcast) {
-      throw new NotFoundException('Podcast not found');
-    }
-
-    const progress = await this.prisma.userPodcastProgress.upsert({
-      where: {
-        userId_podcastId: {
-          userId,
-          podcastId,
-        },
-      },
-      update: {
-        isLiked: toggleLikeDto.isLiked,
-        lastListenAt: new Date(),
-      },
-      create: {
-        userId,
-        podcastId,
-        isLiked: toggleLikeDto.isLiked,
-      },
-    });
-
-    // Update podcast like count
-    await this.prisma.podcast.update({
-      where: { id: podcastId },
-      data: {
-        likeCount: {
-          [toggleLikeDto.isLiked ? 'increment' : 'decrement']: 1,
-        },
-      },
-    });
-
-    return progress;
-  }
-
-  async toggleSave(podcastId: string, userId: string, toggleSaveDto: ToggleSaveDto) {
-    const podcast = await this.prisma.podcast.findUnique({
-      where: { id: podcastId },
-    });
-
-    if (!podcast) {
-      throw new NotFoundException('Podcast not found');
-    }
-
-    const progress = await this.prisma.userPodcastProgress.upsert({
-      where: {
-        userId_podcastId: {
-          userId,
-          podcastId,
-        },
-      },
-      update: {
-        isSaved: toggleSaveDto.isSaved,
-        lastListenAt: new Date(),
-      },
-      create: {
-        userId,
-        podcastId,
-        isSaved: toggleSaveDto.isSaved,
-      },
-    });
-
-    // Update podcast save count
-    await this.prisma.podcast.update({
-      where: { id: podcastId },
-      data: {
-        saveCount: {
-          [toggleSaveDto.isSaved ? 'increment' : 'decrement']: 1,
-        },
-      },
-    });
-
-    return progress;
-  }
-
-  // ===================== RATINGS =====================
 
   async createRating(podcastId: string, userId: string, createRatingDto: CreateRatingDto) {
     const podcast = await this.prisma.podcast.findUnique({
@@ -564,71 +412,191 @@ export class PodcastService {
     });
   }
 
-  // ===================== ANALYTICS =====================
 
-  async getPopularPodcasts(limit = 10) {
-    return this.prisma.podcast.findMany({
-      where: { status: 'published' },
-      orderBy: { viewCount: 'desc' },
-      take: limit,
-      select: {
-        id: true,
-        title: true,
-        code: true,
-        viewCount: true,
-        likeCount: true,
-        averageRating: true,
-        category: true,
-        difficulty: true,
-        duration: true,
-        thumbnailUrl: true,
-      },
-    });
+
+   async startPodcastAttempt(podcastId: string, userId: string) {
+  const podcast = await this.prisma.podcast.findUnique({
+    where: { id: podcastId },
+    include: { gaps: { orderBy: { orderNo: 'asc' } } },
+  });
+
+  if (!podcast) {
+    throw new NotFoundException('Podcast not found');
   }
 
-  async getRecommendedForUser(userId: string, limit = 10) {
-    // Simple recommendation based on user's liked categories and difficulty
-    const userStats = await this.prisma.userPodcastProgress.findMany({
-      where: {
-        userId,
-        isLiked: true,
-      },
-      include: {
+  // Mask transcript
+  let transcriptMasked = podcast.transcript;
+  podcast.gaps.forEach((gap) => {
+    const hidden = '_'.repeat(gap.answer.length);
+    transcriptMasked =
+      transcriptMasked.substring(0, gap.startIndex) +
+      hidden +
+      transcriptMasked.substring(gap.endIndex);
+  });
+
+  let attempt = await this.prisma.podcastAttempt.findFirst({
+    where: { podcastId, userId, status: 'in_progress' },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!attempt) {
+    const lastAttempt = await this.prisma.podcastAttempt.findFirst({
+      where: { podcastId, userId },
+      orderBy: { attemptNo: 'desc' },
+    });
+
+    const nextAttemptNo = lastAttempt ? lastAttempt.attemptNo + 1 : 1;
+
+    attempt = await this.prisma.podcastAttempt.create({
+      data: {
         podcast: {
-          select: {
-            category: true,
-            difficulty: true,
-          },
+          connect: { id: podcastId },
         },
-      },
-    });
-
-    const preferredCategories = [...new Set(userStats.map(s => s.podcast.category))];
-    const preferredDifficulties = [...new Set(userStats.map(s => s.podcast.difficulty))];
-
-    return this.prisma.podcast.findMany({
-      where: {
-        status: 'published',
-        OR: [
-          { category: { in: preferredCategories } },
-          { difficulty: { in: preferredDifficulties } },
-          { isRecommended: true },
-        ],
-        NOT: {
-          userProgress: {
-            some: {
-              userId,
-              isCompleted: true,
-            },
-          },
+        user: {
+          connect: { id: userId },
         },
+        attemptNo: nextAttemptNo,
+        status: 'in_progress',
+        answers: []
       },
-      orderBy: [
-        { isRecommended: 'desc' },
-        { averageRating: 'desc' },
-        { viewCount: 'desc' },
-      ],
-      take: limit,
     });
   }
+
+  return {
+    podcastId: podcast.id,
+    title: podcast.title,
+    transcriptMasked,
+    gaps: podcast.gaps.map((g) => ({
+      id: g.id,
+      orderNo: g.orderNo,
+      startIndex: g.startIndex,
+      endIndex: g.endIndex,
+      length : g.answer.length,
+    })),
+    attemptId: attempt.id,
+    attemptNo: attempt.attemptNo,
+    timeSpent: attempt.timeSpent || 0,
+    answers: attempt.answers,
+    status: attempt.status,
+    metadata: {
+      duration: podcast.duration,
+      difficulty: podcast.difficulty,
+      authorId: podcast.authorId,
+    },
+  };
+}
+
+
+
+async submitPodcastAttempt(
+    podcastId: string,
+    attemptId: string,
+    answers: Record<string, string>, // { gapId: answer }
+  ) {
+    const podcast = await this.prisma.podcast.findUnique({
+      where: { id: podcastId },
+      include: { gaps: true },
+    });
+    if (!podcast) throw new NotFoundException('Podcast not found');
+
+    const attempt = await this.prisma.podcastAttempt.findUnique({
+      where: { id: attemptId },
+    });
+    if (!attempt) throw new NotFoundException('Attempt not found');
+
+    // Chấm điểm
+    let correctCount = 0;
+    podcast.gaps.forEach((gap) => {
+      const userAns = answers[gap.id]?.trim().toLowerCase();
+      const correctAns = gap.answer.trim().toLowerCase();
+      if (userAns === correctAns) correctCount++;
+    });
+
+    const totalQuestions = podcast.gaps.length;
+    const scorePercent = totalQuestions
+      ? Math.round((correctCount / totalQuestions) * 100)
+      : 0;
+
+    // Update attempt
+    const updated = await this.prisma.podcastAttempt.update({
+      where: { id: attemptId },
+      data: {
+        correctCount,
+        totalQuestions,
+        scorePercent,
+        answers,
+        status: 'submitted',
+      },
+    });
+
+    return {
+      attemptId: updated.id,
+      podcastId: podcast.id,
+      scorePercent,
+      correctCount,
+      totalQuestions,
+      status: updated.status,
+    };
+  }
+
+  async saveDraft(
+    podcastId: string,
+    attemptId: string,
+    answers: Record<string, string>,
+    timeSpent?: number,
+  ) {
+    const podcast = await this.prisma.podcast.findUnique({
+      where: { id: podcastId },
+    });
+    if (!podcast) throw new NotFoundException('Podcast not found');
+    const attempt = await this.prisma.podcastAttempt.findUnique({
+      where: { id: attemptId },
+    });
+    if (!attempt) throw new NotFoundException('Attempt not found');
+
+    if (attempt.status !== 'in_progress') {
+      throw new BadRequestException('Cannot save draft for a submitted/completed attempt');
+    }
+
+    const updated = await this.prisma.podcastAttempt.update({
+      where: { id: attemptId },
+      data: {
+        answers,
+        timeSpent: timeSpent
+      },
+    });
+
+    return {
+      attemptId: updated.id,
+      podcastId,
+      status: updated.status,
+      savedAnswers: updated.answers,
+    };
+  }
+
+
+   async getPodcastAttempts(podcastId: string, userId: string) {
+    const podcast = await this.prisma.podcast.findUnique({
+      where: { id: podcastId },
+    });
+    if (!podcast) throw new NotFoundException('Podcast not found');
+
+    const attempts = await this.prisma.podcastAttempt.findMany({
+      where: { podcastId, userId },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return attempts.map((a) => ({
+      attemptId: a.id,
+      attemptNo: a.attemptNo,
+      status: a.status,
+      scorePercent: a.scorePercent,
+      correctCount: a.correctCount,
+      totalQuestions: a.totalQuestions,
+      timeSpent: a.timeSpent,
+      createdAt: a.createdAt,
+      answers: a.answers,
+    }));
+  }
+
 }
