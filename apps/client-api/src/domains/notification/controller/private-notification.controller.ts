@@ -1,4 +1,4 @@
-import { ResponseMessage } from '@app/shared';
+import { RequestContext, ResponseMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
   Body,
@@ -17,6 +17,7 @@ import {
   CreateNotificationDto,
   FilterNotificationRequestDto,
   UpdateNotificationDto,
+  CreateClassroomNotificationDto,
 } from '../dto/notification.dto';
 import { NotificationService } from '../service/notification.service';
 
@@ -64,5 +65,15 @@ export class PrivateNotificationController {
     @Query() query: FilterNotificationRequestDto,
   ): Promise<PageResponseDto<Notification>> {
     return this.notificationService.list(query);
+  }
+
+  @Post('classrooms/:classroomId/broadcast')
+  @ApiOperation({ summary: 'Teacher broadcast notification to classroom students' })
+  @ResponseMessage('Classroom notifications created successfully')
+  broadcastToClassroom(
+    @Param('classroomId', new ParseUUIDPipe()) classroomId: string,
+    @Body() dto: CreateClassroomNotificationDto,
+  ) {
+    return this.notificationService.broadcastToClassroom(classroomId, dto);
   }
 }

@@ -46,8 +46,10 @@ export class NotificationRepository {
     const where: Prisma.NotificationWhereInput = {
       userId,
       channel,
-      readAt: read ? { not: null } : { equals: null },
     };
+    if (typeof read === 'boolean') {
+      where.readAt = read ? { not: null } : { equals: null };
+    }
 
     const totalItems = await this.prisma.notification.count({ where });
     const totalPages = Math.max(1, Math.ceil(totalItems / limit));

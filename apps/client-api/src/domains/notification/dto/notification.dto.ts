@@ -41,6 +41,30 @@ export class CreateNotificationDto {
   channel: NotificationChannel;
 }
 
+export class CreateClassroomNotificationDto {
+  @ApiProperty({ enum: NotificationType, example: NotificationType.system })
+  @IsEnum(NotificationType)
+  type: NotificationType;
+
+  @ApiProperty({ example: 'Class announcement' })
+  @IsString()
+  title: string;
+
+  @ApiPropertyOptional({ example: 'Exam this Friday at 9AM' })
+  @IsOptional()
+  @IsString()
+  body?: string;
+
+  @ApiPropertyOptional({ example: '{}' })
+  @IsOptional()
+  @IsJSON()
+  data?: string;
+
+  @ApiProperty({ enum: NotificationChannel, example: NotificationChannel.socket })
+  @IsEnum(NotificationChannel)
+  channel: NotificationChannel;
+}
+
 export class UpdateNotificationDto {
   @ApiPropertyOptional({ example: true })
   @IsOptional()
