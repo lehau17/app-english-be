@@ -24,7 +24,11 @@ export class EventsGateway
   }
 
   handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+    const userId = (client.handshake.query?.userId as string) || '';
+    if (userId) {
+      client.join(`user:${userId}`);
+    }
+    console.log(`Client connected: ${client.id} user=${userId}`);
   }
 
   handleDisconnect(client: Socket) {
@@ -35,5 +39,9 @@ export class EventsGateway
   handleMessage(): string {
     // For now, just acknowledging the message
     return 'Hello world!';
+  }
+
+  emitToUser(userId: string, event: string, payload: any) {
+    this.server.to(`user:${userId}`).emit(event, payload);
   }
 }
