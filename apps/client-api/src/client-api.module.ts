@@ -10,6 +10,7 @@ import { AssignmentModule } from './domains/assignment';
 import { AttemptModule } from './domains/attempt';
 import { AuthModule } from './domains/auth/auth.module';
 import { ClassroomModule } from './domains/classroom';
+import { ConversationModule } from './domains/conversation';
 import { CourseModule } from './domains/course/course.module';
 import { DashboardModule } from './domains/dashboard/dashboard.module';
 import { DeviceTokenModule } from './domains/device-token';
@@ -50,6 +51,7 @@ import { EventsModule } from './events/events.module';
     TeacherModule,
     UploadModule,
     ClassroomModule,
+    ConversationModule,
     AssignmentModule,
     GoogleTranslateModule,
     AgentModule,
@@ -57,7 +59,7 @@ import { EventsModule } from './events/events.module';
     RoomModule,
     PodcastModule,
     PodcastCommentModule,
-    PodcastRatingModule
+    PodcastRatingModule,
   ],
   controllers: [ClientApiController],
   providers: [ClientApiService, UploadService],

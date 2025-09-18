@@ -1,0 +1,9 @@
+{
+  "files.watcherExclude": {
+    "**/node_modules/**": true,
+    "**/dist/**": true,
+    "**/.git/objects/**": true,
+    "**/.vscode/**": true
+  },
+  "files.maxMemoryForLargeFilesMB": 8192
+}

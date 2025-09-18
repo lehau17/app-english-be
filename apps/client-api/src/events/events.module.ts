@@ -5,5 +5,6 @@ import { NotificationEventsConsumer } from './notification.consumer';
 @Module({
   providers: [EventsGateway, NotificationEventsConsumer],
   controllers: [NotificationEventsConsumer],
+  exports: [EventsGateway],
 })
 export class EventsModule {}
