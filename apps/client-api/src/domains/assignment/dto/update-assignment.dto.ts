@@ -1,17 +1,17 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Transform, Type } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger'
+import { Transform, Type } from 'class-transformer'
 import {
-    IsArray,
-    IsBoolean,
-    IsDateString,
-    IsInt,
-    IsObject,
-    IsOptional,
-    IsString,
-    Min,
-    ValidateNested,
-} from 'class-validator';
-import { ActivityContentDto } from './create-assignment.dto';
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateNested,
+} from 'class-validator'
+import { AssignmentActivityDto } from './create-assignment.dto'
 
 export class UpdateAssignmentDto {
   @ApiPropertyOptional({ description: 'Assignment title' })
@@ -67,12 +67,12 @@ export class UpdateAssignmentDto {
   @IsOptional()
   assignedTo?: string[];
 
-  @ApiPropertyOptional({ description: 'Activities in this assignment', type: [ActivityContentDto] })
+  @ApiPropertyOptional({ description: 'Activities in this assignment', type: [AssignmentActivityDto] })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ActivityContentDto)
+  @Type(() => AssignmentActivityDto)
   @IsOptional()
-  activities?: ActivityContentDto[];
+  activities?: AssignmentActivityDto[];
 
   @ApiPropertyOptional({ description: 'Custom content as JSON' })
   @IsObject()

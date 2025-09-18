@@ -60,7 +60,7 @@ export class AuthService {
 
     if (!user.passwordHash)
       throw new BadRequestException('No password set for this account');
-    if (user.role !== UserRole.student)
+    if (user.role !== UserRole.student && user.role !== UserRole.teacher)
       throw new BadRequestException('Invalid credentials');
     const isPasswordValid = await bcrypt.compare(
       dto.password,
@@ -71,7 +71,7 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email ?? undefined,
-      role: UserRole.student,
+      role: user.role
     };
 
     const token = await this.tokenRepository.generateToken(payload);

@@ -1,54 +1,83 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { DifficultyLevel } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
-    IsArray,
-    IsBoolean,
-    IsDateString,
-    IsInt,
-    IsNotEmpty,
-    IsObject,
-    IsOptional,
-    IsString,
-    Min,
-    ValidateNested,
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateNested,
 } from 'class-validator';
+import { ACTIVITY_TYPES, ActivityTypeValue } from '../../course/dto';
+import {
+  ActivityContent
+} from './activity-content-types.dto';
 
-export class ActivityContentDto {
-  @ApiProperty({ description: 'Activity ID' })
+export class AssignmentActivityDto {
+  @ApiProperty({ description: 'Internal assignment activity ID', example: 'activity-1' })
   @IsString()
   @IsNotEmpty()
-  id: string;
+  id!: string
 
-  @ApiProperty({ description: 'Activity type', enum: ['vocab', 'grammar', 'reading', 'writing', 'listening', 'speaking', 'quiz', 'fill_blank', 'matching'] })
-  @IsString()
-  @IsNotEmpty()
-  type: string;
+  @ApiProperty({ enum: ACTIVITY_TYPES, description: 'Activity type' })
+  @IsEnum(ACTIVITY_TYPES)
+  type!: ActivityTypeValue
 
   @ApiProperty({ description: 'Activity title' })
   @IsString()
   @IsNotEmpty()
-  title: string;
+  title!: string
 
   @ApiPropertyOptional({ description: 'Activity instructions' })
+  @IsOptional()
   @IsString()
+  instructions?: string
+
+  @ApiProperty({ description: 'Activity content (structured based on activity type)' })
+  @ValidateNested()
+  @Type(() => Object)
+  content!: ActivityContent
+
+  @ApiPropertyOptional({ description: 'XP/Points for this activity', default: 10 })
   @IsOptional()
-  instructions?: string;
+  @IsInt()
+  @Min(0)
+  points?: number
 
-  @ApiProperty({ description: 'Activity content as JSON' })
-  @IsObject()
-  content: any;
-
-  @ApiPropertyOptional({ description: 'Points for this activity', minimum: 1 })
+  @ApiPropertyOptional({ description: 'Time limit (minutes)' })
+  @IsOptional()
   @IsInt()
   @Min(1)
-  @IsOptional()
-  points?: number;
+  timeLimit?: number
 
-  @ApiPropertyOptional({ description: 'Time limit in minutes' })
+  @ApiPropertyOptional({ description: 'Maximum attempts allowed' })
+  @IsOptional()
   @IsInt()
   @Min(1)
+  maxAttempts?: number
+
+  @ApiPropertyOptional({ description: 'Passing score (0-100)' })
   @IsOptional()
-  timeLimit?: number;
+  @IsInt()
+  @Min(0)
+  passingScore?: number
+
+  @ApiPropertyOptional({ enum: DifficultyLevel, description: 'Difficulty level' })
+  @IsOptional()
+  @IsEnum(DifficultyLevel)
+  difficulty?: DifficultyLevel
+
+  @ApiPropertyOptional({ type: [String], description: 'Hints (plain text)' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  hints?: string[]
 }
 
 export class CreateAssignmentDto {
@@ -110,11 +139,11 @@ export class CreateAssignmentDto {
   @IsOptional()
   assignedTo?: string[] = [];
 
-  @ApiProperty({ description: 'Activities in this assignment', type: [ActivityContentDto] })
+  @ApiProperty({ description: 'Activities in this assignment', type: [AssignmentActivityDto] })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ActivityContentDto)
-  activities: ActivityContentDto[];
+  @Type(() => AssignmentActivityDto)
+  activities!: AssignmentActivityDto[];
 
   @ApiPropertyOptional({ description: 'Custom content as JSON' })
   @IsObject()

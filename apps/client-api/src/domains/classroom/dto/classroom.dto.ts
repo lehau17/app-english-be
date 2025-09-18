@@ -99,6 +99,13 @@ export class FilterClassroomRequestDto extends RequestPagingDto {
   teacherId?: string;
 }
 
+export class ClassroomAnnouncementQueryDto extends RequestPagingDto {
+  @ApiPropertyOptional({ description: 'Filter by priority', example: 'high' })
+  @IsOptional()
+  @IsString()
+  priority?: string;
+}
+
 export class AddStudentToClassroomDto {
   @ApiProperty({ example: 'f8a8b8e0-5b7a-4b0e-8b0a-0b8b8b8b8b8b' })
   @IsArray()
@@ -110,6 +117,21 @@ export class AssignTeacherToClassroomDto {
   @ApiProperty({ example: 'f8a8b8e0-5b7a-4b0e-8b0a-0b8b8b8b8b8b' })
   @IsUUID()
   teacherId: string;
+}
+
+export class CreateClassroomAnnouncementDto {
+  @ApiProperty({ example: 'Thông báo kiểm tra giữa kỳ' })
+  @IsString()
+  title: string;
+
+  @ApiProperty({ example: 'Các em ôn tập chương 1 và 2, kiểm tra vào thứ 6.' })
+  @IsString()
+  content: string;
+
+  @ApiPropertyOptional({ enum: ['high', 'normal', 'low'], example: 'normal' })
+  @IsOptional()
+  @IsString()
+  priority?: string;
 }
 
 export class ImportStudentFromExcelDto {

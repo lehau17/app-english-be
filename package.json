@@ -14,7 +14,7 @@
     "start": "nest start",
     "start:client-api": "node --max-old-space-size=2048 --gc-interval=100 --expose-gc node_modules/.bin/nest start client-api",
     "start:client-api:dev": "nest start client-api --watch",
-    "build:client-api": "node --max-old-space-size=4096 --gc-interval=100 node_modules/.bin/nest build client-api",
+    "build:client-api": "nest build client-api",
     "start:notification": "nest start notification",
     "start:notification:dev": "nest start notification --watch",
     "build:notification": "nest build notification",

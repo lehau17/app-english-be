@@ -1,7 +1,9 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { AssignmentStatus } from '@prisma/client';
 import { CreateAssignmentDto, GradeAssignmentDto, QueryAssignmentsDto, SubmitAssignmentDto, UpdateAssignmentDto } from '../dto';
-import { AssignmentRepository, AssignmentSubmissionWithStudent, AssignmentWithDetails } from '../repository';
+import { AssignmentRepository, AssignmentSubmissionWithStudent, AssignmentWithDetails, AssignmentActivityModel } from '../repository';
+import { AssignmentActivityDto } from '../dto/create-assignment.dto';
+import { AssignmentActivityModel } from '../repository/assignment.repository';
 
 @Injectable()
 export class AssignmentService {
@@ -22,7 +24,7 @@ export class AssignmentService {
       status: dto.isPublished ? AssignmentStatus.published : AssignmentStatus.draft,
       isPublished: dto.isPublished || false,
       assignedTo: dto.assignedTo || [],
-      activities: dto.activities,
+      activities: dto.activities.map((activity, index) => this.mapActivityDto(activity, index)),
       customContent: dto.customContent,
     };
 
@@ -94,6 +96,12 @@ export class AssignmentService {
       ...dto,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
     };
+
+    if (dto.activities) {
+      updateData.activities = dto.activities.map((activity, index) =>
+        this.mapActivityDto(activity, index)
+      )
+    }
 
     // If publishing, update status
     if (dto.isPublished === true && assignment.status === AssignmentStatus.draft) {
@@ -175,7 +183,7 @@ export class AssignmentService {
 
     // Calculate score automatically (basic implementation)
     // This would need more sophisticated scoring logic based on activity types
-    const score = await this.calculateScore(assignment.activities, dto.answers);
+    const score = await this.calculateScore(assignment.assignmentActivities, dto.answers);
 
     const submission = await this.assignmentRepository.submitAssignment({
       assignmentId,
@@ -230,7 +238,7 @@ export class AssignmentService {
   }
 
   // Private helper methods
-  private async calculateScore(activities: any, answers: any): Promise<number | null> {
+  private async calculateScore(activities: AssignmentActivityModel[], answers: any): Promise<number | null> {
     // Basic implementation - would need more sophisticated logic
     // For now, return null to indicate manual grading needed
     try {
@@ -240,12 +248,14 @@ export class AssignmentService {
       // This is a simplified calculation
       // Real implementation would depend on activity types and content structure
       for (const activity of activities) {
-        const activityAnswers = answers[activity.id];
+        const activityAnswers = answers?.[activity.id];
         if (!activityAnswers) continue;
 
         // Example for fill_blank type
-        if (activity.type === 'fill_blank' && activity.content?.questions) {
-          const questions = activity.content.questions;
+        const content = activity.content as any;
+
+        if (activity.type === 'fill_blank' && content?.questions) {
+          const questions = content.questions;
           totalQuestions += questions.length;
 
           questions.forEach((q: any, index: number) => {
@@ -257,8 +267,8 @@ export class AssignmentService {
         }
 
         // Example for quiz type
-        if (activity.type === 'quiz' && activity.content?.questions) {
-          const questions = activity.content.questions;
+        if (activity.type === 'quiz' && content?.questions) {
+          const questions = content.questions;
           totalQuestions += questions.length;
 
           questions.forEach((q: any, index: number) => {
@@ -276,6 +286,22 @@ export class AssignmentService {
     } catch (error) {
       console.error('Error calculating score:', error);
       return null; // Fall back to manual grading
+    }
+  }
+
+  private mapActivityDto(activity: AssignmentActivityDto, index: number) {
+    return {
+      id: activity.id || `activity-${index + 1}`,
+      type: activity.type,
+      title: activity.title,
+      instructions: activity.instructions,
+      content: activity.content,
+      points: activity.points ?? 10,
+      timeLimit: activity.timeLimit,
+      maxAttempts: activity.maxAttempts,
+      passingScore: activity.passingScore,
+      difficulty: activity.difficulty,
+      hints: activity.hints ?? [],
     }
   }
 }

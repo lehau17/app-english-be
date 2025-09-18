@@ -3,7 +3,7 @@ import { PageResponseDto } from '@app/shared/payload/response/page-response.dto'
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Classroom, Prisma } from '@prisma/client';
 import { Readable } from 'stream';
-import { FilterClassroomRequestDto } from '../dto/classroom.dto';
+import { ClassroomAnnouncementQueryDto, FilterClassroomRequestDto } from '../dto/classroom.dto';
 
 @Injectable()
 export class ClassroomRepository {
@@ -140,6 +140,107 @@ export class ClassroomRepository {
     });
   }
 
+
+
+  async isTeacherOfClassroom(classroomId: string, teacherId: string): Promise<boolean> {
+    const count = await this.prisma.classroom.count({
+      where: {
+        id: classroomId,
+        teacherId,
+      },
+    });
+    return count > 0;
+  }
+
+  async isStudentInClassroom(classroomId: string, studentId: string): Promise<boolean> {
+    const count = await this.prisma.classroomStudent.count({
+      where: {
+        classroomId,
+        studentId,
+        isActive: true,
+      },
+    });
+    return count > 0;
+  }
+
+  async createAnnouncement(
+    classroomId: string,
+    payload: {
+      title: string;
+      content: string;
+      priority?: string;
+    },
+  ) {
+    const studentIds = await this.prisma.classroomStudent.findMany({
+      where: { classroomId, isActive: true },
+      select: { studentId: true },
+    });
+    if (studentIds.length > 0) {
+      await this.prisma.notification.createMany({
+        data: studentIds.map((s) => ({
+          userId: s.studentId,
+          type: 'assignment',
+          title: payload.title,
+          body: payload.content,
+          channel: 'in_app',
+          data: JSON.stringify({ classroomId }),
+        })),
+      });
+    }
+    return this.prisma.announcement.create({
+      data: {
+        classroomId,
+        title: payload.title,
+        content: payload.content,
+        priority: payload.priority ?? 'normal',
+        targetAll: true,
+        targetIds: [],
+      },
+    });
+  }
+
+  async findAnnouncementsByClassroomId(
+    classroomId: string,
+    params: ClassroomAnnouncementQueryDto,
+  ) {
+    const { page = 1, limit = 10, priority } = params;
+
+    const where: Prisma.AnnouncementWhereInput = {
+      classroomId,
+      priority: priority ? priority : undefined,
+      title: params.search
+        ? { contains: params.search, mode: 'insensitive' }
+        : undefined,
+    };
+
+    const totalItems = await this.prisma.announcement.count({ where });
+    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+    const safePage = Math.min(Math.max(page, 1), totalPages);
+
+    const data = await this.prisma.announcement.findMany({
+      where,
+      skip: (safePage - 1) * limit,
+      take: limit,
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return PageResponseDto.of(data, safePage, limit, totalItems);
+  }
+
+  async findClassroomsByTeacherId(teacherId: string) {
+    return this.prisma.classroom.findMany({
+      where: {
+        teacherId
+      },
+      include: {
+        teacher: true,
+        _count: {
+          select: { students: true, assignments: true },
+        },
+      },
+    });
+  }
+
   async getClassroomDetail(classroomId: string) {
     const classroom = await this.prisma.classroom.findUnique({
       where: { id: classroomId },
@@ -150,7 +251,10 @@ export class ClassroomRepository {
           include: { student: true },
         },
         assignments: {
-          include: { submissions: true },
+          include: {
+            submissions: true,
+            assignmentActivities: true,
+          },
         },
         announcements: true,
         course: {
@@ -193,6 +297,21 @@ export class ClassroomRepository {
       maxAttempts: a.maxAttempts,
       createdAt: a.createdAt,
       _count: { submissions: a.submissions.length },
+      activities: a.assignmentActivities?.map(activity => ({
+        id: activity.id,
+        type: activity.type,
+        title: activity.title,
+        instructions: activity.instructions,
+        content: activity.content,
+        points: activity.points,
+        timeLimit: activity.timeLimit,
+        maxAttempts: activity.maxAttempts,
+        passingScore: activity.passingScore,
+        difficulty: activity.difficulty,
+        hints: activity.hints,
+        createdAt: activity.createdAt,
+        updatedAt: activity.updatedAt,
+      })) ?? [],
     }));
 
     // Format announcements

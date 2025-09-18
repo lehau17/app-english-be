@@ -1,6 +1,9 @@
 import { PrismaRepository } from '@app/database';
 import { Injectable } from '@nestjs/common';
-import { Assignment, AssignmentStatus, AssignmentSubmission, Prisma } from '@prisma/client';
+import { Assignment, AssignmentActivity, AssignmentStatus, AssignmentSubmission, DifficultyLevel, Prisma } from '@prisma/client';
+import { ActivityTypeValue } from '../../course/dto';
+
+export type AssignmentActivityModel = AssignmentActivity;
 
 export interface AssignmentWithDetails extends Assignment {
   teacher: {
@@ -18,6 +21,7 @@ export interface AssignmentWithDetails extends Assignment {
   _count: {
     submissions: number;
   };
+  assignmentActivities: AssignmentActivityModel[];
   submissions?: AssignmentSubmissionWithStudent[];
 }
 
@@ -29,6 +33,21 @@ export interface AssignmentSubmissionWithStudent extends AssignmentSubmission {
     lastName: string | null;
     email: string | null;
   };
+}
+
+export interface AssignmentActivity {
+  id: string;
+  activityId?: string;
+  type: ActivityTypeValue;
+  title: string;
+  instructions?: string;
+  content: Record<string, any>;
+  points: number;
+  timeLimit?: number;
+  maxAttempts?: number;
+  passingScore?: number;
+  difficulty?: DifficultyLevel;
+  hints?: string[];
 }
 
 export interface CreateAssignmentData {
@@ -44,7 +63,7 @@ export interface CreateAssignmentData {
   status?: AssignmentStatus;
   isPublished?: boolean;
   assignedTo?: string[];
-  activities: any;
+  activities: AssignmentActivityInput[];
   customContent?: any;
 }
 
@@ -59,39 +78,66 @@ export interface UpdateAssignmentData {
   status?: AssignmentStatus;
   isPublished?: boolean;
   assignedTo?: string[];
-  activities?: any;
+  activities?: AssignmentActivityInput[];
   customContent?: any;
+}
+
+type AssignmentActivityInput = {
+  id: string;
+  type: ActivityTypeValue;
+  title: string;
+  instructions?: string;
+  content: Record<string, any>;
+  points: number;
+  timeLimit?: number;
+  maxAttempts?: number;
+  passingScore?: number;
+  difficulty?: DifficultyLevel;
+  hints?: string[];
 }
 
 @Injectable()
 export class AssignmentRepository extends PrismaRepository {
 
+  private assignmentInclude = {
+    teacher: {
+      select: {
+        id: true,
+        displayName: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+      },
+    },
+    classroom: {
+      select: {
+        id: true,
+        name: true,
+        classCode: true,
+      },
+    },
+    assignmentActivities: {
+      orderBy: {
+        createdAt: 'asc',
+      },
+    },
+    _count: {
+      select: {
+        submissions: true,
+      },
+    },
+  } as const;
+
   async createAssignment(data: CreateAssignmentData): Promise<AssignmentWithDetails> {
+    const { activities, ...assignmentData } = data;
     return this.assignment.create({
-      data,
-      include: {
-        teacher: {
-          select: {
-            id: true,
-            displayName: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        classroom: {
-          select: {
-            id: true,
-            name: true,
-            classCode: true,
-          },
-        },
-        _count: {
-          select: {
-            submissions: true,
-          },
+      data: {
+        ...assignmentData,
+        assignmentActivities: {
+          create: activities.map((activity) => this.mapActivityForCreate(activity)),
         },
       },
+      include: this.assignmentInclude,
     });
   }
 
@@ -99,27 +145,7 @@ export class AssignmentRepository extends PrismaRepository {
     return this.assignment.findUnique({
       where: { id },
       include: {
-        teacher: {
-          select: {
-            id: true,
-            displayName: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        classroom: {
-          select: {
-            id: true,
-            name: true,
-            classCode: true,
-          },
-        },
-        _count: {
-          select: {
-            submissions: true,
-          },
-        },
+        ...this.assignmentInclude,
         ...(includeSubmissions && {
           submissions: {
             include: {
@@ -162,27 +188,7 @@ export class AssignmentRepository extends PrismaRepository {
       this.assignment.findMany({
         where,
         include: {
-          teacher: {
-            select: {
-              id: true,
-              displayName: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
-          },
-          classroom: {
-            select: {
-              id: true,
-              name: true,
-              classCode: true,
-            },
-          },
-          _count: {
-            select: {
-              submissions: true,
-            },
-          },
+          ...this.assignmentInclude,
         },
         orderBy: [
           { createdAt: 'desc' },
@@ -218,27 +224,7 @@ export class AssignmentRepository extends PrismaRepository {
       this.assignment.findMany({
         where,
         include: {
-          teacher: {
-            select: {
-              id: true,
-              displayName: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
-          },
-          classroom: {
-            select: {
-              id: true,
-              name: true,
-              classCode: true,
-            },
-          },
-          _count: {
-            select: {
-              submissions: true,
-            },
-          },
+          ...this.assignmentInclude,
         },
         orderBy: [
           { createdAt: 'desc' },
@@ -253,32 +239,27 @@ export class AssignmentRepository extends PrismaRepository {
   }
 
   async updateAssignment(id: string, data: UpdateAssignmentData): Promise<AssignmentWithDetails> {
-    return this.assignment.update({
-      where: { id },
-      data,
-      include: {
-        teacher: {
-          select: {
-            id: true,
-            displayName: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        classroom: {
-          select: {
-            id: true,
-            name: true,
-            classCode: true,
-          },
-        },
-        _count: {
-          select: {
-            submissions: true,
-          },
-        },
-      },
+    const { activities, ...assignmentData } = data;
+
+    return this.$transaction(async (tx) => {
+      const updated = await tx.assignment.update({
+        where: { id },
+        data: assignmentData,
+      });
+
+      if (activities) {
+        await tx.assignmentActivity.deleteMany({ where: { assignmentId: id } });
+        if (activities.length > 0) {
+          await tx.assignmentActivity.createMany({
+            data: activities.map((activity) => this.mapActivityForCreate(activity)),
+          });
+        }
+      }
+
+      return tx.assignment.findUnique({
+        where: { id },
+        include: this.assignmentInclude,
+      }) as Promise<AssignmentWithDetails>;
     });
   }
 
@@ -293,6 +274,22 @@ export class AssignmentRepository extends PrismaRepository {
       isPublished: true,
       status: AssignmentStatus.published,
     });
+  }
+
+  private mapActivityForCreate(activity: AssignmentActivityInput) {
+    return {
+      id: activity.id,
+      type: activity.type,
+      title: activity.title,
+      instructions: activity.instructions,
+      content: activity.content,
+      points: activity.points ?? 10,
+      timeLimit: activity.timeLimit,
+      maxAttempts: activity.maxAttempts,
+      passingScore: activity.passingScore,
+      difficulty: activity.difficulty,
+      hints: activity.hints ?? [],
+    };
   }
 
   // Submission methods

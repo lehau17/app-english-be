@@ -1,18 +1,18 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    ParseUUIDPipe,
-    Post,
-    Put,
-    Query,
-    Res,
-    UploadedFile,
-    UseInterceptors
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+  Res,
+  UploadedFile,
+  UseInterceptors
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -21,6 +21,8 @@ import { Response } from 'express';
 import {
     AddStudentToClassroomDto,
     AssignTeacherToClassroomDto,
+    ClassroomAnnouncementQueryDto,
+    CreateClassroomAnnouncementDto,
     CreateClassroomDto,
     FilterClassroomRequestDto,
     ImportStudentsResultDto,
@@ -38,7 +40,7 @@ export class PrivateClassroomController {
   @ApiOperation({ summary: 'Get my classrooms' })
   @ResponseMessage('My classrooms fetched successfully')
   myClassrooms(@PayloadToken() payload: JwtPayload) {
-    return this.classroomService.myClassrooms(payload.sub);
+    return this.classroomService.myClassrooms(payload);
   }
 
   @Post()
@@ -128,6 +130,28 @@ export class PrivateClassroomController {
   @ResponseMessage('Classroom detail fetched successfully')
   async getClassroomDetail(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.classroomService.getClassroomDetail(id);
+  }
+
+  @Get(':id/announcements')
+  @ApiOperation({ summary: 'List classroom announcements' })
+  @ResponseMessage('Classroom announcements fetched successfully')
+  async getClassroomAnnouncements(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query() query: ClassroomAnnouncementQueryDto,
+    @PayloadToken() payload: JwtPayload,
+  ) {
+    return this.classroomService.getClassroomAnnouncements(id, payload, query);
+  }
+
+  @Post(':id/announcements')
+  @ApiOperation({ summary: 'Create classroom announcement' })
+  @ResponseMessage('Classroom announcement created successfully')
+  async createClassroomAnnouncement(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: CreateClassroomAnnouncementDto,
+    @PayloadToken() payload: JwtPayload,
+  ) {
+    return this.classroomService.createClassroomAnnouncement(id, payload, body);
   }
 
   @Post(':id/import-students')

@@ -1,12 +1,14 @@
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { Classroom, Prisma } from '@prisma/client';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Classroom, Prisma, UserRole } from '@prisma/client';
+import { JwtPayload } from '@app/shared';
 import * as bcrypt from 'bcrypt';
 import { Readable } from 'stream';
 import * as XLSX from 'xlsx';
 import {
     AddStudentToClassroomDto,
     AssignTeacherToClassroomDto,
+    ClassroomAnnouncementQueryDto,
     CreateClassroomDto,
     FilterClassroomRequestDto,
     ImportStudentsResultDto,
@@ -106,8 +108,71 @@ export class ClassroomService {
     return dataStream.pipe(csvTransform);
   }
 
-  async myClassrooms(studentId: string) {
-    return this.classroomRepository.findClassroomsByStudentId(studentId);
+  async myClassrooms(user: JwtPayload) {
+    if (user.role === UserRole.teacher) {
+      return this.classroomRepository.findClassroomsByTeacherId(user.sub);
+    }
+
+    if (user.role === UserRole.student) {
+      return this.classroomRepository.findClassroomsByStudentId(user.sub);
+    }
+
+    return [];
+  }
+
+  async getClassroomAnnouncements(
+    classroomId: string,
+    user: JwtPayload,
+    params: ClassroomAnnouncementQueryDto,
+  ) {
+    if (user.role === UserRole.teacher) {
+      const allowed = await this.classroomRepository.isTeacherOfClassroom(
+        classroomId,
+        user.sub,
+      );
+      if (!allowed) {
+        throw new ForbiddenException('You do not have access to this classroom');
+      }
+    } else if (user.role === UserRole.student) {
+      const allowed = await this.classroomRepository.isStudentInClassroom(
+        classroomId,
+        user.sub,
+      );
+      if (!allowed) {
+        throw new ForbiddenException('You do not have access to this classroom');
+      }
+    } else {
+      throw new ForbiddenException('You do not have access to this classroom');
+    }
+
+    return this.classroomRepository.findAnnouncementsByClassroomId(
+      classroomId,
+      params,
+    );
+  }
+
+  async createClassroomAnnouncement(
+    classroomId: string,
+    user: JwtPayload,
+    payload: {
+      title: string;
+      content: string;
+      priority?: string;
+    },
+  ) {
+    if (user.role !== UserRole.teacher) {
+      throw new ForbiddenException('Only teacher can create announcements');
+    }
+
+    const isTeacher = await this.classroomRepository.isTeacherOfClassroom(
+      classroomId,
+      user.sub,
+    );
+    if (!isTeacher) {
+      throw new ForbiddenException('You do not manage this classroom');
+    }
+
+    return this.classroomRepository.createAnnouncement(classroomId, payload);
   }
 
   async getClassroomDetail(classroomId: string) {
