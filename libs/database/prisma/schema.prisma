@@ -143,7 +143,6 @@ enum NotificationType {
     system
     social
     assignment
-    streak
     parent_child
 }
 
@@ -829,7 +828,6 @@ model Assignment {
     assignedTo String[]
 
     // Content
-    activities    Json
     customContent Json?
 
     createdAt DateTime @default(now())
@@ -838,11 +836,34 @@ model Assignment {
     teacher     User                   @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
     classroom   Classroom              @relation(fields: [classroomId], references: [id], onDelete: Cascade)
     submissions AssignmentSubmission[]
+    assignmentActivities AssignmentActivity[]
 
     @@index([teacherId])
     @@index([classroomId])
     @@index([status])
     @@index([dueDate])
+}
+
+model AssignmentActivity {
+    id            String           @id @default(uuid())
+    assignmentId  String
+    type          ActivityType
+    title         String
+    instructions  String?
+    content       Json
+    points        Int              @default(10)
+    timeLimit     Int?
+    maxAttempts   Int?
+    passingScore  Int?
+    difficulty    DifficultyLevel?
+    hints         String[]
+    createdAt     DateTime         @default(now())
+    updatedAt     DateTime         @updatedAt
+
+    assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+    @@index([assignmentId])
+    @@index([type])
 }
 
 model AssignmentSubmission {

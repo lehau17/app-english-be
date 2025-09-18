@@ -11,9 +11,12 @@ export class NotificationService {
     subject: string;
     template: string;
     context: ISendMailOptions['context'];
+    to?: string[];
   }) {
     try {
-      const emailsList: string[] = process.env.SMTP_TO?.split(',');
+      const emailsList: string[] = params.to?.length
+        ? params.to
+        : process.env.SMTP_TO?.split(',');
 
       if (!emailsList) {
         throw new BadRequestException(
@@ -27,7 +30,7 @@ export class NotificationService {
         subject: params.subject,
         template: params.template,
         context: params.context,
-      };
+      } as ISendMailOptions;
       const response = await this.mailerService.sendMail(sendMailParams);
       this.logger.log(
         `Email sent successfully to recipients with the following parameters : ${JSON.stringify(

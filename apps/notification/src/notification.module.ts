@@ -2,8 +2,11 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
 import { Module } from '@nestjs/common';
 import { NotificationService } from './notification.service';
+import { NotificationConsumer } from './notification.consumer';
+import { DatabaseModule } from '@app/database';
 @Module({
   imports: [
+    DatabaseModule,
     MailerModule.forRootAsync({
       useFactory: () => ({
         transport: {
@@ -28,6 +31,6 @@ import { NotificationService } from './notification.service';
     }),
   ],
   controllers: [],
-  providers: [NotificationService],
+  providers: [NotificationService, NotificationConsumer],
 })
 export class NotificationModule {}
