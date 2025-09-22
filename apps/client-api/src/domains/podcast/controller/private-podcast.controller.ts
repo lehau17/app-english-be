@@ -55,9 +55,8 @@ export class PodcastController {
   @ResponseMessage('Podcast retrieved successfully')
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,
-    @PayloadToken() payload: JwtPayload,
+    @PayloadToken() _payload: JwtPayload,
   ) {
-    const userId = payload.sub;
     return this.podcastService.getPodcastById(id);
   }
 

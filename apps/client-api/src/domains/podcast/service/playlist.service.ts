@@ -25,36 +25,36 @@ export class PlaylistService {
     const {
       page = 1,
       limit = 20,
-      search,
-      sortBy = 'newest',
-      sortOrder = 'desc',
-      privacy,
+      search: _search,
+      sortBy: _sortBy = 'newest',
+      sortOrder: _sortOrder = 'desc',
+      privacy: _privacy,
     } = query;
 
     // TODO: Implement when playlist models are added to database
     return PageResponseDto.of([], page, limit, 0);
   }
 
-  async findOne(id: string, userId: string) {
+  async findOne(_id: string, _userId: string) {
     // TODO: Implement when playlist models are added to database
     throw new NotFoundException('Playlist not found');
   }
 
-  async create(createPlaylistDto: CreatePlaylistDto, userId: string) {
+  async create(_createPlaylistDto: CreatePlaylistDto, _userId: string) {
     // TODO: Implement when playlist models are added to database
     throw new BadRequestException('Playlist functionality not yet implemented');
   }
 
   async update(
-    id: string,
-    updatePlaylistDto: UpdatePlaylistDto,
-    userId: string,
+    _id: string,
+    _updatePlaylistDto: UpdatePlaylistDto,
+    _userId: string,
   ) {
     // TODO: Implement when playlist models are added to database
     throw new NotFoundException('Playlist not found or access denied');
   }
 
-  async remove(id: string, userId: string) {
+  async remove(_id: string, _userId: string) {
     // TODO: Implement when playlist models are added to database
     throw new NotFoundException('Playlist not found or access denied');
   }
@@ -62,24 +62,24 @@ export class PlaylistService {
   // ===================== PLAYLIST ITEMS MANAGEMENT =====================
 
   async addPodcast(
-    playlistId: string,
-    addToPlaylistDto: AddToPlaylistDto,
-    userId: string,
+    _playlistId: string,
+    _addToPlaylistDto: AddToPlaylistDto,
+    _userId: string,
   ) {
     // TODO: Implement when playlist models are added to database
     throw new NotFoundException('Playlist not found or access denied');
   }
 
   async removePodcast(
-    playlistId: string,
-    removeFromPlaylistDto: RemoveFromPlaylistDto,
-    userId: string,
+    _playlistId: string,
+    _removeFromPlaylistDto: RemoveFromPlaylistDto,
+    _userId: string,
   ) {
     // TODO: Implement when playlist models are added to database
     throw new NotFoundException('Playlist not found or access denied');
   }
 
-  async getPlaylistItems(playlistId: string, userId: string) {
+  async getPlaylistItems(_playlistId: string, _userId: string) {
     // TODO: Implement when playlist models are added to database
     throw new NotFoundException('Playlist not found or access denied');
   }

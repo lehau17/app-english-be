@@ -50,7 +50,7 @@ export class PrivateAuthController {
   @ApiBody({ type: ForgotPasswordDto })
   @ApiOkResponse({ description: 'Reset email sent (stub: returns true)' })
   @ResponseMessage('Reset email sent')
-  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+  async forgotPassword(@Body() _dto: ForgotPasswordDto) {
     // Gửi email: hiện tại chỉ return true theo yêu cầu
     // Bạn có thể implement queue/mail sau này
     return this.authService.forgotPassword(); // hoặc `return true;` nếu chưa có service
@@ -62,7 +62,7 @@ export class PrivateAuthController {
   @ApiOkResponse({ description: 'Password reset successfully (stub OK)' })
   @ApiBadRequestResponse({ description: 'Invalid or expired reset token' })
   @ResponseMessage('Password reset successfully')
-  async resetPassword(@Body() dto: ResetPasswordDto) {
+  async resetPassword(@Body() _dto: ResetPasswordDto) {
     return this.authService.resetPassword(); // tạm thời có thể return true bên service
   }
 }

@@ -244,7 +244,7 @@ export class GoogleTranslateFreeService {
           if (error) {
             // Remove partially written file on error
             try {
-              require('fs').unlinkSync(filePath);
+              unlinkSync(filePath);
             } catch (unlinkError) {
               this.logger.warn('Failed to cleanup partial file:', unlinkError);
             }

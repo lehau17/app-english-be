@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 export class DashboardStudentService {
   constructor(private readonly prisma: PrismaRepository) {}
 
-  async getDashboard(userId: string) {
+  async getDashboard(_userId: string) {
     return {};
   }
 }

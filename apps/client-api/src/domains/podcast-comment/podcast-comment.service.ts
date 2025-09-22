@@ -286,7 +286,7 @@ export class PodcastCommentService {
   async reportComment(
     userId: string,
     commentId: string,
-    reportDto: ReportCommentDto,
+    _reportDto: ReportCommentDto,
   ) {
     const comment = await this.prisma.podcastComment.findUnique({
       where: { id: commentId },

@@ -4,7 +4,7 @@ import { GoogleTranslateFreeService } from '../google-translate/google-translate
 import { CourseController } from './controller/private-course.controller';
 import { CourseRepository } from './repository/course.repository';
 import { CourseService } from './service/course.service';
-import { CoursesImportService } from './service/couse-import.service';
+import { CoursesImportService } from './service/course-import.service';
 import { UploadService } from '../upload/upload.service';
 
 @Module({

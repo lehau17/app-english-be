@@ -217,7 +217,6 @@ export class PodcastService {
     }> = [];
     const regex = /\[([^\]]+)\]/g;
     let match;
-    const currentIndex = 0;
 
     // Process entire content to find [word] patterns
     const processedContent = content;

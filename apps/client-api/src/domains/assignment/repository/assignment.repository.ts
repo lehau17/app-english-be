@@ -254,7 +254,7 @@ export class AssignmentRepository extends PrismaRepository {
     const { activities, ...assignmentData } = data;
 
     return this.$transaction(async (tx) => {
-      const updated = await tx.assignment.update({
+      await tx.assignment.update({
         where: { id },
         data: assignmentData,
       });
