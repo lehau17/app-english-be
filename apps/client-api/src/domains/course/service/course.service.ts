@@ -20,24 +20,28 @@ function normalizeCurrency(code?: string): string | undefined {
   return code.trim().toUpperCase();
 }
 
-
-
-
 @Injectable()
 export class CourseService {
   constructor(
     private readonly courseRepository: CourseRepository,
     private readonly prisma: PrismaRepository,
-  private readonly googleTranslateFreeService: GoogleTranslateFreeService,
-  ) { }
+    private readonly googleTranslateFreeService: GoogleTranslateFreeService,
+  ) {}
 
   // service.ts (đoạn create)
   async create(dto: CreateCourseDto): Promise<Course> {
     // 1) Validate instructor
-    const instructor = await this.prisma.user.findUnique({ where: { id: dto.instructorId } });
+    const instructor = await this.prisma.user.findUnique({
+      where: { id: dto.instructorId },
+    });
     if (!instructor) throw new BadRequestException('Instructor không tồn tại');
-    if (instructor.role !== UserRole.teacher && instructor.role !== UserRole.admin) {
-      throw new BadRequestException('Instructor phải có vai trò TEACHER hoặc ADMIN');
+    if (
+      instructor.role !== UserRole.teacher &&
+      instructor.role !== UserRole.admin
+    ) {
+      throw new BadRequestException(
+        'Instructor phải có vai trò TEACHER hoặc ADMIN',
+      );
     }
     if (dto.price != null && dto.price < 0) {
       throw new BadRequestException('Giá không được âm');
@@ -45,22 +49,29 @@ export class CourseService {
 
     // 2) Optional: orderNo unique ở cấp Course
     if (dto.orderNo != null) {
-      const sameOrder = await this.prisma.course.findFirst({ where: { orderNo: dto.orderNo } });
-      if (sameOrder) throw new ConflictException('orderNo đã được dùng cho khóa học khác');
+      const sameOrder = await this.prisma.course.findFirst({
+        where: { orderNo: dto.orderNo },
+      });
+      if (sameOrder)
+        throw new ConflictException('orderNo đã được dùng cho khóa học khác');
     }
 
     // 3) Validate trùng order trong lesson/activity (trước khi ghi DB)
     const lessonOrders = new Set<number>();
     for (const ls of dto.lessons) {
       if (lessonOrders.has(ls.orderNo)) {
-        throw new BadRequestException(`Trùng orderNo giữa các lesson: ${ls.orderNo}`);
+        throw new BadRequestException(
+          `Trùng orderNo giữa các lesson: ${ls.orderNo}`,
+        );
       }
       lessonOrders.add(ls.orderNo);
 
       const actOrders = new Set<number>();
       for (const ac of ls.activities) {
         if (actOrders.has(ac.orderNo)) {
-          throw new BadRequestException(`Trùng orderNo trong activities của lesson "${ls.title}": ${ac.orderNo}`);
+          throw new BadRequestException(
+            `Trùng orderNo trong activities của lesson "${ls.title}": ${ac.orderNo}`,
+          );
         }
         actOrders.add(ac.orderNo);
       }
@@ -68,7 +79,9 @@ export class CourseService {
 
     // 4) Convert minutes -> hours cho course
     const estimatedHours =
-      dto.estimatedTime != null ? Math.round((dto.estimatedTime / 60) * 100) / 100 : undefined;
+      dto.estimatedTime != null
+        ? Math.round((dto.estimatedTime / 60) * 100) / 100
+        : undefined;
 
     // 5) Transaction
     // We'll collect audio generation tasks during the transaction and run them after commit
@@ -131,17 +144,19 @@ export class CourseService {
               type: activityDto.type as any, // nếu Prisma enum trùng literal
               orderNo: activityDto.orderNo,
               title: activityDto.title,
-              content: normalizedContent,  // JSONB
+              content: normalizedContent, // JSONB
               timeLimit: activityDto.timeLimit ?? undefined,
               maxAttempts: activityDto.maxAttempts ?? undefined,
               passingScore: activityDto.passingScore ?? undefined,
-              difficulty: activityDto.difficulty ?? lessonDto.difficulty ?? dto.difficulty,
+              difficulty:
+                activityDto.difficulty ??
+                lessonDto.difficulty ??
+                dto.difficulty,
               points: activityDto.points ?? 10,
               instructions: activityDto.instructions ?? undefined,
               hints: activityDto.hints ?? [],
               mediaUrls: activityDto.mediaUrls ?? [],
             },
-
           });
 
           // If this is a vocab activity, check items without audioUrl and schedule generation
@@ -181,7 +196,9 @@ export class CourseService {
         for (const task of pendingAudioTasks) {
           try {
             // fetch latest activity content
-            const act = await this.prisma.activity.findUnique({ where: { id: task.activityId } });
+            const act = await this.prisma.activity.findUnique({
+              where: { id: task.activityId },
+            });
             if (!act) continue;
             const content: any = act.content ?? {};
             if (content.kind !== 'vocab') continue;
@@ -191,7 +208,11 @@ export class CourseService {
               const word = items[idx]?.word;
               if (!word) continue;
               try {
-                const { url } = await this.googleTranslateFreeService.createAudioWithUrl(word, task.language?.split('-')[0] ?? 'en');
+                const { url } =
+                  await this.googleTranslateFreeService.createAudioWithUrl(
+                    word,
+                    task.language?.split('-')[0] ?? 'en',
+                  );
                 items[idx].audioUrl = url;
               } catch (e) {
                 // log and continue
@@ -200,7 +221,10 @@ export class CourseService {
             }
 
             // Persist updated content
-            await this.prisma.activity.update({ where: { id: task.activityId }, data: { content } });
+            await this.prisma.activity.update({
+              where: { id: task.activityId },
+              data: { content },
+            });
           } catch (e) {
             console.error('Error processing audio task', task, e);
           }
@@ -213,13 +237,13 @@ export class CourseService {
     return result;
   }
 
-/**
- * Hỗ trợ cả 2 shape:
- *  - MỚI: { kind:'vocab', data:{ items:[ {word,definition,...}, ...] } }
- *  - CŨ : { kind:'vocab', data:{ word, definition, examples?, imageUrl?, audioUrl? } }
- * Trả về luôn shape MỚI.
- */
- async normalizeVocabContent(content: any) {
+  /**
+   * Hỗ trợ cả 2 shape:
+   *  - MỚI: { kind:'vocab', data:{ items:[ {word,definition,...}, ...] } }
+   *  - CŨ : { kind:'vocab', data:{ word, definition, examples?, imageUrl?, audioUrl? } }
+   * Trả về luôn shape MỚI.
+   */
+  async normalizeVocabContent(content: any) {
     if (!content || content.kind !== 'vocab') return content;
 
     const data = content.data ?? {};
@@ -235,7 +259,14 @@ export class CourseService {
               definition: data.definition,
               examples: data.examples ?? [],
               imageUrl: data.imageUrl ?? undefined,
-              audioUrl: data.audioUrl ?? (await this.googleTranslateFreeService.createAudioWithUrl(data.word, "en")).url
+              audioUrl:
+                data.audioUrl ??
+                (
+                  await this.googleTranslateFreeService.createAudioWithUrl(
+                    data.word,
+                    'en',
+                  )
+                ).url,
             },
           ],
         },
@@ -244,8 +275,6 @@ export class CourseService {
     // fallback giữ nguyên nếu không match
     return content;
   }
-
-
 
   async findById(id: string): Promise<Course> {
     const course = await this.courseRepository.findById(id);

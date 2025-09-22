@@ -1,34 +1,39 @@
 import { JwtPayload } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Classroom, Prisma, UserRole } from '@prisma/client';
 import { EventsGateway } from 'apps/client-api/src/events/events.gateway';
 import * as bcrypt from 'bcrypt';
 import { Readable } from 'stream';
 import * as XLSX from 'xlsx';
 import {
-    AddStudentToClassroomDto,
-    AssignTeacherToClassroomDto,
-    ClassroomAnnouncementQueryDto,
-    CreateClassroomDto,
-    FilterClassroomRequestDto,
-    ImportStudentsResultDto,
-    UpdateClassroomDto
+  AddStudentToClassroomDto,
+  AssignTeacherToClassroomDto,
+  ClassroomAnnouncementQueryDto,
+  CreateClassroomDto,
+  FilterClassroomRequestDto,
+  ImportStudentsResultDto,
+  UpdateClassroomDto,
 } from '../dto/classroom.dto';
 import { ClassroomRepository } from '../repository/classroom.repository';
 import {
-    calculateClassroomSchedule,
-    generateClassroomSessions,
+  calculateClassroomSchedule,
+  generateClassroomSessions,
 } from '../utils/classroom-schedule.util';
 import {
-    generateClassCode,
-    getCsvTransformStream,
+  generateClassCode,
+  getCsvTransformStream,
 } from '../utils/classroom.util';
 
 @Injectable()
 export class ClassroomService {
-  constructor(private readonly classroomRepository: ClassroomRepository,
-    private readonly gateway: EventsGateway
+  constructor(
+    private readonly classroomRepository: ClassroomRepository,
+    private readonly gateway: EventsGateway,
   ) {}
 
   async create(dto: CreateClassroomDto): Promise<Classroom> {
@@ -36,7 +41,7 @@ export class ClassroomService {
     const scheduleCalculation = calculateClassroomSchedule(
       dto.periodStart,
       dto.periodEnd,
-      dto.slots
+      dto.slots,
     );
 
     const createPayload: Prisma.ClassroomCreateInput = {
@@ -62,13 +67,13 @@ export class ClassroomService {
       plannedSessions: scheduleCalculation.plannedSessions,
       // Create slots
       slots: {
-        create: dto.slots.map(slot => ({
+        create: dto.slots.map((slot) => ({
           dayOfWeek: slot.dayOfWeek,
           startMinuteOfDay: slot.startMinuteOfDay,
           endMinuteOfDay: slot.endMinuteOfDay,
-          isActive: true
-        }))
-      }
+          isActive: true,
+        })),
+      },
     };
 
     const classroom = await this.classroomRepository.create(createPayload);
@@ -78,7 +83,7 @@ export class ClassroomService {
       const sessionData = generateClassroomSessions(
         classroom.id,
         dto.teacherId,
-        scheduleCalculation
+        scheduleCalculation,
       );
 
       // Create sessions in batch
@@ -172,7 +177,9 @@ export class ClassroomService {
         user.sub,
       );
       if (!allowed) {
-        throw new ForbiddenException('You do not have access to this classroom');
+        throw new ForbiddenException(
+          'You do not have access to this classroom',
+        );
       }
     } else if (user.role === UserRole.student) {
       const allowed = await this.classroomRepository.isStudentInClassroom(
@@ -180,7 +187,9 @@ export class ClassroomService {
         user.sub,
       );
       if (!allowed) {
-        throw new ForbiddenException('You do not have access to this classroom');
+        throw new ForbiddenException(
+          'You do not have access to this classroom',
+        );
       }
     } else {
       throw new ForbiddenException('You do not have access to this classroom');
@@ -216,9 +225,16 @@ export class ClassroomService {
     return this.classroomRepository.createAnnouncement(classroomId, payload);
   }
 
-  async getClassroomDetail(classroomId: string, userId?: string, userRole?: string) {
+  async getClassroomDetail(
+    classroomId: string,
+    userId?: string,
+    userRole?: string,
+  ) {
     if (userRole === 'student' && userId) {
-      return this.classroomRepository.getClassroomDetailForStudent(classroomId, userId);
+      return this.classroomRepository.getClassroomDetailForStudent(
+        classroomId,
+        userId,
+      );
     }
     return this.classroomRepository.getClassroomDetail(classroomId);
   }
@@ -255,23 +271,30 @@ export class ClassroomService {
         // Validate required fields
         const email = row['Email'] || row['email'];
         const phone = row['Phone'] || row['phone'];
-        const firstName = row['First Name'] || row['firstName'] || row['FirstName'];
+        const firstName =
+          row['First Name'] || row['firstName'] || row['FirstName'];
         const lastName = row['Last Name'] || row['lastName'] || row['LastName'];
-        const displayName = row['Display Name'] || row['displayName'] || row['DisplayName'] || `${firstName} ${lastName}`;
+        const displayName =
+          row['Display Name'] ||
+          row['displayName'] ||
+          row['DisplayName'] ||
+          `${firstName} ${lastName}`;
         const gender = row['Gender'] || row['gender'];
 
         if (!email || !phone || !firstName || !lastName) {
           result.errors.push({
             row: rowNumber,
             email: email || 'N/A',
-            error: 'Missing required fields: Email, Phone, First Name, Last Name',
+            error:
+              'Missing required fields: Email, Phone, First Name, Last Name',
           });
           result.failedImports++;
           continue;
         }
 
         // Check if student already exists by email
-        let existingStudent = await this.classroomRepository.findStudentByEmail(email);
+        const existingStudent =
+          await this.classroomRepository.findStudentByEmail(email);
 
         if (existingStudent) {
           // Student exists, add to existing list
@@ -292,7 +315,12 @@ export class ClassroomService {
             firstName,
             lastName,
             displayName,
-            gender: gender === 'male' ? 'male' : gender === 'female' ? 'female' : 'other',
+            gender:
+              gender === 'male'
+                ? 'male'
+                : gender === 'female'
+                  ? 'female'
+                  : 'other',
             passwordHash,
             role: 'student',
             language: 'vi',
@@ -327,24 +355,41 @@ export class ClassroomService {
     return result;
   }
 
-  async getTeacherSchedule(teacherId: string, weekStart?: string, weekEnd?: string) {
+  async getTeacherSchedule(
+    teacherId: string,
+    weekStart?: string,
+    weekEnd?: string,
+  ) {
     const startDate = weekStart ? new Date(weekStart) : new Date();
-    const endDate = weekEnd ? new Date(weekEnd) : new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const endDate = weekEnd
+      ? new Date(weekEnd)
+      : new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    const scheduleData = await this.classroomRepository.getTeacherSchedule(teacherId, startDate, endDate);
+    const scheduleData = await this.classroomRepository.getTeacherSchedule(
+      teacherId,
+      startDate,
+      endDate,
+    );
 
     // Process and format the schedule data
     const schedule: { [dayOfWeek: string]: any[] } = {
-      mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: []
+      mon: [],
+      tue: [],
+      wed: [],
+      thu: [],
+      fri: [],
+      sat: [],
+      sun: [],
     };
 
     // Add classroom slots (recurring weekly schedule)
-    scheduleData.classroomSlots.forEach(slot => {
+    scheduleData.classroomSlots.forEach((slot) => {
       const classroom = slot.classroom;
       const now = new Date();
 
       // Check if classroom is currently active
-      const isActive = classroom.periodStart <= now && classroom.periodEnd >= now;
+      const isActive =
+        classroom.periodStart <= now && classroom.periodEnd >= now;
 
       if (isActive) {
         schedule[slot.dayOfWeek].push({
@@ -360,10 +405,12 @@ export class ClassroomService {
     });
 
     // Add actual sessions
-    scheduleData.sessions.forEach(session => {
+    scheduleData.sessions.forEach((session) => {
       const dayOfWeek = this.getDayOfWeek(session.startTime);
-      const startMinute = session.startTime.getHours() * 60 + session.startTime.getMinutes();
-      const endMinute = session.endTime.getHours() * 60 + session.endTime.getMinutes();
+      const startMinute =
+        session.startTime.getHours() * 60 + session.startTime.getMinutes();
+      const endMinute =
+        session.endTime.getHours() * 60 + session.endTime.getMinutes();
 
       schedule[dayOfWeek].push({
         type: 'session',
@@ -380,7 +427,7 @@ export class ClassroomService {
     });
 
     // Sort each day's schedule by start time
-    Object.keys(schedule).forEach(day => {
+    Object.keys(schedule).forEach((day) => {
       schedule[day].sort((a, b) => a.startMinuteOfDay - b.startMinuteOfDay);
     });
 

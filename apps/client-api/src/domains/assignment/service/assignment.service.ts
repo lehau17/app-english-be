@@ -1,14 +1,34 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { AssignmentStatus } from '@prisma/client';
-import { CreateAssignmentDto, GradeAssignmentDto, QueryAssignmentsDto, SubmitAssignmentDto, UpdateAssignmentDto } from '../dto';
+import {
+  CreateAssignmentDto,
+  GradeAssignmentDto,
+  QueryAssignmentsDto,
+  SubmitAssignmentDto,
+  UpdateAssignmentDto,
+} from '../dto';
 import { AssignmentActivityDto } from '../dto/create-assignment.dto';
-import { AssignmentActivityModel, AssignmentRepository, AssignmentSubmissionWithStudent, AssignmentWithDetails } from '../repository';
+import {
+  AssignmentActivityModel,
+  AssignmentRepository,
+  AssignmentSubmissionWithStudent,
+  AssignmentWithDetails,
+} from '../repository';
 
 @Injectable()
 export class AssignmentService {
   constructor(private readonly assignmentRepository: AssignmentRepository) {}
 
-  async createAssignment(teacherId: string, dto: CreateAssignmentDto, classroomId: string): Promise<AssignmentWithDetails> {
+  async createAssignment(
+    teacherId: string,
+    dto: CreateAssignmentDto,
+    classroomId: string,
+  ): Promise<AssignmentWithDetails> {
     // Validate classroom belongs to teacher - should add this check
     const assignmentData = {
       teacherId,
@@ -20,21 +40,33 @@ export class AssignmentService {
       totalPoints: dto.totalPoints || 100,
       timeLimit: dto.timeLimit,
       maxAttempts: dto.maxAttempts || 1,
-      status: dto.isPublished ? AssignmentStatus.published : AssignmentStatus.draft,
+      status: dto.isPublished
+        ? AssignmentStatus.published
+        : AssignmentStatus.draft,
       isPublished: dto.isPublished || false,
       assignedTo: dto.assignedTo || [],
-      activities: dto.activities.map((activity, index) => this.mapActivityDto(activity, index)),
+      activities: dto.activities.map((activity, index) =>
+        this.mapActivityDto(activity, index),
+      ),
       customContent: dto.customContent,
     };
 
     return this.assignmentRepository.createAssignment(assignmentData);
   }
 
-  async getAssignmentById(assignmentId: string, includeSubmissions = false): Promise<AssignmentWithDetails> {
-    const assignment = await this.assignmentRepository.findAssignmentById(assignmentId, includeSubmissions);
+  async getAssignmentById(
+    assignmentId: string,
+    includeSubmissions = false,
+  ): Promise<AssignmentWithDetails> {
+    const assignment = await this.assignmentRepository.findAssignmentById(
+      assignmentId,
+      includeSubmissions,
+    );
 
     if (!assignment) {
-      throw new NotFoundException(`Assignment with ID ${assignmentId} not found`);
+      throw new NotFoundException(
+        `Assignment with ID ${assignmentId} not found`,
+      );
     }
 
     return assignment;
@@ -42,15 +74,23 @@ export class AssignmentService {
 
   async getAssignmentsByClassroom(
     classroomId: string,
-    query: QueryAssignmentsDto
-  ): Promise<{ assignments: AssignmentWithDetails[]; total: number; page: number; limit: number }> {
+    query: QueryAssignmentsDto,
+  ): Promise<{
+    assignments: AssignmentWithDetails[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const { page = 1, limit = 20 } = query;
 
-    const result = await this.assignmentRepository.findAssignmentsByClassroom(classroomId, {
-      status: query.status as AssignmentStatus,
-      page,
-      limit,
-    });
+    const result = await this.assignmentRepository.findAssignmentsByClassroom(
+      classroomId,
+      {
+        status: query.status as AssignmentStatus,
+        page,
+        limit,
+      },
+    );
 
     return {
       ...result,
@@ -61,16 +101,24 @@ export class AssignmentService {
 
   async getAssignmentsByTeacher(
     teacherId: string,
-    query: QueryAssignmentsDto
-  ): Promise<{ assignments: AssignmentWithDetails[]; total: number; page: number; limit: number }> {
+    query: QueryAssignmentsDto,
+  ): Promise<{
+    assignments: AssignmentWithDetails[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const { page = 1, limit = 20 } = query;
 
-    const result = await this.assignmentRepository.findAssignmentsByTeacher(teacherId, {
-      classroomId: query.classroomId,
-      status: query.status as AssignmentStatus,
-      page,
-      limit,
-    });
+    const result = await this.assignmentRepository.findAssignmentsByTeacher(
+      teacherId,
+      {
+        classroomId: query.classroomId,
+        status: query.status as AssignmentStatus,
+        page,
+        limit,
+      },
+    );
 
     return {
       ...result,
@@ -82,7 +130,7 @@ export class AssignmentService {
   async updateAssignment(
     assignmentId: string,
     teacherId: string,
-    dto: UpdateAssignmentDto
+    dto: UpdateAssignmentDto,
   ): Promise<AssignmentWithDetails> {
     const assignment = await this.getAssignmentById(assignmentId);
 
@@ -91,19 +139,22 @@ export class AssignmentService {
       throw new ForbiddenException('You can only update your own assignments');
     }
 
-    const updateData : any = {
+    const updateData: any = {
       ...dto,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
     };
 
     if (dto.activities) {
       updateData.activities = dto.activities.map((activity, index) =>
-        this.mapActivityDto(activity, index)
-      )
+        this.mapActivityDto(activity, index),
+      );
     }
 
     // If publishing, update status
-    if (dto.isPublished === true && assignment.status === AssignmentStatus.draft) {
+    if (
+      dto.isPublished === true &&
+      assignment.status === AssignmentStatus.draft
+    ) {
       updateData.status = AssignmentStatus.published;
     } else if (dto.isPublished === false) {
       updateData.status = AssignmentStatus.draft;
@@ -112,7 +163,10 @@ export class AssignmentService {
     return this.assignmentRepository.updateAssignment(assignmentId, updateData);
   }
 
-  async deleteAssignment(assignmentId: string, teacherId: string): Promise<void> {
+  async deleteAssignment(
+    assignmentId: string,
+    teacherId: string,
+  ): Promise<void> {
     const assignment = await this.getAssignmentById(assignmentId);
 
     // Check if teacher owns this assignment
@@ -122,13 +176,18 @@ export class AssignmentService {
 
     // Don't allow deletion if there are submissions
     if (assignment._count.submissions > 0) {
-      throw new BadRequestException('Cannot delete assignment with existing submissions');
+      throw new BadRequestException(
+        'Cannot delete assignment with existing submissions',
+      );
     }
 
     await this.assignmentRepository.deleteAssignment(assignmentId);
   }
 
-  async publishAssignment(assignmentId: string, teacherId: string): Promise<AssignmentWithDetails> {
+  async publishAssignment(
+    assignmentId: string,
+    teacherId: string,
+  ): Promise<AssignmentWithDetails> {
     const assignment = await this.getAssignmentById(assignmentId);
 
     // Check if teacher owns this assignment
@@ -147,7 +206,7 @@ export class AssignmentService {
   async submitAssignment(
     assignmentId: string,
     studentId: string,
-    dto: SubmitAssignmentDto
+    dto: SubmitAssignmentDto,
   ): Promise<AssignmentSubmissionWithStudent> {
     const assignment = await this.getAssignmentById(assignmentId);
 
@@ -161,28 +220,37 @@ export class AssignmentService {
     }
 
     // Check if student is assigned to this assignment
-    if (assignment.assignedTo.length > 0 && !assignment.assignedTo.includes(studentId)) {
+    if (
+      assignment.assignedTo.length > 0 &&
+      !assignment.assignedTo.includes(studentId)
+    ) {
       throw new ForbiddenException('You are not assigned to this assignment');
     }
 
     // Check existing submissions and attempt limits
-    const existingSubmission = await this.assignmentRepository.findSubmissionByAssignmentAndStudent(
-      assignmentId,
-      studentId
-    );
+    const existingSubmission =
+      await this.assignmentRepository.findSubmissionByAssignmentAndStudent(
+        assignmentId,
+        studentId,
+      );
 
     let attemptCount = 1;
     if (existingSubmission) {
       attemptCount = existingSubmission.attemptCount + 1;
 
       if (attemptCount > assignment.maxAttempts) {
-        throw new BadRequestException(`Maximum attempts (${assignment.maxAttempts}) exceeded`);
+        throw new BadRequestException(
+          `Maximum attempts (${assignment.maxAttempts}) exceeded`,
+        );
       }
     }
 
     // Calculate score automatically (basic implementation)
     // This would need more sophisticated scoring logic based on activity types
-    const score = await this.calculateScore(assignment.assignmentActivities, dto.answers);
+    const score = await this.calculateScore(
+      assignment.assignmentActivities,
+      dto.answers,
+    );
 
     const submission = await this.assignmentRepository.submitAssignment({
       assignmentId,
@@ -206,7 +274,7 @@ export class AssignmentService {
   async gradeSubmission(
     submissionId: string,
     teacherId: string,
-    dto: GradeAssignmentDto
+    dto: GradeAssignmentDto,
   ): Promise<AssignmentSubmissionWithStudent> {
     // Should add validation that teacher owns the assignment
     return this.assignmentRepository.gradeSubmission(submissionId, {
@@ -217,13 +285,15 @@ export class AssignmentService {
 
   async getSubmissionsByAssignment(
     assignmentId: string,
-    teacherId: string
+    teacherId: string,
   ): Promise<AssignmentSubmissionWithStudent[]> {
     const assignment = await this.getAssignmentById(assignmentId);
 
     // Check if teacher owns this assignment
     if (assignment.teacherId !== teacherId) {
-      throw new ForbiddenException('You can only view submissions for your own assignments');
+      throw new ForbiddenException(
+        'You can only view submissions for your own assignments',
+      );
     }
 
     return this.assignmentRepository.getSubmissionsByAssignment(assignmentId);
@@ -231,13 +301,19 @@ export class AssignmentService {
 
   async getStudentSubmission(
     assignmentId: string,
-    studentId: string
+    studentId: string,
   ): Promise<AssignmentSubmissionWithStudent | null> {
-    return this.assignmentRepository.findSubmissionByAssignmentAndStudent(assignmentId, studentId);
+    return this.assignmentRepository.findSubmissionByAssignmentAndStudent(
+      assignmentId,
+      studentId,
+    );
   }
 
   // Private helper methods
-  private async calculateScore(activities: AssignmentActivityModel[], answers: any): Promise<number | null> {
+  private async calculateScore(
+    activities: AssignmentActivityModel[],
+    answers: any,
+  ): Promise<number | null> {
     // Basic implementation - would need more sophisticated logic
     // For now, return null to indicate manual grading needed
     try {
@@ -259,7 +335,11 @@ export class AssignmentService {
 
           questions.forEach((q: any, index: number) => {
             const userAnswer = activityAnswers[`q${index}`];
-            if (userAnswer && userAnswer.toLowerCase().trim() === q.correctAnswer.toLowerCase().trim()) {
+            if (
+              userAnswer &&
+              userAnswer.toLowerCase().trim() ===
+                q.correctAnswer.toLowerCase().trim()
+            ) {
               correctAnswers++;
             }
           });
@@ -290,8 +370,13 @@ export class AssignmentService {
 
   private mapActivityDto(activity: AssignmentActivityDto, index: number) {
     // Extract the actual content from the wrapper format { kind, data }
-    let processedContent:any = activity.content;
-    if (activity.content && typeof activity.content === 'object' && 'kind' in activity.content && 'data' in activity.content) {
+    let processedContent: any = activity.content;
+    if (
+      activity.content &&
+      typeof activity.content === 'object' &&
+      'kind' in activity.content &&
+      'data' in activity.content
+    ) {
       // If content is wrapped in { kind, data } format, extract the data
       processedContent = activity.content.data || activity.content;
     }
@@ -308,6 +393,6 @@ export class AssignmentService {
       passingScore: activity.passingScore,
       difficulty: activity.difficulty,
       hints: activity.hints ?? [],
-    }
+    };
   }
 }

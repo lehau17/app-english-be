@@ -1,8 +1,4 @@
-import {
-  JwtPayload,
-  PayloadToken,
-  ResponseMessage
-} from '@app/shared';
+import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
   Body,
@@ -11,12 +7,12 @@ import {
   Get,
   Param,
   Post,
-  Query
+  Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
   CreatePodcastRatingDto,
-  FilterPodcastQueryDto
+  FilterPodcastQueryDto,
 } from './podcast-rating.dto';
 import { PodcastRatingService } from './podcast-rating.service';
 
@@ -27,7 +23,10 @@ export class PodcastRatingController {
 
   @Post()
   @ResponseMessage('Rating saved')
-  async createOrUpdate(@Body() payload: CreatePodcastRatingDto, @PayloadToken() payloadToken: JwtPayload) {
+  async createOrUpdate(
+    @Body() payload: CreatePodcastRatingDto,
+    @PayloadToken() payloadToken: JwtPayload,
+  ) {
     const userId = payloadToken.sub;
     const result = await this.svc.createOrUpdate(userId, payload);
     return result;
@@ -43,30 +42,39 @@ export class PodcastRatingController {
   @Get('/public/:podcastId')
   async list(
     @Param('podcastId') podcastId: string,
-    @Query() query : FilterPodcastQueryDto
+    @Query() query: FilterPodcastQueryDto,
   ) {
     const p = parseInt(query.page as any, 10) || 1;
     const l = parseInt(query.limit as any, 10) || 10;
     const result = await this.svc.listRatings(podcastId, p, l);
-    return PageResponseDto.of(result.data, p, l, result.total );
+    return PageResponseDto.of(result.data, p, l, result.total);
   }
 
   @Get('/:podcastId/me')
-  async myRating(@Param('podcastId') podcastId: string, @PayloadToken() payloadToken: any) {
+  async myRating(
+    @Param('podcastId') podcastId: string,
+    @PayloadToken() payloadToken: any,
+  ) {
     const userId = payloadToken.sub;
     return this.svc.getByUserAndPodcast(userId, podcastId);
   }
 
   // Check if current user has rated this podcast
   @Get('/:podcastId/has-rated')
-  async hasRated(@Param('podcastId') podcastId: string, @PayloadToken() payloadToken: any) {
+  async hasRated(
+    @Param('podcastId') podcastId: string,
+    @PayloadToken() payloadToken: any,
+  ) {
     const userId = payloadToken.sub;
-    return  await this.svc.hasUserRated(userId, podcastId) ;
+    return await this.svc.hasUserRated(userId, podcastId);
   }
 
   @Delete('/:podcastId')
   @ResponseMessage('Rating removed')
-  async remove(@Param('podcastId') podcastId: string, @PayloadToken() payloadToken: any) {
+  async remove(
+    @Param('podcastId') podcastId: string,
+    @PayloadToken() payloadToken: any,
+  ) {
     const userId = payloadToken.sub;
     return this.svc.deleteRating(userId, podcastId);
   }

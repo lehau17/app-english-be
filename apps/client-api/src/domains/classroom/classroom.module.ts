@@ -8,7 +8,7 @@ import { ClassroomService } from './service';
 
 @Module({
   imports: [AssignmentModule, EventsModule],
-  controllers: [PrivateClassroomController, ],
+  controllers: [PrivateClassroomController],
   providers: [ClassroomService, ClassroomRepository, EventsGateway],
   exports: [ClassroomService, ClassroomRepository],
 })

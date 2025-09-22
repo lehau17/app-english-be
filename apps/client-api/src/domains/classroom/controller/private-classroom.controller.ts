@@ -1,41 +1,51 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-    BadRequestException,
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    ParseUUIDPipe,
-    Post,
-    Put,
-    Query,
-    Res,
-    UploadedFile,
-    UseInterceptors
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+  Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Classroom } from '@prisma/client';
 import { Response } from 'express';
-import { CreateAssignmentDto, QueryAssignmentsDto, UpdateAssignmentDto } from '../../assignment/dto';
+import {
+  CreateAssignmentDto,
+  QueryAssignmentsDto,
+  UpdateAssignmentDto,
+} from '../../assignment/dto';
 import { AssignmentService } from '../../assignment/service/assignment.service';
 import {
-    AddStudentToClassroomDto,
-    AssignTeacherToClassroomDto,
-    ClassroomAnnouncementQueryDto,
-    CreateClassroomAnnouncementDto,
-    CreateClassroomDto,
-    FilterClassroomRequestDto,
-    ImportStudentsResultDto,
-    UpdateClassroomDto,
+  AddStudentToClassroomDto,
+  AssignTeacherToClassroomDto,
+  ClassroomAnnouncementQueryDto,
+  CreateClassroomAnnouncementDto,
+  CreateClassroomDto,
+  FilterClassroomRequestDto,
+  ImportStudentsResultDto,
+  UpdateClassroomDto,
 } from '../dto/classroom.dto';
 import { ClassroomService } from '../service/classroom.service';
 
 @ApiTags('Classrooms')
 @ApiBearerAuth('Authorization')
-  @Controller('/private/v1/classrooms')
+@Controller('/private/v1/classrooms')
 export class PrivateClassroomController {
   constructor(
     private readonly classroomService: ClassroomService,
@@ -106,7 +116,11 @@ export class PrivateClassroomController {
     @Query('weekStart') weekStart?: string,
     @Query('weekEnd') weekEnd?: string,
   ) {
-    return this.classroomService.getTeacherSchedule(teacherId, weekStart, weekEnd);
+    return this.classroomService.getTeacherSchedule(
+      teacherId,
+      weekStart,
+      weekEnd,
+    );
   }
 
   @Post(':id/students')
@@ -143,13 +157,20 @@ export class PrivateClassroomController {
   }
 
   @Get(':id/detail')
-  @ApiOperation({ summary: 'Get full classroom detail (students, assignments, announcements, lessons, activities)' })
+  @ApiOperation({
+    summary:
+      'Get full classroom detail (students, assignments, announcements, lessons, activities)',
+  })
   @ResponseMessage('Classroom detail fetched successfully')
   async getClassroomDetail(
     @Param('id', new ParseUUIDPipe()) id: string,
     @PayloadToken() payload: JwtPayload,
   ) {
-    return this.classroomService.getClassroomDetail(id, payload.userId, payload.role);
+    return this.classroomService.getClassroomDetail(
+      id,
+      payload.userId,
+      payload.role,
+    );
   }
 
   @Get(':id/announcements')
@@ -210,7 +231,11 @@ export class PrivateClassroomController {
   ) {
     // Ensure classroomId matches DTO
     const assignmentDto = { ...dto, classroomId };
-    return this.assignmentService.createAssignment(payload.sub, assignmentDto, classroomId);
+    return this.assignmentService.createAssignment(
+      payload.sub,
+      assignmentDto,
+      classroomId,
+    );
   }
 
   @Get(':id/assignments')
@@ -233,11 +258,18 @@ export class PrivateClassroomController {
     @Body() dto: UpdateAssignmentDto,
   ) {
     // Ensure the assignment belongs to this classroom first
-    const assignment = await this.assignmentService.getAssignmentById(assignmentId);
+    const assignment =
+      await this.assignmentService.getAssignmentById(assignmentId);
     if (assignment.classroomId !== classroomId) {
-      throw new BadRequestException('Assignment does not belong to this classroom');
+      throw new BadRequestException(
+        'Assignment does not belong to this classroom',
+      );
     }
 
-    return this.assignmentService.updateAssignment(assignmentId, payload.sub, dto);
+    return this.assignmentService.updateAssignment(
+      assignmentId,
+      payload.sub,
+      dto,
+    );
   }
 }

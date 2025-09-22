@@ -19,9 +19,9 @@ export class DashboardService {
     }
 
     return {
-        ...dashboard,
-        recentStudents: JSON.parse(dashboard.recentStudents as string),
-        registrationTrend: JSON.parse(dashboard.registrationTrend as string),
+      ...dashboard,
+      recentStudents: JSON.parse(dashboard.recentStudents as string),
+      registrationTrend: JSON.parse(dashboard.registrationTrend as string),
     };
   }
 }

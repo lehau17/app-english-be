@@ -10,9 +10,15 @@ import {
   ParseIntPipe,
   Post,
   Put,
-  Query
+  Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   CreatePodcastCommentDto,
   LikeCommentDto,
@@ -40,14 +46,32 @@ export class PodcastCommentController {
     @PayloadToken() tokenPayload: JwtPayload,
     @Body() createCommentDto: CreatePodcastCommentDto,
   ) {
-    return await this.podcastCommentService.createComment(tokenPayload.sub, createCommentDto);
+    return await this.podcastCommentService.createComment(
+      tokenPayload.sub,
+      createCommentDto,
+    );
   }
 
   @Get('podcast/:podcastId')
   @ApiOperation({ summary: 'Lấy danh sách comment của một podcast' })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Số trang (default: 1)' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Số lượng per page (default: 20)' })
-  @ApiQuery({ name: 'includeReplies', required: false, type: Boolean, description: 'Include replies (default: true)' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Số trang (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Số lượng per page (default: 20)',
+  })
+  @ApiQuery({
+    name: 'includeReplies',
+    required: false,
+    type: Boolean,
+    description: 'Include replies (default: true)',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Lấy danh sách comment thành công',
@@ -57,7 +81,8 @@ export class PodcastCommentController {
     @Param('podcastId') podcastId: string,
     @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
     @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 20,
-    @Query('includeReplies', new ParseBoolPipe({ optional: true })) includeReplies: boolean = true,
+    @Query('includeReplies', new ParseBoolPipe({ optional: true }))
+    includeReplies: boolean = true,
   ) {
     return await this.podcastCommentService.getCommentsByPodcast(
       podcastId,
@@ -69,8 +94,18 @@ export class PodcastCommentController {
 
   @Get('replies/:parentCommentId')
   @ApiOperation({ summary: 'Lấy danh sách replies của một comment' })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Số trang (default: 1)' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Số lượng per page (default: 10)' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Số trang (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Số lượng per page (default: 10)',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Lấy danh sách replies thành công',
@@ -81,13 +116,27 @@ export class PodcastCommentController {
     @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
     @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
   ) {
-    return await this.podcastCommentService.getReplies(parentCommentId, page, limit);
+    return await this.podcastCommentService.getReplies(
+      parentCommentId,
+      page,
+      limit,
+    );
   }
 
   @Get('user/my-comments')
   @ApiOperation({ summary: 'Lấy danh sách comment của user hiện tại' })
-  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Số trang (default: 1)' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Số lượng per page (default: 20)' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Số trang (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Số lượng per page (default: 20)',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'Lấy danh sách comment của user thành công',
@@ -98,7 +147,11 @@ export class PodcastCommentController {
     @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
     @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 20,
   ) {
-    return await this.podcastCommentService.getUserComments(tokenPayload.sub, page, limit);
+    return await this.podcastCommentService.getUserComments(
+      tokenPayload.sub,
+      page,
+      limit,
+    );
   }
 
   @Put(':commentId')
@@ -114,7 +167,11 @@ export class PodcastCommentController {
     @Param('commentId') commentId: string,
     @Body() updateCommentDto: UpdatePodcastCommentDto,
   ) {
-    return await this.podcastCommentService.updateComment(tokenPayload.sub, commentId, updateCommentDto);
+    return await this.podcastCommentService.updateComment(
+      tokenPayload.sub,
+      commentId,
+      updateCommentDto,
+    );
   }
 
   @Delete(':commentId')
@@ -128,7 +185,10 @@ export class PodcastCommentController {
     @PayloadToken() tokenPayload: JwtPayload,
     @Param('commentId') commentId: string,
   ) {
-    return await this.podcastCommentService.deleteComment(tokenPayload.sub, commentId);
+    return await this.podcastCommentService.deleteComment(
+      tokenPayload.sub,
+      commentId,
+    );
   }
 
   @Post(':commentId/like')
@@ -143,7 +203,11 @@ export class PodcastCommentController {
     @Param('commentId') commentId: string,
     @Body() likeDto: LikeCommentDto,
   ) {
-    return await this.podcastCommentService.likeComment(tokenPayload.sub, commentId, likeDto.isLiked);
+    return await this.podcastCommentService.likeComment(
+      tokenPayload.sub,
+      commentId,
+      likeDto.isLiked,
+    );
   }
 
   @Post(':commentId/report')
@@ -158,6 +222,10 @@ export class PodcastCommentController {
     @Param('commentId') commentId: string,
     @Body() reportDto: ReportCommentDto,
   ) {
-    return await this.podcastCommentService.reportComment(tokenPayload.sub, commentId, reportDto);
+    return await this.podcastCommentService.reportComment(
+      tokenPayload.sub,
+      commentId,
+      reportDto,
+    );
   }
 }

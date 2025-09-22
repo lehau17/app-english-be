@@ -2,7 +2,11 @@ import { PrismaRepository } from '@app/database';
 import { RequestContext } from '@app/shared';
 import { KafkaService } from '@app/shared/kafka/kafka.service';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Notification, UserRole } from '@prisma/client';
 import {
   CreateClassroomNotificationDto,
@@ -84,10 +88,12 @@ export class NotificationService {
       throw new NotFoundException(`Classroom ${classroomId} not found`);
     }
 
-    const isAdmin = payload.role === UserRole .admin || payload.role === 'admin';
+    const isAdmin = payload.role === UserRole.admin || payload.role === 'admin';
     const isOwnerTeacher = classroom.teacherId === payload.sub;
     if (!isAdmin && !isOwnerTeacher) {
-      throw new ForbiddenException('Not allowed to broadcast for this classroom');
+      throw new ForbiddenException(
+        'Not allowed to broadcast for this classroom',
+      );
     }
 
     const studentIds = classroom.students

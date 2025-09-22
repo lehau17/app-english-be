@@ -28,7 +28,6 @@ export class DashboardDto {
   @ApiProperty({ type: [RegistrationTrendPoint] })
   registrationTrend: RegistrationTrendPoint[];
 
-
   static defaultValueResponse() {
     return {
       totalStudents: 0,

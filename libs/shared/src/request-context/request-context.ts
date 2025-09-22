@@ -53,7 +53,7 @@ class RequestContext {
   static clear() {
     const store = RequestContext.storage.getStore();
     if (store) {
-      Object.keys(store).forEach(key => {
+      Object.keys(store).forEach((key) => {
         delete store[key];
       });
     }

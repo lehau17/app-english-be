@@ -1,4 +1,12 @@
-import { Controller, Post, Delete, Get, Body, Req, Param } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Delete,
+  Get,
+  Body,
+  Req,
+  Param,
+} from '@nestjs/common';
 import { ParentChildService } from '../service/parent-child.service';
 
 @Controller('/private/v1/parent-child')

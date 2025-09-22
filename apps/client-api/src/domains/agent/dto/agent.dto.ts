@@ -11,7 +11,11 @@ export class AgentChatDto {
   @IsString()
   context?: string;
 
-  @ApiProperty({ description: 'Language code', required: false, enum: ['en', 'vi', 'es', 'fr'] })
+  @ApiProperty({
+    description: 'Language code',
+    required: false,
+    enum: ['en', 'vi', 'es', 'fr'],
+  })
   @IsOptional()
   @IsIn(['en', 'vi', 'es', 'fr'])
   language?: string;
@@ -36,7 +40,10 @@ export class AgentChatResponseDto {
   @ApiProperty({ description: 'Reasoning steps', required: false })
   reasoning?: string;
 
-  @ApiProperty({ description: 'Processing time in milliseconds', required: false })
+  @ApiProperty({
+    description: 'Processing time in milliseconds',
+    required: false,
+  })
   processingTime?: number;
 
   @ApiProperty({ description: 'Execution steps', required: false })

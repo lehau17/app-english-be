@@ -23,19 +23,25 @@ export interface SessionEstimate {
 export function calculateClassroomSchedule(
   periodStart: Date,
   periodEnd: Date,
-  slots: CreateClassroomSlotDto[]
+  slots: CreateClassroomSlotDto[],
 ): ScheduleCalculation {
   const sessions: SessionEstimate[] = [];
 
   // Convert Weekday enum to numbers (0=Sunday, 1=Monday, ..., 6=Saturday)
   const weekdayToNumber: Record<string, number> = {
-    sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6
+    sun: 0,
+    mon: 1,
+    tue: 2,
+    wed: 3,
+    thu: 4,
+    fri: 5,
+    sat: 6,
   };
 
   // Get slot days as numbers
-  const slotDays = slots.map(slot => ({
+  const slotDays = slots.map((slot) => ({
     dayNumber: weekdayToNumber[slot.dayOfWeek],
-    ...slot
+    ...slot,
   }));
 
   // Iterate through each day in the period
@@ -46,10 +52,13 @@ export function calculateClassroomSchedule(
     const currentDayOfWeek = currentDate.getDay(); // 0=Sunday, 1=Monday, etc.
 
     // Find matching slot for this day
-    const matchingSlot = slotDays.find(slot => slot.dayNumber === currentDayOfWeek);
+    const matchingSlot = slotDays.find(
+      (slot) => slot.dayNumber === currentDayOfWeek,
+    );
 
     if (matchingSlot) {
-      const durationMinutes = matchingSlot.endMinuteOfDay - matchingSlot.startMinuteOfDay;
+      const durationMinutes =
+        matchingSlot.endMinuteOfDay - matchingSlot.startMinuteOfDay;
       const durationHours = durationMinutes / 60;
 
       sessions.push({
@@ -57,7 +66,7 @@ export function calculateClassroomSchedule(
         dayOfWeek: matchingSlot.dayOfWeek as Weekday,
         startMinuteOfDay: matchingSlot.startMinuteOfDay,
         endMinuteOfDay: matchingSlot.endMinuteOfDay,
-        durationHours
+        durationHours,
       });
     }
 
@@ -67,12 +76,15 @@ export function calculateClassroomSchedule(
 
   // Calculate totals
   const plannedSessions = sessions.length;
-  const plannedHours = sessions.reduce((total, session) => total + session.durationHours, 0);
+  const plannedHours = sessions.reduce(
+    (total, session) => total + session.durationHours,
+    0,
+  );
 
   return {
     plannedSessions,
     plannedHours,
-    estimatedSessions: sessions
+    estimatedSessions: sessions,
   };
 }
 
@@ -89,7 +101,9 @@ export function minutesToTimeString(minutes: number): string {
  * Convert HH:MM time string to minutes from 00:00
  */
 export function timeStringToMinutes(timeString: string): number {
-  const [hours, minutes] = timeString.split(':').map(num => parseInt(num, 10));
+  const [hours, minutes] = timeString
+    .split(':')
+    .map((num) => parseInt(num, 10));
   return hours * 60 + minutes;
 }
 
@@ -100,7 +114,7 @@ export function generateClassroomSessions(
   classroomId: string,
   instructorId: string,
   calculation: ScheduleCalculation,
-  timezone: string = 'Asia/Ho_Chi_Minh'
+  timezone: string = 'Asia/Ho_Chi_Minh',
 ) {
   return calculation.estimatedSessions.map((session, index) => {
     // Create start and end DateTime by adding minutes to date
@@ -129,7 +143,7 @@ export function generateClassroomSessions(
       materials: null,
       homework: null,
       notes: null,
-      recordingUrl: null
+      recordingUrl: null,
     };
   });
 }

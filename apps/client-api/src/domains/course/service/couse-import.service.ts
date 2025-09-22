@@ -1,7 +1,16 @@
 // src/modules/courses/courses-import.service.ts
 import { PrismaRepository } from '@app/database';
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import { ActivityType, DifficultyLevel, LanguageCode, UserRole } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
+import {
+  ActivityType,
+  DifficultyLevel,
+  LanguageCode,
+  UserRole,
+} from '@prisma/client';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { GoogleTranslateFreeService } from '../../google-translate/google-translate.service';
@@ -13,10 +22,10 @@ type CourseMetaRow = {
   description?: string;
   orderNo?: number | string;
   difficulty?: string; // beginner...
-  language?: string;   // en/vi...
+  language?: string; // en/vi...
   price?: number | string;
   isPublished?: boolean | string;
-  tags?: string;       // tag1,tag2
+  tags?: string; // tag1,tag2
   imageUrl?: string;
   instructorId?: string;
 };
@@ -39,13 +48,13 @@ type CourseContentRow = {
   activityDifficulty?: string;
   points?: number | string;
   instructions?: string;
-  hints?: string;       // "h1|h2"
-  mediaUrls?: string;   // "u1,u2"
+  hints?: string; // "h1|h2"
+  mediaUrls?: string; // "u1,u2"
   contentJson?: string; // JSON ưu tiên
 
   // gợi ý theo type:
   question?: string;
-  options?: string;       // "A|B|C"
+  options?: string; // "A|B|C"
   correctIndex?: number | string;
   explanation?: string;
 
@@ -69,7 +78,7 @@ type CourseContentRow = {
 export class CoursesImportService {
   constructor(
     private readonly prisma: PrismaRepository,
-    private readonly googleTranslateFreeService: GoogleTranslateFreeService
+    private readonly googleTranslateFreeService: GoogleTranslateFreeService,
   ) {}
 
   async importFromExcel(dto: ImportCoursesDto) {
@@ -77,7 +86,9 @@ export class CoursesImportService {
 
     if (dto.url) {
       // Import từ URL
-      res = (await axios.get<ArrayBuffer>(dto.url, { responseType: 'arraybuffer' })).data;
+      res = (
+        await axios.get<ArrayBuffer>(dto.url, { responseType: 'arraybuffer' })
+      ).data;
     } else if ((dto as any).buffer) {
       // Import từ buffer (cho multiple files)
       res = (dto as any).buffer;
@@ -88,11 +99,17 @@ export class CoursesImportService {
     const wb = XLSX.read(Buffer.from(res), { type: 'buffer' });
     if (wb.SheetNames.length === 0) throw new BadRequestException('Excel rỗng');
 
-    const coursesSheet = wb.SheetNames.find((n) => n.toLowerCase() === 'courses');
+    const coursesSheet = wb.SheetNames.find(
+      (n) => n.toLowerCase() === 'courses',
+    );
     if (!coursesSheet) throw new BadRequestException('Thiếu sheet "Courses"');
 
-    const metaRows = XLSX.utils.sheet_to_json<CourseMetaRow>(wb.Sheets[coursesSheet], { defval: '' });
-    if (!metaRows.length) throw new BadRequestException('Sheet Courses không có dữ liệu');
+    const metaRows = XLSX.utils.sheet_to_json<CourseMetaRow>(
+      wb.Sheets[coursesSheet],
+      { defval: '' },
+    );
+    if (!metaRows.length)
+      throw new BadRequestException('Sheet Courses không có dữ liệu');
 
     const errors: string[] = [];
     const results: any[] = [];
@@ -103,7 +120,10 @@ export class CoursesImportService {
       if (!m.code) errors.push(`Courses row ${i + 2}: thiếu code`);
       if (!m.title) errors.push(`Courses row ${i + 2}: thiếu title`);
       const instructorId = m.instructorId || dto.defaultInstructorId;
-      if (!instructorId) errors.push(`Courses row ${i + 2}: thiếu instructorId (hoặc defaultInstructorId)`);
+      if (!instructorId)
+        errors.push(
+          `Courses row ${i + 2}: thiếu instructorId (hoặc defaultInstructorId)`,
+        );
 
       // Chỉ check role TEACHER nếu instructorId đến từ Excel file (không phải default)
       const isFromExcel = !!m.instructorId;
@@ -112,7 +132,11 @@ export class CoursesImportService {
         : null;
       if (instructorId && !instructor) {
         errors.push(`Courses row ${i + 2}: instructorId không hợp lệ`);
-      } else if (instructorId && isFromExcel && instructor.role !== UserRole.teacher) {
+      } else if (
+        instructorId &&
+        isFromExcel &&
+        instructor.role !== UserRole.teacher
+      ) {
         errors.push(`Courses row ${i + 2}: instructorId không phải TEACHER`);
       }
     }
@@ -123,9 +147,13 @@ export class CoursesImportService {
       const m = this.normalizeMeta(mRaw);
       const sheetName =
         wb.SheetNames.find((n) => n.trim() === m.code) ||
-        wb.SheetNames.find((n) => n.trim().toLowerCase() === `${m.code}`.toLowerCase());
+        wb.SheetNames.find(
+          (n) => n.trim().toLowerCase() === `${m.code}`.toLowerCase(),
+        );
       const rows: CourseContentRow[] = sheetName
-        ? XLSX.utils.sheet_to_json<CourseContentRow>(wb.Sheets[sheetName], { defval: '' })
+        ? XLSX.utils.sheet_to_json<CourseContentRow>(wb.Sheets[sheetName], {
+            defval: '',
+          })
         : [];
 
       const lessons = await this.rowsToLessons(rows);
@@ -145,9 +173,13 @@ export class CoursesImportService {
         actions.push(async () => {
           // business rule: orderNo unique (nếu có)
           if (m.orderNo != null) {
-            const same = await this.prisma.course.findFirst({ where: { orderNo: m.orderNo } });
+            const same = await this.prisma.course.findFirst({
+              where: { orderNo: m.orderNo },
+            });
             if (same && !(dto.upsert && dto.matchBy === 'orderNo')) {
-              throw new ConflictException(`orderNo ${m.orderNo} đã dùng cho khóa khác`);
+              throw new ConflictException(
+                `orderNo ${m.orderNo} đã dùng cho khóa khác`,
+              );
             }
           }
 
@@ -155,15 +187,21 @@ export class CoursesImportService {
           let existing = null as any;
           if (dto.upsert) {
             if (dto.matchBy === 'orderNo' && m.orderNo != null) {
-              existing = await this.prisma.course.findFirst({ where: { orderNo: m.orderNo } });
+              existing = await this.prisma.course.findFirst({
+                where: { orderNo: m.orderNo },
+              });
             } else {
-              existing = await this.prisma.course.findFirst({ where: { title: m.title } });
+              existing = await this.prisma.course.findFirst({
+                where: { title: m.title },
+              });
             }
           }
 
           if (existing) {
             // xoá lessons/activities cũ rồi tạo lại cho đơn giản (hoặc patch nếu muốn)
-            await this.prisma.lesson.deleteMany({ where: { courseId: existing.id } });
+            await this.prisma.lesson.deleteMany({
+              where: { courseId: existing.id },
+            });
 
             await this.prisma.course.update({
               where: { id: existing.id },
@@ -174,7 +212,9 @@ export class CoursesImportService {
                 difficulty: m.difficulty,
                 imageUrl: m.imageUrl,
                 tags: m.tags,
-                instructor: { connect: { id: m.instructorId || dto.defaultInstructorId! } },
+                instructor: {
+                  connect: { id: m.instructorId || dto.defaultInstructorId! },
+                },
                 price: m.price ?? 0,
                 language: m.language,
                 isPublished: dto.publish ?? m.isPublished ?? false,
@@ -220,7 +260,9 @@ export class CoursesImportService {
                 difficulty: m.difficulty,
                 imageUrl: m.imageUrl,
                 tags: m.tags,
-                instructor: { connect: { id: m.instructorId || dto.defaultInstructorId! } },
+                instructor: {
+                  connect: { id: m.instructorId || dto.defaultInstructorId! },
+                },
                 price: m.price ?? 0,
                 language: m.language,
                 isPublished: dto.publish ?? m.isPublished ?? false,
@@ -295,8 +337,12 @@ export class CoursesImportService {
   // ==== helpers ====
 
   private normalizeMeta(r: CourseMetaRow) {
-    const diffKey = (String(r.difficulty || 'beginner').trim().toLowerCase() as keyof typeof DifficultyLevel);
-    const langKey = (String(r.language || 'en').trim().toLowerCase() as keyof typeof LanguageCode);
+    const diffKey = String(r.difficulty || 'beginner')
+      .trim()
+      .toLowerCase() as keyof typeof DifficultyLevel;
+    const langKey = String(r.language || 'en')
+      .trim()
+      .toLowerCase() as keyof typeof LanguageCode;
     return {
       code: String(r.code || '').trim(),
       title: String(r.title || '').trim(),
@@ -320,8 +366,10 @@ export class CoursesImportService {
       .map((r) => ({
         lessonNo: this.numOrZero(r.lessonNo),
         lessonTitle: (r.lessonTitle ?? '').toString().trim(),
-        lessonDescription: (r.lessonDescription ?? '').toString().trim() || undefined,
-        lessonDifficulty: (r.lessonDifficulty ?? '').toString().toLowerCase() || 'beginner',
+        lessonDescription:
+          (r.lessonDescription ?? '').toString().trim() || undefined,
+        lessonDifficulty:
+          (r.lessonDifficulty ?? '').toString().toLowerCase() || 'beginner',
         lessonEstimatedTime: this.numOrUndef(r.lessonEstimatedTime),
         lessonIsLocked: this.boolOrUndef(r.lessonIsLocked) ?? true,
         lessonObjectives: this.splitList(r.lessonObjectives),
@@ -333,7 +381,8 @@ export class CoursesImportService {
         timeLimit: this.numOrUndef(r.timeLimit),
         maxAttempts: this.numOrUndef(r.maxAttempts),
         passingScore: this.numOrUndef(r.passingScore),
-        activityDifficulty: (r.activityDifficulty ?? '').toString().toLowerCase() || undefined,
+        activityDifficulty:
+          (r.activityDifficulty ?? '').toString().toLowerCase() || undefined,
         points: this.numOrUndef(r.points),
         instructions: (r.instructions ?? '').toString().trim() || undefined,
         hints: this.splitList(r.hints),
@@ -363,7 +412,7 @@ export class CoursesImportService {
         phrase: (r.phrase ?? '').toString().trim() || undefined,
         scenario: (r.scenario ?? '').toString().trim() || undefined,
       }))
-      .sort((a, b) => (a.lessonNo - b.lessonNo) || (a.activityNo - b.activityNo));
+      .sort((a, b) => a.lessonNo - b.lessonNo || a.activityNo - b.activityNo);
 
     // group -> lessons
     const lessons: Array<{
@@ -398,7 +447,10 @@ export class CoursesImportService {
           title: row.lessonTitle || `Lesson ${row.lessonNo}`,
           description: row.lessonDescription,
           orderNo: row.lessonNo,
-          difficulty: DifficultyLevel[(row.lessonDifficulty as keyof typeof DifficultyLevel)] ?? DifficultyLevel.beginner,
+          difficulty:
+            DifficultyLevel[
+              row.lessonDifficulty as keyof typeof DifficultyLevel
+            ] ?? DifficultyLevel.beginner,
           estimatedTime: row.lessonEstimatedTime,
           isLocked: row.lessonIsLocked,
           objectives: row.lessonObjectives,
@@ -422,7 +474,9 @@ export class CoursesImportService {
           maxAttempts: row.maxAttempts,
           passingScore: row.passingScore,
           difficulty: row.activityDifficulty
-            ? (DifficultyLevel[row.activityDifficulty as keyof typeof DifficultyLevel] ?? DifficultyLevel.beginner)
+            ? (DifficultyLevel[
+                row.activityDifficulty as keyof typeof DifficultyLevel
+              ] ?? DifficultyLevel.beginner)
             : undefined,
           points: row.points,
           instructions: row.instructions,
@@ -444,8 +498,8 @@ export class CoursesImportService {
       }
     } catch {}
 
-  const typeKey = String(type);
-  switch (typeKey) {
+    const typeKey = String(type);
+    switch (typeKey) {
       case ActivityType.quiz:
         return {
           question: r.question || '',
@@ -459,17 +513,35 @@ export class CoursesImportService {
         try {
           if (r.contentJson) {
             const parsed = JSON.parse(r.contentJson);
-            if (parsed && typeof parsed === 'object' && Array.isArray(parsed.items)) {
+            if (
+              parsed &&
+              typeof parsed === 'object' &&
+              Array.isArray(parsed.items)
+            ) {
               for (const it of parsed.items) {
-                it.examples = Array.isArray(it.examples) ? it.examples : (it.examples ? String(it.examples).split(/[|,]/).map(s => s.trim()).filter(Boolean) : []);
+                it.examples = Array.isArray(it.examples)
+                  ? it.examples
+                  : it.examples
+                    ? String(it.examples)
+                        .split(/[|,]/)
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+                    : [];
               }
               for (const it of parsed.items) {
                 if (!it.audioUrl && it.word) {
                   try {
-                    const { url } = await this.googleTranslateFreeService.createAudioWithUrl(it.word, 'en');
+                    const { url } =
+                      await this.googleTranslateFreeService.createAudioWithUrl(
+                        it.word,
+                        'en',
+                      );
                     it.audioUrl = url;
                   } catch (e) {
-                    console.error(`Failed to generate audio for vocab "${it.word}":`, e);
+                    console.error(
+                      `Failed to generate audio for vocab "${it.word}":`,
+                      e,
+                    );
                   }
                 }
               }
@@ -482,17 +554,33 @@ export class CoursesImportService {
 
         // If there is an `items` column (pipe-separated words), parse aligned columns
         if (r.items) {
-          const words = String(r.items || '').split(/\|/).map((s) => s.trim()).filter(Boolean);
-          const defs = String(r.items_definitions || '').split(/\|/).map((s) => s.trim());
-          const examplesGroups = String(r.items_examples || '').split(/\|/).map((s) => s.trim());
-          const images = String(r.items_imageUrls || '').split(/\|/).map((s) => s.trim());
-          const audios = String(r.items_audioUrls || '').split(/\|/).map((s) => s.trim());
+          const words = String(r.items || '')
+            .split(/\|/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const defs = String(r.items_definitions || '')
+            .split(/\|/)
+            .map((s) => s.trim());
+          const examplesGroups = String(r.items_examples || '')
+            .split(/\|/)
+            .map((s) => s.trim());
+          const images = String(r.items_imageUrls || '')
+            .split(/\|/)
+            .map((s) => s.trim());
+          const audios = String(r.items_audioUrls || '')
+            .split(/\|/)
+            .map((s) => s.trim());
 
           for (let i = 0; i < words.length; i++) {
             const word = words[i];
             const def = defs[i] || '';
             const examplesRaw = examplesGroups[i] || '';
-            const examples = examplesRaw ? String(examplesRaw).split(/\|\|/).map((x: string) => x.trim()).filter(Boolean) : [];
+            const examples = examplesRaw
+              ? String(examplesRaw)
+                  .split(/\|\|/)
+                  .map((x: string) => x.trim())
+                  .filter(Boolean)
+              : [];
             const imageUrl = images[i] || null;
             const audioUrl = audios[i] || null;
             items.push({ word, definition: def, examples, imageUrl, audioUrl });
@@ -502,12 +590,27 @@ export class CoursesImportService {
         // legacy single-word column (supports pipe-separated multiple words)
         if (!items.length && r.word) {
           if (typeof r.word === 'string' && r.word.includes('|')) {
-            const parts = String(r.word).split(/\|/).map((p) => p.trim()).filter(Boolean);
+            const parts = String(r.word)
+              .split(/\|/)
+              .map((p) => p.trim())
+              .filter(Boolean);
             for (const w of parts) {
-              items.push({ word: w, definition: r.definition || '', examples: r.examples?.length ? r.examples : [], imageUrl: r.imageUrl || null, audioUrl: null });
+              items.push({
+                word: w,
+                definition: r.definition || '',
+                examples: r.examples?.length ? r.examples : [],
+                imageUrl: r.imageUrl || null,
+                audioUrl: null,
+              });
             }
           } else {
-            items.push({ word: r.word || '', definition: r.definition || '', examples: r.examples?.length ? r.examples : [], imageUrl: r.imageUrl || null, audioUrl: r.audioUrl || null });
+            items.push({
+              word: r.word || '',
+              definition: r.definition || '',
+              examples: r.examples?.length ? r.examples : [],
+              imageUrl: r.imageUrl || null,
+              audioUrl: r.audioUrl || null,
+            });
           }
         }
 
@@ -515,10 +618,17 @@ export class CoursesImportService {
         for (const it of items) {
           if (!it.audioUrl && it.word) {
             try {
-              const { url } = await this.googleTranslateFreeService.createAudioWithUrl(it.word, 'en');
+              const { url } =
+                await this.googleTranslateFreeService.createAudioWithUrl(
+                  it.word,
+                  'en',
+                );
               it.audioUrl = url;
             } catch (e) {
-              console.error(`Failed to generate audio for vocab "${it.word}":`, e);
+              console.error(
+                `Failed to generate audio for vocab "${it.word}":`,
+                e,
+              );
             }
           }
         }
@@ -531,7 +641,7 @@ export class CoursesImportService {
           options: r.options?.length ? r.options : ['', ''],
           correctIndex: r.correctIndex ?? 0,
         };
-  case 'fill_blank':
+      case 'fill_blank':
         // Expect either contentJson with { passage, blanks } or columns: passage, blanks (pipe-separated)
         try {
           if (r.contentJson) {
@@ -542,9 +652,20 @@ export class CoursesImportService {
         return {
           passage: r.passage || r.question || r.prompt || '',
           // blanks: array of answers for the blanks in order. Accept pipe-separated 'blanks' column or 'answers'
-          blanks: (r.blanks && r.blanks.length) ? String(r.blanks).split(/[|,]/).map((s:any)=>s.trim()).filter(Boolean) : (r.answers && r.answers.length ? String(r.answers).split(/[|,]/).map((s:any)=>s.trim()).filter(Boolean) : []),
+          blanks:
+            r.blanks && r.blanks.length
+              ? String(r.blanks)
+                  .split(/[|,]/)
+                  .map((s: any) => s.trim())
+                  .filter(Boolean)
+              : r.answers && r.answers.length
+                ? String(r.answers)
+                    .split(/[|,]/)
+                    .map((s: any) => s.trim())
+                    .filter(Boolean)
+                : [],
         };
-  case 'dictation':
+      case 'dictation':
         // Simple dictation activity shape
         try {
           if (r.contentJson) {
@@ -557,7 +678,7 @@ export class CoursesImportService {
           transcript: r.passage || r.prompt || r.question || '',
           minWords: r.minWords ?? 0,
         };
-  case 'matching':
+      case 'matching':
         // Expect either contentJson with { pairs: [{left,right}, ...] } or leftItems/rightItems pipe-separated columns
         try {
           if (r.contentJson) {
@@ -567,74 +688,135 @@ export class CoursesImportService {
         } catch {}
         // try leftItems / rightItems
         if (r.leftItems || r.rightItems) {
-          const left = String(r.leftItems || '').split(/[|,]/).map((s) => s.trim()).filter(Boolean);
-          const right = String(r.rightItems || '').split(/[|,]/).map((s) => s.trim()).filter(Boolean);
+          const left = String(r.leftItems || '')
+            .split(/[|,]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+          const right = String(r.rightItems || '')
+            .split(/[|,]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
           const pairs: Array<{ left?: string; right?: string }> = [];
           const max = Math.max(left.length, right.length);
-          for (let i = 0; i < max; i++) pairs.push({ left: left[i] || '', right: right[i] || '' });
+          for (let i = 0; i < max; i++)
+            pairs.push({ left: left[i] || '', right: right[i] || '' });
           return { pairs };
         }
         // fallback: parse options as pairs separated by :: (e.g. "apple::táo|banana::chuối")
         if (r.options && typeof r.options === 'string') {
-          const parts = String(r.options).split(/[|]/).map((s) => s.trim()).filter(Boolean);
+          const parts = String(r.options)
+            .split(/[|]/)
+            .map((s) => s.trim())
+            .filter(Boolean);
           const pairs = parts.map((p) => {
-            const [l, rgt] = p.split(/::|:\s|--|->/).map((x:any) => String(x||'').trim());
+            const [l, rgt] = p
+              .split(/::|:\s|--|->/)
+              .map((x: any) => String(x || '').trim());
             return { left: l || '', right: rgt || '' };
           });
           return { pairs };
         }
         return { pairs: [] };
       case ActivityType.pronunciation:
-        return { phrase: r.phrase || '', tips: r.hints || [], sampleUrl: r.audioUrl || '' };
+        return {
+          phrase: r.phrase || '',
+          tips: r.hints || [],
+          sampleUrl: r.audioUrl || '',
+        };
       case ActivityType.speaking:
-        return { prompt: r.prompt || '', minSeconds: r.minSeconds ?? 15, tips: r.hints || [] };
+        return {
+          prompt: r.prompt || '',
+          minSeconds: r.minSeconds ?? 15,
+          tips: r.hints || [],
+        };
       case ActivityType.mini_game:
-        return { target: r.prompt || '', pool: r.options || [], rounds: r.points ?? 3 };
+        return {
+          target: r.prompt || '',
+          pool: r.options || [],
+          rounds: r.points ?? 3,
+        };
       case ActivityType.reading:
-        return { passage: r.passage || '', question: r.question || '', options: r.options || ['', ''], correctIndex: r.correctIndex ?? 0 };
+        return {
+          passage: r.passage || '',
+          question: r.question || '',
+          options: r.options || ['', ''],
+          correctIndex: r.correctIndex ?? 0,
+        };
       case ActivityType.writing:
-        return { prompt: r.prompt || '', minWords: r.minWords ?? 40, rubric: r.hints || [] };
+        return {
+          prompt: r.prompt || '',
+          minWords: r.minWords ?? 40,
+          rubric: r.hints || [],
+        };
       case ActivityType.grammar:
-        return { rule: r.rule || '', question: r.question || '', options: r.options || ['', ''], correctIndex: r.correctIndex ?? 0 };
+        return {
+          rule: r.rule || '',
+          question: r.question || '',
+          options: r.options || ['', ''],
+          correctIndex: r.correctIndex ?? 0,
+        };
       case ActivityType.flashcard:
-        return { cards: [{ front: r.word || '', back: r.definition || '', imageUrl: r.imageUrl || '' }] };
+        return {
+          cards: [
+            {
+              front: r.word || '',
+              back: r.definition || '',
+              imageUrl: r.imageUrl || '',
+            },
+          ],
+        };
       case ActivityType.conversation:
-        return { scenario: r.scenario || '', initialDialog: [{ role: 'assistant', text: r.prompt || '' }], suggestions: r.hints || [] };
+        return {
+          scenario: r.scenario || '',
+          initialDialog: [{ role: 'assistant', text: r.prompt || '' }],
+          suggestions: r.hints || [],
+        };
       default:
         return {};
     }
   }
 
-  private computeTotals(lessons: Array<{
-    title: string;
-    description?: string;
-    orderNo: number;
-    difficulty?: DifficultyLevel;
-    estimatedTime?: number;
-    isLocked?: boolean;
-    objectives?: string[];
-    activities: Array<{
-      type: ActivityType;
-      orderNo: number;
+  private computeTotals(
+    lessons: Array<{
       title: string;
-      content: any;
-      timeLimit?: number;
-      maxAttempts?: number;
-      passingScore?: number;
+      description?: string;
+      orderNo: number;
       difficulty?: DifficultyLevel;
-      points?: number;
-      instructions?: string;
-      hints?: string[];
-      mediaUrls?: string[];
-    }>;
-  }>) {
-    const estimatedTime = lessons.reduce((s, l) => s + (l.estimatedTime ?? 0), 0);
+      estimatedTime?: number;
+      isLocked?: boolean;
+      objectives?: string[];
+      activities: Array<{
+        type: ActivityType;
+        orderNo: number;
+        title: string;
+        content: any;
+        timeLimit?: number;
+        maxAttempts?: number;
+        passingScore?: number;
+        difficulty?: DifficultyLevel;
+        points?: number;
+        instructions?: string;
+        hints?: string[];
+        mediaUrls?: string[];
+      }>;
+    }>,
+  ) {
+    const estimatedTime = lessons.reduce(
+      (s, l) => s + (l.estimatedTime ?? 0),
+      0,
+    );
     const activities = lessons.reduce((s, l) => s + l.activities.length, 0);
     return { estimatedTime, activities };
   }
 
-  private numOrUndef(v: any) { const n = Number(String(v).trim()); return Number.isFinite(n) ? n : undefined; }
-  private numOrZero(v: any) { const n = Number(String(v).trim()); return Number.isFinite(n) ? n : 0; }
+  private numOrUndef(v: any) {
+    const n = Number(String(v).trim());
+    return Number.isFinite(n) ? n : undefined;
+  }
+  private numOrZero(v: any) {
+    const n = Number(String(v).trim());
+    return Number.isFinite(n) ? n : 0;
+  }
   private boolOrUndef(v: any) {
     if (v === true || v === false) return v;
     const s = String(v).trim().toLowerCase();
@@ -651,32 +833,35 @@ export class CoursesImportService {
 
   // Normalize various human-friendly activity type strings from Excel into keys matching ActivityType
   private normalizeActivityKey(raw: string) {
-    const s = String(raw || '').trim().toLowerCase().replace(/[_\s]+/g, '_');
+    const s = String(raw || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[_\s]+/g, '_');
     // common aliases mapping
     const map: Record<string, string> = {
-      'fill_blank': 'fill_blank',
-      'fillinblank': 'fill_blank',
-      'fill_in_blank': 'fill_blank',
+      fill_blank: 'fill_blank',
+      fillinblank: 'fill_blank',
+      fill_in_blank: 'fill_blank',
       'fill in the blank': 'fill_blank',
       'fill in blanks': 'fill_blank',
-      'fill_in_blanks': 'fill_blank',
-      'dictation': 'dictation',
-      'dictate': 'dictation',
-      'matching': 'matching',
-      'match': 'matching',
-      'matchings': 'matching',
+      fill_in_blanks: 'fill_blank',
+      dictation: 'dictation',
+      dictate: 'dictation',
+      matching: 'matching',
+      match: 'matching',
+      matchings: 'matching',
       // keep known types as-is
-      'quiz': 'quiz',
-      'vocab': 'vocab',
-      'listening': 'listening',
-      'pronunciation': 'pronunciation',
-      'speaking': 'speaking',
-      'mini_game': 'mini_game',
-      'reading': 'reading',
-      'writing': 'writing',
-      'grammar': 'grammar',
-      'flashcard': 'flashcard',
-      'conversation': 'conversation',
+      quiz: 'quiz',
+      vocab: 'vocab',
+      listening: 'listening',
+      pronunciation: 'pronunciation',
+      speaking: 'speaking',
+      mini_game: 'mini_game',
+      reading: 'reading',
+      writing: 'writing',
+      grammar: 'grammar',
+      flashcard: 'flashcard',
+      conversation: 'conversation',
     };
     // try direct match
     if (map[s]) return map[s];
@@ -690,7 +875,10 @@ export class CoursesImportService {
   /**
    * Import nhiều file Excel cùng lúc
    */
-  async importMultipleExcels(files: Express.Multer.File[], dto: Partial<ImportCoursesDto>) {
+  async importMultipleExcels(
+    files: Express.Multer.File[],
+    dto: Partial<ImportCoursesDto>,
+  ) {
     if (!files || files.length === 0) {
       throw new BadRequestException('Không có file nào được upload');
     }
@@ -703,8 +891,13 @@ export class CoursesImportService {
     const results: any[] = [];
     for (const file of files) {
       // Validate file type
-      if (!file.originalname.endsWith('.xlsx') && !file.originalname.endsWith('.xls')) {
-        throw new BadRequestException(`File ${file.originalname}: Chỉ hỗ trợ file .xlsx hoặc .xls`);
+      if (
+        !file.originalname.endsWith('.xlsx') &&
+        !file.originalname.endsWith('.xls')
+      ) {
+        throw new BadRequestException(
+          `File ${file.originalname}: Chỉ hỗ trợ file .xlsx hoặc .xls`,
+        );
       }
 
       try {
@@ -719,7 +912,9 @@ export class CoursesImportService {
         });
       } catch (error) {
         // Immediately throw BadRequestException with the underlying error message
-        throw new BadRequestException(`File ${file.originalname}: ${error.message || 'Lỗi không xác định'}`);
+        throw new BadRequestException(
+          `File ${file.originalname}: ${error.message || 'Lỗi không xác định'}`,
+        );
       }
     }
 

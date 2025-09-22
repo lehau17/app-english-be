@@ -1,10 +1,19 @@
 import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { CreatePodcastDto, GetPodcastsQueryDto, UpdatePodcastDto } from '../dto/podcast.dto';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  CreatePodcastDto,
+  GetPodcastsQueryDto,
+  UpdatePodcastDto,
+} from '../dto/podcast.dto';
 import {
   CreateRatingDto,
-  GetRatingsQueryDto
+  GetRatingsQueryDto,
 } from '../dto/user-interaction.dto';
 
 @Injectable()
@@ -30,8 +39,7 @@ export class PodcastService {
     } = query;
 
     const skip = (page - 1) * limit;
-    const where: any = {
-    };
+    const where: any = {};
 
     // Search
     if (search) {
@@ -138,7 +146,7 @@ export class PodcastService {
       ...podcast,
     }));
 
-  return PageResponseDto.of(transformedPodcasts as any, page, limit, total);
+    return PageResponseDto.of(transformedPodcasts as any, page, limit, total);
   }
 
   async getPodcastById(id: string) {
@@ -152,7 +160,8 @@ export class PodcastService {
 
   async createPodcast(dto: CreatePodcastDto, authorId: string) {
     // Generate code from title
-    const code = dto.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now();
+    const code =
+      dto.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now();
 
     // Create base podcast data
     const podcastData = {
@@ -188,7 +197,7 @@ export class PodcastService {
       },
       include: {
         gaps: true,
-        author: { select: { id: true, firstName: true, lastName: true } }
+        author: { select: { id: true, firstName: true, lastName: true } },
       },
     });
   }
@@ -200,10 +209,15 @@ export class PodcastService {
     startIndex: number;
     endIndex: number;
   }> {
-    const blanks: Array<{ sentence: string; word: string; startIndex: number; endIndex: number }> = [];
+    const blanks: Array<{
+      sentence: string;
+      word: string;
+      startIndex: number;
+      endIndex: number;
+    }> = [];
     const regex = /\[([^\]]+)\]/g;
     let match;
-    let currentIndex = 0;
+    const currentIndex = 0;
 
     // Process entire content to find [word] patterns
     const processedContent = content;
@@ -218,21 +232,33 @@ export class PodcastService {
       const afterMatch = processedContent.substring(matchEnd);
 
       // Simple sentence extraction (could be improved)
-      const sentenceStart = Math.max(
-        beforeMatch.lastIndexOf('.'),
-        beforeMatch.lastIndexOf('!'),
-        beforeMatch.lastIndexOf('?')
-      ) + 1;
+      const sentenceStart =
+        Math.max(
+          beforeMatch.lastIndexOf('.'),
+          beforeMatch.lastIndexOf('!'),
+          beforeMatch.lastIndexOf('?'),
+        ) + 1;
 
       const nextSentenceEnd = Math.min(
-        afterMatch.indexOf('.') !== -1 ? afterMatch.indexOf('.') + matchEnd : Infinity,
-        afterMatch.indexOf('!') !== -1 ? afterMatch.indexOf('!') + matchEnd : Infinity,
-        afterMatch.indexOf('?') !== -1 ? afterMatch.indexOf('?') + matchEnd : Infinity
+        afterMatch.indexOf('.') !== -1
+          ? afterMatch.indexOf('.') + matchEnd
+          : Infinity,
+        afterMatch.indexOf('!') !== -1
+          ? afterMatch.indexOf('!') + matchEnd
+          : Infinity,
+        afterMatch.indexOf('?') !== -1
+          ? afterMatch.indexOf('?') + matchEnd
+          : Infinity,
       );
 
-      const sentenceEnd = nextSentenceEnd === Infinity ? processedContent.length : nextSentenceEnd + 1;
+      const sentenceEnd =
+        nextSentenceEnd === Infinity
+          ? processedContent.length
+          : nextSentenceEnd + 1;
 
-      const fullSentence = processedContent.substring(sentenceStart, sentenceEnd).trim();
+      const fullSentence = processedContent
+        .substring(sentenceStart, sentenceEnd)
+        .trim();
       const sentenceWithBlank = fullSentence.replace(`[${word}]`, '___');
 
       blanks.push({
@@ -246,7 +272,7 @@ export class PodcastService {
     return blanks;
   }
 
-  async update(id: string, updatePodcastDto: UpdatePodcastDto, userId: string){
+  async update(id: string, updatePodcastDto: UpdatePodcastDto, userId: string) {
     const podcast = await this.prisma.podcast.findUnique({
       where: { id },
     });
@@ -264,7 +290,7 @@ export class PodcastService {
       data: updatePodcastDto,
     });
 
-    return updatedPodcast
+    return updatedPodcast;
   }
 
   async remove(id: string, userId: string): Promise<void> {
@@ -285,11 +311,11 @@ export class PodcastService {
     });
   }
 
-
-
-
-
-  async createRating(podcastId: string, userId: string, createRatingDto: CreateRatingDto) {
+  async createRating(
+    podcastId: string,
+    userId: string,
+    createRatingDto: CreateRatingDto,
+  ) {
     const podcast = await this.prisma.podcast.findUnique({
       where: { id: podcastId },
     });
@@ -385,7 +411,7 @@ export class PodcastService {
       this.prisma.podcastRating.count({ where: { podcastId } }),
     ]);
 
-  return PageResponseDto.of(ratings as any, page, limit, total);
+    return PageResponseDto.of(ratings as any, page, limit, total);
   }
 
   private async updatePodcastRatingsCache(podcastId: string) {
@@ -412,83 +438,79 @@ export class PodcastService {
     });
   }
 
-
-
-   async startPodcastAttempt(podcastId: string, userId: string) {
-  const podcast = await this.prisma.podcast.findUnique({
-    where: { id: podcastId },
-    include: { gaps: { orderBy: { orderNo: 'asc' } } },
-  });
-
-  if (!podcast) {
-    throw new NotFoundException('Podcast not found');
-  }
-
-  // Mask transcript
-  let transcriptMasked = podcast.transcript;
-  podcast.gaps.forEach((gap) => {
-    const hidden = '_'.repeat(gap.answer.length);
-    transcriptMasked =
-      transcriptMasked.substring(0, gap.startIndex) +
-      hidden +
-      transcriptMasked.substring(gap.endIndex);
-  });
-
-  let attempt = await this.prisma.podcastAttempt.findFirst({
-    where: { podcastId, userId, status: 'in_progress' },
-    orderBy: { createdAt: 'desc' },
-  });
-
-  if (!attempt) {
-    const lastAttempt = await this.prisma.podcastAttempt.findFirst({
-      where: { podcastId, userId },
-      orderBy: { attemptNo: 'desc' },
+  async startPodcastAttempt(podcastId: string, userId: string) {
+    const podcast = await this.prisma.podcast.findUnique({
+      where: { id: podcastId },
+      include: { gaps: { orderBy: { orderNo: 'asc' } } },
     });
 
-    const nextAttemptNo = lastAttempt ? lastAttempt.attemptNo + 1 : 1;
+    if (!podcast) {
+      throw new NotFoundException('Podcast not found');
+    }
 
-    attempt = await this.prisma.podcastAttempt.create({
-      data: {
-        podcast: {
-          connect: { id: podcastId },
+    // Mask transcript
+    let transcriptMasked = podcast.transcript;
+    podcast.gaps.forEach((gap) => {
+      const hidden = '_'.repeat(gap.answer.length);
+      transcriptMasked =
+        transcriptMasked.substring(0, gap.startIndex) +
+        hidden +
+        transcriptMasked.substring(gap.endIndex);
+    });
+
+    let attempt = await this.prisma.podcastAttempt.findFirst({
+      where: { podcastId, userId, status: 'in_progress' },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!attempt) {
+      const lastAttempt = await this.prisma.podcastAttempt.findFirst({
+        where: { podcastId, userId },
+        orderBy: { attemptNo: 'desc' },
+      });
+
+      const nextAttemptNo = lastAttempt ? lastAttempt.attemptNo + 1 : 1;
+
+      attempt = await this.prisma.podcastAttempt.create({
+        data: {
+          podcast: {
+            connect: { id: podcastId },
+          },
+          user: {
+            connect: { id: userId },
+          },
+          attemptNo: nextAttemptNo,
+          status: 'in_progress',
+          answers: [],
         },
-        user: {
-          connect: { id: userId },
-        },
-        attemptNo: nextAttemptNo,
-        status: 'in_progress',
-        answers: []
+      });
+    }
+
+    return {
+      podcastId: podcast.id,
+      title: podcast.title,
+      transcriptMasked,
+      gaps: podcast.gaps.map((g) => ({
+        id: g.id,
+        orderNo: g.orderNo,
+        startIndex: g.startIndex,
+        endIndex: g.endIndex,
+        length: g.answer.length,
+      })),
+      attemptId: attempt.id,
+      attemptNo: attempt.attemptNo,
+      timeSpent: attempt.timeSpent || 0,
+      answers: attempt.answers,
+      status: attempt.status,
+      metadata: {
+        duration: podcast.duration,
+        difficulty: podcast.difficulty,
+        authorId: podcast.authorId,
       },
-    });
+    };
   }
 
-  return {
-    podcastId: podcast.id,
-    title: podcast.title,
-    transcriptMasked,
-    gaps: podcast.gaps.map((g) => ({
-      id: g.id,
-      orderNo: g.orderNo,
-      startIndex: g.startIndex,
-      endIndex: g.endIndex,
-      length : g.answer.length,
-    })),
-    attemptId: attempt.id,
-    attemptNo: attempt.attemptNo,
-    timeSpent: attempt.timeSpent || 0,
-    answers: attempt.answers,
-    status: attempt.status,
-    metadata: {
-      duration: podcast.duration,
-      difficulty: podcast.difficulty,
-      authorId: podcast.authorId,
-    },
-  };
-}
-
-
-
-async submitPodcastAttempt(
+  async submitPodcastAttempt(
     podcastId: string,
     attemptId: string,
     answers: Record<string, string>, // { gapId: answer }
@@ -555,14 +577,16 @@ async submitPodcastAttempt(
     if (!attempt) throw new NotFoundException('Attempt not found');
 
     if (attempt.status !== 'in_progress') {
-      throw new BadRequestException('Cannot save draft for a submitted/completed attempt');
+      throw new BadRequestException(
+        'Cannot save draft for a submitted/completed attempt',
+      );
     }
 
     const updated = await this.prisma.podcastAttempt.update({
       where: { id: attemptId },
       data: {
         answers,
-        timeSpent: timeSpent
+        timeSpent: timeSpent,
       },
     });
 
@@ -574,8 +598,7 @@ async submitPodcastAttempt(
     };
   }
 
-
-   async getPodcastAttempts(podcastId: string, userId: string) {
+  async getPodcastAttempts(podcastId: string, userId: string) {
     const podcast = await this.prisma.podcast.findUnique({
       where: { id: podcastId },
     });
@@ -598,5 +621,4 @@ async submitPodcastAttempt(
       answers: a.answers,
     }));
   }
-
 }

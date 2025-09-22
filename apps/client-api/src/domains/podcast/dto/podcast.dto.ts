@@ -1,6 +1,11 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PodcastCategory, PodcastDifficulty, PodcastSource, PodcastStatus } from '@prisma/client';
+import {
+  PodcastCategory,
+  PodcastDifficulty,
+  PodcastSource,
+  PodcastStatus,
+} from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -13,11 +18,14 @@ import {
   IsString,
   IsUrl,
   Min,
-  ValidateNested
+  ValidateNested,
 } from 'class-validator';
 
 export class GetPodcastsQueryDto extends RequestPagingDto {
-  @ApiPropertyOptional({ enum: PodcastCategory, description: 'Filter by category' })
+  @ApiPropertyOptional({
+    enum: PodcastCategory,
+    description: 'Filter by category',
+  })
   @IsOptional()
   @IsEnum(PodcastCategory)
   category?: PodcastCategory;
@@ -27,12 +35,17 @@ export class GetPodcastsQueryDto extends RequestPagingDto {
   @IsEnum(PodcastSource)
   source?: PodcastSource;
 
-  @ApiPropertyOptional({ enum: PodcastDifficulty, description: 'Filter by difficulty' })
+  @ApiPropertyOptional({
+    enum: PodcastDifficulty,
+    description: 'Filter by difficulty',
+  })
   @IsOptional()
   @IsEnum(PodcastDifficulty)
   difficulty?: PodcastDifficulty;
 
-  @ApiPropertyOptional({ description: 'Filter by duration range (short|medium|long)' })
+  @ApiPropertyOptional({
+    description: 'Filter by duration range (short|medium|long)',
+  })
   @IsOptional()
   @IsString()
   duration?: 'short' | 'medium' | 'long';
@@ -49,7 +62,10 @@ export class GetPodcastsQueryDto extends RequestPagingDto {
   @IsBoolean()
   premium?: boolean;
 
-  @ApiPropertyOptional({ description: 'Filter by user tab', enum: ['all', 'recommended', 'listening', 'completed'] })
+  @ApiPropertyOptional({
+    description: 'Filter by user tab',
+    enum: ['all', 'recommended', 'listening', 'completed'],
+  })
   @IsOptional()
   @IsString()
   tab?: 'all' | 'recommended' | 'listening' | 'completed';
@@ -83,7 +99,10 @@ export class CreatePodcastDto {
   @IsString()
   description: string;
 
-  @ApiProperty({ description: 'Nội dung podcast - transcript cho upload hoặc text cho generate' })
+  @ApiProperty({
+    description:
+      'Nội dung podcast - transcript cho upload hoặc text cho generate',
+  })
   @IsString()
   content: string;
 
@@ -123,7 +142,10 @@ export class CreatePodcastDto {
   @IsInt()
   duration?: number;
 
-  @ApiPropertyOptional({ description: 'Gaps cho fill-in-the-blank (tùy chọn, sẽ auto-generate từ content nếu có [word])' })
+  @ApiPropertyOptional({
+    description:
+      'Gaps cho fill-in-the-blank (tùy chọn, sẽ auto-generate từ content nếu có [word])',
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreatePodcastGapDto)

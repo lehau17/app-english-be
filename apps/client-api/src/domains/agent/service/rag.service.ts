@@ -49,7 +49,9 @@ export class RagService {
         doc.id,
       );
     } catch (e) {
-      this.logger.warn(`Không thể lưu embedding_vector (pgvector) cho doc ${doc.id}: ${(e as any)?.message}`);
+      this.logger.warn(
+        `Không thể lưu embedding_vector (pgvector) cho doc ${doc.id}: ${(e as any)?.message}`,
+      );
     }
     this.logger.log(`✅ Đã lưu tài liệu ID: ${doc.id}`);
     return doc;
@@ -130,7 +132,10 @@ YÊU CẦU:
       return normalized;
     } catch (e) {
       // Fallback: nếu có lỗi (ví dụ pgvector chưa có), dùng cách cũ
-      this.logger.warn('ANN query failed, falling back to in-memory similarity: ' + (e as any)?.message);
+      this.logger.warn(
+        'ANN query failed, falling back to in-memory similarity: ' +
+          (e as any)?.message,
+      );
       const allDocs = await this.prisma.knowledgeDocument.findMany();
       const scored = allDocs.map((d) => {
         const emb = d.embedding ? (JSON.parse(d.embedding) as number[]) : [];

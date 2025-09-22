@@ -73,8 +73,4 @@ export class PodcastRatingResponseDto {
   createdAt: Date;
 }
 
-
-
-export class FilterPodcastQueryDto extends RequestPagingDto {
-
-}
+export class FilterPodcastQueryDto extends RequestPagingDto {}
