@@ -13,36 +13,52 @@ import {
   IsString,
   IsUUID,
   Max,
-  Min
+  Min,
 } from 'class-validator';
 import { CreateActivityDto } from '../../activity/dto/activity.dto';
 
 export class CreateLessonDto {
-  @ApiProperty() @IsString()
+  @ApiProperty()
+  @IsString()
   title!: string;
 
-  @ApiPropertyOptional() @IsOptional() @IsString()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
   description?: string;
 
-  @ApiProperty() @IsInt() @Min(1) @Type(() => Number)
+  @ApiProperty()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
   orderNo!: number;
 
   @ApiPropertyOptional({ enum: DifficultyLevel })
-  @IsOptional() @IsEnum(DifficultyLevel)
+  @IsOptional()
+  @IsEnum(DifficultyLevel)
   difficulty?: DifficultyLevel;
 
-  @ApiPropertyOptional() @IsOptional() @IsInt() @Type(() => Number)
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Type(() => Number)
   estimatedTime?: number; // minutes
 
-  @ApiPropertyOptional() @IsOptional() @IsBoolean()
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
   isLocked?: boolean;
 
   @ApiPropertyOptional({ type: [String] })
-  @IsOptional() @IsArray() @IsString({ each: true })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   objectives?: string[];
 
   @ApiProperty({ type: () => [CreateActivityDto] })
-  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100)
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
   @Type(() => CreateActivityDto)
   activities!: CreateActivityDto[];
 }

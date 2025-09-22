@@ -1,23 +1,27 @@
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Classroom, Prisma, UserRole } from '@prisma/client';
 import { JwtPayload } from '@app/shared';
 import * as bcrypt from 'bcrypt';
 import { Readable } from 'stream';
 import * as XLSX from 'xlsx';
 import {
-    AddStudentToClassroomDto,
-    AssignTeacherToClassroomDto,
-    ClassroomAnnouncementQueryDto,
-    CreateClassroomDto,
-    FilterClassroomRequestDto,
-    ImportStudentsResultDto,
-    UpdateClassroomDto
+  AddStudentToClassroomDto,
+  AssignTeacherToClassroomDto,
+  ClassroomAnnouncementQueryDto,
+  CreateClassroomDto,
+  FilterClassroomRequestDto,
+  ImportStudentsResultDto,
+  UpdateClassroomDto,
 } from '../dto/classroom.dto';
 import { ClassroomRepository } from '../repository/classroom.repository';
 import {
-    generateClassCode,
-    getCsvTransformStream,
+  generateClassCode,
+  getCsvTransformStream,
 } from '../utils/classroom.util';
 
 @Injectable()
@@ -131,7 +135,9 @@ export class ClassroomService {
         user.sub,
       );
       if (!allowed) {
-        throw new ForbiddenException('You do not have access to this classroom');
+        throw new ForbiddenException(
+          'You do not have access to this classroom',
+        );
       }
     } else if (user.role === UserRole.student) {
       const allowed = await this.classroomRepository.isStudentInClassroom(
@@ -139,7 +145,9 @@ export class ClassroomService {
         user.sub,
       );
       if (!allowed) {
-        throw new ForbiddenException('You do not have access to this classroom');
+        throw new ForbiddenException(
+          'You do not have access to this classroom',
+        );
       }
     } else {
       throw new ForbiddenException('You do not have access to this classroom');
@@ -211,23 +219,30 @@ export class ClassroomService {
         // Validate required fields
         const email = row['Email'] || row['email'];
         const phone = row['Phone'] || row['phone'];
-        const firstName = row['First Name'] || row['firstName'] || row['FirstName'];
+        const firstName =
+          row['First Name'] || row['firstName'] || row['FirstName'];
         const lastName = row['Last Name'] || row['lastName'] || row['LastName'];
-        const displayName = row['Display Name'] || row['displayName'] || row['DisplayName'] || `${firstName} ${lastName}`;
+        const displayName =
+          row['Display Name'] ||
+          row['displayName'] ||
+          row['DisplayName'] ||
+          `${firstName} ${lastName}`;
         const gender = row['Gender'] || row['gender'];
 
         if (!email || !phone || !firstName || !lastName) {
           result.errors.push({
             row: rowNumber,
             email: email || 'N/A',
-            error: 'Missing required fields: Email, Phone, First Name, Last Name',
+            error:
+              'Missing required fields: Email, Phone, First Name, Last Name',
           });
           result.failedImports++;
           continue;
         }
 
         // Check if student already exists by email
-        let existingStudent = await this.classroomRepository.findStudentByEmail(email);
+        const existingStudent =
+          await this.classroomRepository.findStudentByEmail(email);
 
         if (existingStudent) {
           // Student exists, add to existing list
@@ -248,7 +263,12 @@ export class ClassroomService {
             firstName,
             lastName,
             displayName,
-            gender: gender === 'male' ? 'male' : gender === 'female' ? 'female' : 'other',
+            gender:
+              gender === 'male'
+                ? 'male'
+                : gender === 'female'
+                  ? 'female'
+                  : 'other',
             passwordHash,
             role: 'student',
             language: 'vi',

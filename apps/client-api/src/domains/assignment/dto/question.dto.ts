@@ -1,6 +1,14 @@
 // src/assignments/dto/question.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export enum QuestionTypeDto {
   MULTIPLE_CHOICE = 'multiple_choice',
@@ -14,7 +22,9 @@ export enum QuestionTypeDto {
 
 export class BaseQuestionDto {
   @ApiProperty() @IsString() id!: string;
-  @ApiProperty({ enum: QuestionTypeDto }) @IsEnum(QuestionTypeDto) type!: QuestionTypeDto;
+  @ApiProperty({ enum: QuestionTypeDto })
+  @IsEnum(QuestionTypeDto)
+  type!: QuestionTypeDto;
   @ApiProperty() @IsInt() @Min(1) orderNo!: number;
   @ApiProperty() @IsInt() @Min(0) points!: number;
   @ApiProperty() @IsString() prompt!: string;
@@ -33,17 +43,22 @@ export class FillBlankQuestionDto extends BaseQuestionDto {
 }
 export class MatchingQuestionDto extends BaseQuestionDto {
   @ApiProperty({ type: [Object] })
-  @IsArray() left!: { id: string; text: string }[];
+  @IsArray()
+  left!: { id: string; text: string }[];
   @ApiProperty({ type: [Object] })
-  @IsArray() right!: { id: string; text: string }[];
+  @IsArray()
+  right!: { id: string; text: string }[];
   @ApiProperty({ type: [Object] })
-  @IsArray() solution!: { leftId: string; rightId: string }[];
+  @IsArray()
+  solution!: { leftId: string; rightId: string }[];
 }
 export class OrderingQuestionDto extends BaseQuestionDto {
   @ApiProperty({ type: [Object] })
-  @IsArray() items!: { id: string; text: string }[];
+  @IsArray()
+  items!: { id: string; text: string }[];
   @ApiProperty({ type: [String] })
-  @IsArray() correctOrder!: string[];
+  @IsArray()
+  correctOrder!: string[];
 }
 export class EssayQuestionDto extends BaseQuestionDto {
   @ApiPropertyOptional() @IsString() @IsOptional() rubric?: string;

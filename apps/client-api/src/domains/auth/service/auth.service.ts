@@ -6,7 +6,13 @@ import {
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { ChangePasswordDto, LoginDto, LogoutDto, RefreshTokenDto, RegisterDto } from '../dto';
+import {
+  ChangePasswordDto,
+  LoginDto,
+  LogoutDto,
+  RefreshTokenDto,
+  RegisterDto,
+} from '../dto';
 import { AuthRepository } from '../repository';
 
 @Injectable()
@@ -71,7 +77,7 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email ?? undefined,
-      role: user.role
+      role: user.role,
     };
 
     const token = await this.tokenRepository.generateToken(payload);
@@ -182,7 +188,6 @@ export class AuthService {
 
   async me(userId: string) {
     const user = await this.authRepository.findById(userId);
-
 
     return {
       ...user,

@@ -2,15 +2,15 @@ import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-    IsArray,
-    IsBoolean,
-    IsEnum,
-    IsNumber,
-    IsObject,
-    IsOptional,
-    IsString,
-    Min,
-    ValidateNested,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  Min,
+  ValidateNested,
 } from 'class-validator';
 import { ListeningActivityType } from '../entities/podcast-activity.entity';
 
@@ -39,7 +39,10 @@ class FillBlankContentDto {
   @Min(1)
   totalQuestions: number;
 
-  @ApiProperty({ description: 'Fill blank questions', type: [FillBlankQuestionDto] })
+  @ApiProperty({
+    description: 'Fill blank questions',
+    type: [FillBlankQuestionDto],
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => FillBlankQuestionDto)
@@ -131,7 +134,10 @@ export class UpdateActivityDto {
 }
 
 export class SubmitAttemptDto {
-  @ApiProperty({ description: 'User answers for each question', type: 'object' })
+  @ApiProperty({
+    description: 'User answers for each question',
+    type: 'object',
+  })
   @IsObject()
   answers: Record<string, string>; // questionId -> userAnswer
 
@@ -143,7 +149,10 @@ export class SubmitAttemptDto {
 }
 
 export class GetActivitiesQueryDto {
-  @ApiPropertyOptional({ description: 'Show only active activities', default: true })
+  @ApiPropertyOptional({
+    description: 'Show only active activities',
+    default: true,
+  })
   @IsOptional()
   @Type(() => Boolean)
   @IsBoolean()

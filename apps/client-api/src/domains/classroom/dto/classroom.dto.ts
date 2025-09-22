@@ -2,16 +2,16 @@ import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-    IsArray,
-    IsBoolean,
-    IsDate,
-    IsInt,
-    IsNotEmpty,
-    IsNumber,
-    IsOptional,
-    IsString,
-    IsUUID,
-    Min,
+  IsArray,
+  IsBoolean,
+  IsDate,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
 } from 'class-validator';
 
 export class CreateClassroomDto {
@@ -139,7 +139,11 @@ export class ImportStudentFromExcelDto {
   @IsUUID()
   classroomId: string;
 
-  @ApiProperty({ type: 'string', format: 'binary', description: 'Excel file containing student data' })
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'Excel file containing student data',
+  })
   file: Express.Multer.File;
 }
 

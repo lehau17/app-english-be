@@ -20,12 +20,8 @@ import { TextToPodcastService } from './service/text-to-podcast.service';
     PodcastService,
     PlaylistService,
     TextToPodcastService,
-    UploadService
+    UploadService,
   ],
-  exports: [
-    PodcastService,
-    PlaylistService,
-    TextToPodcastService,
-  ],
+  exports: [PodcastService, PlaylistService, TextToPodcastService],
 })
 export class PodcastModule {}

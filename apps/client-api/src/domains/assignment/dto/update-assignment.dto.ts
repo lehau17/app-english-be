@@ -1,5 +1,5 @@
-import { ApiPropertyOptional } from '@nestjs/swagger'
-import { Transform, Type } from 'class-transformer'
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -10,8 +10,8 @@ import {
   IsString,
   Min,
   ValidateNested,
-} from 'class-validator'
-import { AssignmentActivityDto } from './create-assignment.dto'
+} from 'class-validator';
+import { AssignmentActivityDto } from './create-assignment.dto';
 
 export class UpdateAssignmentDto {
   @ApiPropertyOptional({ description: 'Assignment title' })
@@ -29,7 +29,10 @@ export class UpdateAssignmentDto {
   @IsOptional()
   instructions?: string;
 
-  @ApiPropertyOptional({ description: 'Due date for assignment', example: '2024-12-31T17:00:00Z' })
+  @ApiPropertyOptional({
+    description: 'Due date for assignment',
+    example: '2024-12-31T17:00:00Z',
+  })
   @IsDateString()
   @IsOptional()
   dueDate?: string;
@@ -61,13 +64,19 @@ export class UpdateAssignmentDto {
   @Transform(({ value }) => value === 'true' || value === true)
   isPublished?: boolean;
 
-  @ApiPropertyOptional({ description: 'Assign to specific students (user IDs)', type: [String] })
+  @ApiPropertyOptional({
+    description: 'Assign to specific students (user IDs)',
+    type: [String],
+  })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
   assignedTo?: string[];
 
-  @ApiPropertyOptional({ description: 'Activities in this assignment', type: [AssignmentActivityDto] })
+  @ApiPropertyOptional({
+    description: 'Activities in this assignment',
+    type: [AssignmentActivityDto],
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => AssignmentActivityDto)

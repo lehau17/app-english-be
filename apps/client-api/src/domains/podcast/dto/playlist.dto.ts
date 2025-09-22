@@ -1,11 +1,11 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-    IsBoolean,
-    IsEnum,
-    IsOptional,
-    IsString,
-    MinLength,
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MinLength,
 } from 'class-validator';
 
 export class CreatePlaylistDto {
@@ -19,7 +19,10 @@ export class CreatePlaylistDto {
   @IsString()
   description?: string;
 
-  @ApiPropertyOptional({ description: 'Whether playlist is public', default: false })
+  @ApiPropertyOptional({
+    description: 'Whether playlist is public',
+    default: false,
+  })
   @IsOptional()
   @IsBoolean()
   isPublic?: boolean;
@@ -49,7 +52,7 @@ export class GetPlaylistsQueryDto extends RequestPagingDto {
 
   @ApiPropertyOptional({
     description: 'Privacy filter',
-    enum: ['public', 'private']
+    enum: ['public', 'private'],
   })
   @IsOptional()
   @IsEnum(['public', 'private'])

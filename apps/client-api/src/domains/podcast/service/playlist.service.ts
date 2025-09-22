@@ -1,11 +1,18 @@
 import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { AddToPlaylistDto, RemoveFromPlaylistDto } from '../dto/playlist-item.dto';
 import {
-    CreatePlaylistDto,
-    GetPlaylistsQueryDto,
-    UpdatePlaylistDto,
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  AddToPlaylistDto,
+  RemoveFromPlaylistDto,
+} from '../dto/playlist-item.dto';
+import {
+  CreatePlaylistDto,
+  GetPlaylistsQueryDto,
+  UpdatePlaylistDto,
 } from '../dto/playlist.dto';
 
 @Injectable()
@@ -25,7 +32,7 @@ export class PlaylistService {
     } = query;
 
     // TODO: Implement when playlist models are added to database
-  return PageResponseDto.of([], page, limit, 0);
+    return PageResponseDto.of([], page, limit, 0);
   }
 
   async findOne(id: string, userId: string) {
@@ -38,7 +45,11 @@ export class PlaylistService {
     throw new BadRequestException('Playlist functionality not yet implemented');
   }
 
-  async update(id: string, updatePlaylistDto: UpdatePlaylistDto, userId: string) {
+  async update(
+    id: string,
+    updatePlaylistDto: UpdatePlaylistDto,
+    userId: string,
+  ) {
     // TODO: Implement when playlist models are added to database
     throw new NotFoundException('Playlist not found or access denied');
   }
@@ -50,12 +61,20 @@ export class PlaylistService {
 
   // ===================== PLAYLIST ITEMS MANAGEMENT =====================
 
-  async addPodcast(playlistId: string, addToPlaylistDto: AddToPlaylistDto, userId: string) {
+  async addPodcast(
+    playlistId: string,
+    addToPlaylistDto: AddToPlaylistDto,
+    userId: string,
+  ) {
     // TODO: Implement when playlist models are added to database
     throw new NotFoundException('Playlist not found or access denied');
   }
 
-  async removePodcast(playlistId: string, removeFromPlaylistDto: RemoveFromPlaylistDto, userId: string) {
+  async removePodcast(
+    playlistId: string,
+    removeFromPlaylistDto: RemoveFromPlaylistDto,
+    userId: string,
+  ) {
     // TODO: Implement when playlist models are added to database
     throw new NotFoundException('Playlist not found or access denied');
   }
