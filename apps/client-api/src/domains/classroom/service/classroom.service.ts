@@ -1,7 +1,8 @@
+import { JwtPayload } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { Classroom, Prisma, UserRole } from '@prisma/client';
-import { JwtPayload } from '@app/shared';
+import { EventsGateway } from 'apps/client-api/src/events/events.gateway';
 import * as bcrypt from 'bcrypt';
 import { Readable } from 'stream';
 import * as XLSX from 'xlsx';
@@ -16,15 +17,28 @@ import {
 } from '../dto/classroom.dto';
 import { ClassroomRepository } from '../repository/classroom.repository';
 import {
+    calculateClassroomSchedule,
+    generateClassroomSessions,
+} from '../utils/classroom-schedule.util';
+import {
     generateClassCode,
     getCsvTransformStream,
 } from '../utils/classroom.util';
 
 @Injectable()
 export class ClassroomService {
-  constructor(private readonly classroomRepository: ClassroomRepository) {}
+  constructor(private readonly classroomRepository: ClassroomRepository,
+    private readonly gateway: EventsGateway
+  ) {}
 
   async create(dto: CreateClassroomDto): Promise<Classroom> {
+    // Calculate planned sessions and hours from period and slots
+    const scheduleCalculation = calculateClassroomSchedule(
+      dto.periodStart,
+      dto.periodEnd,
+      dto.slots
+    );
+
     const createPayload: Prisma.ClassroomCreateInput = {
       name: dto.name,
       description: dto.description,
@@ -43,11 +57,38 @@ export class ClassroomService {
       isActive: dto.isActive || true,
       periodStart: dto.periodStart,
       periodEnd: dto.periodEnd,
-      plannedHours: dto.plannedHours,
-      sessionDurationHours: dto.sessionDurationHours,
-      plannedSessions: Math.ceil(dto.plannedHours / dto.sessionDurationHours),
+      // Auto-calculated from schedule
+      plannedHours: scheduleCalculation.plannedHours,
+      plannedSessions: scheduleCalculation.plannedSessions,
+      // Create slots
+      slots: {
+        create: dto.slots.map(slot => ({
+          dayOfWeek: slot.dayOfWeek,
+          startMinuteOfDay: slot.startMinuteOfDay,
+          endMinuteOfDay: slot.endMinuteOfDay,
+          isActive: true
+        }))
+      }
     };
-    return this.classroomRepository.create(createPayload);
+
+    const classroom = await this.classroomRepository.create(createPayload);
+
+    // Generate sessions asynchronously (optional - you could make this background job)
+    try {
+      const sessionData = generateClassroomSessions(
+        classroom.id,
+        dto.teacherId,
+        scheduleCalculation
+      );
+
+      // Create sessions in batch
+      await this.classroomRepository.createSessions(sessionData);
+    } catch (error) {
+      console.error('Failed to create classroom sessions:', error);
+      // Don't fail the classroom creation if session generation fails
+    }
+
+    return classroom;
   }
 
   async findById(id: string): Promise<Classroom> {
@@ -175,7 +216,10 @@ export class ClassroomService {
     return this.classroomRepository.createAnnouncement(classroomId, payload);
   }
 
-  async getClassroomDetail(classroomId: string) {
+  async getClassroomDetail(classroomId: string, userId?: string, userRole?: string) {
+    if (userRole === 'student' && userId) {
+      return this.classroomRepository.getClassroomDetailForStudent(classroomId, userId);
+    }
     return this.classroomRepository.getClassroomDetail(classroomId);
   }
 
@@ -281,5 +325,75 @@ export class ClassroomService {
     }
 
     return result;
+  }
+
+  async getTeacherSchedule(teacherId: string, weekStart?: string, weekEnd?: string) {
+    const startDate = weekStart ? new Date(weekStart) : new Date();
+    const endDate = weekEnd ? new Date(weekEnd) : new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const scheduleData = await this.classroomRepository.getTeacherSchedule(teacherId, startDate, endDate);
+
+    // Process and format the schedule data
+    const schedule: { [dayOfWeek: string]: any[] } = {
+      mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: []
+    };
+
+    // Add classroom slots (recurring weekly schedule)
+    scheduleData.classroomSlots.forEach(slot => {
+      const classroom = slot.classroom;
+      const now = new Date();
+
+      // Check if classroom is currently active
+      const isActive = classroom.periodStart <= now && classroom.periodEnd >= now;
+
+      if (isActive) {
+        schedule[slot.dayOfWeek].push({
+          type: 'classroom_slot',
+          dayOfWeek: slot.dayOfWeek,
+          startMinuteOfDay: slot.startMinuteOfDay,
+          endMinuteOfDay: slot.endMinuteOfDay,
+          classroomId: classroom.id,
+          classroomName: classroom.name,
+          status: 'occupied',
+        });
+      }
+    });
+
+    // Add actual sessions
+    scheduleData.sessions.forEach(session => {
+      const dayOfWeek = this.getDayOfWeek(session.startTime);
+      const startMinute = session.startTime.getHours() * 60 + session.startTime.getMinutes();
+      const endMinute = session.endTime.getHours() * 60 + session.endTime.getMinutes();
+
+      schedule[dayOfWeek].push({
+        type: 'session',
+        dayOfWeek,
+        startMinuteOfDay: startMinute,
+        endMinuteOfDay: endMinute,
+        classroomId: session.classroom.id,
+        classroomName: session.classroom.name,
+        status: 'occupied',
+        sessionId: session.id,
+        sessionTitle: session.title,
+        sessionStatus: session.status,
+      });
+    });
+
+    // Sort each day's schedule by start time
+    Object.keys(schedule).forEach(day => {
+      schedule[day].sort((a, b) => a.startMinuteOfDay - b.startMinuteOfDay);
+    });
+
+    return {
+      teacherId: scheduleData.teacherId,
+      weekStart: scheduleData.weekStart,
+      weekEnd: scheduleData.weekEnd,
+      schedule,
+    };
+  }
+
+  private getDayOfWeek(date: Date): string {
+    const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+    return days[date.getDay()];
   }
 }

@@ -6,6 +6,7 @@ import {
   IsArray,
   IsBoolean,
   IsEnum,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -104,7 +105,7 @@ export class CreatePodcastDto {
   difficulty: PodcastDifficulty;
 
   @ApiProperty({ description: 'Chế độ audio', enum: ['upload', 'generate'] })
-  @IsEnum(['upload', 'generate'])
+  @IsIn(['upload', 'generate'])
   audioMode: 'upload' | 'generate';
 
   @ApiPropertyOptional({ description: 'Loại giọng đọc (cho generate mode)' })

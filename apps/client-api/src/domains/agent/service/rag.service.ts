@@ -43,12 +43,13 @@ export class RagService {
     // Ghi vector vào cột embedding_vector (kiểu pgvector) bằng raw SQL cast
     try {
       const vectorText = `[${embedding.join(',')}]`;
-      // Sử dụng $executeRawUnsafe vì Prisma hiện không hỗ trợ pgvector type trực tiếp
+      // Parameterize id but pgvector literal still must be cast; use $executeRawUnsafe for vector cast
       await this.prisma.$executeRawUnsafe(
-        `UPDATE knowledge_document SET embedding_vector = '${vectorText}'::vector WHERE id = '${doc.id}'`,
+        `UPDATE knowledge_documents SET embedding_vector = '${vectorText}'::vector WHERE id = $1`,
+        doc.id,
       );
     } catch (e) {
-      this.logger.warn('Không thể lưu embedding_vector (pgvector) cho doc ' + doc.id, e as any);
+      this.logger.warn(`Không thể lưu embedding_vector (pgvector) cho doc ${doc.id}: ${(e as any)?.message}`);
     }
     this.logger.log(`✅ Đã lưu tài liệu ID: ${doc.id}`);
     return doc;
@@ -111,7 +112,7 @@ YÊU CẦU:
       const vectorText = `[${queryEmbedding.join(',')}]`;
       const rows = await this.prisma.$queryRawUnsafe<any[]>(
         `SELECT id, title, content, document_type, source, embedding
-         FROM knowledge_document
+         FROM knowledge_documents
          WHERE embedding_vector IS NOT NULL
          ORDER BY embedding_vector <-> '${vectorText}'::vector
          LIMIT ${Number(topK)}`,

@@ -13,6 +13,66 @@ export class ClassroomRepository {
     return this.prisma.classroom.create({ data });
   }
 
+  async createSessions(sessionsData: any[]): Promise<void> {
+    await this.prisma.classroomSession.createMany({
+      data: sessionsData,
+      skipDuplicates: true
+    });
+  }
+
+  async getTeacherSchedule(teacherId: string, weekStart?: Date, weekEnd?: Date) {
+    const startDate = weekStart || new Date();
+    const endDate = weekEnd || new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    // Get all classroom slots for this teacher
+    const classroomSlots = await this.prisma.classroomSlot.findMany({
+      where: {
+        classroom: {
+          teacherId: teacherId,
+          isActive: true,
+        },
+        isActive: true,
+      },
+      include: {
+        classroom: {
+          select: {
+            id: true,
+            name: true,
+            periodStart: true,
+            periodEnd: true,
+          }
+        }
+      }
+    });
+
+    // Get all sessions for this teacher in the date range
+    const sessions = await this.prisma.classroomSession.findMany({
+      where: {
+        instructorId: teacherId,
+        startTime: {
+          gte: startDate,
+          lte: endDate,
+        }
+      },
+      include: {
+        classroom: {
+          select: {
+            id: true,
+            name: true,
+          }
+        }
+      }
+    });
+
+    return {
+      teacherId,
+      weekStart: startDate,
+      weekEnd: endDate,
+      classroomSlots,
+      sessions,
+    };
+  }
+
   async findById(id: string): Promise<Classroom | null> {
     return this.prisma.classroom.findUnique({
       where: { id },
@@ -401,5 +461,152 @@ export class ClassroomRepository {
         status: 'active',
       },
     });
+  }
+
+  async getClassroomDetailForStudent(classroomId: string, studentId: string) {
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: {
+        slots: true,
+        teacher: true,
+        students: {
+          include: { student: true },
+        },
+        assignments: {
+          include: {
+            submissions: {
+              where: { studentId },
+              orderBy: { attemptCount: 'desc' },
+              take: 1,
+            },
+            assignmentActivities: true,
+          },
+        },
+        announcements: true,
+        course: {
+          include: {
+            lessons: {
+              include: { activities: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!classroom) throw new BadRequestException('Classroom not found');
+
+    // Format students
+    const students = classroom.students.map(cs => ({
+      id: cs.student.id,
+      firstName: cs.student.firstName,
+      lastName: cs.student.lastName,
+      displayName: cs.student.displayName,
+      avatarUrl: cs.student.avatarUrl,
+      studentRecord: {
+        joinedAt: cs.joinedAt,
+        isActive: cs.isActive,
+        notes: cs.notes,
+      },
+    }));
+
+    // Format assignments with student's submission data
+    const assignments = classroom.assignments.map(a => {
+      const mySubmission = a.submissions.length > 0 ? a.submissions[0] : null;
+
+      return {
+        id: a.id,
+        title: a.title,
+        description: a.description,
+        instructions: a.instructions,
+        dueDate: a.dueDate,
+        status: a.status,
+        isPublished: a.isPublished,
+        totalPoints: a.totalPoints,
+        timeLimit: a.timeLimit,
+        maxAttempts: a.maxAttempts,
+        createdAt: a.createdAt,
+        _count: { submissions: 1 }, // For student view, just indicate if they have submitted
+        submission: mySubmission ? {
+          id: mySubmission.id,
+          score: mySubmission.score,
+          status: mySubmission.score !== null ? 'graded' : 'submitted',
+          attempt: mySubmission.attemptCount,
+          submittedAt: mySubmission.submittedAt?.toISOString() || null,
+        } : null,
+        activities: a.assignmentActivities?.map(activity => ({
+          id: activity.id,
+          type: activity.type,
+          title: activity.title,
+          instructions: activity.instructions,
+          content: activity.content,
+          points: activity.points,
+          timeLimit: activity.timeLimit,
+          maxAttempts: activity.maxAttempts,
+          passingScore: activity.passingScore,
+          difficulty: activity.difficulty,
+          hints: activity.hints,
+          createdAt: activity.createdAt,
+          updatedAt: activity.updatedAt,
+        })) ?? [],
+      };
+    });
+
+    // Format announcements
+    const announcements = classroom.announcements.map(an => ({
+      id: an.id,
+      title: an.title,
+      content: an.content,
+      priority: an.priority,
+      targetAll: an.targetAll,
+      createdAt: an.createdAt,
+      updatedAt: an.updatedAt,
+    }));
+
+    // Format lessons + activities
+    const lessons = classroom.course?.lessons?.map(lesson => ({
+      id: lesson.id,
+      title: lesson.title,
+      orderNo: lesson.orderNo,
+      estimatedTime: lesson.estimatedTime,
+      difficulty: lesson.difficulty,
+      isLocked: lesson.isLocked,
+      activities: lesson.activities?.map(activity => ({
+        id: activity.id,
+        lessonId: activity.lessonId,
+        orderNo: activity.orderNo,
+        type: activity.type,
+        title: activity.title,
+        duration: activity.duration,
+        passingScore: activity.passingScore,
+      })) ?? [],
+    })) ?? [];
+
+    const settings = (classroom.settings as any) || {};
+    const schedule = (classroom.slots as any[]) || [];
+    const _count = {
+      students: students.length,
+      assignments: assignments.length,
+      announcements: announcements.length,
+    };
+
+    return {
+      id: classroom.id,
+      name: classroom.name,
+      description: classroom.description,
+      classCode: classroom.classCode,
+      teacher: classroom.teacher,
+      isActive: classroom.isActive,
+      maxStudents: classroom.maxStudents,
+      createdAt: classroom.createdAt,
+      updatedAt: classroom.updatedAt,
+      expiresAt: classroom.expiresAt,
+      settings,
+      schedule,
+      _count,
+      students,
+      assignments,
+      announcements,
+      lessons,
+    };
   }
 }

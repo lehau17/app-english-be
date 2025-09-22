@@ -122,7 +122,7 @@ export class CourseService {
           // --- Normalize content cho vocab: cho phép dữ liệu cũ 1 từ -> items[] ---
           const normalizedContent =
             activityDto.type === 'vocab'
-              ? this.normalizeVocabContent(activityDto.content)
+              ? await this.normalizeVocabContent(activityDto.content)
               : activityDto.content;
 
           const createdActivity = await tx.activity.create({
@@ -218,7 +218,8 @@ export class CourseService {
  *  - MỚI: { kind:'vocab', data:{ items:[ {word,definition,...}, ...] } }
  *  - CŨ : { kind:'vocab', data:{ word, definition, examples?, imageUrl?, audioUrl? } }
  * Trả về luôn shape MỚI.
- */  normalizeVocabContent(content: any) {
+ */
+ async normalizeVocabContent(content: any) {
     if (!content || content.kind !== 'vocab') return content;
 
     const data = content.data ?? {};
@@ -234,7 +235,7 @@ export class CourseService {
               definition: data.definition,
               examples: data.examples ?? [],
               imageUrl: data.imageUrl ?? undefined,
-              audioUrl: data.audioUrl ?? undefined,
+              audioUrl: data.audioUrl ?? (await this.googleTranslateFreeService.createAudioWithUrl(data.word, "en")).url
             },
           ],
         },

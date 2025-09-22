@@ -325,6 +325,9 @@ model KnowledgeDocument {
 
   embedding String
 
+  /// pgvector column to store embedding vector for ANN queries
+  embeddingVector Unsupported("vector")? @map("embedding_vector")
+
   documentType String
 
   source String
@@ -995,13 +998,11 @@ model Classroom {
 
   timezone TimezoneCode @default(Asia_Ho_Chi_Minh)
 
-  // Quy mô giờ học của lớp
+  // Quy mô giờ học của lớp (tự động tính từ slots và period)
 
-  plannedHours Float // Tổng SỐ GIỜ học cần dạy cho lớp (ví dụ: 36 giờ)
+  plannedHours Float? // Tổng SỐ GIỜ học - tự động tính từ slots và khoảng thời gian
 
-  sessionDurationHours Float // SỐ GIỜ mỗi buổi (ví dụ: 1.5 giờ/buổi)
-
-  plannedSessions Int? // Số buổi dự kiến (có thể = plannedHours / sessionDurationHours, lưu để tiện query)
+  plannedSessions Int? // Số buổi dự kiến - tự động tính từ slots và period
 
   // Cài đặt khác
 
@@ -1057,9 +1058,9 @@ model ClassroomSlot {
 
   isActive Boolean @default(true)
 
-  // Nếu muốn khác duration từng slot (tuỳ chọn)
+  // Duration tính từ startMinuteOfDay và endMinuteOfDay
 
-  sessionDurationHours Float? // nếu null → dùng Classroom.sessionDurationHours
+  // sessionDurationHours Float? // REMOVED - tính trực tiếp từ start/end minutes
 
   createdAt DateTime @default(now())
 

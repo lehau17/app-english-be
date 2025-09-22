@@ -12,18 +12,69 @@ import {
   IsOptional,
   IsString,
   Min,
+  Validate,
   ValidateNested,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
+import * as uuid from "uuid";
 import { ACTIVITY_TYPES, ActivityTypeValue } from '../../course/dto';
-import {
-  ActivityContent
-} from './activity-content-types.dto';
+
+// Custom validator for content based on activity type
+@ValidatorConstraint({ name: 'ValidateActivityContent', async: false })
+export class ActivityContentValidator implements ValidatorConstraintInterface {
+  validate(content: any, args: ValidationArguments) {
+    const activity = args.object as AssignmentActivityDto;
+    const activityType = activity.type;
+
+    if (!content || typeof content !== 'object') {
+      return false;
+    }
+
+    // Basic validation based on activity type
+    switch (activityType) {
+      case 'quiz':
+      case 'reading':
+      case 'grammar':
+        return (
+          typeof content.question === 'string' &&
+          Array.isArray(content.options) &&
+          content.options.length > 0 &&
+          typeof content.correctIndex === 'number' &&
+          content.correctIndex >= 0 &&
+          content.correctIndex < content.options.length
+        );
+      case 'listening':
+        return (
+          typeof content.audioUrl === 'string' &&
+          typeof content.prompt === 'string' &&
+          Array.isArray(content.options) &&
+          content.options.length > 0 &&
+          typeof content.correctIndex === 'number' &&
+          content.correctIndex >= 0 &&
+          content.correctIndex < content.options.length
+        );
+      case 'vocab':
+        return Array.isArray(content.items);
+      case 'flashcard':
+        return Array.isArray(content.cards);
+      default:
+        return true; // For other types, just allow any object
+    }
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    const activity = args.object as AssignmentActivityDto;
+    return `Content is invalid for activity type '${activity.type}'`;
+  }
+}
 
 export class AssignmentActivityDto {
   @ApiProperty({ description: 'Internal assignment activity ID', example: 'activity-1' })
   @IsString()
-  @IsNotEmpty()
-  id!: string
+    @IsOptional()
+  id: string = uuid.v4()
 
   @ApiProperty({ enum: ACTIVITY_TYPES, description: 'Activity type' })
   @IsEnum(ACTIVITY_TYPES)
@@ -40,9 +91,9 @@ export class AssignmentActivityDto {
   instructions?: string
 
   @ApiProperty({ description: 'Activity content (structured based on activity type)' })
-  @ValidateNested()
-  @Type(() => Object)
-  content!: ActivityContent
+  @IsObject()
+  @Validate(ActivityContentValidator)
+  content!: any
 
   @ApiPropertyOptional({ description: 'XP/Points for this activity', default: 10 })
   @IsOptional()
@@ -96,10 +147,6 @@ export class CreateAssignmentDto {
   @IsOptional()
   instructions?: string;
 
-  @ApiProperty({ description: 'Classroom ID where assignment belongs' })
-  @IsString()
-  @IsNotEmpty()
-  classroomId: string;
 
   @ApiPropertyOptional({ description: 'Due date for assignment', example: '2024-12-31T17:00:00Z' })
   @IsDateString()
@@ -110,21 +157,21 @@ export class CreateAssignmentDto {
   @IsInt()
   @Min(1)
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
+  @Transform(({ value }) => typeof value === 'number' ? value : parseInt(value))
   totalPoints?: number = 100;
 
   @ApiPropertyOptional({ description: 'Time limit in minutes' })
   @IsInt()
   @Min(1)
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
+  @Transform(({ value }) => typeof value === 'number' ? value : parseInt(value))
   timeLimit?: number;
 
   @ApiPropertyOptional({ description: 'Maximum attempts allowed', minimum: 1, default: 1 })
   @IsInt()
   @Min(1)
   @IsOptional()
-  @Transform(({ value }) => parseInt(value))
+  @Transform(({ value }) => typeof value === 'number' ? value : parseInt(value))
   maxAttempts?: number = 1;
 
   @ApiPropertyOptional({ description: 'Publish assignment immediately', default: false })

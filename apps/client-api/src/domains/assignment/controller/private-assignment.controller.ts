@@ -17,11 +17,10 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {
-  CreateAssignmentDto,
   GradeAssignmentDto,
   QueryAssignmentsDto,
   SubmitAssignmentDto,
-  UpdateAssignmentDto,
+  UpdateAssignmentDto
 } from '../dto';
 import { AssignmentService } from '../service';
 
@@ -31,17 +30,17 @@ import { AssignmentService } from '../service';
 export class PrivateAssignmentController {
   constructor(private readonly assignmentService: AssignmentService) {}
 
-  @Post()
-  @ApiOperation({ summary: 'Create new assignment (Teacher only)' })
-  @ApiResponse({ status: 201, description: 'Assignment created successfully' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Teacher access required' })
-  async createAssignment(
-    @PayloadToken() payload: JwtPayload,
-    @Body() dto: CreateAssignmentDto,
-  ) {
-    return this.assignmentService.createAssignment(payload.sub, dto);
-  }
+  // @Post()
+  // @ApiOperation({ summary: 'Create new assignment (Teacher only)' })
+  // @ApiResponse({ status: 201, description: 'Assignment created successfully' })
+  // @ApiResponse({ status: 400, description: 'Bad request' })
+  // @ApiResponse({ status: 403, description: 'Forbidden - Teacher access required' })
+  // async createAssignment(
+  //   @PayloadToken() payload: JwtPayload,
+  //   @Body() dto: CreateAssignmentDto,
+  // ) {
+  //   return this.assignmentService.createAssignment(payload.sub, dto);
+  // }
 
   @Get('my-assignments')
   @ApiOperation({ summary: 'Get assignments created by current teacher' })

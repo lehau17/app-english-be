@@ -99,6 +99,8 @@ export class PodcastRatingService {
               id: true,
               displayName: true,
               avatarUrl: true,
+              firstName: true,
+              lastName: true
             },
           },
         },

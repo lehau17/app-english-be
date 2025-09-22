@@ -1,23 +1,26 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Post,
-  Put,
-  Query,
-  Res,
-  UploadedFile,
-  UseInterceptors
+    BadRequestException,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    ParseUUIDPipe,
+    Post,
+    Put,
+    Query,
+    Res,
+    UploadedFile,
+    UseInterceptors
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Classroom } from '@prisma/client';
 import { Response } from 'express';
+import { CreateAssignmentDto, QueryAssignmentsDto, UpdateAssignmentDto } from '../../assignment/dto';
+import { AssignmentService } from '../../assignment/service/assignment.service';
 import {
     AddStudentToClassroomDto,
     AssignTeacherToClassroomDto,
@@ -34,7 +37,10 @@ import { ClassroomService } from '../service/classroom.service';
 @ApiBearerAuth('Authorization')
   @Controller('/private/v1/classrooms')
 export class PrivateClassroomController {
-  constructor(private readonly classroomService: ClassroomService) {}
+  constructor(
+    private readonly classroomService: ClassroomService,
+    private readonly assignmentService: AssignmentService,
+  ) {}
 
   @Get('my-classrooms')
   @ApiOperation({ summary: 'Get my classrooms' })
@@ -92,6 +98,17 @@ export class PrivateClassroomController {
     return this.classroomService.list(query);
   }
 
+  @Get('teacher/:teacherId/schedule')
+  @ApiOperation({ summary: 'Get teacher weekly schedule' })
+  @ResponseMessage('Teacher schedule fetched successfully')
+  getTeacherSchedule(
+    @Param('teacherId', new ParseUUIDPipe()) teacherId: string,
+    @Query('weekStart') weekStart?: string,
+    @Query('weekEnd') weekEnd?: string,
+  ) {
+    return this.classroomService.getTeacherSchedule(teacherId, weekStart, weekEnd);
+  }
+
   @Post(':id/students')
   @ApiOperation({ summary: 'Add a student to a classroom' })
   @ResponseMessage('Student added to classroom successfully')
@@ -128,8 +145,11 @@ export class PrivateClassroomController {
   @Get(':id/detail')
   @ApiOperation({ summary: 'Get full classroom detail (students, assignments, announcements, lessons, activities)' })
   @ResponseMessage('Classroom detail fetched successfully')
-  async getClassroomDetail(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.classroomService.getClassroomDetail(id);
+  async getClassroomDetail(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @PayloadToken() payload: JwtPayload,
+  ) {
+    return this.classroomService.getClassroomDetail(id, payload.userId, payload.role);
   }
 
   @Get(':id/announcements')
@@ -178,5 +198,46 @@ export class PrivateClassroomController {
     @UploadedFile() file: Express.Multer.File,
   ): Promise<ImportStudentsResultDto> {
     return this.classroomService.importStudentsFromExcel(classroomId, file);
+  }
+
+  @Post(':id/assignments')
+  @ApiOperation({ summary: 'Create assignment for classroom' })
+  @ResponseMessage('Assignment created successfully')
+  async createClassroomAssignment(
+    @Param('id', new ParseUUIDPipe()) classroomId: string,
+    @PayloadToken() payload: JwtPayload,
+    @Body() dto: CreateAssignmentDto,
+  ) {
+    // Ensure classroomId matches DTO
+    const assignmentDto = { ...dto, classroomId };
+    return this.assignmentService.createAssignment(payload.sub, assignmentDto, classroomId);
+  }
+
+  @Get(':id/assignments')
+  @ApiOperation({ summary: 'Get assignments for classroom' })
+  @ResponseMessage('Classroom assignments fetched successfully')
+  async getClassroomAssignments(
+    @Param('id', new ParseUUIDPipe()) classroomId: string,
+    @Query() query: QueryAssignmentsDto,
+  ) {
+    return this.assignmentService.getAssignmentsByClassroom(classroomId, query);
+  }
+
+  @Put(':id/assignments/:assignmentId')
+  @ApiOperation({ summary: 'Update assignment in classroom' })
+  @ResponseMessage('Assignment updated successfully')
+  async updateClassroomAssignment(
+    @Param('id', new ParseUUIDPipe()) classroomId: string,
+    @Param('assignmentId', new ParseUUIDPipe()) assignmentId: string,
+    @PayloadToken() payload: JwtPayload,
+    @Body() dto: UpdateAssignmentDto,
+  ) {
+    // Ensure the assignment belongs to this classroom first
+    const assignment = await this.assignmentService.getAssignmentById(assignmentId);
+    if (assignment.classroomId !== classroomId) {
+      throw new BadRequestException('Assignment does not belong to this classroom');
+    }
+
+    return this.assignmentService.updateAssignment(assignmentId, payload.sub, dto);
   }
 }

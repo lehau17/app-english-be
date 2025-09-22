@@ -1,19 +1,18 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { AssignmentStatus } from '@prisma/client';
 import { CreateAssignmentDto, GradeAssignmentDto, QueryAssignmentsDto, SubmitAssignmentDto, UpdateAssignmentDto } from '../dto';
-import { AssignmentRepository, AssignmentSubmissionWithStudent, AssignmentWithDetails, AssignmentActivityModel } from '../repository';
 import { AssignmentActivityDto } from '../dto/create-assignment.dto';
-import { AssignmentActivityModel } from '../repository/assignment.repository';
+import { AssignmentActivityModel, AssignmentRepository, AssignmentSubmissionWithStudent, AssignmentWithDetails } from '../repository';
 
 @Injectable()
 export class AssignmentService {
   constructor(private readonly assignmentRepository: AssignmentRepository) {}
 
-  async createAssignment(teacherId: string, dto: CreateAssignmentDto): Promise<AssignmentWithDetails> {
+  async createAssignment(teacherId: string, dto: CreateAssignmentDto, classroomId: string): Promise<AssignmentWithDetails> {
     // Validate classroom belongs to teacher - should add this check
     const assignmentData = {
       teacherId,
-      classroomId: dto.classroomId,
+      classroomId: classroomId,
       title: dto.title,
       description: dto.description,
       instructions: dto.instructions,
@@ -290,12 +289,19 @@ export class AssignmentService {
   }
 
   private mapActivityDto(activity: AssignmentActivityDto, index: number) {
+    // Extract the actual content from the wrapper format { kind, data }
+    let processedContent:any = activity.content;
+    if (activity.content && typeof activity.content === 'object' && 'kind' in activity.content && 'data' in activity.content) {
+      // If content is wrapped in { kind, data } format, extract the data
+      processedContent = activity.content.data || activity.content;
+    }
+
     return {
       id: activity.id || `activity-${index + 1}`,
       type: activity.type,
       title: activity.title,
       instructions: activity.instructions,
-      content: activity.content,
+      content: processedContent,
       points: activity.points ?? 10,
       timeLimit: activity.timeLimit,
       maxAttempts: activity.maxAttempts,

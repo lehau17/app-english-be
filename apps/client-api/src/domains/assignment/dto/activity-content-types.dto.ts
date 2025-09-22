@@ -1,15 +1,15 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsArray,
-  IsInt,
-  IsString,
-  IsOptional,
-  IsNotEmpty,
-  ValidateNested,
   IsIn,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
   Min,
+  ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 
 // ============= ACTIVITY CONTENT TYPES FOR ASSIGNMENT =============
 
@@ -275,3 +275,14 @@ export type ActivityContent =
   | FillBlankContent
   | DictationContent
   | MatchingContent;
+
+// Wrapper class to match frontend format { kind, data }
+export class ActivityContentWrapper {
+  @ApiProperty({ description: 'Activity content kind' })
+  @IsString() @IsNotEmpty()
+  kind!: string;
+
+  @ApiProperty({ description: 'Activity content data' })
+  @IsOptional()
+  data?: ActivityContent;
+}

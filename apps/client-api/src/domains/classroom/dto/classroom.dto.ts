@@ -5,14 +5,44 @@ import {
     IsArray,
     IsBoolean,
     IsDate,
+    IsEnum,
     IsInt,
     IsNotEmpty,
-    IsNumber,
     IsOptional,
     IsString,
     IsUUID,
+    Max,
     Min,
+    ValidateNested
 } from 'class-validator';
+
+export enum Weekday {
+  mon = 'mon',
+  tue = 'tue',
+  wed = 'wed',
+  thu = 'thu',
+  fri = 'fri',
+  sat = 'sat',
+  sun = 'sun'
+}
+
+export class CreateClassroomSlotDto {
+  @ApiProperty({ enum: Weekday, example: 'tue' })
+  @IsEnum(Weekday)
+  dayOfWeek: Weekday;
+
+  @ApiProperty({ example: 390, description: 'Start time in minutes from 00:00 (e.g., 6:30 = 390)' })
+  @IsInt()
+  @Min(0)
+  @Max(1439) // 23:59 = 1439 minutes
+  startMinuteOfDay: number;
+
+  @ApiProperty({ example: 480, description: 'End time in minutes from 00:00 (e.g., 8:00 = 480)' })
+  @IsInt()
+  @Min(0)
+  @Max(1439)
+  endMinuteOfDay: number;
+}
 
 export class CreateClassroomDto {
   @ApiProperty({ example: 'Lop hoc 1' })
@@ -42,23 +72,28 @@ export class CreateClassroomDto {
   @IsOptional()
   isActive?: boolean;
 
-  @ApiProperty({ type: Date })
+  @ApiProperty({ type: Date, description: 'Class start date' })
   @Type(() => Date)
   @IsDate()
   periodStart: Date;
 
-  @ApiProperty({ type: Date })
+  @ApiProperty({ type: Date, description: 'Class end date' })
   @Type(() => Date)
   @IsDate()
   periodEnd: Date;
 
-  @ApiProperty({ example: 36 })
-  @IsNumber()
-  plannedHours: number;
-
-  @ApiProperty({ example: 1.5 })
-  @IsNumber()
-  sessionDurationHours: number;
+  @ApiProperty({
+    type: [CreateClassroomSlotDto],
+    description: 'Weekly schedule slots (e.g., Mon 6:30-8:00, Sat 7:30-9:00)',
+    example: [
+      { dayOfWeek: 'mon', startMinuteOfDay: 390, endMinuteOfDay: 480 },
+      { dayOfWeek: 'sat', startMinuteOfDay: 450, endMinuteOfDay: 540 }
+    ]
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateClassroomSlotDto)
+  slots: CreateClassroomSlotDto[];
 }
 
 export class UpdateClassroomDto {

@@ -3,22 +3,22 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DifficultyLevel, LanguageCode } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
-    ArrayMaxSize,
-    ArrayMinSize,
-    ArrayUnique,
-    IsArray,
-    IsBoolean,
-    IsEnum,
-    IsInt,
-    IsNumber,
-    IsOptional,
-    IsString,
-    IsUUID,
-    IsUrl,
-    Matches,
-    MaxLength,
-    Min,
-    MinLength
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  IsUrl,
+  Matches,
+  MaxLength,
+  Min,
+  MinLength
 } from 'class-validator';
 import { CreateLessonDto } from '../../lesson/dto/lesson.dto';
 export const ACTIVITY_TYPES = [
@@ -50,7 +50,7 @@ export class CreateCourseDto {
   estimatedTime?: number;               // MINUTES (server sẽ convert sang hours)
 
   @ApiPropertyOptional({ example: 'https://cdn.ex/img.png' })
-  @IsOptional() @IsUrl()
+  @IsOptional() @IsString()
   imageUrl?: string;
 
   @ApiPropertyOptional({ type: [String], example: ['grammar', 'beginner'] })

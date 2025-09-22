@@ -1,11 +1,13 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
+    IsArray,
     IsBoolean,
-    IsEnum,
+    IsIn,
     IsOptional,
     IsString,
-    MinLength,
+    IsUrl,
+    MinLength
 } from 'class-validator';
 
 export class CreatePlaylistDto {
@@ -23,6 +25,23 @@ export class CreatePlaylistDto {
   @IsOptional()
   @IsBoolean()
   isPublic?: boolean;
+
+  @ApiPropertyOptional({ description: 'Playlist thumbnail URL' })
+  @IsOptional()
+  @IsString()
+  @IsUrl()
+  thumbnailUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Playlist tags', type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @ApiPropertyOptional({ description: 'Playlist category' })
+  @IsOptional()
+  @IsString()
+  category?: string;
 }
 
 export class UpdatePlaylistDto {
@@ -41,6 +60,23 @@ export class UpdatePlaylistDto {
   @IsOptional()
   @IsBoolean()
   isPublic?: boolean;
+
+  @ApiPropertyOptional({ description: 'Playlist thumbnail URL' })
+  @IsOptional()
+  @IsString()
+  @IsUrl()
+  thumbnailUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Playlist tags', type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @ApiPropertyOptional({ description: 'Playlist category' })
+  @IsOptional()
+  @IsString()
+  category?: string;
 }
 
 export class GetPlaylistsQueryDto extends RequestPagingDto {
@@ -52,6 +88,6 @@ export class GetPlaylistsQueryDto extends RequestPagingDto {
     enum: ['public', 'private']
   })
   @IsOptional()
-  @IsEnum(['public', 'private'])
+  @IsIn(['public', 'private'])
   privacy?: 'public' | 'private';
 }

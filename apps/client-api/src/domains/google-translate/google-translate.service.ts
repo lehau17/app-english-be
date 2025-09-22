@@ -2,7 +2,7 @@ import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 import { Translate } from '@google-cloud/translate/build/src/v2';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createWriteStream, readFileSync, unlinkSync } from 'fs';
+import { appendFileSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import fetch from 'node-fetch';
 import * as path from 'path';
 import { join } from 'path';
@@ -170,8 +170,9 @@ export class GoogleTranslateFreeService {
    * Tạo audio từ văn bản sử dụng Google Translate TTS miễn phí
    */
   async createAudioFile(text: string, language: string = 'en'): Promise<string> {
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${language}&client=tw-ob`;
-
+    // Google Translate TTS rejects very long `q` parameters. Split text into safe chunks
+    // (try to keep each chunk under ~200 characters) and fetch each segment, appending
+    // the resulting MP3 bytes into a single file.
     const options = {
       method: 'GET',
       headers: {
@@ -182,65 +183,97 @@ export class GoogleTranslateFreeService {
       },
     };
 
-    try {
-      const response = await fetch(url, options);
+    const maxChunkLength = 200;
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+    const splitTextToChunks = (input: string, maxLen: number) => {
+      const sentences = input.split(/(?<=[.!?])\s+/);
+      const chunks: string[] = [];
 
-      // Tạo tên file an toàn
-      const safeText = text.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-      const fileName = `${safeText}-${Date.now()}.mp3`;
-  const filePath = join(process.cwd(), 'uploads', 'audio', fileName);
-
-  const writer = createWriteStream(filePath);
-
-      return new Promise((resolve, reject) => {
-        if (!response.body) {
-          writer.end(); // Cleanup on error
-          reject(new Error('No response body'));
-          return;
-        }
-
-        const cleanup = (error?: any) => {
-          writer.end();
-          if (error) {
-            // Remove partially written file on error
-            try {
-              require('fs').unlinkSync(filePath);
-            } catch (unlinkError) {
-              this.logger.warn('Failed to cleanup partial file:', unlinkError);
+      for (const sentence of sentences) {
+        if (!sentence) continue;
+        if (sentence.length <= maxLen) {
+          // try to merge into previous chunk if possible
+          const last = chunks.at(-1);
+          if (last && (last.length + 1 + sentence.length) <= maxLen) {
+            chunks[chunks.length - 1] = `${last} ${sentence}`;
+          } else {
+            chunks.push(sentence);
+          }
+        } else {
+          // sentence too long, split on spaces
+          const words = sentence.split(' ');
+          let cur = '';
+          for (const w of words) {
+            if ((cur + ' ' + w).trim().length > maxLen) {
+              if (cur) chunks.push(cur.trim());
+              cur = w;
+            } else {
+              cur = (cur + ' ' + w).trim();
             }
           }
-        };
+          if (cur) chunks.push(cur.trim());
+        }
+      }
 
-        // Handle writer errors
-        writer.on('error', (error) => {
-          cleanup(error);
-          reject(error);
-        });
+      // Fallback: if still empty, push the original input
+      if (chunks.length === 0) chunks.push(input);
+      return chunks;
+    };
 
-        // Handle stream errors
-        response.body.on('error', (error) => {
-          cleanup(error);
-          reject(error);
-        });
+    // Create safe file name and ensure directory exists
+    const safeText = text.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    const fileName = `${safeText}-${Date.now()}.mp3`;
+    const dirPath = join(process.cwd(), 'uploads', 'audio');
+    try {
+      mkdirSync(dirPath, { recursive: true });
+    } catch (e) {
+      // ignore mkdir errors, we'll surface them later if writes fail
+    }
 
-        // Pipe response body to file writer
-        response.body.pipe(writer);
+    const filePath = join(dirPath, fileName);
 
-        writer.on('finish', () => {
-          this.logger.log(`Audio file created: ${filePath}`);
-          resolve(filePath);
-        });
+    try {
+      const chunks = splitTextToChunks(text, maxChunkLength);
 
-        writer.on('error', (error) => {
-          cleanup(error);
-          reject(error);
-        });
-      });
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=${language}&client=tw-ob`;
+
+        const response = await fetch(url, options as any);
+
+        if (!response.ok) {
+          // try to get text body for easier debugging
+          let bodyText = '';
+          try {
+            bodyText = await response.text();
+          } catch (e) {
+            bodyText = '<non-text response>';
+          }
+          this.logger.error(`TTS request failed for chunk ${i} status=${response.status} body=${bodyText}`);
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const arrayBuf = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuf);
+
+        if (i === 0) {
+          // write first chunk (overwrite if exists)
+          writeFileSync(filePath, buffer);
+        } else {
+          // append subsequent chunks
+          appendFileSync(filePath, buffer);
+        }
+      }
+
+      this.logger.log(`Audio file created: ${filePath}`);
+      return filePath;
     } catch (error) {
+      // Remove partially written file on error
+      try {
+        unlinkSync(filePath);
+      } catch (e) {
+        // ignore
+      }
       this.logger.error('Error creating audio file:', error);
       throw new Error('Failed to create audio file');
     }

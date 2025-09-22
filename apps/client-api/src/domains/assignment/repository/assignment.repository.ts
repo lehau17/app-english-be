@@ -1,9 +1,9 @@
 import { PrismaRepository } from '@app/database';
 import { Injectable } from '@nestjs/common';
-import { Assignment, AssignmentActivity, AssignmentStatus, AssignmentSubmission, DifficultyLevel, Prisma } from '@prisma/client';
+import { Assignment, AssignmentStatus, AssignmentSubmission, DifficultyLevel, Prisma, AssignmentActivity as PrismaAssignmentActivity } from '@prisma/client';
 import { ActivityTypeValue } from '../../course/dto';
 
-export type AssignmentActivityModel = AssignmentActivity;
+export type AssignmentActivityModel = PrismaAssignmentActivity;
 
 export interface AssignmentWithDetails extends Assignment {
   teacher: {
@@ -33,6 +33,7 @@ export interface AssignmentSubmissionWithStudent extends AssignmentSubmission {
     lastName: string | null;
     email: string | null;
   };
+  assignment?: AssignmentWithDetails;
 }
 
 export interface AssignmentActivity {
@@ -134,7 +135,7 @@ export class AssignmentRepository extends PrismaRepository {
       data: {
         ...assignmentData,
         assignmentActivities: {
-          create: activities.map((activity) => this.mapActivityForCreate(activity)),
+          create: activities.map((activity) => this.mapActivityForNestedCreate(activity)),
         },
       },
       include: this.assignmentInclude,
@@ -251,7 +252,7 @@ export class AssignmentRepository extends PrismaRepository {
         await tx.assignmentActivity.deleteMany({ where: { assignmentId: id } });
         if (activities.length > 0) {
           await tx.assignmentActivity.createMany({
-            data: activities.map((activity) => this.mapActivityForCreate(activity)),
+            data: activities.map((activity) => this.mapActivityForCreate(activity, id)),
           });
         }
       }
@@ -276,7 +277,24 @@ export class AssignmentRepository extends PrismaRepository {
     });
   }
 
-  private mapActivityForCreate(activity: AssignmentActivityInput) {
+  private mapActivityForCreate(activity: AssignmentActivityInput, assignmentId: string) {
+    return {
+      id: activity.id,
+      assignmentId,
+      type: activity.type,
+      title: activity.title,
+      instructions: activity.instructions,
+      content: activity.content,
+      points: activity.points ?? 10,
+      timeLimit: activity.timeLimit,
+      maxAttempts: activity.maxAttempts,
+      passingScore: activity.passingScore,
+      difficulty: activity.difficulty,
+      hints: activity.hints ?? [],
+    };
+  }
+
+  private mapActivityForNestedCreate(activity: AssignmentActivityInput) {
     return {
       id: activity.id,
       type: activity.type,
@@ -374,6 +392,9 @@ export class AssignmentRepository extends PrismaRepository {
             lastName: true,
             email: true,
           },
+        },
+        assignment: {
+          include: this.assignmentInclude,
         },
       },
       orderBy: {
