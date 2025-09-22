@@ -6,9 +6,6 @@ export class DashboardStudentService {
   constructor(private readonly prisma: PrismaRepository) {}
 
   async getDashboard(userId: string) {
-
-    return {
-
-    };
+    return {};
   }
 }

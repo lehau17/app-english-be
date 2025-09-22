@@ -9,7 +9,13 @@ import { UploadService } from '../upload/upload.service';
 
 @Module({
   imports: [GoogleTranslateModule],
-  controllers: [CourseController, ],
-  providers: [CourseService, CourseRepository, CoursesImportService, GoogleTranslateFreeService, UploadService],
+  controllers: [CourseController],
+  providers: [
+    CourseService,
+    CourseRepository,
+    CoursesImportService,
+    GoogleTranslateFreeService,
+    UploadService,
+  ],
 })
 export class CourseModule {}

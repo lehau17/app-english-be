@@ -12,27 +12,33 @@ import {
   Query,
   Res,
   UploadedFile,
-  UseInterceptors
+  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Classroom } from '@prisma/client';
 import { Response } from 'express';
 import {
-    AddStudentToClassroomDto,
-    AssignTeacherToClassroomDto,
-    ClassroomAnnouncementQueryDto,
-    CreateClassroomAnnouncementDto,
-    CreateClassroomDto,
-    FilterClassroomRequestDto,
-    ImportStudentsResultDto,
-    UpdateClassroomDto,
+  AddStudentToClassroomDto,
+  AssignTeacherToClassroomDto,
+  ClassroomAnnouncementQueryDto,
+  CreateClassroomAnnouncementDto,
+  CreateClassroomDto,
+  FilterClassroomRequestDto,
+  ImportStudentsResultDto,
+  UpdateClassroomDto,
 } from '../dto/classroom.dto';
 import { ClassroomService } from '../service/classroom.service';
 
 @ApiTags('Classrooms')
 @ApiBearerAuth('Authorization')
-  @Controller('/private/v1/classrooms')
+@Controller('/private/v1/classrooms')
 export class PrivateClassroomController {
   constructor(private readonly classroomService: ClassroomService) {}
 
@@ -126,7 +132,10 @@ export class PrivateClassroomController {
   }
 
   @Get(':id/detail')
-  @ApiOperation({ summary: 'Get full classroom detail (students, assignments, announcements, lessons, activities)' })
+  @ApiOperation({
+    summary:
+      'Get full classroom detail (students, assignments, announcements, lessons, activities)',
+  })
   @ResponseMessage('Classroom detail fetched successfully')
   async getClassroomDetail(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.classroomService.getClassroomDetail(id);

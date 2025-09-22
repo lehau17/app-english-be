@@ -100,7 +100,6 @@ export class AuthRepository {
   async findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
-
     });
   }
 }

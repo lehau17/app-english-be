@@ -9,9 +9,14 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
-  Query
+  Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Lesson } from '@prisma/client';
 import { JwtPayload } from 'jsonwebtoken';
 import {
@@ -36,21 +41,22 @@ import { LessonService } from '../service/lesson.service';
 @ApiBearerAuth('Authorization')
 @Controller('/private/v1/lessons')
 export class PrivateLessonController {
-  constructor(private readonly lessonService: LessonService) { }
+  constructor(private readonly lessonService: LessonService) {}
 
-
-    @Get('next')
-    @ApiOperation({ summary: 'Get next lesson with activity for current user' })
-    @ApiResponse({
-      status: 200,
-      description: 'Next lesson with activity retrieved successfully',
-      type: NextLessonWithActivityResponseDto,
-    })
-    async getNextLesson(@PayloadToken() payloadToken : JwtPayload): Promise<NextLessonWithActivityResponseDto> {
-      const userId = payloadToken.sub;
-      // Trả về lesson và activity tiếp theo chưa hoàn thành
-      return this.lessonService.findNextLessonForUser(userId);
-    }
+  @Get('next')
+  @ApiOperation({ summary: 'Get next lesson with activity for current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Next lesson with activity retrieved successfully',
+    type: NextLessonWithActivityResponseDto,
+  })
+  async getNextLesson(
+    @PayloadToken() payloadToken: JwtPayload,
+  ): Promise<NextLessonWithActivityResponseDto> {
+    const userId = payloadToken.sub;
+    // Trả về lesson và activity tiếp theo chưa hoàn thành
+    return this.lessonService.findNextLessonForUser(userId);
+  }
 
   // ===== CRUD =====
 
@@ -98,7 +104,8 @@ export class PrivateLessonController {
 
   @Get(':id/full')
   @ApiOperation({
-    summary: 'Get lesson + activities (+questions count) + lessonDetails + progress if userId provided',
+    summary:
+      'Get lesson + activities (+questions count) + lessonDetails + progress if userId provided',
   })
   @ResponseMessage('Lesson full data fetched successfully')
   getFull(
@@ -170,8 +177,4 @@ export class PrivateLessonController {
   ): Promise<CompleteActivityResponseDto> {
     return this.lessonService.completeActivity(dto);
   }
-
-
-
-
 }

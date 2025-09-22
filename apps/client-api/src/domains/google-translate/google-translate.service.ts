@@ -16,21 +16,33 @@ export class GoogleTranslateService {
   constructor(private readonly configService: ConfigService) {
     // Khởi tạo Google Translate client
     this.translateClient = new Translate({
-      projectId: this.configService.getOrThrow<string>('GOOGLE_CLOUD_PROJECT_ID'),
-      keyFilename: this.configService.getOrThrow<string>('GOOGLE_CLOUD_KEY_FILE'),
+      projectId: this.configService.getOrThrow<string>(
+        'GOOGLE_CLOUD_PROJECT_ID',
+      ),
+      keyFilename: this.configService.getOrThrow<string>(
+        'GOOGLE_CLOUD_KEY_FILE',
+      ),
     });
 
     // Khởi tạo Text-to-Speech client
     this.ttsClient = new TextToSpeechClient({
-      projectId: this.configService.getOrThrow<string>('GOOGLE_CLOUD_PROJECT_ID'),
-      keyFilename: this.configService.getOrThrow<string>('GOOGLE_CLOUD_KEY_FILE'),
+      projectId: this.configService.getOrThrow<string>(
+        'GOOGLE_CLOUD_PROJECT_ID',
+      ),
+      keyFilename: this.configService.getOrThrow<string>(
+        'GOOGLE_CLOUD_KEY_FILE',
+      ),
     });
   }
 
   /**
    * Dịch văn bản từ ngôn ngữ nguồn sang ngôn ngữ đích
    */
-  async translateText(text: string, targetLanguage: string, sourceLanguage?: string) {
+  async translateText(
+    text: string,
+    targetLanguage: string,
+    sourceLanguage?: string,
+  ) {
     try {
       const [translation] = await this.translateClient.translate(text, {
         from: sourceLanguage,
@@ -68,7 +80,11 @@ export class GoogleTranslateService {
   /**
    * Chuyển văn bản thành audio (Text-to-Speech)
    */
-  async textToSpeech(text: string, languageCode: string = 'en-US', voiceName?: string) {
+  async textToSpeech(
+    text: string,
+    languageCode: string = 'en-US',
+    voiceName?: string,
+  ) {
     try {
       const request = {
         input: { text },
@@ -103,13 +119,24 @@ export class GoogleTranslateService {
   /**
    * Dịch văn bản và tạo audio cho bản dịch
    */
-  async translateAndGenerateAudio(text: string, targetLanguage: string, sourceLanguage?: string) {
+  async translateAndGenerateAudio(
+    text: string,
+    targetLanguage: string,
+    sourceLanguage?: string,
+  ) {
     try {
       // Bước 1: Dịch văn bản
-      const translation = await this.translateText(text, targetLanguage, sourceLanguage);
+      const translation = await this.translateText(
+        text,
+        targetLanguage,
+        sourceLanguage,
+      );
 
       // Bước 2: Tạo audio cho bản dịch
-      const audio = await this.textToSpeech(translation.translatedText, targetLanguage);
+      const audio = await this.textToSpeech(
+        translation.translatedText,
+        targetLanguage,
+      );
 
       return {
         ...translation,
@@ -128,7 +155,7 @@ export class GoogleTranslateService {
   async getSupportedLanguages() {
     try {
       const [languages] = await this.translateClient.getLanguages();
-      return languages.map(lang => ({
+      return languages.map((lang) => ({
         code: lang.code,
         name: lang.name,
       }));
@@ -147,12 +174,14 @@ export class GoogleTranslateService {
         languageCode,
       });
 
-      return result.voices?.map(voice => ({
-        name: voice.name,
-        languageCodes: voice.languageCodes,
-        ssmlGender: voice.ssmlGender,
-        naturalSampleRateHertz: voice.naturalSampleRateHertz,
-      })) || [];
+      return (
+        result.voices?.map((voice) => ({
+          name: voice.name,
+          languageCodes: voice.languageCodes,
+          ssmlGender: voice.ssmlGender,
+          naturalSampleRateHertz: voice.naturalSampleRateHertz,
+        })) || []
+      );
     } catch (error) {
       console.error('Get available voices error:', error);
       throw new Error('Failed to get available voices');
@@ -169,16 +198,20 @@ export class GoogleTranslateFreeService {
   /**
    * Tạo audio từ văn bản sử dụng Google Translate TTS miễn phí
    */
-  async createAudioFile(text: string, language: string = 'en'): Promise<string> {
+  async createAudioFile(
+    text: string,
+    language: string = 'en',
+  ): Promise<string> {
     const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=${language}&client=tw-ob`;
 
     const options = {
       method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'audio/mpeg',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        Accept: 'audio/mpeg',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'https://translate.google.com/',
+        Referer: 'https://translate.google.com/',
       },
     };
 
@@ -190,11 +223,14 @@ export class GoogleTranslateFreeService {
       }
 
       // Tạo tên file an toàn
-      const safeText = text.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+      const safeText = text
+        .substring(0, 50)
+        .replace(/[^a-zA-Z0-9]/g, '_')
+        .toLowerCase();
       const fileName = `${safeText}-${Date.now()}.mp3`;
-  const filePath = join(process.cwd(), 'uploads', 'audio', fileName);
+      const filePath = join(process.cwd(), 'uploads', 'audio', fileName);
 
-  const writer = createWriteStream(filePath);
+      const writer = createWriteStream(filePath);
 
       return new Promise((resolve, reject) => {
         if (!response.body) {
@@ -249,7 +285,10 @@ export class GoogleTranslateFreeService {
   /**
    * Tạo audio và trả về URL công khai
    */
-  async createAudioWithUrl(text: string, language: string = 'en'): Promise<{ filePath: string; url: string }> {
+  async createAudioWithUrl(
+    text: string,
+    language: string = 'en',
+  ): Promise<{ filePath: string; url: string }> {
     const filePath = await this.createAudioFile(text, language);
 
     // If UploadService is available, upload the generated file to S3 (MinIO) and return that URL
@@ -289,7 +328,10 @@ export class GoogleTranslateFreeService {
   /**
    * Tạo audio cho nhiều ngôn ngữ
    */
-  async createAudioForMultipleLanguages(text: string, languages: string[] = ['en', 'vi', 'es']): Promise<{ [key: string]: string }> {
+  async createAudioForMultipleLanguages(
+    text: string,
+    languages: string[] = ['en', 'vi', 'es'],
+  ): Promise<{ [key: string]: string }> {
     const results: { [key: string]: string } = {};
 
     for (const lang of languages) {
@@ -310,10 +352,64 @@ export class GoogleTranslateFreeService {
    */
   isLanguageSupported(language: string): boolean {
     const supportedLanguages = [
-      'af', 'ar', 'bn', 'bs', 'ca', 'cs', 'cy', 'da', 'de', 'el', 'en', 'eo', 'es', 'et', 'fi', 'fr',
-      'hi', 'hr', 'hu', 'hy', 'id', 'is', 'it', 'ja', 'jw', 'km', 'ko', 'la', 'lv', 'mk', 'ml', 'mr',
-      'ms', 'my', 'ne', 'nl', 'no', 'pl', 'pt', 'ro', 'ru', 'si', 'sk', 'sq', 'sr', 'su', 'sv', 'sw',
-      'ta', 'te', 'th', 'tl', 'tr', 'uk', 'ur', 'vi', 'zh-CN', 'zh-TW'
+      'af',
+      'ar',
+      'bn',
+      'bs',
+      'ca',
+      'cs',
+      'cy',
+      'da',
+      'de',
+      'el',
+      'en',
+      'eo',
+      'es',
+      'et',
+      'fi',
+      'fr',
+      'hi',
+      'hr',
+      'hu',
+      'hy',
+      'id',
+      'is',
+      'it',
+      'ja',
+      'jw',
+      'km',
+      'ko',
+      'la',
+      'lv',
+      'mk',
+      'ml',
+      'mr',
+      'ms',
+      'my',
+      'ne',
+      'nl',
+      'no',
+      'pl',
+      'pt',
+      'ro',
+      'ru',
+      'si',
+      'sk',
+      'sq',
+      'sr',
+      'su',
+      'sv',
+      'sw',
+      'ta',
+      'te',
+      'th',
+      'tl',
+      'tr',
+      'uk',
+      'ur',
+      'vi',
+      'zh-CN',
+      'zh-TW',
     ];
 
     return supportedLanguages.includes(language);

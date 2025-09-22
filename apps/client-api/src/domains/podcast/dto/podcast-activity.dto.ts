@@ -2,16 +2,16 @@ import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
-    IsArray,
-    IsEnum,
-    IsNumber,
-    IsObject,
-    IsOptional,
-    IsString,
-    IsUUID,
-    Min,
-    MinLength,
-    ValidateNested
+  IsArray,
+  IsEnum,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+  MinLength,
+  ValidateNested,
 } from 'class-validator';
 
 export enum PodcastActivityType {
@@ -43,7 +43,10 @@ class FillBlankContentDto {
   @Min(1)
   totalQuestions: number;
 
-  @ApiProperty({ description: 'Fill blank questions', type: [FillBlankQuestionDto] })
+  @ApiProperty({
+    description: 'Fill blank questions',
+    type: [FillBlankQuestionDto],
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => FillBlankQuestionDto)
@@ -68,7 +71,7 @@ export class CreateActivityDto {
 
   @ApiProperty({
     description: 'Activity type (only fill_blank supported)',
-    enum: PodcastActivityType
+    enum: PodcastActivityType,
   })
   @IsEnum(PodcastActivityType)
   type: PodcastActivityType;
@@ -85,7 +88,11 @@ export class CreateActivityDto {
   @Min(0)
   timeLimit?: number;
 
-  @ApiPropertyOptional({ description: 'Points awarded', minimum: 0, default: 10 })
+  @ApiPropertyOptional({
+    description: 'Points awarded',
+    minimum: 0,
+    default: 10,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)

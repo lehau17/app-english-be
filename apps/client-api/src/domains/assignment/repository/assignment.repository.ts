@@ -1,6 +1,13 @@
 import { PrismaRepository } from '@app/database';
 import { Injectable } from '@nestjs/common';
-import { Assignment, AssignmentActivity, AssignmentStatus, AssignmentSubmission, DifficultyLevel, Prisma } from '@prisma/client';
+import {
+  Assignment,
+  AssignmentActivity,
+  AssignmentStatus,
+  AssignmentSubmission,
+  DifficultyLevel,
+  Prisma,
+} from '@prisma/client';
 import { ActivityTypeValue } from '../../course/dto';
 
 export type AssignmentActivityModel = AssignmentActivity;
@@ -94,11 +101,10 @@ type AssignmentActivityInput = {
   passingScore?: number;
   difficulty?: DifficultyLevel;
   hints?: string[];
-}
+};
 
 @Injectable()
 export class AssignmentRepository extends PrismaRepository {
-
   private assignmentInclude = {
     teacher: {
       select: {
@@ -128,20 +134,27 @@ export class AssignmentRepository extends PrismaRepository {
     },
   } as const;
 
-  async createAssignment(data: CreateAssignmentData): Promise<AssignmentWithDetails> {
+  async createAssignment(
+    data: CreateAssignmentData,
+  ): Promise<AssignmentWithDetails> {
     const { activities, ...assignmentData } = data;
     return this.assignment.create({
       data: {
         ...assignmentData,
         assignmentActivities: {
-          create: activities.map((activity) => this.mapActivityForCreate(activity)),
+          create: activities.map((activity) =>
+            this.mapActivityForCreate(activity),
+          ),
         },
       },
       include: this.assignmentInclude,
     });
   }
 
-  async findAssignmentById(id: string, includeSubmissions = false): Promise<AssignmentWithDetails | null> {
+  async findAssignmentById(
+    id: string,
+    includeSubmissions = false,
+  ): Promise<AssignmentWithDetails | null> {
     return this.assignment.findUnique({
       where: { id },
       include: {
@@ -174,7 +187,7 @@ export class AssignmentRepository extends PrismaRepository {
       status?: AssignmentStatus;
       page?: number;
       limit?: number;
-    }
+    },
   ): Promise<{ assignments: AssignmentWithDetails[]; total: number }> {
     const { status, page = 1, limit = 20 } = options || {};
     const skip = (page - 1) * limit;
@@ -190,9 +203,7 @@ export class AssignmentRepository extends PrismaRepository {
         include: {
           ...this.assignmentInclude,
         },
-        orderBy: [
-          { createdAt: 'desc' },
-        ],
+        orderBy: [{ createdAt: 'desc' }],
         skip,
         take: limit,
       }),
@@ -209,7 +220,7 @@ export class AssignmentRepository extends PrismaRepository {
       status?: AssignmentStatus;
       page?: number;
       limit?: number;
-    }
+    },
   ): Promise<{ assignments: AssignmentWithDetails[]; total: number }> {
     const { classroomId, status, page = 1, limit = 20 } = options || {};
     const skip = (page - 1) * limit;
@@ -226,9 +237,7 @@ export class AssignmentRepository extends PrismaRepository {
         include: {
           ...this.assignmentInclude,
         },
-        orderBy: [
-          { createdAt: 'desc' },
-        ],
+        orderBy: [{ createdAt: 'desc' }],
         skip,
         take: limit,
       }),
@@ -238,7 +247,10 @@ export class AssignmentRepository extends PrismaRepository {
     return { assignments, total };
   }
 
-  async updateAssignment(id: string, data: UpdateAssignmentData): Promise<AssignmentWithDetails> {
+  async updateAssignment(
+    id: string,
+    data: UpdateAssignmentData,
+  ): Promise<AssignmentWithDetails> {
     const { activities, ...assignmentData } = data;
 
     return this.$transaction(async (tx) => {
@@ -251,7 +263,9 @@ export class AssignmentRepository extends PrismaRepository {
         await tx.assignmentActivity.deleteMany({ where: { assignmentId: id } });
         if (activities.length > 0) {
           await tx.assignmentActivity.createMany({
-            data: activities.map((activity) => this.mapActivityForCreate(activity)),
+            data: activities.map((activity) =>
+              this.mapActivityForCreate(activity),
+            ),
           });
         }
       }
@@ -328,7 +342,7 @@ export class AssignmentRepository extends PrismaRepository {
     data: {
       score: number;
       feedback?: string;
-    }
+    },
   ): Promise<AssignmentSubmissionWithStudent> {
     return this.assignmentSubmission.update({
       where: { id: submissionId },
@@ -355,7 +369,7 @@ export class AssignmentRepository extends PrismaRepository {
   async findSubmissionByAssignmentAndStudent(
     assignmentId: string,
     studentId: string,
-    attemptCount?: number
+    attemptCount?: number,
   ): Promise<AssignmentSubmissionWithStudent | null> {
     const where: Prisma.AssignmentSubmissionWhereInput = {
       assignmentId,
@@ -382,7 +396,9 @@ export class AssignmentRepository extends PrismaRepository {
     });
   }
 
-  async getSubmissionsByAssignment(assignmentId: string): Promise<AssignmentSubmissionWithStudent[]> {
+  async getSubmissionsByAssignment(
+    assignmentId: string,
+  ): Promise<AssignmentSubmissionWithStudent[]> {
     return this.assignmentSubmission.findMany({
       where: { assignmentId },
       include: {
@@ -396,9 +412,7 @@ export class AssignmentRepository extends PrismaRepository {
           },
         },
       },
-      orderBy: [
-        { submittedAt: 'desc' },
-      ],
+      orderBy: [{ submittedAt: 'desc' }],
     });
   }
 }

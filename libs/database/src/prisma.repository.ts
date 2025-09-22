@@ -2,7 +2,10 @@ import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
-export class PrismaRepository extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaRepository
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   constructor() {
     super({
       // Optimize connection pool to prevent memory leaks

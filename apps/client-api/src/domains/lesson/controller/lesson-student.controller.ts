@@ -1,8 +1,4 @@
-import {
-  Controller,
-  Get,
-  Req
-} from '@nestjs/common';
+import { Controller, Get, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { LessonService } from '../service/lesson.service';
 

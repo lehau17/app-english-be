@@ -7,7 +7,7 @@ import {
   IsOptional,
   IsString,
   Max,
-  Min
+  Min,
 } from 'class-validator';
 
 // ===================== USER PROGRESS =====================
@@ -19,7 +19,9 @@ export class UpdateProgressDto {
   @Min(0)
   currentPosition: number;
 
-  @ApiPropertyOptional({ description: 'Total time listened this session (seconds)' })
+  @ApiPropertyOptional({
+    description: 'Total time listened this session (seconds)',
+  })
   @Type(() => Number)
   @IsOptional()
   @IsNumber()
@@ -58,7 +60,11 @@ export class CreateRatingDto {
   @Max(5)
   overallRating: number;
 
-  @ApiPropertyOptional({ description: 'Difficulty rating', minimum: 1, maximum: 5 })
+  @ApiPropertyOptional({
+    description: 'Difficulty rating',
+    minimum: 1,
+    maximum: 5,
+  })
   @Type(() => Number)
   @IsOptional()
   @IsNumber()
@@ -66,7 +72,11 @@ export class CreateRatingDto {
   @Max(5)
   difficultyRating?: number;
 
-  @ApiPropertyOptional({ description: 'Audio quality rating', minimum: 1, maximum: 5 })
+  @ApiPropertyOptional({
+    description: 'Audio quality rating',
+    minimum: 1,
+    maximum: 5,
+  })
   @Type(() => Number)
   @IsOptional()
   @IsNumber()

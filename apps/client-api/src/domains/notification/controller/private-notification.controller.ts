@@ -68,7 +68,9 @@ export class PrivateNotificationController {
   }
 
   @Post('classrooms/:classroomId/broadcast')
-  @ApiOperation({ summary: 'Teacher broadcast notification to classroom students' })
+  @ApiOperation({
+    summary: 'Teacher broadcast notification to classroom students',
+  })
   @ResponseMessage('Classroom notifications created successfully')
   broadcastToClassroom(
     @Param('classroomId', new ParseUUIDPipe()) classroomId: string,

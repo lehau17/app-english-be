@@ -1,4 +1,9 @@
-import { Controller, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UploadService } from './upload.service';
@@ -22,7 +27,11 @@ export class UploadController {
       },
     },
   })
-  @ApiResponse({ status: 201, description: 'File uploaded', schema: { example: { url: 'https://...' } } })
+  @ApiResponse({
+    status: 201,
+    description: 'File uploaded',
+    schema: { example: { url: 'https://...' } },
+  })
   async uploadFile(@UploadedFile() file: Express.Multer.File) {
     const url = await this.uploadService.uploadFile(file);
     return { url };

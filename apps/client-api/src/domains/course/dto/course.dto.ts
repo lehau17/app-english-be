@@ -3,58 +3,88 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DifficultyLevel, LanguageCode } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
-    ArrayMaxSize,
-    ArrayMinSize,
-    ArrayUnique,
-    IsArray,
-    IsBoolean,
-    IsEnum,
-    IsInt,
-    IsNumber,
-    IsOptional,
-    IsString,
-    IsUUID,
-    IsUrl,
-    Matches,
-    MaxLength,
-    Min,
-    MinLength
+  ArrayMaxSize,
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  IsUrl,
+  Matches,
+  MaxLength,
+  Min,
+  MinLength,
 } from 'class-validator';
 import { CreateLessonDto } from '../../lesson/dto/lesson.dto';
 export const ACTIVITY_TYPES = [
-  'vocab','pronunciation','listening','speaking','mini_game',
-  'fill_blank','dictation','matching',
-  'reading','writing','grammar','quiz','flashcard','conversation'
+  'vocab',
+  'pronunciation',
+  'listening',
+  'speaking',
+  'mini_game',
+  'fill_blank',
+  'dictation',
+  'matching',
+  'reading',
+  'writing',
+  'grammar',
+  'quiz',
+  'flashcard',
+  'conversation',
 ] as const;
-export type ActivityTypeValue = typeof ACTIVITY_TYPES[number];
+export type ActivityTypeValue = (typeof ACTIVITY_TYPES)[number];
 
 export class CreateCourseDto {
   @ApiProperty({ example: 'Introduction to English Grammar' })
-  @IsString() @MinLength(3) @MaxLength(180)
+  @IsString()
+  @MinLength(3)
+  @MaxLength(180)
   title!: string;
 
-  @ApiPropertyOptional({ example: 'A comprehensive course on the basics of English grammar.' })
-  @IsOptional() @IsString() @MaxLength(2000)
+  @ApiPropertyOptional({
+    example: 'A comprehensive course on the basics of English grammar.',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
   description?: string;
 
   @ApiProperty({ example: 1 }) // tuỳ chọn business rule duy nhất
-  @IsOptional() @Type(() => Number) @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
   orderNo?: number;
 
   @ApiProperty({ enum: DifficultyLevel, example: DifficultyLevel.beginner })
   @IsEnum(DifficultyLevel)
   difficulty!: DifficultyLevel;
 
-  @ApiPropertyOptional({ example: 600, description: 'Tổng thời lượng ước tính (phút)' })
-  @IsOptional() @Type(() => Number) @IsInt() @Min(0)
-  estimatedTime?: number;               // MINUTES (server sẽ convert sang hours)
+  @ApiPropertyOptional({
+    example: 600,
+    description: 'Tổng thời lượng ước tính (phút)',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  estimatedTime?: number; // MINUTES (server sẽ convert sang hours)
 
   @ApiPropertyOptional({ example: 'https://cdn.ex/img.png' })
-  @IsOptional() @IsUrl()
+  @IsOptional()
+  @IsUrl()
   imageUrl?: string;
 
   @ApiPropertyOptional({ type: [String], example: ['grammar', 'beginner'] })
-  @IsOptional() @IsArray() @ArrayMaxSize(50) @ArrayUnique() @IsString({ each: true })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ArrayUnique()
+  @IsString({ each: true })
   tags?: string[];
 
   @ApiProperty({
@@ -65,40 +95,68 @@ export class CreateCourseDto {
   instructorId!: string;
 
   @ApiPropertyOptional({ example: 0 })
-  @IsOptional() @Type(() => Number) @IsNumber() @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
   price?: number;
 
-  @ApiPropertyOptional({ example: 'VND', description: 'ISO currency code (VD: VND, USD)' })
-  @IsOptional() @IsString() @Matches(/^[A-Z]{3}$/)
+  @ApiPropertyOptional({
+    example: 'VND',
+    description: 'ISO currency code (VD: VND, USD)',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^[A-Z]{3}$/)
   currency?: string;
 
   @ApiPropertyOptional({ example: 20 })
-  @IsOptional() @Type(() => Number) @IsInt() @Min(1)
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
   maxStudents?: number;
 
   @ApiPropertyOptional({ enum: LanguageCode, example: LanguageCode.vi })
-  @IsOptional() @IsEnum(LanguageCode)
+  @IsOptional()
+  @IsEnum(LanguageCode)
   language?: LanguageCode;
 
-  @ApiPropertyOptional({ type: [String], example: ['uuid-course-1', 'uuid-course-2'] })
-  @IsOptional() @IsArray() @ArrayMaxSize(50) @ArrayUnique() @IsString({ each: true })
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['uuid-course-1', 'uuid-course-2'],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(50)
+  @ArrayUnique()
+  @IsString({ each: true })
   prerequisites?: string[];
 
   @ApiPropertyOptional({ example: false })
-  @IsOptional() @IsBoolean()
+  @IsOptional()
+  @IsBoolean()
   isPublished?: boolean;
 
   // server sẽ tính lại nên để optional, bỏ qua nếu client gửi
   @ApiPropertyOptional({ example: 12 })
-  @IsOptional() @Type(() => Number) @IsInt() @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
   totalLessons?: number;
 
   @ApiPropertyOptional({ example: 480, description: 'Tổng thời lượng (phút)' })
-  @IsOptional() @Type(() => Number) @IsInt() @Min(0)
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
   totalDuration?: number;
 
   @ApiProperty({ type: () => [CreateLessonDto] })
-  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100)
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(100)
   @Type(() => CreateLessonDto)
   lessons!: CreateLessonDto[];
 }
@@ -257,32 +315,49 @@ export class FilterCourseRequestDto extends RequestPagingDto {
   // nhưng service sẽ WHITELIST trường hợp an toàn.
 }
 
-
-
-
 export class ImportCoursesDto {
   @ApiProperty({ example: 'https://cdn.example.com/courses.xlsx' })
   @IsUrl()
   url!: string;
 
-  @ApiPropertyOptional({ example: true, description: 'Chỉ parse & trả preview, không ghi DB' })
-  @IsOptional() @IsBoolean() dryRun?: boolean;
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Chỉ parse & trả preview, không ghi DB',
+  })
+  @IsOptional()
+  @IsBoolean()
+  dryRun?: boolean;
 
-  @ApiPropertyOptional({ example: true, description: 'Nếu Title trùng thì update (upsert theo title)' })
-  @IsOptional() @IsBoolean() upsert?: boolean;
+  @ApiPropertyOptional({
+    example: true,
+    description: 'Nếu Title trùng thì update (upsert theo title)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  upsert?: boolean;
 
-  @ApiPropertyOptional({ example: false, description: 'Publish ngay sau khi import' })
-  @IsOptional() @IsBoolean() publish?: boolean;
+  @ApiPropertyOptional({
+    example: false,
+    description: 'Publish ngay sau khi import',
+  })
+  @IsOptional()
+  @IsBoolean()
+  publish?: boolean;
 
   @ApiPropertyOptional({
     example: '639fc4bd-1219-484f-9985-4912180f0809',
     description: 'Instructor mặc định nếu không điền trong sheet Courses',
   })
-  @IsOptional() @IsUUID() defaultInstructorId?: string;
+  @IsOptional()
+  @IsUUID()
+  defaultInstructorId?: string;
 
   @ApiPropertyOptional({
     example: 'title',
-    description: 'Cách xác định course để upsert: "title" (mặc định) hoặc "orderNo"',
+    description:
+      'Cách xác định course để upsert: "title" (mặc định) hoặc "orderNo"',
   })
-  @IsOptional() @IsString() matchBy?: 'title' | 'orderNo';
+  @IsOptional()
+  @IsString()
+  matchBy?: 'title' | 'orderNo';
 }
