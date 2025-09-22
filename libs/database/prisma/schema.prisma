@@ -325,6 +325,9 @@ model KnowledgeDocument {
 
   embedding String
 
+  // pgvector column for efficient similarity search
+  embedding_vector Unsupported("vector(768)")?
+
   documentType String
 
   source String

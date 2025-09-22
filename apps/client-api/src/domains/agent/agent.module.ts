@@ -7,6 +7,7 @@ import { LangChainAgentService } from './service/langchain-agent.service';
 import { RagService } from './service/rag.service';
 import { SqlService } from './service/sql.service';
 import { ApiSearchTool } from './tools/api-search.tool';
+import { RagTool } from './tools/rag.tool';
 
 @Module({
   controllers: [IntelligentController],
@@ -17,6 +18,7 @@ import { ApiSearchTool } from './tools/api-search.tool';
     SqlService,
     GeminiService,
     ApiSearchTool,
+    RagTool,
     SwaggerService,
   ],
 })

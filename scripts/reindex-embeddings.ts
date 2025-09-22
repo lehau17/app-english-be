@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import { config } from 'dotenv';
-import fetch from 'node-fetch';
 
 config();
 
@@ -25,28 +24,21 @@ async function main() {
 
   // Simple helper to call the same GoogleGenerativeAI usage as GeminiService
   async function generateEmbedding(text: string): Promise<number[]> {
-    // Minimal fetch wrapper to call Google Generative AI embeddings endpoint.
-    // NOTE: You may prefer to import existing GeminiService; this keeps script standalone.
-    const resp = await fetch('https://generativeai.googleapis.com/v1beta2/models/text-embedding-004:embed', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${GEMINI_KEY}`,
-      },
-      body: JSON.stringify({
-        text: text,
-      }),
-    });
-
-    if (!resp.ok) {
-      const t = await resp.text();
-      throw new Error(`Embedding API failed: ${resp.status} ${t}`);
+    try {
+      // Use GoogleGenerativeAI SDK instead of raw fetch for proper authentication
+      const { GoogleGenerativeAI } = await import('@google/generative-ai');
+      const genAI = new GoogleGenerativeAI(GEMINI_KEY);
+      
+      const embeddingModel = genAI.getGenerativeModel({
+        model: 'text-embedding-004',
+      });
+      
+      const result: any = await embeddingModel.embedContent(text);
+      return result?.embedding?.values || [];
+    } catch (error) {
+      console.error('Error generating embedding:', error);
+      throw error;
     }
-
-  const j: any = await resp.json();
-  // Adjust according to actual API shape; fallback: search for embedding in response
-  const embedding = (j && (j.embedding?.values || j.data?.[0]?.embedding)) || [];
-    return embedding;
   }
 
   const batchSize = Number(process.env.BATCH_SIZE) || 100;
