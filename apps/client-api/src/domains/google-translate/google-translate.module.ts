@@ -6,6 +6,7 @@ import {
   GoogleTranslateFreeService,
   GoogleTranslateService,
 } from './google-translate.service';
+import { VietnameseUtil } from './vietnamese.util';
 
 @Module({
   imports: [UploadModule],
@@ -13,8 +14,9 @@ import {
     GoogleTranslateService,
     GoogleTranslateFreeService,
     UploadService,
+    VietnameseUtil,
   ],
   controllers: [GoogleTranslateController],
-  exports: [GoogleTranslateService, GoogleTranslateFreeService],
+  exports: [GoogleTranslateService, GoogleTranslateFreeService, VietnameseUtil],
 })
 export class GoogleTranslateModule {}

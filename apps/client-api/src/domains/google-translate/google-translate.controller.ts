@@ -457,4 +457,233 @@ export class GoogleTranslateController {
 
     return languageNames[code] || code;
   }
+
+  // ============== VIETNAMESE-SPECIFIC ENDPOINTS ==============
+
+  @Post('vietnamese/pronunciation-analysis')
+  @ApiOperation({
+    summary: 'Phân tích phát âm tiếng Việt',
+    description: 'Tạo hướng dẫn phát âm chi tiết cho văn bản tiếng Việt',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Văn bản tiếng Việt cần phân tích',
+          example: 'Xin chào, tôi học tiếng Việt',
+        },
+      },
+      required: ['text'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Phân tích phát âm thành công',
+    schema: {
+      type: 'object',
+      properties: {
+        originalText: { type: 'string' },
+        phoneticGuide: { type: 'array' },
+        tonalAnalysis: { type: 'string' },
+        difficulty: { type: 'object' },
+        suggestions: { type: 'array' },
+        audioUrl: { type: 'string' },
+      },
+    },
+  })
+  async analyzeVietnamesePronunciation(@Body() body: { text: string }) {
+    const { text } = body;
+
+    if (!text) {
+      throw new BadRequestException('Text is required');
+    }
+
+    return this.googleTranslateFreeService.analyzeVietnameseForPronunciation(
+      text,
+    );
+  }
+
+  @Post('vietnamese/regional-audio')
+  @ApiOperation({
+    summary: 'Tạo audio tiếng Việt theo phương ngữ',
+    description: 'Tạo audio với phương ngữ miền Bắc, Trung, Nam',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Văn bản tiếng Việt',
+          example: 'Tôi đang học tiếng Việt',
+        },
+        region: {
+          type: 'string',
+          enum: ['north', 'central', 'south'],
+          description: 'Phương ngữ miền',
+          example: 'north',
+        },
+      },
+      required: ['text'],
+    },
+  })
+  async createRegionalVietnameseAudio(
+    @Body() body: { text: string; region?: 'north' | 'central' | 'south' },
+  ) {
+    const { text, region = 'north' } = body;
+
+    if (!text) {
+      throw new BadRequestException('Text is required');
+    }
+
+    return this.googleTranslateFreeService.createVietnameseAudioWithRegionalAccent(
+      text,
+      region,
+    );
+  }
+
+  @Post('vietnamese/fill-blank-exercise')
+  @ApiOperation({
+    summary: 'Tạo bài tập điền từ tiếng Việt',
+    description: 'Tự động tạo bài tập điền từ từ văn bản tiếng Việt',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Văn bản tiếng Việt để tạo bài tập',
+          example:
+            'Việt Nam là một quốc gia có nền văn hóa lâu đời và truyền thống tốt đẹp',
+        },
+      },
+      required: ['text'],
+    },
+  })
+  async generateVietnameseFillBlank(@Body() body: { text: string }) {
+    const { text } = body;
+
+    if (!text) {
+      throw new BadRequestException('Text is required');
+    }
+
+    return this.googleTranslateFreeService.generateVietnameseFillBlankExercise(
+      text,
+    );
+  }
+
+  @Post('vietnamese/grammar-quiz')
+  @ApiOperation({
+    summary: 'Tạo quiz ngữ pháp tiếng Việt',
+    description: 'Tự động tạo câu hỏi trắc nghiệm về ngữ pháp tiếng Việt',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Văn bản tiếng Việt để tạo quiz',
+          example:
+            'Kính thưa quý khách, chúng tôi xin thông báo về chương trình học mới',
+        },
+      },
+      required: ['text'],
+    },
+  })
+  async generateVietnameseGrammarQuiz(@Body() body: { text: string }) {
+    const { text } = body;
+
+    if (!text) {
+      throw new BadRequestException('Text is required');
+    }
+
+    return this.googleTranslateFreeService.generateVietnameseGrammarQuiz(text);
+  }
+
+  @Post('vietnamese/vocabulary-audio')
+  @ApiOperation({
+    summary: 'Tạo audio học từ vựng tiếng Việt',
+    description: 'Tạo audio phát âm từng từ với tốc độ có thể điều chỉnh',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        words: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Danh sách từ vựng tiếng Việt',
+          example: ['học', 'tập', 'nói', 'nghe', 'đọc', 'viết'],
+        },
+        speed: {
+          type: 'string',
+          enum: ['slow', 'normal', 'fast'],
+          description: 'Tốc độ đọc',
+          example: 'normal',
+        },
+        includeDefinitions: {
+          type: 'boolean',
+          description: 'Có bao gồm nghĩa của từ không',
+          example: true,
+        },
+      },
+      required: ['words'],
+    },
+  })
+  async createVietnameseVocabularyAudio(
+    @Body()
+    body: {
+      words: string[];
+      speed?: 'slow' | 'normal' | 'fast';
+      includeDefinitions?: boolean;
+    },
+  ) {
+    const { words, speed = 'normal', includeDefinitions = false } = body;
+
+    if (!words || words.length === 0) {
+      throw new BadRequestException(
+        'Words array is required and cannot be empty',
+      );
+    }
+
+    return this.googleTranslateFreeService.createVietnameseVocabularyAudio(
+      words,
+      { speed, includeDefinitions },
+    );
+  }
+
+  @Post('vietnamese/listening-exercise')
+  @ApiOperation({
+    summary: 'Tạo bài tập nghe tiếng Việt',
+    description: 'Tạo bài tập nghe hiểu từ văn bản tiếng Việt',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Văn bản tiếng Việt để tạo bài tập nghe',
+          example:
+            'Hà Nội là thủ đô của Việt Nam. Thành phố này có nhiều di tích lịch sử nổi tiếng.',
+        },
+      },
+      required: ['text'],
+    },
+  })
+  async createVietnameseListeningExercise(@Body() body: { text: string }) {
+    const { text } = body;
+
+    if (!text) {
+      throw new BadRequestException('Text is required');
+    }
+
+    return this.googleTranslateFreeService.createVietnameseListeningExercise(
+      text,
+    );
+  }
 }
