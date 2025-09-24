@@ -14,18 +14,6 @@ class ChildProgressDto {
   level: number;
 
   @ApiProperty()
-  xp: number;
-
-  @ApiProperty()
-  xpToNext: number;
-
-  @ApiProperty()
-  streak: number;
-
-  @ApiProperty()
-  coins: number;
-
-  @ApiProperty()
   todayStudyTime: number;
 
   @ApiProperty()
@@ -52,27 +40,39 @@ class ParentRewardDto {
   description?: string;
 
   @ApiProperty()
-  cost: number;
+  type: string;
+
+  @ApiProperty({ required: false })
+  imageUrl?: string;
 
   @ApiProperty()
-  claimed: boolean;
+  isActive: boolean;
+
+  @ApiProperty()
+  claimsCount: number;
+
+  @ApiProperty()
+  createdAt: Date;
 }
 
 class ParentNotificationDto {
   @ApiProperty()
-  type: 'achievement' | 'activity' | 'reminder' | 'system';
+  id: string;
 
   @ApiProperty()
-  title: string;
+  type: string;
 
   @ApiProperty()
-  message: string;
+  body: string;
+
+  @ApiProperty({ required: false })
+  data?: any;
+
+  @ApiProperty({ required: false })
+  readAt?: Date;
 
   @ApiProperty()
-  time: string;
-
-  @ApiProperty()
-  read: boolean;
+  createdAt: Date;
 }
 
 export class ParentDashboardDto {
