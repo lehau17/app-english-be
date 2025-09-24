@@ -43,11 +43,12 @@ export class RagService {
     // Ghi vector vào cột embedding_vector (kiểu pgvector) bằng raw SQL cast
     try {
       const vectorText = `[${embedding.join(',')}]`;
-      // Parameterize id but pgvector literal still must be cast; use $executeRawUnsafe for vector cast
-      await this.prisma.$executeRawUnsafe(
-        `UPDATE knowledge_documents SET embedding_vector = '${vectorText}'::vector WHERE id = $1`,
-        doc.id,
-      );
+      // ✅ Safe: Use $executeRaw with proper parameterization
+      await this.prisma.$executeRaw`
+        UPDATE knowledge_documents
+        SET embedding_vector = ${vectorText}::vector
+        WHERE id = ${doc.id}
+      `;
     } catch (e) {
       this.logger.warn(`Không thể lưu embedding_vector (pgvector) cho doc ${doc.id}: ${(e as any)?.message}`);
     }
@@ -109,14 +110,17 @@ YÊU CẦU:
   private async findSimilarDocuments(queryEmbedding: number[], topK = 3) {
     // Nếu cột embedding_vector đã có dữ liệu, dùng truy vấn ANN của Postgres (pgvector)
     try {
+      // ✅ Safe: Use parameterized query with Prisma's $queryRaw
       const vectorText = `[${queryEmbedding.join(',')}]`;
-      const rows = await this.prisma.$queryRawUnsafe<any[]>(
-        `SELECT id, title, content, document_type, source, embedding
-         FROM knowledge_documents
-         WHERE embedding_vector IS NOT NULL
-         ORDER BY embedding_vector <-> '${vectorText}'::vector
-         LIMIT ${Number(topK)}`,
-      );
+
+      // Use $queryRaw with template literal for type safety
+      const rows = await this.prisma.$queryRaw<any[]>`
+        SELECT id, title, content, document_type, source, embedding
+        FROM knowledge_documents
+        WHERE embedding_vector IS NOT NULL
+        ORDER BY embedding_vector <-> ${vectorText}::vector
+        LIMIT ${topK}
+      `;
 
       // Normalize column names so caller gets { id, title, documentType, content, source }
       const normalized = (rows || []).map((r: any) => ({
@@ -127,22 +131,36 @@ YÊU CẦU:
         source: r.source,
         embedding: r.embedding,
       }));
-      return normalized;
+
+      if (normalized.length > 0) {
+        this.logger.log(`✅ Found ${normalized.length} documents using pgvector ANN query`);
+        return normalized;
+      }
     } catch (e) {
       // Fallback: nếu có lỗi (ví dụ pgvector chưa có), dùng cách cũ
       this.logger.warn('ANN query failed, falling back to in-memory similarity: ' + (e as any)?.message);
-      const allDocs = await this.prisma.knowledgeDocument.findMany();
-      const scored = allDocs.map((d) => {
-        const emb = d.embedding ? (JSON.parse(d.embedding) as number[]) : [];
-        return { doc: d, sim: this.cosineSimilarity(queryEmbedding, emb) };
-      });
-
-      return scored
-        .filter((x) => x.sim > 0.6)
-        .sort((a, b) => b.sim - a.sim)
-        .slice(0, topK)
-        .map((x) => x.doc);
     }
+
+    // Fallback to in-memory similarity calculation
+    this.logger.log('Using fallback in-memory similarity search');
+    const allDocs = await this.prisma.knowledgeDocument.findMany();
+    const scored = allDocs.map((d) => {
+      const emb = d.embedding ? (JSON.parse(d.embedding) as number[]) : [];
+      return { doc: d, sim: this.cosineSimilarity(queryEmbedding, emb) };
+    });
+
+    return scored
+      .filter((x) => x.sim > 0.6)
+      .sort((a, b) => b.sim - a.sim)
+      .slice(0, topK)
+      .map((x) => ({
+        id: x.doc.id,
+        title: x.doc.title,
+        documentType: x.doc.documentType,
+        content: x.doc.content,
+        source: x.doc.source,
+        embedding: x.doc.embedding,
+      }));
   }
 
   private cosineSimilarity(a: number[], b: number[]) {
