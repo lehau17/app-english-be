@@ -91,8 +91,10 @@ export class CourseController {
 
 
   @Post('import-excel')
-  importExcel(@Body() dto: ImportCoursesDto) {
-    return this.svc.importFromExcel(dto);
+  importExcel(@Body() dto: ImportCoursesDto,
+    @PayloadToken() payload : JwtPayload
+  ) {
+    return this.svc.importFromExcel(dto, payload.sub);
   }
 
   @Post('import-multiple-excels')
@@ -116,6 +118,6 @@ export class CourseController {
     const defaultInstructorId = dto.defaultInstructorId || payload.sub
     const finalDto = { ...dto, defaultInstructorId };
 
-    return this.svc.importMultipleExcels(files, finalDto);
+    return this.svc.importMultipleExcels(files, finalDto, payload.sub);
   }
 }

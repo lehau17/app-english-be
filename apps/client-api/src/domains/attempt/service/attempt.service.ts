@@ -1,6 +1,7 @@
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Attempt } from '@prisma/client';
+import { GeminiService } from '../../agent/service/gemini.service';
 import {
   CreateAttemptDto,
   FilterAttemptRequestDto,
@@ -10,7 +11,12 @@ import { AttemptRepository } from '../repository/attempt.repository';
 
 @Injectable()
 export class AttemptService {
-  constructor(private readonly attemptRepository: AttemptRepository) {}
+  private readonly logger = new Logger(AttemptService.name);
+
+  constructor(
+    private readonly attemptRepository: AttemptRepository,
+    private readonly geminiService: GeminiService,
+  ) {}
 
   async create(dto: CreateAttemptDto): Promise<Attempt> {
     return this.attemptRepository.create(dto);
@@ -26,6 +32,35 @@ export class AttemptService {
 
   async update(id: string, dto: UpdateAttemptDto): Promise<Attempt> {
     await this.ensureExists(id);
+
+    // Nếu có score mới, kiểm tra xem có cần tạo feedback AI không
+    if (dto.score !== undefined) {
+      const currentAttempt = await this.attemptRepository.findById(id);
+      if (currentAttempt && currentAttempt.maxScore) {
+        // Chỉ tạo feedback AI nếu score < maxScore
+        if (dto.score < currentAttempt.maxScore) {
+          try {
+            const feedback = await this.geminiService.generateAttemptFeedback({
+              score: dto.score,
+              maxScore: currentAttempt.maxScore,
+              timeSpent: currentAttempt.timeSpent,
+              userAnswers: currentAttempt.detail as any,
+            });
+
+            // Gán feedback vào dto
+            dto.feedback = feedback;
+            this.logger.log(`✅ Đã tạo feedback AI cho attempt ${id}: ${dto.score}/${currentAttempt.maxScore}`);
+          } catch (error) {
+            this.logger.error(`❌ Lỗi tạo feedback AI cho attempt ${id}:`, error);
+            // Vẫn tiếp tục update mà không có feedback AI
+          }
+        } else {
+          // Đạt điểm tối đa - có thể set feedback mặc định
+          dto.feedback = 'Hoàn hảo! Bạn đã đạt điểm tối đa. Tiếp tục phát huy!';
+        }
+      }
+    }
+
     return this.attemptRepository.update(id, dto);
   }
 
@@ -44,6 +79,5 @@ export class AttemptService {
     const exists = await this.attemptRepository.findById(id);
     if (!exists) {
       throw new NotFoundException(`Attempt with id ${id} not found`);
-    }
-  }
+    }}
 }

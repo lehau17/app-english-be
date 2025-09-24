@@ -72,7 +72,7 @@ export class CoursesImportService {
     private readonly googleTranslateFreeService: GoogleTranslateFreeService
   ) {}
 
-  async importFromExcel(dto: ImportCoursesDto) {
+  async importFromExcel(dto: ImportCoursesDto, currentUserId : string) {
     let res: ArrayBuffer;
 
     if (dto.url) {
@@ -690,7 +690,7 @@ export class CoursesImportService {
   /**
    * Import nhiều file Excel cùng lúc
    */
-  async importMultipleExcels(files: Express.Multer.File[], dto: Partial<ImportCoursesDto>) {
+  async importMultipleExcels(files: Express.Multer.File[], dto: Partial<ImportCoursesDto>, currentUserId:string) {
     if (!files || files.length === 0) {
       throw new BadRequestException('Không có file nào được upload');
     }
@@ -710,7 +710,7 @@ export class CoursesImportService {
       try {
         // Import trực tiếp từ buffer
         const singleDto = { ...dto, buffer: file.buffer } as any;
-        const result = await this.importFromExcel(singleDto);
+        const result = await this.importFromExcel(singleDto,currentUserId);
 
         results.push({
           fileName: file.originalname,

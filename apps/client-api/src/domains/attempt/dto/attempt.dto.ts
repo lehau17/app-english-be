@@ -32,6 +32,10 @@ export class UpdateAttemptDto {
   @IsOptional()
   @IsJSON()
   detail?: string;
+
+  @ApiPropertyOptional({ example: 'Bài làm rất tốt! Hãy tiếp tục phát huy.' })
+  @IsOptional()
+  feedback?: string;
 }
 
 export class FilterAttemptRequestDto extends RequestPagingDto {

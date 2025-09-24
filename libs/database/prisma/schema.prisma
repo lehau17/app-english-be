@@ -1390,6 +1390,30 @@ model ParentChild {
 
   maxDifficulty DifficultyLevel?
 
+  // Cài đặt thông báo cho parent
+
+  notificationsEnabled Boolean @default(true)
+
+  notificationTypes String[] @default(["achievement", "progress", "activity_completed", "streak_lost", "daily_goal_reached"]) // Các loại thông báo parent muốn nhận
+
+  notificationSchedule String @default("realtime") // "realtime", "daily_summary", "weekly_summary", "disabled"
+
+  quietHoursStart String? // Ví dụ: "22:00" - không gửi thông báo từ giờ này
+
+  quietHoursEnd String? // Ví dụ: "07:00" - đến giờ này
+
+  timezone String @default("Asia/Ho_Chi_Minh")
+
+  // Ngưỡng thông báo
+
+  minProgressThreshold Int @default(10) // Chỉ thông báo khi progress >= X%
+
+  streakNotificationDays Int @default(3) // Thông báo khi streak >= X ngày
+
+  activityCompletionNotify Boolean @default(true) // Thông báo khi con hoàn thành activity
+
+  goalReachedNotify Boolean @default(true) // Thông báo khi đạt mục tiêu hàng ngày
+
   parent User @relation("ParentChildParent", fields: [parentId], references: [id], onDelete: Cascade)
 
   child User @relation("ParentChildChild", fields: [childId], references: [id], onDelete: Cascade)

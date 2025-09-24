@@ -1,9 +1,11 @@
 import { PrismaRepository } from '@app/database';
+import { KafkaService, TTSTaskMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Course, UserRole } from '@prisma/client';
@@ -25,10 +27,13 @@ function normalizeCurrency(code?: string): string | undefined {
 
 @Injectable()
 export class CourseService {
+  private readonly logger = new Logger(CourseService.name);
+
   constructor(
     private readonly courseRepository: CourseRepository,
     private readonly prisma: PrismaRepository,
-  private readonly googleTranslateFreeService: GoogleTranslateFreeService,
+    private readonly googleTranslateFreeService: GoogleTranslateFreeService,
+    private readonly kafkaService: KafkaService,
   ) { }
 
   // service.ts (đoạn create)
@@ -174,40 +179,28 @@ export class CourseService {
       return course;
     });
 
-    // After transaction commit, process pending audio tasks (generate audio and update activities)
-    // Use setImmediate to prevent memory accumulation and ensure proper cleanup
+    // After transaction commit, emit TTS tasks to background worker via Kafka
     if (pendingAudioTasks.length > 0) {
-      setImmediate(async () => {
-        for (const task of pendingAudioTasks) {
-          try {
-            // fetch latest activity content
-            const act = await this.prisma.activity.findUnique({ where: { id: task.activityId } });
-            if (!act) continue;
-            const content: any = act.content ?? {};
-            if (content.kind !== 'vocab') continue;
-            const items: any[] = (content.data && content.data.items) || [];
+      this.logger.log(`Emitting ${pendingAudioTasks.length} TTS tasks to background worker`);
 
-            for (const idx of task.itemsIndex) {
-              const word = items[idx]?.word;
-              if (!word) continue;
-              try {
-                const { url } = await this.googleTranslateFreeService.createAudioWithUrl(word, task.language?.split('-')[0] ?? 'en');
-                items[idx].audioUrl = url;
-              } catch (e) {
-                // log and continue
-                console.error('Failed to generate audio for word', word, e);
-              }
-            }
+      for (const task of pendingAudioTasks) {
+        const message: TTSTaskMessage = {
+          activityId: task.activityId,
+          itemsIndex: task.itemsIndex,
+          language: task.language ?? 'en',
+          taskId: `${task.activityId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: Date.now(),
+        };
 
-            // Persist updated content
-            await this.prisma.activity.update({ where: { id: task.activityId }, data: { content } });
-          } catch (e) {
-            console.error('Error processing audio task', task, e);
-          }
+        try {
+          this.kafkaService.send('tts-audio-generation', message);
+        } catch (error) {
+          this.logger.error(`Failed to emit TTS task: ${error.message}`, error);
         }
-        // Explicitly clear task array to prevent memory retention
-        pendingAudioTasks.length = 0;
-      });
+      }
+
+      // Clear the array immediately since we've queued the tasks
+      pendingAudioTasks.length = 0;
     }
 
     return result;

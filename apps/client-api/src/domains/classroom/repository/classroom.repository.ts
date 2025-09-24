@@ -4,10 +4,14 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Classroom, Prisma } from '@prisma/client';
 import { Readable } from 'stream';
 import { ClassroomAnnouncementQueryDto, FilterClassroomRequestDto } from '../dto/classroom.dto';
+import { LessonRepository } from '../../lesson/repository/lesson.repository';
 
 @Injectable()
 export class ClassroomRepository {
-  constructor(private readonly prisma: PrismaRepository) {}
+  constructor(
+    private readonly prisma: PrismaRepository,
+    private readonly lessonRepository: LessonRepository
+  ) {}
 
   async create(data: Prisma.ClassroomCreateInput): Promise<Classroom> {
     return this.prisma.classroom.create({ data });
@@ -421,8 +425,8 @@ export class ClassroomRepository {
           time: classroom.slots[0].startMinuteOfDay !== undefined
             ? `${Math.floor(classroom.slots[0].startMinuteOfDay / 60)}:${String(classroom.slots[0].startMinuteOfDay % 60).padStart(2, '0')}`
             : undefined,
-          duration: classroom.slots[0].sessionDurationHours !== undefined
-            ? Math.round(classroom.slots[0].sessionDurationHours * 60)
+          duration: classroom.slots[0].startMinuteOfDay !== undefined && classroom.slots[0].endMinuteOfDay !== undefined
+            ? Math.round((classroom.slots[0].endMinuteOfDay - classroom.slots[0].startMinuteOfDay))
             : undefined,
         }
       : undefined;
@@ -562,24 +566,26 @@ export class ClassroomRepository {
       updatedAt: an.updatedAt,
     }));
 
-    // Format lessons + activities
-    const lessons = classroom.course?.lessons?.map(lesson => ({
+    // Format lessons + activities với progress unlocking logic
+    const lessons = classroom.course?.lessons?.length ? 
+      await this.lessonRepository.listLessonsOfCourseWithProgress(classroom.course.id, studentId)
+      : [];
+
+    const formattedLessons = lessons.map(lesson => ({
       id: lesson.id,
       title: lesson.title,
       orderNo: lesson.orderNo,
       estimatedTime: lesson.estimatedTime,
       difficulty: lesson.difficulty,
-      isLocked: lesson.isLocked,
+      isLocked: lesson.isLocked, // Sử dụng dynamic isLocked từ progress logic
       activities: lesson.activities?.map(activity => ({
         id: activity.id,
-        lessonId: activity.lessonId,
-        orderNo: activity.orderNo,
         type: activity.type,
-        title: activity.title,
-        duration: activity.duration,
         passingScore: activity.passingScore,
       })) ?? [],
-    })) ?? [];
+      // Thêm progress data nếu có (using type assertion for dynamic property)
+      ...((lesson as any).progress && { progress: (lesson as any).progress }),
+    }));
 
     const settings = (classroom.settings as any) || {};
     const schedule = (classroom.slots as any[]) || [];
