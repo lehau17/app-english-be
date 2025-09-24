@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Param,
+  Post,
   Req
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -19,5 +21,15 @@ export class LessonStudentController {
     // Logic: lấy tất cả lesson, tìm lesson đầu tiên chưa hoàn thành
     // (giả sử có hàm lessonService.findNextLessonForUser)
     return this.lessonService.findNextLessonForUser(userId);
+  }
+
+  @Post(':lessonId/unlock-next')
+  @ApiOperation({ summary: 'Unlock next lesson after completing current lesson' })
+  async unlockNextLesson(
+    @Param('lessonId') lessonId: string,
+    @Req() req
+  ) {
+    const userId = req.user.id;
+    return this.lessonService.unlockNextLesson(lessonId, userId);
   }
 }

@@ -1,27 +1,33 @@
+import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Lesson, ProgressState } from '@prisma/client';
+import { ParentNotificationService } from '../../parent/service/parent-notification.service';
 import {
-  CanStartActivityRequestDto,
-  CanStartActivityResponseDto,
-  CompleteActivityRequestDto,
-  CompleteActivityResponseDto,
-  CreateLessonDto,
-  FilterLessonRequestDto,
-  GetLessonHubsRequestDto,
-  GetLessonHubsResponseDto,
-  LessonProgressSummaryDto,
-  NextActivityResponseDto,
-  NextLessonWithActivityResponseDto,
-  StartActivityRequestDto,
-  StartActivityResponseDto,
-  UpdateLessonDto,
+    CanStartActivityRequestDto,
+    CanStartActivityResponseDto,
+    CompleteActivityRequestDto,
+    CompleteActivityResponseDto,
+    CreateLessonDto,
+    FilterLessonRequestDto,
+    GetLessonHubsRequestDto,
+    GetLessonHubsResponseDto,
+    LessonProgressSummaryDto,
+    NextActivityResponseDto,
+    NextLessonWithActivityResponseDto,
+    StartActivityRequestDto,
+    StartActivityResponseDto,
+    UpdateLessonDto,
 } from '../dto/lesson.dto';
 import { LessonRepository } from '../repository/lesson.repository';
 
 @Injectable()
 export class LessonService {
-  constructor(private readonly lessonRepository: LessonRepository) {}
+  constructor(
+    private readonly lessonRepository: LessonRepository,
+    private readonly parentNotificationService: ParentNotificationService,
+    private readonly prisma: PrismaRepository,
+  ) {}
 
   /** ===== CRUD ===== */
 
@@ -244,6 +250,11 @@ export class LessonService {
       score,
     );
 
+    // Trigger parent notification if activity completed successfully
+    if (p.state === 'done') {
+      await this.notifyParentActivityCompleted(userId, activityId, score);
+    }
+
     return {
       state: p.state as ProgressState,
       score: p.score ?? null,
@@ -355,5 +366,123 @@ export class LessonService {
       }
     }
     return null;
+  }
+
+  /**
+   * Helper method to notify parents when child completes an activity
+   */
+  private async notifyParentActivityCompleted(userId: string, activityId: string, score?: number) {
+    try {
+      // Get activity and user info using Prisma directly
+      const activity = await this.prisma.activity.findUnique({
+        where: { id: activityId },
+        select: { title: true, type: true },
+      });
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { displayName: true, firstName: true },
+      });
+
+      if (!activity || !user) return;
+
+      const childName = user.displayName || user.firstName || 'Con';
+
+      // Get time spent from progress record
+      const progress = await this.prisma.progress.findUnique({
+        where: { userId_activityId: { userId, activityId } },
+        select: { timeSpentSec: true },
+      });
+
+      await this.parentNotificationService.notifyActivityCompleted({
+        childId: userId,
+        childName,
+        activityTitle: activity.title,
+        activityType: activity.type,
+        score,
+        timeSpent: progress?.timeSpentSec,
+      });
+    } catch (error) {
+      // Don't fail the main operation if notification fails
+      console.error('Failed to send parent notification:', error);
+    }
+  }
+
+  /**
+   * Unlock next lesson when current lesson is completed
+   */
+  async unlockNextLesson(lessonId: string, userId: string): Promise<{ message: string; nextLessonId?: string }> {
+    // 1. Check if current lesson is completed
+    const isLessonCompleted = await this.isLessonCompleted(lessonId, userId);
+    if (!isLessonCompleted) {
+      throw new BadRequestException('Current lesson must be completed before unlocking next lesson');
+    }
+
+    // 2. Get current lesson to find course and order
+    const currentLesson = await this.prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: { courseId: true, orderNo: true },
+    });
+
+    if (!currentLesson) {
+      throw new NotFoundException(`Lesson with id ${lessonId} not found`);
+    }
+
+    // 3. Find next lesson in the same course
+    const nextLesson = await this.prisma.lesson.findFirst({
+      where: {
+        courseId: currentLesson.courseId,
+        orderNo: { gt: currentLesson.orderNo },
+      },
+      orderBy: { orderNo: 'asc' },
+    });
+
+    if (!nextLesson) {
+      return { message: 'No more lessons to unlock. Course completed!' };
+    }
+
+    // 4. Unlock next lesson if it's locked
+    if (nextLesson.isLocked) {
+      await this.prisma.lesson.update({
+        where: { id: nextLesson.id },
+        data: { isLocked: false },
+      });
+
+      return {
+        message: `Next lesson "${nextLesson.title}" has been unlocked!`,
+        nextLessonId: nextLesson.id,
+      };
+    }
+
+    return {
+      message: `Next lesson "${nextLesson.title}" is already unlocked`,
+      nextLessonId: nextLesson.id,
+    };
+  }
+
+  /**
+   * Check if a lesson is completed by checking if all activities are completed
+   */
+  private async isLessonCompleted(lessonId: string, userId: string): Promise<boolean> {
+    // Get all activities for the lesson
+    const activities = await this.prisma.activity.findMany({
+      where: { lessonId },
+      select: { id: true },
+    });
+
+    if (activities.length === 0) {
+      return false; // No activities means lesson is not completable
+    }
+
+    // Check if all activities have completed progress
+    const completedActivities = await this.prisma.progress.count({
+      where: {
+        userId,
+        activityId: { in: activities.map(a => a.id) },
+        state: { in: [ProgressState.done, ProgressState.mastered] },
+      },
+    });
+
+    return completedActivities === activities.length;
   }
 }

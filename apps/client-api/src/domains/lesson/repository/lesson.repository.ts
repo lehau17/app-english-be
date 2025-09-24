@@ -496,6 +496,7 @@ export class LessonRepository {
 
   /**
    * Lấy danh sách lesson thuộc một khoá học kèm progress của user
+   * Bao gồm logic unlock lessons dựa trên completion của lesson trước
    */
   async listLessonsOfCourseWithProgress(courseId: string, userId?: string) {
     const lessons = await this.prisma.lesson.findMany({
@@ -527,7 +528,7 @@ export class LessonRepository {
 
     // Tính progress cho từng lesson nếu có userId
     if (userId) {
-      return lessons.map(lesson => {
+      return lessons.map((lesson, index) => {
         const activities = lesson.activities;
         const totalActivities = activities.length;
         let completedActivities = 0;
@@ -541,8 +542,38 @@ export class LessonRepository {
 
         const completion = totalActivities > 0 ? Math.round((completedActivities * 100) / totalActivities) : 0;
 
+        // LESSON UNLOCKING LOGIC:
+        // Lesson đầu tiên luôn được unlock
+        // Lesson tiếp theo chỉ unlock khi lesson trước đó hoàn thành 100%
+        let dynamicIsLocked = lesson.isLocked;
+        if (index === 0) {
+          // Lesson đầu tiên luôn unlock
+          dynamicIsLocked = false;
+        } else if (index > 0 && lessons[index - 1]) {
+          // Kiểm tra lesson trước đã hoàn thành chưa
+          const prevLesson = lessons[index - 1];
+          const prevActivities = prevLesson.activities;
+          const prevTotalActivities = prevActivities.length;
+          let prevCompletedActivities = 0;
+
+          for (const activity of prevActivities) {
+            const progress = (activity as any).progress?.[0];
+            if (progress && (progress.state === 'done' || progress.state === 'mastered')) {
+              prevCompletedActivities++;
+            }
+          }
+
+          const prevCompletion = prevTotalActivities > 0 ? Math.round((prevCompletedActivities * 100) / prevTotalActivities) : 0;
+          
+          // Unlock nếu lesson trước hoàn thành 100%
+          if (prevCompletion >= 100) {
+            dynamicIsLocked = false;
+          }
+        }
+
         return {
           ...lesson,
+          isLocked: dynamicIsLocked, // Override với dynamic logic
           progress: {
             totalActivities,
             completedActivities,
@@ -552,7 +583,11 @@ export class LessonRepository {
       });
     }
 
-    return lessons;
+    // Nếu không có userId, vẫn áp dụng unlock logic cơ bản (chỉ lesson đầu tiên unlock)
+    return lessons.map((lesson, index) => ({
+      ...lesson,
+      isLocked: index === 0 ? false : lesson.isLocked,
+    }));
   }
 
   /**

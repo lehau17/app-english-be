@@ -171,6 +171,19 @@ export class PrivateLessonController {
     return this.lessonService.completeActivity(dto);
   }
 
+  @Post(':id/unlock')
+  @ApiOperation({
+    summary: 'Unlock next lesson when current lesson is completed',
+  })
+  @ResponseMessage('Next lesson unlocked successfully')
+  async unlockNextLesson(
+    @Param('id', new ParseUUIDPipe()) lessonId: string,
+    @PayloadToken() payloadToken: JwtPayload,
+  ): Promise<{ message: string; nextLessonId?: string }> {
+    const userId = payloadToken.sub;
+    return this.lessonService.unlockNextLesson(lessonId, userId);
+  }
+
 
 
 
