@@ -1,11 +1,11 @@
+import { IUploadService } from '@app/shared';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
-export class UploadService {
+export class BackgroundWorkerUploadService implements IUploadService {
   private readonly s3Client: S3Client;
   private readonly s3Region: string;
   private readonly s3Endpoint: string;
@@ -31,40 +31,8 @@ export class UploadService {
     });
   }
 
-  async uploadFile(file: Express.Multer.File): Promise<string> {
-    let processedBuffer = file.buffer;
-    let contentType = file.mimetype;
-    let originalname = file.originalname;
-
-    // Check if the file is an image
-    if (file.mimetype.startsWith('image/')) {
-      processedBuffer = await sharp(file.buffer)
-        .resize(800, undefined, {
-          fit: sharp.fit.inside,
-          withoutEnlargement: true,
-        })
-        .jpeg({ quality: 80 })
-        .toBuffer();
-      contentType = 'image/jpeg';
-      originalname = originalname.replace(/\.[^/.]+$/, '') + '.jpeg'; // Change extension to .jpeg
-    }
-
-    const key = `${uuidv4()}-${originalname}`;
-
-    const command = new PutObjectCommand({
-      Bucket: this.s3BucketName,
-      Key: key,
-      Body: processedBuffer,
-      ContentType: contentType,
-    });
-
-    await this.s3Client.send(command);
-
-    return `${this.s3Endpoint}/${this.s3BucketName}/${key}`;
-  }
-
   async uploadBuffer(buffer: Buffer, filename: string, contentType: string): Promise<{ url: string }> {
-    const key = `${uuidv4()}-${filename}`;
+    const key = `audio/${uuidv4()}-${filename}`;
 
     const command = new PutObjectCommand({
       Bucket: this.s3BucketName,
