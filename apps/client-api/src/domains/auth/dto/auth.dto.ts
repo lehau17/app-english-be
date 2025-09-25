@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MinLength, MaxLength, Matches } from 'class-validator';
 
 export class LoginDto {
   @ApiProperty({
@@ -108,4 +108,38 @@ export class ResetPasswordDto {
   @IsString()
   @MinLength(6)
   newPassword: string;
+}
+
+export class UpdateProfileDto {
+  @ApiProperty({ required: false, example: 'Nguyen Van A' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  displayName?: string;
+
+  @ApiProperty({ required: false, example: 'student@example.com' })
+  @IsOptional()
+  @IsEmail()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  email?: string;
+
+  @ApiProperty({ required: false, example: 'Nguyen' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  firstName?: string;
+
+  @ApiProperty({ required: false, example: 'Van A' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(60)
+  lastName?: string;
+
+  @ApiProperty({ required: false, example: 'https://example.com/avatar.png' })
+  @IsOptional()
+  @IsString()
+  @Matches(/^https?:\/\//, {
+    message: 'avatarUrl must be a valid URL',
+  })
+  avatarUrl?: string;
 }

@@ -3,7 +3,7 @@ import { JwtPayload, TokenRepository } from '@app/shared';
 import { Injectable } from '@nestjs/common';
 
 import * as bcrypt from 'bcrypt';
-import { ChangePasswordDto, RegisterDto } from '../dto';
+import { ChangePasswordDto, RegisterDto, UpdateProfileDto } from '../dto';
 
 @Injectable()
 export class AuthRepository {
@@ -100,7 +100,85 @@ export class AuthRepository {
   async findById(id: string) {
     return this.prisma.user.findUnique({
       where: { id },
+    });
+  }
 
+  async findByEmail(email: string) {
+    if (!email) return null;
+    return this.prisma.user.findUnique({ where: { email } });
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        displayName: dto.displayName,
+        email: dto.email,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        avatarUrl: dto.avatarUrl,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        displayName: true,
+        avatarUrl: true,
+        role: true,
+        status: true,
+        lastLoginAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  async invalidateUserResetTokens(userId: string) {
+    await this.prisma.passwordResetToken.updateMany({
+      where: { userId, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+  }
+
+  async createPasswordResetToken(userId: string, tokenHash: string, expiresAt: Date) {
+    return this.prisma.passwordResetToken.create({
+      data: {
+        userId,
+        tokenHash,
+        expiresAt,
+      },
+      select: { id: true, userId: true },
+    });
+  }
+
+  async findValidPasswordResetToken(tokenHash: string) {
+    return this.prisma.passwordResetToken.findFirst({
+      where: {
+        tokenHash,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      include: {
+        user: true,
+      },
+    });
+  }
+
+  async markResetTokenUsed(id: string) {
+    await this.prisma.passwordResetToken.update({
+      where: { id },
+      data: { usedAt: new Date() },
+    });
+  }
+
+  async updatePassword(userId: string, newPassword: string) {
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+      },
     });
   }
 }

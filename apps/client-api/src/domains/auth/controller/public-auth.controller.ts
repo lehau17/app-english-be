@@ -9,7 +9,14 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
-import { LoginDto, LogoutDto, RefreshTokenDto, RegisterDto } from '../dto';
+import {
+  ForgotPasswordDto,
+  LoginDto,
+  LogoutDto,
+  RefreshTokenDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from '../dto';
 import { AuthService } from '../service/auth.service';
 
 @ApiTags('Auth')
@@ -69,5 +76,24 @@ export class PublicAuthController {
   @Post('admin-register')
   async adminRegister(@Body() dto: RegisterDto) {
     return this.authService.adminRegister(dto);
+  }
+
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Request password reset token via email' })
+  @ApiBody({ type: ForgotPasswordDto })
+  @ApiOkResponse({ description: 'Always returns success for security reasons' })
+  @ResponseMessage('Reset email sent')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Reset password using a token from email' })
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiOkResponse({ description: 'Password reset successfully' })
+  @ApiBadRequestResponse({ description: 'Reset token invalid or expired' })
+  @ResponseMessage('Password reset successfully')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.authService.resetPassword(dto);
   }
 }

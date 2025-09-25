@@ -1,12 +1,16 @@
 import { CreateJwtPayload, JwtPayload, TokenRepository } from '@app/shared';
+import { KafkaService } from '@app/shared/kafka/kafka.service';
 import {
   BadRequestException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { ChangePasswordDto, LoginDto, LogoutDto, RefreshTokenDto, RegisterDto } from '../dto';
+import * as crypto from 'crypto';
+import { ChangePasswordDto, ForgotPasswordDto, LoginDto, LogoutDto, RefreshTokenDto, RegisterDto, ResetPasswordDto, UpdateProfileDto } from '../dto';
 import { AuthRepository } from '../repository';
 
 @Injectable()
@@ -14,7 +18,11 @@ export class AuthService {
   constructor(
     private readonly authRepository: AuthRepository,
     private readonly tokenRepository: TokenRepository,
+    private readonly kafkaService: KafkaService,
+    private readonly configService: ConfigService,
   ) {}
+
+  private readonly logger = new Logger(AuthService.name);
 
   /**
    * Đăng ký tài khoản mới + trả về token
@@ -105,12 +113,73 @@ export class AuthService {
     await this.authRepository.revokeRefreshToken(decoded.jti);
     return { success: true };
   }
-  forgotPassword() {
-    return true;
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const user = await this.authRepository.findByEmail(dto.email.trim().toLowerCase());
+
+    if (!user) {
+      return { success: true };
+    }
+
+    await this.authRepository.invalidateUserResetTokens(user.id);
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    await this.authRepository.createPasswordResetToken(user.id, tokenHash, expiresAt);
+
+    const appUrl = this.configService.get<string>('APP_URL') ?? 'http://localhost:3000';
+    const resetLink = `${appUrl}/reset-password?token=${rawToken}`;
+
+    this.kafkaService.send('notifications', {
+      id: `password-reset-${user.id}-${Date.now()}`,
+      userId: user.id,
+      channel: 'email',
+      type: 'system',
+      title: 'Yêu cầu đặt lại mật khẩu',
+      body:
+        `Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản tại English Learning. ` +
+        `Sử dụng mã sau hoặc nhấp vào liên kết để tiếp tục: ${rawToken}\n${resetLink}`,
+      data: {
+        action: 'password_reset',
+        token: rawToken,
+        resetLink,
+        expiresAt: expiresAt.toISOString(),
+      },
+      priority: 'high',
+    });
+
+    this.logger.log(`Password reset token dispatched for ${user.email}`);
+
+    return { success: true };
   }
 
-  resetPassword() {
-    return true;
+  async resetPassword(dto: ResetPasswordDto) {
+    const tokenHash = crypto.createHash('sha256').update(dto.token).digest('hex');
+    const record = await this.authRepository.findValidPasswordResetToken(tokenHash);
+
+    if (!record) {
+      throw new BadRequestException('Reset token invalid or expired');
+    }
+
+    await this.authRepository.updatePassword(record.userId, dto.newPassword);
+    await this.authRepository.markResetTokenUsed(record.id);
+    await this.authRepository.invalidateUserResetTokens(record.userId);
+
+    return { success: true };
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    if (dto.email) {
+      const normalizedEmail = dto.email.trim().toLowerCase();
+      const existing = await this.authRepository.findByEmail(normalizedEmail);
+      if (existing && existing.id !== userId) {
+        throw new BadRequestException('Email already in use');
+      }
+      dto.email = normalizedEmail;
+    }
+
+    return this.authRepository.updateProfile(userId, dto);
   }
 
   async adminLogin(dto: LoginDto) {
