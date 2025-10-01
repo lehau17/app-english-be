@@ -34,10 +34,17 @@ export class RealtimeTtsService {
       'AI_SPEAKING_TTS_COMMAND',
       'piper',
     );
-    this.modelPath = this.configService.get<string>('AI_SPEAKING_TTS_MODEL_PATH');
+    this.modelPath = this.configService.get<string>(
+      'AI_SPEAKING_TTS_MODEL_PATH',
+    );
     this.defaultVoice = this.configService.get<string>('AI_SPEAKING_TTS_VOICE');
-    this.useHttpApi = this.configService.get<string>('AI_SPEAKING_TTS_USE_HTTP', 'true') === 'true';
-    this.httpApiUrl = this.configService.get<string>('AI_SPEAKING_TTS_HTTP_URL', 'http://localhost:5400');
+    this.useHttpApi =
+      this.configService.get<string>('AI_SPEAKING_TTS_USE_HTTP', 'true') ===
+      'true';
+    this.httpApiUrl = this.configService.get<string>(
+      'AI_SPEAKING_TTS_HTTP_URL',
+      'http://localhost:5400',
+    );
   }
 
   async synthesizeAndStream(
@@ -57,7 +64,8 @@ export class RealtimeTtsService {
       throw new Error('AI_SPEAKING_TTS_HTTP_URL is not configured');
     }
 
-    const voice = params.voiceHint ?? this.defaultVoice ?? 'en_US-lessac-medium';
+    const voice =
+      params.voiceHint ?? this.defaultVoice ?? 'en_US-lessac-medium';
 
     this.logger.debug(
       `Starting TTS HTTP synthesis url=${this.httpApiUrl} voice=${voice} text=${params.text.substring(0, 100)}...`,
@@ -76,7 +84,7 @@ export class RealtimeTtsService {
             'Content-Type': 'application/json',
           },
           timeout: 30000,
-        }
+        },
       );
 
       if (response.data?.success && response.data?.chunks) {
@@ -84,16 +92,20 @@ export class RealtimeTtsService {
 
         // Emit chunks to client
         for (const chunk of response.data.chunks) {
-          this.gateway.emitToSession(params.sessionId, 'ai-speaking:tts-chunk', {
-            turnId: params.turnId,
-            sequence: sequence++,
-            audio: chunk,
-          });
+          this.gateway.emitToSession(
+            params.sessionId,
+            'ai-speaking:tts-chunk',
+            {
+              turnId: params.turnId,
+              sequence: sequence++,
+              audio: chunk,
+            },
+          );
         }
 
         // Convert base64 chunks to buffer and upload
         const buffers = response.data.chunks.map((chunk: string) =>
-          Buffer.from(chunk, 'base64')
+          Buffer.from(chunk, 'base64'),
         );
 
         if (buffers.length > 0) {
@@ -108,13 +120,14 @@ export class RealtimeTtsService {
       }
 
       return { audioUrl: null };
-
     } catch (error) {
       this.logger.error(`TTS HTTP API failed: ${error.message}`, error);
 
       // Fallback to command line if HTTP fails
       if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-        this.logger.warn('TTS HTTP API unavailable, falling back to command line');
+        this.logger.warn(
+          'TTS HTTP API unavailable, falling back to command line',
+        );
         return this.synthesizeViaCommand(params);
       }
 

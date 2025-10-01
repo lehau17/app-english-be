@@ -1,6 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DifficultyLevel } from '@prisma/client';
-import { IsEnum, IsInt, IsNotEmpty, IsObject, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class StartAiSpeakingSessionDto {
   @ApiProperty({
@@ -32,14 +42,22 @@ export class StartAiSpeakingSessionDto {
   @IsEnum(DifficultyLevel)
   targetDifficulty?: DifficultyLevel;
 
-  @ApiPropertyOptional({ description: 'Số lượt hội thoại tối đa', default: 8, minimum: 1, maximum: 12 })
+  @ApiPropertyOptional({
+    description: 'Số lượt hội thoại tối đa',
+    default: 8,
+    minimum: 1,
+    maximum: 12,
+  })
   @IsOptional()
   @IsInt()
   @Min(1)
   @Max(12)
   maxTurns?: number;
 
-  @ApiPropertyOptional({ description: 'Thiết lập tùy chỉnh cho session', type: Object })
+  @ApiPropertyOptional({
+    description: 'Thiết lập tùy chỉnh cho session',
+    type: Object,
+  })
   @IsOptional()
   @IsObject()
   config?: Record<string, unknown>;

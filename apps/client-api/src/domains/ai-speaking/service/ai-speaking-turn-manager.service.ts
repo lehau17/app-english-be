@@ -85,7 +85,9 @@ export class AiSpeakingTurnManager {
       : [];
 
     const metrics: Prisma.JsonObject = {
-      ...(typeof turn.metrics === 'object' && turn.metrics ? (turn.metrics as any) : {}),
+      ...(typeof turn.metrics === 'object' && turn.metrics
+        ? (turn.metrics as any)
+        : {}),
       evaluationScore: evaluation.score,
       evaluationCreatedAt: new Date().toISOString(),
       durationSec: durationSec ?? null,
@@ -112,20 +114,25 @@ export class AiSpeakingTurnManager {
     );
 
     const reachedTurnLimit =
-      session.turnCount >= session.maxTurns || session.turnCount >= this.maxAutoTurns;
+      session.turnCount >= session.maxTurns ||
+      session.turnCount >= this.maxAutoTurns;
     const shouldContinue = !reachedTurnLimit && evaluation.score >= 25;
 
     if (!shouldContinue) {
-      const sessionForSummary = await this.repository.findSessionById(sessionId);
+      const sessionForSummary =
+        await this.repository.findSessionById(sessionId);
       if (!sessionForSummary) {
         throw new Error(`Session ${sessionId} not found for summarization`);
       }
 
-      const summary = await this.coordinator.summarizeSession(sessionForSummary, {
-        reason: reachedTurnLimit
-          ? 'Kết thúc do đạt giới hạn lượt hội thoại.'
-          : 'Kết thúc do điểm số thấp.',
-      });
+      const summary = await this.coordinator.summarizeSession(
+        sessionForSummary,
+        {
+          reason: reachedTurnLimit
+            ? 'Kết thúc do đạt giới hạn lượt hội thoại.'
+            : 'Kết thúc do điểm số thấp.',
+        },
+      );
 
       await this.repository.updateSession(sessionId, {
         state: AiSpeakingSessionState.finished,
@@ -216,8 +223,10 @@ export class AiSpeakingTurnManager {
     });
 
     const nextDifficulty = degradeDifficulty
-      ? this.stepDifficultyDown(session.currentDifficulty ?? session.targetDifficulty)
-      : session.currentDifficulty ?? session.targetDifficulty;
+      ? this.stepDifficultyDown(
+          session.currentDifficulty ?? session.targetDifficulty,
+        )
+      : (session.currentDifficulty ?? session.targetDifficulty);
 
     const promptPlan = this.conversationDesigner.buildOpeningPrompt({
       topic: session.topic,

@@ -35,7 +35,10 @@ export class VNPayService {
 
   constructor(private configService: ConfigService) {
     this.tmnCode = this.configService.get('VNPAY_TMN_CODE', 'demo_tmn');
-    this.hashSecret = this.configService.get('VNPAY_HASH_SECRET', 'demo_secret');
+    this.hashSecret = this.configService.get(
+      'VNPAY_HASH_SECRET',
+      'demo_secret',
+    );
     this.paymentUrl = this.configService.get(
       'VNPAY_PAYMENT_URL',
       'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
@@ -47,7 +50,9 @@ export class VNPayService {
 
     // Debug logging
     this.logger.debug(`VNPay Config - TMN_CODE: ${this.tmnCode}`);
-    this.logger.debug(`VNPay Config - HASH_SECRET: ${this.hashSecret.substring(0, 8)}...`);
+    this.logger.debug(
+      `VNPay Config - HASH_SECRET: ${this.hashSecret.substring(0, 8)}...`,
+    );
     this.logger.debug(`VNPay Config - RETURN_URL: ${this.returnUrl}`);
   }
 
@@ -87,7 +92,6 @@ export class VNPayService {
     const finalQueryString = qs.stringify(payloadWithHash, { encode: false });
     const finalUrl = `${this.paymentUrl}?${finalQueryString}`;
 
-
     this.logger.log(`Created VNPay payment URL for order: ${params.orderId}`);
     return finalUrl;
   }
@@ -95,16 +99,23 @@ export class VNPayService {
   /**
    * Xác thực callback từ VNPay
    */
-  verifyReturnData(returnData: VNPayReturnData & { vnp_SecureHashType?: string }): boolean {
-    const { vnp_SecureHash, vnp_SecureHashType, ...paramsToVerify } = returnData;
+  verifyReturnData(
+    returnData: VNPayReturnData & { vnp_SecureHashType?: string },
+  ): boolean {
+    const { vnp_SecureHash, vnp_SecureHashType, ...paramsToVerify } =
+      returnData;
 
-    const sortedParams = this.sortObject(paramsToVerify as Record<string, string>);
+    const sortedParams = this.sortObject(
+      paramsToVerify as Record<string, string>,
+    );
     const signData = qs.stringify(sortedParams, { encode: false });
     const calculatedHash = this.createSecureHash(signData).toUpperCase();
 
     const isValid = calculatedHash === (vnp_SecureHash?.toUpperCase() || '');
 
-    this.logger.log(`VNPay return data verification: ${isValid ? 'SUCCESS' : 'FAILED'} for ${returnData.vnp_TxnRef}`);
+    this.logger.log(
+      `VNPay return data verification: ${isValid ? 'SUCCESS' : 'FAILED'} for ${returnData.vnp_TxnRef}`,
+    );
 
     return isValid;
   }
@@ -142,30 +153,32 @@ export class VNPayService {
   /**
    * Tạo secure hash theo thuật toán VNPay (theo code demo chính thức)
    */
-private createSecureHash(queryString: string): string {
-  return crypto
-    .createHmac('sha512', this.hashSecret)
-    .update(Buffer.from(queryString, 'utf-8'))
-    .digest('hex');
-}
+  private createSecureHash(queryString: string): string {
+    return crypto
+      .createHmac('sha512', this.hashSecret)
+      .update(Buffer.from(queryString, 'utf-8'))
+      .digest('hex');
+  }
 
-private sortObject(obj: Record<string, string>): Record<string, string> {
-  const sorted: Record<string, string> = {};
-  Object.keys(obj)
-    .filter(key => obj[key] !== undefined && obj[key] !== null)
-    .sort()
-    .forEach(key => {
-      sorted[key] = encodeURIComponent(obj[key]).replace(/%20/g, '+');
-    });
-  return sorted;
-}
+  private sortObject(obj: Record<string, string>): Record<string, string> {
+    const sorted: Record<string, string> = {};
+    Object.keys(obj)
+      .filter((key) => obj[key] !== undefined && obj[key] !== null)
+      .sort()
+      .forEach((key) => {
+        sorted[key] = encodeURIComponent(obj[key]).replace(/%20/g, '+');
+      });
+    return sorted;
+  }
 
   /**
    * Generate unique order ID
    */
   generateOrderId(): string {
     const timestamp = this.formatDate(new Date(), 'YYYYMMDD_HHmmss');
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const random = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, '0');
     return `ORDER_${timestamp}_${random}`;
   }
 

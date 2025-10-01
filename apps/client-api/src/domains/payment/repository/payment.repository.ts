@@ -4,11 +4,15 @@ import { PaymentStatus, Prisma, Transaction } from '@prisma/client';
 
 @Injectable()
 export class PaymentRepository extends PrismaRepository {
-  async createTransaction(data: Prisma.TransactionCreateInput): Promise<Transaction> {
+  async createTransaction(
+    data: Prisma.TransactionCreateInput,
+  ): Promise<Transaction> {
     return this.transaction.create({ data });
   }
 
-  async findTransactionByTxnRef(vnpayTxnRef: string): Promise<Transaction | null> {
+  async findTransactionByTxnRef(
+    vnpayTxnRef: string,
+  ): Promise<Transaction | null> {
     return this.transaction.findFirst({
       where: { vnpayTxnRef },
       include: {
@@ -41,7 +45,9 @@ export class PaymentRepository extends PrismaRepository {
         status,
         ...data,
         updatedAt: new Date(),
-        ...(status === PaymentStatus.success ? { completedAt: new Date() } : {}),
+        ...(status === PaymentStatus.success
+          ? { completedAt: new Date() }
+          : {}),
       },
     });
   }

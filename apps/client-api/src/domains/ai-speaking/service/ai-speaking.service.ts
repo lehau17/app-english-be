@@ -3,7 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   Logger,
-  NotFoundException
+  NotFoundException,
 } from '@nestjs/common';
 import {
   AiSpeakingSessionState,
@@ -47,74 +47,76 @@ export class AiSpeakingService {
       difficulty: targetDifficulty,
     });
 
-    const { session, openingTurnId } = await this.prisma.$transaction(async (tx) => {
-      const createdSession = await this.repository.createSession(
-        {
-          user: { connect: { id: userId } },
-          conversationId,
-          topic: dto.topic,
-          goal: dto.goal,
-          state: AiSpeakingSessionState.pending,
-          maxTurns,
-          turnCount: 0,
-          targetDifficulty,
-          currentDifficulty: targetDifficulty,
-          config: (dto.config as Prisma.JsonObject) ?? {},
-          metadata: openingPlan.metadata as Prisma.JsonObject,
-        },
-        tx,
-      );
-
-      const turn = await this.repository.createTurn(
-        {
-          session: { connect: { id: createdSession.id } },
-          turnIndex: 1,
-          state: AiSpeakingTurnStatus.streaming,
-          aiPrompt: openingPlan.prompt,
-          suggestions: openingPlan.followUpSuggestions,
-        },
-        tx,
-      );
-
-      await this.repository.createTurnSegment(
-        {
-          turn: { connect: { id: turn.id } },
-          role: AiSpeakingTurnRole.system,
-          orderNo: 0,
-          transcript: 'Session initialized',
-          payload: {
-            designerVersion: openingPlan.version,
-          } as Prisma.JsonObject,
-        },
-        tx,
-      );
-
-      await this.repository.createTurnSegment(
-        {
-          turn: { connect: { id: turn.id } },
-          role: AiSpeakingTurnRole.ai,
-          orderNo: 1,
-          transcript: openingPlan.prompt,
-          payload: {
+    const { session, openingTurnId } = await this.prisma.$transaction(
+      async (tx) => {
+        const createdSession = await this.repository.createSession(
+          {
+            user: { connect: { id: userId } },
+            conversationId,
             topic: dto.topic,
-            difficulty: targetDifficulty,
-          } as Prisma.JsonObject,
-        },
-        tx,
-      );
+            goal: dto.goal,
+            state: AiSpeakingSessionState.pending,
+            maxTurns,
+            turnCount: 0,
+            targetDifficulty,
+            currentDifficulty: targetDifficulty,
+            config: (dto.config as Prisma.JsonObject) ?? {},
+            metadata: openingPlan.metadata as Prisma.JsonObject,
+          },
+          tx,
+        );
 
-      const updatedSession = await this.repository.updateSession(
-        createdSession.id,
-        {
-          state: AiSpeakingSessionState.ai_speaking,
-          turnCount: 1,
-          lastActivityAt: new Date(),
-        },
-        tx,
-      );
+        const turn = await this.repository.createTurn(
+          {
+            session: { connect: { id: createdSession.id } },
+            turnIndex: 1,
+            state: AiSpeakingTurnStatus.streaming,
+            aiPrompt: openingPlan.prompt,
+            suggestions: openingPlan.followUpSuggestions,
+          },
+          tx,
+        );
 
-      return { session: updatedSession, openingTurnId: turn.id };
-    });
+        await this.repository.createTurnSegment(
+          {
+            turn: { connect: { id: turn.id } },
+            role: AiSpeakingTurnRole.system,
+            orderNo: 0,
+            transcript: 'Session initialized',
+            payload: {
+              designerVersion: openingPlan.version,
+            } as Prisma.JsonObject,
+          },
+          tx,
+        );
+
+        await this.repository.createTurnSegment(
+          {
+            turn: { connect: { id: turn.id } },
+            role: AiSpeakingTurnRole.ai,
+            orderNo: 1,
+            transcript: openingPlan.prompt,
+            payload: {
+              topic: dto.topic,
+              difficulty: targetDifficulty,
+            } as Prisma.JsonObject,
+          },
+          tx,
+        );
+
+        const updatedSession = await this.repository.updateSession(
+          createdSession.id,
+          {
+            state: AiSpeakingSessionState.ai_speaking,
+            turnCount: 1,
+            lastActivityAt: new Date(),
+          },
+          tx,
+        );
+
+        return { session: updatedSession, openingTurnId: turn.id };
+      },
+    );
 
     void this.realtimeService.streamAiTurn(
       session.id,
@@ -125,7 +127,9 @@ export class AiSpeakingService {
       },
     );
 
-    const sessionWithRelations = await this.repository.findSessionById(session.id);
+    const sessionWithRelations = await this.repository.findSessionById(
+      session.id,
+    );
     return AiSpeakingSessionPresenter.toDto(sessionWithRelations);
   }
 
@@ -191,7 +195,10 @@ export class AiSpeakingService {
     userId: string,
     options: { limit?: number; cursor?: string } = {},
   ) {
-    const conversations = await this.repository.listConversationsByUser(userId, options);
+    const conversations = await this.repository.listConversationsByUser(
+      userId,
+      options,
+    );
     return conversations.map((conv) => ({
       conversationId: conv.conversationId,
       latestSession: AiSpeakingSessionPresenter.toDto(conv.latestSession),
@@ -200,7 +207,10 @@ export class AiSpeakingService {
   }
 
   async getConversation(userId: string, conversationId: string) {
-    const sessions = await this.repository.findSessionsByConversation(userId, conversationId);
+    const sessions = await this.repository.findSessionsByConversation(
+      userId,
+      conversationId,
+    );
     if (sessions.length === 0) {
       throw new NotFoundException('Conversation không tồn tại');
     }

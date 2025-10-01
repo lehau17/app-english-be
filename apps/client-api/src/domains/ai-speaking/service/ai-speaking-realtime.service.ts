@@ -8,7 +8,10 @@ import {
 } from '@prisma/client';
 import { AiSpeakingGateway } from '../gateway/ai-speaking.gateway';
 import { AiSpeakingRepository } from '../repository/ai-speaking.repository';
-import { RealtimeAsrService, RealtimeAsrSessionHandle } from './realtime-asr.service';
+import {
+  RealtimeAsrService,
+  RealtimeAsrSessionHandle,
+} from './realtime-asr.service';
 import { RealtimeTtsService } from './realtime-tts.service';
 import { AiSpeakingTurnManager } from './ai-speaking-turn-manager.service';
 
@@ -46,16 +49,24 @@ export class AiSpeakingRealtimeService {
     private readonly configService: ConfigService,
     private readonly turnManager: AiSpeakingTurnManager,
   ) {
-    this.defaultUserAudioMime =
-      this.configService.get<string>('AI_SPEAKING_USER_AUDIO_MIME', 'audio/webm');
+    this.defaultUserAudioMime = this.configService.get<string>(
+      'AI_SPEAKING_USER_AUDIO_MIME',
+      'audio/webm',
+    );
     this.silenceTimeoutMs = Number(
       this.configService.get<string>('AI_SPEAKING_SILENCE_TIMEOUT_MS', '6000'),
     );
     this.silenceWarningThreshold = Number(
-      this.configService.get<string>('AI_SPEAKING_SILENCE_WARNING_THRESHOLD', '2'),
+      this.configService.get<string>(
+        'AI_SPEAKING_SILENCE_WARNING_THRESHOLD',
+        '2',
+      ),
     );
     this.maxBufferedBytes = Number(
-      this.configService.get<string>('AI_SPEAKING_MAX_BUFFER_BYTES', `${5 * 1024 * 1024}`),
+      this.configService.get<string>(
+        'AI_SPEAKING_MAX_BUFFER_BYTES',
+        `${5 * 1024 * 1024}`,
+      ),
     );
   }
 
@@ -224,8 +235,9 @@ export class AiSpeakingRealtimeService {
       lastActivityAt: new Date(),
     });
 
-    let followUp: Awaited<ReturnType<typeof this.turnManager.handleTurnCompletion>> | null =
-      null;
+    let followUp: Awaited<
+      ReturnType<typeof this.turnManager.handleTurnCompletion>
+    > | null = null;
     try {
       followUp = await this.turnManager.handleTurnCompletion({
         sessionId,
@@ -254,9 +266,14 @@ export class AiSpeakingRealtimeService {
     });
 
     if (followUp?.followUpTurnId && followUp.followUpPrompt) {
-      void this.streamAiTurn(sessionId, followUp.followUpTurnId, followUp.followUpPrompt, {
-        voiceHint: followUp.followUpVoiceHint ?? undefined,
-      });
+      void this.streamAiTurn(
+        sessionId,
+        followUp.followUpTurnId,
+        followUp.followUpPrompt,
+        {
+          voiceHint: followUp.followUpVoiceHint ?? undefined,
+        },
+      );
     }
   }
 
@@ -406,7 +423,10 @@ export class AiSpeakingRealtimeService {
       lastActivityAt: new Date(),
     });
 
-    if (holder.silenceCount >= this.silenceWarningThreshold && holder.totalBytes === 0) {
+    if (
+      holder.silenceCount >= this.silenceWarningThreshold &&
+      holder.totalBytes === 0
+    ) {
       this.logger.warn(
         `Silence threshold reached for session=${sessionId} turn=${turnId}, triggering recovery turn`,
       );
@@ -421,7 +441,11 @@ export class AiSpeakingRealtimeService {
       });
 
       if (recovery.followUpTurnId && recovery.followUpPrompt) {
-        void this.streamAiTurn(sessionId, recovery.followUpTurnId, recovery.followUpPrompt);
+        void this.streamAiTurn(
+          sessionId,
+          recovery.followUpTurnId,
+          recovery.followUpPrompt,
+        );
       }
     } else {
       this.refreshSilenceTimer(sessionId, turnId, holder);

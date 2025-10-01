@@ -282,7 +282,7 @@ export class AssignmentService {
             timeSpent: dto.timeSpent,
             assignmentTitle: assignment.title,
             assignmentDescription: assignment.description,
-            activities: assignment.assignmentActivities.map(activity => ({
+            activities: assignment.assignmentActivities.map((activity) => ({
               id: activity.id,
               type: activity.type,
               title: activity.title,

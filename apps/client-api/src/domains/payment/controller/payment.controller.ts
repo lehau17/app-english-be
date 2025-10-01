@@ -11,7 +11,12 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Request } from 'express';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { VNPayReturnDto } from '../dto/vnpay-return.dto';
@@ -36,7 +41,12 @@ export class PaymentController {
     const ipAddress = req.ip || req.connection.remoteAddress || '127.0.0.1';
     // Sử dụng studentId từ DTO nếu có (phụ huynh thanh toán), nếu không dùng payload.sub (học sinh tự thanh toán)
     const studentId = dto.studentId || payload.sub;
-    return this.paymentService.createPayment(studentId, dto, ipAddress, payload.sub);
+    return this.paymentService.createPayment(
+      studentId,
+      dto,
+      ipAddress,
+      payload.sub,
+    );
   }
 
   @Get('/transactions')
@@ -50,7 +60,11 @@ export class PaymentController {
     @Query('cursor') cursor?: string,
   ) {
     const parsedLimit = limit ? parseInt(limit, 10) : 10;
-    return this.paymentService.getStudentTransactions(payload.sub, parsedLimit, cursor);
+    return this.paymentService.getStudentTransactions(
+      payload.sub,
+      parsedLimit,
+      cursor,
+    );
   }
 
   @Get('/purchase-status/:classroomId')
@@ -60,7 +74,10 @@ export class PaymentController {
     @PayloadToken() payload: JwtPayload,
     @Param('classroomId') classroomId: string,
   ) {
-    return this.paymentService.checkStudentPurchaseStatus(payload.sub, classroomId);
+    return this.paymentService.checkStudentPurchaseStatus(
+      payload.sub,
+      classroomId,
+    );
   }
 }
 
@@ -80,7 +97,8 @@ export class PaymentWebhookController {
     const result = await this.paymentService.handleVNPayReturn(returnData);
 
     // Redirect frontend based on result
-    const baseUrl = process.env.VNPAY_RETURN_URL || 'http://localhost:5173/payment/return';
+    const baseUrl =
+      process.env.VNPAY_RETURN_URL || 'http://localhost:5173/payment/return';
     const redirectUrl = new URL(baseUrl);
 
     redirectUrl.searchParams.set('success', result.success.toString());

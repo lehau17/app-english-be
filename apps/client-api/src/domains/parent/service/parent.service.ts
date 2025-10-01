@@ -644,7 +644,7 @@ export class ParentService {
         },
       });
 
-      const childIds = parentChildRelations.map(rel => rel.childId);
+      const childIds = parentChildRelations.map((rel) => rel.childId);
 
       if (childIds.length === 0) {
         return [];
@@ -750,25 +750,28 @@ export class ParentService {
       ).length;
 
       // Group by children
-      const childrenSummary = unpaidClassrooms.reduce((acc, classroom) => {
-        const childId = classroom.child.id;
-        if (!acc[childId]) {
-          acc[childId] = {
-            child: classroom.child,
-            unpaidCount: 0,
-            totalAmount: 0,
-            urgentCount: 0,
-          };
-        }
+      const childrenSummary = unpaidClassrooms.reduce(
+        (acc, classroom) => {
+          const childId = classroom.child.id;
+          if (!acc[childId]) {
+            acc[childId] = {
+              child: classroom.child,
+              unpaidCount: 0,
+              totalAmount: 0,
+              urgentCount: 0,
+            };
+          }
 
-        acc[childId].unpaidCount++;
-        acc[childId].totalAmount += classroom.course?.price || 0;
-        if (classroom.status === 'ongoing') {
-          acc[childId].urgentCount++;
-        }
+          acc[childId].unpaidCount++;
+          acc[childId].totalAmount += classroom.course?.price || 0;
+          if (classroom.status === 'ongoing') {
+            acc[childId].urgentCount++;
+          }
 
-        return acc;
-      }, {} as Record<string, any>);
+          return acc;
+        },
+        {} as Record<string, any>,
+      );
 
       return {
         totalUnpaid,

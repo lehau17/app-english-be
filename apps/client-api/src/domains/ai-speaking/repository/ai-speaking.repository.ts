@@ -2,15 +2,16 @@ import { PrismaRepository } from '@app/database';
 import { Injectable } from '@nestjs/common';
 import { AiSpeakingSessionState, Prisma } from '@prisma/client';
 
-export type AiSpeakingSessionWithRelations = Prisma.AiSpeakingSessionGetPayload<{
-  include: {
-    turns: {
-      include: {
-        segments: true;
+export type AiSpeakingSessionWithRelations =
+  Prisma.AiSpeakingSessionGetPayload<{
+    include: {
+      turns: {
+        include: {
+          segments: true;
+        };
       };
     };
-  };
-}>;
+  }>;
 
 @Injectable()
 export class AiSpeakingRepository {
@@ -152,7 +153,13 @@ export class AiSpeakingRepository {
   async listConversationsByUser(
     userId: string,
     options: { limit?: number; cursor?: string } = {},
-  ): Promise<{ conversationId: string; latestSession: AiSpeakingSessionWithRelations; sessionCount: number }[]> {
+  ): Promise<
+    {
+      conversationId: string;
+      latestSession: AiSpeakingSessionWithRelations;
+      sessionCount: number;
+    }[]
+  > {
     const { limit = 20, cursor } = options;
 
     // Get distinct conversation IDs first
@@ -181,7 +188,7 @@ export class AiSpeakingRepository {
         where: {
           userId,
           conversationId: conv.conversationId,
-        }
+        },
       });
 
       if (latestSession) {

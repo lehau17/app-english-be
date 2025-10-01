@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Client } from 'pg';
 
 type ScoreChangeEvent = {
@@ -21,7 +26,9 @@ export class ScoreChangeListenerService
     const connectionString = process.env.DATABASE_URL;
 
     if (!connectionString) {
-      this.logger.warn('DATABASE_URL is not defined; leaderboard listener disabled.');
+      this.logger.warn(
+        'DATABASE_URL is not defined; leaderboard listener disabled.',
+      );
       return;
     }
 
@@ -44,16 +51,24 @@ export class ScoreChangeListenerService
         const key = `${event.table}:${event.id}`;
         this.buffer.set(key, event);
       } catch (error) {
-        this.logger.error('Failed to parse leaderboard notification payload', error as Error);
+        this.logger.error(
+          'Failed to parse leaderboard notification payload',
+          error as Error,
+        );
       }
     });
 
     try {
       await this.client.connect();
       await this.client.query(`LISTEN ${this.channel}`);
-      this.logger.log(`Listening for leaderboard score changes on channel "${this.channel}".`);
+      this.logger.log(
+        `Listening for leaderboard score changes on channel "${this.channel}".`,
+      );
     } catch (error) {
-      this.logger.error('Failed to establish LISTEN/NOTIFY connection', error as Error);
+      this.logger.error(
+        'Failed to establish LISTEN/NOTIFY connection',
+        error as Error,
+      );
       await this.safeShutdown();
     }
   }
@@ -80,12 +95,18 @@ export class ScoreChangeListenerService
     try {
       await this.client.query(`UNLISTEN ${this.channel}`);
     } catch (error) {
-      this.logger.warn('Failed to unlisten from channel during shutdown', error as Error);
+      this.logger.warn(
+        'Failed to unlisten from channel during shutdown',
+        error as Error,
+      );
     } finally {
       try {
         await this.client.end();
       } catch (error) {
-        this.logger.warn('Failed to close PostgreSQL notification client', error as Error);
+        this.logger.warn(
+          'Failed to close PostgreSQL notification client',
+          error as Error,
+        );
       }
       this.client = null;
     }

@@ -5,8 +5,8 @@ import { Classroom, Prisma } from '@prisma/client';
 import { Readable } from 'stream';
 import { LessonRepository } from '../../lesson/repository/lesson.repository';
 import {
-    ClassroomAnnouncementQueryDto,
-    FilterClassroomRequestDto,
+  ClassroomAnnouncementQueryDto,
+  FilterClassroomRequestDto,
 } from '../dto/classroom.dto';
 
 @Injectable()
@@ -280,11 +280,15 @@ export class ClassroomRepository {
     return PageResponseDto.of(data, safePage, limit, totalItems);
   }
 
-  async addStudents(classroomId: string, studentIds: string[], isPurchased: boolean = false) {
+  async addStudents(
+    classroomId: string,
+    studentIds: string[],
+    isPurchased: boolean = false,
+  ) {
     const data = studentIds.map((studentId) => ({
       classroomId,
       studentId,
-      isPurchased
+      isPurchased,
     }));
     return this.prisma.classroomStudent.createMany({
       data,
@@ -666,7 +670,7 @@ export class ClassroomRepository {
       assignments,
       announcements,
       lessons,
-      course: classroom.course
+      course: classroom.course,
     };
   }
 

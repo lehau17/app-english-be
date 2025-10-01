@@ -32,7 +32,8 @@ const DIFFICULTY_HINT: Record<DifficultyLevel, string> = {
 export class ConversationDesignerService {
   buildOpeningPrompt(options: BuildOpeningPromptOptions): OpeningPromptPlan {
     const topic = options.topic ?? 'your daily life';
-    const hint = DIFFICULTY_HINT[options.difficulty] ?? DIFFICULTY_HINT.beginner;
+    const hint =
+      DIFFICULTY_HINT[options.difficulty] ?? DIFFICULTY_HINT.beginner;
 
     const prompt = `Xin chào! Chúng ta hãy bắt đầu luyện nói về chủ đề "${topic}". ${hint} Bạn có thể kể cho tôi nghe vài ý đầu tiên không?`;
 

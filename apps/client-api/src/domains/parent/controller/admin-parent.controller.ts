@@ -98,8 +98,6 @@ export class AdminParentController {
     return this.adminParentService.removeChildFromParent(parentId, childId);
   }
 
-
-
   @Patch(':id/toggle-status')
   @ApiOperation({ summary: 'Toggle parent account active status' })
   @ResponseMessage('Parent status toggled successfully')

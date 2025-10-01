@@ -1,18 +1,16 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
 import {
-    Body,
-    Controller,
-    Get,
-    Param,
-    ParseUUIDPipe,
-    Post,
-    Query,
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FinalizeAiSpeakingSessionDto } from '../dto/finalize-session.dto';
-import {
-    AiSpeakingSessionResponseDto
-} from '../dto/session-response.dto';
+import { AiSpeakingSessionResponseDto } from '../dto/session-response.dto';
 import { StartAiSpeakingSessionDto } from '../dto/start-session.dto';
 import { AiSpeakingService } from '../service/ai-speaking.service';
 
@@ -31,7 +29,8 @@ export class AiSpeakingController {
     @Query('cursor') cursor?: string,
   ) {
     const parsedLimit = typeof limit === 'string' ? Number(limit) : undefined;
-    const safeLimit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined;
+    const safeLimit =
+      Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined;
 
     return this.aiSpeakingService.listConversations(payload.sub, {
       limit: safeLimit,
