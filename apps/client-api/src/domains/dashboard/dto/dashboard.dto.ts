@@ -9,6 +9,60 @@ class RegistrationTrendPoint {
   count: number;
 }
 
+class CourseDistributionPoint {
+  @ApiProperty()
+  label: string;
+
+  @ApiProperty()
+  value: number;
+}
+
+class UpcomingClassItem {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  classroomName: string;
+
+  @ApiProperty({ required: false })
+  courseTitle?: string;
+
+  @ApiProperty()
+  teacherName: string;
+
+  @ApiProperty()
+  startTime: string;
+
+  @ApiProperty()
+  endTime: string;
+
+  @ApiProperty({ required: false })
+  roomName?: string | null;
+
+  @ApiProperty()
+  activeStudents: number;
+
+  @ApiProperty({ required: false })
+  maxStudents?: number | null;
+}
+
+class DashboardNotificationItem {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  title: string;
+
+  @ApiProperty({ required: false })
+  message?: string | null;
+
+  @ApiProperty({ enum: ['success', 'warning', 'error', 'info'] })
+  type: 'success' | 'warning' | 'error' | 'info';
+
+  @ApiProperty()
+  createdAt: string;
+}
+
 export class DashboardDto {
   @ApiProperty()
   totalStudents: number;
@@ -28,8 +82,16 @@ export class DashboardDto {
   @ApiProperty({ type: [RegistrationTrendPoint] })
   registrationTrend: RegistrationTrendPoint[];
 
+  @ApiProperty({ type: [CourseDistributionPoint] })
+  courseDistribution: CourseDistributionPoint[];
 
-  static defaultValueResponse() {
+  @ApiProperty({ type: [UpcomingClassItem] })
+  upcomingClasses: UpcomingClassItem[];
+
+  @ApiProperty({ type: [DashboardNotificationItem] })
+  notifications: DashboardNotificationItem[];
+
+  static defaultValueResponse(): DashboardDto {
     return {
       totalStudents: 0,
       totalCourses: 0,
@@ -37,6 +99,9 @@ export class DashboardDto {
       totalActivities: 0,
       recentStudents: [],
       registrationTrend: [],
-    };
+      courseDistribution: [],
+      upcomingClasses: [],
+      notifications: [],
+    } as DashboardDto;
   }
 }
