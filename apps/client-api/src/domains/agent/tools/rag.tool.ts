@@ -7,7 +7,7 @@ import { RagService } from '../service/rag.service';
 export class RagTool extends StructuredTool {
   name = 'knowledge_search';
   description =
-    'Tìm trong tài liệu (quy định/hướng dẫn/kiến thức). Dùng khi cần tra cứu policy/process.';
+    'Tìm trong knowledge base (quy định/hướng dẫn/khóa học/bài học/từ vựng/hoạt động). Dùng khi cần tra cứu thông tin về courses, lessons, vocabulary, activities, policy/process.';
 
   schema = z.object({
     query: z.string().describe('Câu hỏi cần tìm trong knowledge base'),
