@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNumber, IsObject, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class AttemptResultDto {
   @ApiProperty({ description: 'Attempt ID' })
@@ -44,7 +52,10 @@ export class AttemptResultDto {
   @Min(0)
   timeSpent?: number;
 
-  @ApiProperty({ description: 'User answers for each question', type: 'object' })
+  @ApiProperty({
+    description: 'User answers for each question',
+    type: 'object',
+  })
   @IsObject()
   answers: Record<string, string>; // questionId -> userAnswer
 
@@ -63,7 +74,10 @@ export class CreateAttemptResultDto {
   @Min(1)
   totalQuestions: number;
 
-  @ApiProperty({ description: 'User answers for each question', type: 'object' })
+  @ApiProperty({
+    description: 'User answers for each question',
+    type: 'object',
+  })
   @IsObject()
   answers: Record<string, string>; // questionId -> userAnswer
 
