@@ -1,7 +1,7 @@
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Attempt } from '@prisma/client';
-import { GeminiService } from '../../agent/service/gemini.service';
+import { GeminiService } from '@app/shared';
 import {
   CreateAttemptDto,
   FilterAttemptRequestDto,
@@ -49,9 +49,14 @@ export class AttemptService {
 
             // Gán feedback vào dto
             dto.feedback = feedback;
-            this.logger.log(`✅ Đã tạo feedback AI cho attempt ${id}: ${dto.score}/${currentAttempt.maxScore}`);
+            this.logger.log(
+              `✅ Đã tạo feedback AI cho attempt ${id}: ${dto.score}/${currentAttempt.maxScore}`,
+            );
           } catch (error) {
-            this.logger.error(`❌ Lỗi tạo feedback AI cho attempt ${id}:`, error);
+            this.logger.error(
+              `❌ Lỗi tạo feedback AI cho attempt ${id}:`,
+              error,
+            );
             // Vẫn tiếp tục update mà không có feedback AI
           }
         } else {
@@ -79,5 +84,6 @@ export class AttemptService {
     const exists = await this.attemptRepository.findById(id);
     if (!exists) {
       throw new NotFoundException(`Attempt with id ${id} not found`);
-    }}
+    }
+  }
 }
