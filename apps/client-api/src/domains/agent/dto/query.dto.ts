@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { IsNotEmpty, IsString, MaxLength, IsIn } from 'class-validator';
 
 // DTO cho endpoint /query
 export class QueryDto {
@@ -9,6 +9,7 @@ export class QueryDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(1000, { message: 'Câu hỏi không được vượt quá 1000 ký tự' })
   question!: string;
 }
 
@@ -20,6 +21,7 @@ export class AddDocumentDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(500, { message: 'Tiêu đề không được vượt quá 500 ký tự' })
   title!: string;
 
   @ApiProperty({
@@ -29,14 +31,18 @@ export class AddDocumentDto {
   })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(50000, { message: 'Nội dung không được vượt quá 50000 ký tự' })
   content!: string;
 
   @ApiProperty({
     description: 'Loại tài liệu',
     example: 'regulation',
-    enum: ['regulation', 'handbook', 'curriculum'],
+    enum: ['regulation', 'handbook', 'curriculum', 'faq', 'policy'],
   })
   @IsString()
+  @IsIn(['regulation', 'handbook', 'curriculum', 'faq', 'policy'], {
+    message: 'Loại tài liệu không hợp lệ',
+  })
   documentType!: string;
 
   @ApiProperty({
@@ -44,5 +50,7 @@ export class AddDocumentDto {
     example: 'Thông tư 08/2021/TT-BGDĐT',
   })
   @IsString()
+  @MaxLength(200, { message: 'Nguồn không được vượt quá 200 ký tự' })
   source!: string;
 }
+
