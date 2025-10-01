@@ -23,56 +23,78 @@ export interface SessionEstimate {
 export function calculateClassroomSchedule(
   periodStart: Date,
   periodEnd: Date,
-  slots: CreateClassroomSlotDto[]
+  slots: CreateClassroomSlotDto[],
 ): ScheduleCalculation {
   const sessions: SessionEstimate[] = [];
 
-  // Convert Weekday enum to numbers (0=Sunday, 1=Monday, ..., 6=Saturday)
-  const weekdayToNumber: Record<string, number> = {
-    sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6
-  };
-
-  // Get slot days as numbers
-  const slotDays = slots.map(slot => ({
-    dayNumber: weekdayToNumber[slot.dayOfWeek],
-    ...slot
-  }));
-
-  // Iterate through each day in the period
-  const currentDate = new Date(periodStart);
-  const endDate = new Date(periodEnd);
-
-  while (currentDate <= endDate) {
-    const currentDayOfWeek = currentDate.getDay(); // 0=Sunday, 1=Monday, etc.
-
-    // Find matching slot for this day
-    const matchingSlot = slotDays.find(slot => slot.dayNumber === currentDayOfWeek);
-
-    if (matchingSlot) {
-      const durationMinutes = matchingSlot.endMinuteOfDay - matchingSlot.startMinuteOfDay;
-      const durationHours = durationMinutes / 60;
-
-      sessions.push({
-        date: new Date(currentDate),
-        dayOfWeek: matchingSlot.dayOfWeek as Weekday,
-        startMinuteOfDay: matchingSlot.startMinuteOfDay,
-        endMinuteOfDay: matchingSlot.endMinuteOfDay,
-        durationHours
-      });
-    }
-
-    // Move to next day
-    currentDate.setDate(currentDate.getDate() + 1);
+  if (!slots?.length) {
+    return {
+      plannedSessions: 0,
+      plannedHours: 0,
+      estimatedSessions: [],
+    };
   }
 
-  // Calculate totals
+  const weekdayToNumber: Record<string, number> = {
+    sun: 0,
+    mon: 1,
+    tue: 2,
+    wed: 3,
+    thu: 4,
+    fri: 5,
+    sat: 6,
+  };
+
+  const slotsByDay = slots.reduce<Record<number, CreateClassroomSlotDto[]>>(
+    (acc, slot) => {
+      const dayNumber = weekdayToNumber[slot.dayOfWeek];
+      if (typeof dayNumber !== 'number') return acc;
+      if (!acc[dayNumber]) acc[dayNumber] = [];
+      acc[dayNumber].push(slot);
+      return acc;
+    },
+    {},
+  );
+
+  const start = new Date(periodStart);
+  const end = new Date(periodEnd);
+
+  for (
+    const cursor = new Date(
+      start.getFullYear(),
+      start.getMonth(),
+      start.getDate(),
+    );
+    cursor <= end;
+    cursor.setDate(cursor.getDate() + 1)
+  ) {
+    const daySlots = slotsByDay[cursor.getDay()] || [];
+
+    for (const slot of daySlots) {
+      if (slot.endMinuteOfDay <= slot.startMinuteOfDay) continue; // skip invalid slot
+
+      const durationHours = (slot.endMinuteOfDay - slot.startMinuteOfDay) / 60;
+
+      sessions.push({
+        date: new Date(cursor),
+        dayOfWeek: slot.dayOfWeek as Weekday,
+        startMinuteOfDay: slot.startMinuteOfDay,
+        endMinuteOfDay: slot.endMinuteOfDay,
+        durationHours,
+      });
+    }
+  }
+
   const plannedSessions = sessions.length;
-  const plannedHours = sessions.reduce((total, session) => total + session.durationHours, 0);
+  const plannedHours = sessions.reduce(
+    (total, session) => total + session.durationHours,
+    0,
+  );
 
   return {
     plannedSessions,
     plannedHours,
-    estimatedSessions: sessions
+    estimatedSessions: sessions,
   };
 }
 
@@ -89,7 +111,9 @@ export function minutesToTimeString(minutes: number): string {
  * Convert HH:MM time string to minutes from 00:00
  */
 export function timeStringToMinutes(timeString: string): number {
-  const [hours, minutes] = timeString.split(':').map(num => parseInt(num, 10));
+  const [hours, minutes] = timeString
+    .split(':')
+    .map((num) => parseInt(num, 10));
   return hours * 60 + minutes;
 }
 
@@ -100,7 +124,7 @@ export function generateClassroomSessions(
   classroomId: string,
   instructorId: string,
   calculation: ScheduleCalculation,
-  timezone: string = 'Asia/Ho_Chi_Minh'
+  timezone: string = 'Asia_Ho_Chi_Minh',
 ) {
   return calculation.estimatedSessions.map((session, index) => {
     // Create start and end DateTime by adding minutes to date
@@ -117,19 +141,21 @@ export function generateClassroomSessions(
       description: `Weekly ${session.dayOfWeek} session`,
       startTime,
       endTime,
-      timezone: timezone as any, // Convert to TimezoneCode enum
+      timezone: normaliseTimezone(timezone),
       durationHours: session.durationHours,
       type: 'offline' as any, // Default type
       status: 'scheduled' as any,
-      maxStudents: null,
-      roomId: null,
       meetingUrl: null,
-      location: null,
       agenda: null,
       materials: null,
-      homework: null,
       notes: null,
-      recordingUrl: null
+      recordingUrl: null,
     };
   });
+}
+
+function normaliseTimezone(tz: string): any {
+  if (!tz) return 'Asia_Ho_Chi_Minh';
+  const cleaned = tz.replace('/', '_');
+  return cleaned as any;
 }

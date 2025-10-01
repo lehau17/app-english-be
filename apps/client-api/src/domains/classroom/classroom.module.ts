@@ -8,8 +8,13 @@ import { ClassroomRepository } from './repository';
 import { ClassroomService } from './service';
 @Module({
   imports: [AssignmentModule, EventsModule],
-  controllers: [PrivateClassroomController, ],
-  providers: [ClassroomService, ClassroomRepository, EventsGateway, LessonRepository],
+  controllers: [PrivateClassroomController],
+  providers: [
+    ClassroomService,
+    ClassroomRepository,
+    EventsGateway,
+    LessonRepository,
+  ],
   exports: [ClassroomService, ClassroomRepository],
 })
 export class ClassroomModule {}

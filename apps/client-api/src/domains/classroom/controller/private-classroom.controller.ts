@@ -13,13 +13,23 @@ import {
     Query,
     Res,
     UploadedFile,
-    UseInterceptors
+    UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+    ApiBearerAuth,
+    ApiBody,
+    ApiConsumes,
+    ApiOperation,
+    ApiTags,
+} from '@nestjs/swagger';
 import { Classroom } from '@prisma/client';
 import { Response } from 'express';
-import { CreateAssignmentDto, QueryAssignmentsDto, UpdateAssignmentDto } from '../../assignment/dto';
+import {
+    CreateAssignmentDto,
+    QueryAssignmentsDto,
+    UpdateAssignmentDto,
+} from '../../assignment/dto';
 import { AssignmentService } from '../../assignment/service/assignment.service';
 import {
     AddStudentToClassroomDto,
@@ -29,13 +39,15 @@ import {
     CreateClassroomDto,
     FilterClassroomRequestDto,
     ImportStudentsResultDto,
+    StudentDailyScheduleQueryDto,
+    StudentWeeklyScheduleQueryDto,
     UpdateClassroomDto,
 } from '../dto/classroom.dto';
 import { ClassroomService } from '../service/classroom.service';
 
 @ApiTags('Classrooms')
 @ApiBearerAuth('Authorization')
-  @Controller('/private/v1/classrooms')
+@Controller('/private/v1/classrooms')
 export class PrivateClassroomController {
   constructor(
     private readonly classroomService: ClassroomService,
@@ -45,8 +57,11 @@ export class PrivateClassroomController {
   @Get('my-classrooms')
   @ApiOperation({ summary: 'Get my classrooms' })
   @ResponseMessage('My classrooms fetched successfully')
-  myClassrooms(@PayloadToken() payload: JwtPayload) {
-    return this.classroomService.myClassrooms(payload);
+  myClassrooms(
+    @PayloadToken() payload: JwtPayload,
+    @Query('status') status?: string,
+  ) {
+    return this.classroomService.myClassrooms(payload, status);
   }
 
   @Post()
@@ -54,6 +69,31 @@ export class PrivateClassroomController {
   @ResponseMessage('Classroom created successfully')
   create(@Body() dto: CreateClassroomDto) {
     return this.classroomService.create(dto);
+  }
+
+  @Get('my-schedule/daily')
+  @ApiOperation({ summary: 'Get daily schedule for current student' })
+  @ResponseMessage('Lịch học theo ngày được lấy thành công')
+  getMyDailySchedule(
+    @PayloadToken() payload: JwtPayload,
+    @Query() query: StudentDailyScheduleQueryDto,
+  ) {
+    return this.classroomService.getMyDailySchedule(payload, query);
+  }
+
+  @Get('students/:studentId/schedule/daily')
+  @ApiOperation({ summary: 'Get daily schedule for specific student' })
+  @ResponseMessage('Lịch học của học sinh được lấy thành công')
+  getStudentDailySchedule(
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @PayloadToken() payload: JwtPayload,
+    @Query() query: StudentDailyScheduleQueryDto,
+  ) {
+    return this.classroomService.getStudentDailyScheduleForRequester(
+      payload,
+      studentId,
+      query,
+    );
   }
 
   @Get('export')
@@ -106,7 +146,11 @@ export class PrivateClassroomController {
     @Query('weekStart') weekStart?: string,
     @Query('weekEnd') weekEnd?: string,
   ) {
-    return this.classroomService.getTeacherSchedule(teacherId, weekStart, weekEnd);
+    return this.classroomService.getTeacherSchedule(
+      teacherId,
+      weekStart,
+      weekEnd,
+    );
   }
 
   @Post(':id/students')
@@ -143,13 +187,20 @@ export class PrivateClassroomController {
   }
 
   @Get(':id/detail')
-  @ApiOperation({ summary: 'Get full classroom detail (students, assignments, announcements, lessons, activities)' })
+  @ApiOperation({
+    summary:
+      'Get full classroom detail (students, assignments, announcements, lessons, activities)',
+  })
   @ResponseMessage('Classroom detail fetched successfully')
   async getClassroomDetail(
     @Param('id', new ParseUUIDPipe()) id: string,
     @PayloadToken() payload: JwtPayload,
   ) {
-    return this.classroomService.getClassroomDetail(id, payload.userId, payload.role);
+    return this.classroomService.getClassroomDetail(
+      id,
+      payload.sub,
+      payload.role,
+    );
   }
 
   @Get(':id/announcements')
@@ -210,7 +261,11 @@ export class PrivateClassroomController {
   ) {
     // Ensure classroomId matches DTO
     const assignmentDto = { ...dto, classroomId };
-    return this.assignmentService.createAssignment(payload.sub, assignmentDto, classroomId);
+    return this.assignmentService.createAssignment(
+      payload.sub,
+      assignmentDto,
+      classroomId,
+    );
   }
 
   @Get(':id/assignments')
@@ -233,11 +288,43 @@ export class PrivateClassroomController {
     @Body() dto: UpdateAssignmentDto,
   ) {
     // Ensure the assignment belongs to this classroom first
-    const assignment = await this.assignmentService.getAssignmentById(assignmentId);
+    const assignment =
+      await this.assignmentService.getAssignmentById(assignmentId);
     if (assignment.classroomId !== classroomId) {
-      throw new BadRequestException('Assignment does not belong to this classroom');
+      throw new BadRequestException(
+        'Assignment does not belong to this classroom',
+      );
     }
 
-    return this.assignmentService.updateAssignment(assignmentId, payload.sub, dto);
+    return this.assignmentService.updateAssignment(
+      assignmentId,
+      payload.sub,
+      dto,
+    );
+  }
+
+  @Get('my-schedule/weekly')
+  @ApiOperation({ summary: 'Get weekly schedule for current student' })
+  @ResponseMessage('Lịch học theo tuần được lấy thành công')
+  getMyWeeklySchedule(
+    @PayloadToken() payload: JwtPayload,
+    @Query() query: StudentWeeklyScheduleQueryDto,
+  ) {
+    return this.classroomService.getMyWeeklySchedule(payload, query);
+  }
+
+  @Get('students/:studentId/schedule/weekly')
+  @ApiOperation({ summary: 'Get weekly schedule for specific student' })
+  @ResponseMessage('Lịch học tuần của học sinh được lấy thành công')
+  getStudentWeeklySchedule(
+    @Param('studentId', new ParseUUIDPipe()) studentId: string,
+    @PayloadToken() payload: JwtPayload,
+    @Query() query: StudentWeeklyScheduleQueryDto,
+  ) {
+    return this.classroomService.getStudentWeeklyScheduleForRequester(
+      payload,
+      studentId,
+      query,
+    );
   }
 }

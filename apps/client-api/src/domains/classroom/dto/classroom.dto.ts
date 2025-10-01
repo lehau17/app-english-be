@@ -1,5 +1,6 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ClassroomStatus, TimezoneCode } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
     IsArray,
@@ -7,13 +8,14 @@ import {
     IsDate,
     IsEnum,
     IsInt,
+    IsISO8601,
     IsNotEmpty,
     IsOptional,
     IsString,
     IsUUID,
     Max,
     Min,
-    ValidateNested
+    ValidateNested,
 } from 'class-validator';
 
 export enum Weekday {
@@ -23,21 +25,34 @@ export enum Weekday {
   thu = 'thu',
   fri = 'fri',
   sat = 'sat',
-  sun = 'sun'
+  sun = 'sun',
 }
 
 export class CreateClassroomSlotDto {
+  @ApiPropertyOptional({
+    description: 'Slot identifier (optional when editing existing slot)',
+  })
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
   @ApiProperty({ enum: Weekday, example: 'tue' })
   @IsEnum(Weekday)
   dayOfWeek: Weekday;
 
-  @ApiProperty({ example: 390, description: 'Start time in minutes from 00:00 (e.g., 6:30 = 390)' })
+  @ApiProperty({
+    example: 390,
+    description: 'Start time in minutes from 00:00 (e.g., 6:30 = 390)',
+  })
   @IsInt()
   @Min(0)
   @Max(1439) // 23:59 = 1439 minutes
   startMinuteOfDay: number;
 
-  @ApiProperty({ example: 480, description: 'End time in minutes from 00:00 (e.g., 8:00 = 480)' })
+  @ApiProperty({
+    example: 480,
+    description: 'End time in minutes from 00:00 (e.g., 8:00 = 480)',
+  })
   @IsInt()
   @Min(0)
   @Max(1439)
@@ -87,8 +102,8 @@ export class CreateClassroomDto {
     description: 'Weekly schedule slots (e.g., Mon 6:30-8:00, Sat 7:30-9:00)',
     example: [
       { dayOfWeek: 'mon', startMinuteOfDay: 390, endMinuteOfDay: 480 },
-      { dayOfWeek: 'sat', startMinuteOfDay: 450, endMinuteOfDay: 540 }
-    ]
+      { dayOfWeek: 'sat', startMinuteOfDay: 450, endMinuteOfDay: 540 },
+    ],
   })
   @IsArray()
   @ValidateNested({ each: true })
@@ -132,6 +147,31 @@ export class FilterClassroomRequestDto extends RequestPagingDto {
   @IsOptional()
   @IsUUID()
   teacherId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by classroom status',
+    enum: ClassroomStatus,
+    example: ClassroomStatus.ongoing,
+  })
+  @IsOptional()
+  @IsEnum(ClassroomStatus)
+  status?: ClassroomStatus;
+
+  @ApiPropertyOptional({
+    description: 'Filter by student ID to get classrooms where student is enrolled',
+    example: 'f8a8b8e0-5b7a-4b0e-8b0a-0b8b8b8b8b8b',
+  })
+  @IsOptional()
+  @IsUUID()
+  studentId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Include payment status for student',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  includePaymentStatus?: boolean;
 }
 
 export class ClassroomAnnouncementQueryDto extends RequestPagingDto {
@@ -139,6 +179,55 @@ export class ClassroomAnnouncementQueryDto extends RequestPagingDto {
   @IsOptional()
   @IsString()
   priority?: string;
+}
+
+export class StudentDailyScheduleQueryDto {
+  @ApiPropertyOptional({
+    description: 'Target date (ISO 8601). Defaults to today.',
+    example: '2025-05-25',
+  })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  date?: string;
+
+  @ApiPropertyOptional({
+    enum: TimezoneCode,
+    description:
+      'Preferred timezone for formatting results. Defaults to Asia_Ho_Chi_Minh.',
+  })
+  @IsOptional()
+  @IsEnum(TimezoneCode)
+  timezone?: TimezoneCode;
+}
+
+export class StudentWeeklyScheduleQueryDto {
+  @ApiPropertyOptional({
+    description:
+      'Start date (Monday) in ISO 8601. Defaults to current week start.',
+    example: '2025-05-19',
+  })
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  weekStart?: string;
+
+  @ApiPropertyOptional({
+    description: 'Number of days to include. Defaults to 7.',
+    example: 7,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(14)
+  days?: number;
+
+  @ApiPropertyOptional({
+    enum: TimezoneCode,
+    description:
+      'Preferred timezone for formatting results. Defaults to Asia_Ho_Chi_Minh.',
+  })
+  @IsOptional()
+  @IsEnum(TimezoneCode)
+  timezone?: TimezoneCode;
 }
 
 export class AddStudentToClassroomDto {
@@ -174,7 +263,11 @@ export class ImportStudentFromExcelDto {
   @IsUUID()
   classroomId: string;
 
-  @ApiProperty({ type: 'string', format: 'binary', description: 'Excel file containing student data' })
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    description: 'Excel file containing student data',
+  })
   file: Express.Multer.File;
 }
 

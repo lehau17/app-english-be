@@ -3,14 +3,17 @@ import { PageResponseDto } from '@app/shared/payload/response/page-response.dto'
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Classroom, Prisma } from '@prisma/client';
 import { Readable } from 'stream';
-import { ClassroomAnnouncementQueryDto, FilterClassroomRequestDto } from '../dto/classroom.dto';
 import { LessonRepository } from '../../lesson/repository/lesson.repository';
+import {
+    ClassroomAnnouncementQueryDto,
+    FilterClassroomRequestDto,
+} from '../dto/classroom.dto';
 
 @Injectable()
 export class ClassroomRepository {
   constructor(
     private readonly prisma: PrismaRepository,
-    private readonly lessonRepository: LessonRepository
+    private readonly lessonRepository: LessonRepository,
   ) {}
 
   async create(data: Prisma.ClassroomCreateInput): Promise<Classroom> {
@@ -20,13 +23,18 @@ export class ClassroomRepository {
   async createSessions(sessionsData: any[]): Promise<void> {
     await this.prisma.classroomSession.createMany({
       data: sessionsData,
-      skipDuplicates: true
+      skipDuplicates: true,
     });
   }
 
-  async getTeacherSchedule(teacherId: string, weekStart?: Date, weekEnd?: Date) {
+  async getTeacherSchedule(
+    teacherId: string,
+    weekStart?: Date,
+    weekEnd?: Date,
+  ) {
     const startDate = weekStart || new Date();
-    const endDate = weekEnd || new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const endDate =
+      weekEnd || new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     // Get all classroom slots for this teacher
     const classroomSlots = await this.prisma.classroomSlot.findMany({
@@ -44,9 +52,9 @@ export class ClassroomRepository {
             name: true,
             periodStart: true,
             periodEnd: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     // Get all sessions for this teacher in the date range
@@ -56,16 +64,16 @@ export class ClassroomRepository {
         startTime: {
           gte: startDate,
           lte: endDate,
-        }
+        },
       },
       include: {
         classroom: {
           select: {
             id: true,
             name: true,
-          }
-        }
-      }
+          },
+        },
+      },
     });
 
     return {
@@ -75,6 +83,106 @@ export class ClassroomRepository {
       classroomSlots,
       sessions,
     };
+  }
+
+  async getStudentDailySessions(
+    studentId: string,
+    dayStart: Date,
+    dayEnd: Date,
+  ) {
+    return this.prisma.classroomSession.findMany({
+      where: {
+        startTime: {
+          gte: dayStart,
+          lt: dayEnd,
+        },
+        classroom: {
+          students: {
+            some: {
+              studentId,
+              isActive: true,
+            },
+          },
+        },
+      },
+      include: {
+        classroom: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        instructor: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+        attendance: {
+          where: {
+            studentId,
+          },
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: {
+        startTime: 'asc',
+      },
+    });
+  }
+
+  async getStudentWeeklySessions(studentId: string, start: Date, end: Date) {
+    return this.prisma.classroomSession.findMany({
+      where: {
+        startTime: {
+          gte: start,
+          lt: end,
+        },
+        classroom: {
+          students: {
+            some: {
+              studentId,
+              isActive: true,
+            },
+          },
+        },
+      },
+      include: {
+        classroom: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        instructor: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+        attendance: {
+          where: {
+            studentId,
+          },
+          select: {
+            id: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: {
+        startTime: 'asc',
+      },
+    });
   }
 
   async findById(id: string): Promise<Classroom | null> {
@@ -105,12 +213,27 @@ export class ClassroomRepository {
       sortBy = 'createdAt',
       sortOrder = 'desc',
       teacherId,
+      status,
+      studentId,
+      includePaymentStatus = false,
     } = params;
 
     const where: Prisma.ClassroomWhereInput = {
       teacherId,
+      status,
       name: search ? { contains: search, mode: 'insensitive' } : undefined,
+      ...(studentId && {
+        students: {
+          some: {
+            studentId,
+            isActive: true,
+          },
+        },
+      }),
     };
+
+    // Auto-update classroom status based on current date
+    await this.updateClassroomStatuses();
 
     const totalItems = await this.prisma.classroom.count({ where });
     const totalPages = Math.max(1, Math.ceil(totalItems / limit));
@@ -121,18 +244,68 @@ export class ClassroomRepository {
       skip: (safePage - 1) * limit,
       take: limit,
       orderBy: { [sortBy]: sortOrder },
-      include: { students: true, teacher: true },
+      include: {
+        students: includePaymentStatus
+          ? {
+              where: studentId ? { studentId } : undefined,
+              select: {
+                studentId: true,
+                isPurchased: true,
+                isActive: true,
+                joinedAt: true,
+                student: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    displayName: true,
+                    avatarUrl: true,
+                  },
+                },
+              },
+            }
+          : true,
+        teacher: true,
+        course: {
+          select: {
+            id: true,
+            title: true,
+            price: true,
+            currency: true,
+          },
+        },
+      },
     });
 
     return PageResponseDto.of(data, safePage, limit, totalItems);
   }
 
-  async addStudents(classroomId: string, studentIds: string[]) {
-    const data = studentIds.map((studentId) => ({ classroomId, studentId }));
+  async addStudents(classroomId: string, studentIds: string[], isPurchased: boolean = false) {
+    const data = studentIds.map((studentId) => ({
+      classroomId,
+      studentId,
+      isPurchased
+    }));
     return this.prisma.classroomStudent.createMany({
       data,
       skipDuplicates: true,
     });
+  }
+
+  async getCourseByClassroomId(classroomId: string) {
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: {
+        course: {
+          select: {
+            id: true,
+            price: true,
+            title: true,
+          },
+        },
+      },
+    });
+    return classroom?.course || null;
   }
 
   async removeStudent(classroomId: string, studentId: string) {
@@ -204,9 +377,10 @@ export class ClassroomRepository {
     });
   }
 
-
-
-  async isTeacherOfClassroom(classroomId: string, teacherId: string): Promise<boolean> {
+  async isTeacherOfClassroom(
+    classroomId: string,
+    teacherId: string,
+  ): Promise<boolean> {
     const count = await this.prisma.classroom.count({
       where: {
         id: classroomId,
@@ -216,12 +390,46 @@ export class ClassroomRepository {
     return count > 0;
   }
 
-  async isStudentInClassroom(classroomId: string, studentId: string): Promise<boolean> {
+  async isStudentInClassroom(
+    classroomId: string,
+    studentId: string,
+  ): Promise<boolean> {
     const count = await this.prisma.classroomStudent.count({
       where: {
         classroomId,
         studentId,
         isActive: true,
+      },
+    });
+    return count > 0;
+  }
+
+  async isTeacherOfStudent(
+    teacherId: string,
+    studentId: string,
+  ): Promise<boolean> {
+    const count = await this.prisma.classroom.count({
+      where: {
+        teacherId,
+        students: {
+          some: {
+            studentId,
+            isActive: true,
+          },
+        },
+      },
+    });
+    return count > 0;
+  }
+
+  async isParentOfStudent(
+    parentId: string,
+    studentId: string,
+  ): Promise<boolean> {
+    const count = await this.prisma.parentChild.count({
+      where: {
+        parentId,
+        childId: studentId,
       },
     });
     return count > 0;
@@ -294,7 +502,7 @@ export class ClassroomRepository {
   async findClassroomsByTeacherId(teacherId: string) {
     return this.prisma.classroom.findMany({
       where: {
-        teacherId
+        teacherId,
       },
       include: {
         teacher: true,
@@ -309,7 +517,7 @@ export class ClassroomRepository {
     const classroom = await this.prisma.classroom.findUnique({
       where: { id: classroomId },
       include: {
-         slots: true,
+        slots: true,
         teacher: true,
         students: {
           include: { student: true },
@@ -334,7 +542,7 @@ export class ClassroomRepository {
     if (!classroom) throw new BadRequestException('Classroom not found');
 
     // Format students
-    const students = classroom.students.map(cs => ({
+    const students = classroom.students.map((cs) => ({
       id: cs.student.id,
       firstName: cs.student.firstName,
       lastName: cs.student.lastName,
@@ -348,7 +556,7 @@ export class ClassroomRepository {
     }));
 
     // Format assignments
-    const assignments = classroom.assignments.map(a => ({
+    const assignments = classroom.assignments.map((a) => ({
       id: a.id,
       title: a.title,
       description: a.description,
@@ -361,25 +569,26 @@ export class ClassroomRepository {
       maxAttempts: a.maxAttempts,
       createdAt: a.createdAt,
       _count: { submissions: a.submissions.length },
-      activities: a.assignmentActivities?.map(activity => ({
-        id: activity.id,
-        type: activity.type,
-        title: activity.title,
-        instructions: activity.instructions,
-        content: activity.content,
-        points: activity.points,
-        timeLimit: activity.timeLimit,
-        maxAttempts: activity.maxAttempts,
-        passingScore: activity.passingScore,
-        difficulty: activity.difficulty,
-        hints: activity.hints,
-        createdAt: activity.createdAt,
-        updatedAt: activity.updatedAt,
-      })) ?? [],
+      activities:
+        a.assignmentActivities?.map((activity) => ({
+          id: activity.id,
+          type: activity.type,
+          title: activity.title,
+          instructions: activity.instructions,
+          content: activity.content,
+          points: activity.points,
+          timeLimit: activity.timeLimit,
+          maxAttempts: activity.maxAttempts,
+          passingScore: activity.passingScore,
+          difficulty: activity.difficulty,
+          hints: activity.hints,
+          createdAt: activity.createdAt,
+          updatedAt: activity.updatedAt,
+        })) ?? [],
     }));
 
     // Format announcements
-    const announcements = classroom.announcements.map(an => ({
+    const announcements = classroom.announcements.map((an) => ({
       id: an.id,
       title: an.title,
       content: an.content,
@@ -390,23 +599,24 @@ export class ClassroomRepository {
     }));
 
     // Format lessons + activities
-    const lessons = classroom.course?.lessons?.map(lesson => ({
-      id: lesson.id,
-      title: lesson.title,
-      orderNo: lesson.orderNo,
-      estimatedTime: lesson.estimatedTime,
-      difficulty: lesson.difficulty,
-      isLocked: lesson.isLocked,
-      activities: lesson.activities.map(act => ({
-        id: act.id,
-        lessonId: act.lessonId,
-        orderNo: act.orderNo,
-        type: act.type,
-        title: act.title,
-        duration: act.timeLimit,
-        passingScore: act.passingScore,
-      })),
-    })) ?? [];
+    const lessons =
+      classroom.course?.lessons?.map((lesson) => ({
+        id: lesson.id,
+        title: lesson.title,
+        orderNo: lesson.orderNo,
+        estimatedTime: lesson.estimatedTime,
+        difficulty: lesson.difficulty,
+        isLocked: lesson.isLocked,
+        activities: lesson.activities.map((act) => ({
+          id: act.id,
+          lessonId: act.lessonId,
+          orderNo: act.orderNo,
+          type: act.type,
+          title: act.title,
+          duration: act.timeLimit,
+          passingScore: act.passingScore,
+        })),
+      })) ?? [];
 
     // Stats
     const _count = {
@@ -419,17 +629,24 @@ export class ClassroomRepository {
     const settings = classroom.settings || {};
 
     // Schedule
-    const schedule = classroom.slots && classroom.slots.length > 0
-      ? {
-          days: classroom.slots.map(s => s.dayOfWeek),
-          time: classroom.slots[0].startMinuteOfDay !== undefined
-            ? `${Math.floor(classroom.slots[0].startMinuteOfDay / 60)}:${String(classroom.slots[0].startMinuteOfDay % 60).padStart(2, '0')}`
-            : undefined,
-          duration: classroom.slots[0].startMinuteOfDay !== undefined && classroom.slots[0].endMinuteOfDay !== undefined
-            ? Math.round((classroom.slots[0].endMinuteOfDay - classroom.slots[0].startMinuteOfDay))
-            : undefined,
-        }
-      : undefined;
+    const schedule =
+      classroom.slots && classroom.slots.length > 0
+        ? {
+            days: classroom.slots.map((s) => s.dayOfWeek),
+            time:
+              classroom.slots[0].startMinuteOfDay !== undefined
+                ? `${Math.floor(classroom.slots[0].startMinuteOfDay / 60)}:${String(classroom.slots[0].startMinuteOfDay % 60).padStart(2, '0')}`
+                : undefined,
+            duration:
+              classroom.slots[0].startMinuteOfDay !== undefined &&
+              classroom.slots[0].endMinuteOfDay !== undefined
+                ? Math.round(
+                    classroom.slots[0].endMinuteOfDay -
+                      classroom.slots[0].startMinuteOfDay,
+                  )
+                : undefined,
+          }
+        : undefined;
 
     return {
       id: classroom.id,
@@ -449,6 +666,7 @@ export class ClassroomRepository {
       assignments,
       announcements,
       lessons,
+      course: classroom.course
     };
   }
 
@@ -465,6 +683,63 @@ export class ClassroomRepository {
         status: 'active',
       },
     });
+  }
+
+  /**
+   * Auto-update classroom status based on current date
+   */
+  async updateClassroomStatuses(): Promise<void> {
+    const now = new Date();
+
+    // Update to ongoing for classrooms that started
+    await this.prisma.classroom.updateMany({
+      where: {
+        status: 'upcoming',
+        periodStart: { lte: now },
+        periodEnd: { gt: now },
+      },
+      data: { status: 'ongoing' },
+    });
+
+    // Update to completed for classrooms that ended
+    await this.prisma.classroom.updateMany({
+      where: {
+        status: { in: ['upcoming', 'ongoing'] },
+        periodEnd: { lte: now },
+      },
+      data: { status: 'completed' },
+    });
+  }
+
+  /**
+   * Get classroom status with payment info for student
+   */
+  async getClassroomStatusForStudent(classroomId: string, studentId: string) {
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      include: {
+        students: {
+          where: { studentId, isActive: true },
+          select: { isPurchased: true },
+        },
+        course: {
+          select: { price: true },
+        },
+      },
+    });
+
+    if (!classroom) return null;
+
+    const studentRecord = classroom.students[0];
+    const needsPayment = classroom.course?.price && classroom.course.price > 0;
+
+    return {
+      id: classroom.id,
+      status: classroom.status,
+      isPurchased: studentRecord?.isPurchased || false,
+      needsPayment: needsPayment || false,
+      hasAccess: !needsPayment || studentRecord?.isPurchased || false,
+    };
   }
 
   async getClassroomDetailForStudent(classroomId: string, studentId: string) {
@@ -500,7 +775,7 @@ export class ClassroomRepository {
     if (!classroom) throw new BadRequestException('Classroom not found');
 
     // Format students
-    const students = classroom.students.map(cs => ({
+    const students = classroom.students.map((cs) => ({
       id: cs.student.id,
       firstName: cs.student.firstName,
       lastName: cs.student.lastName,
@@ -514,7 +789,7 @@ export class ClassroomRepository {
     }));
 
     // Format assignments with student's submission data
-    const assignments = classroom.assignments.map(a => {
+    const assignments = classroom.assignments.map((a) => {
       const mySubmission = a.submissions.length > 0 ? a.submissions[0] : null;
 
       return {
@@ -530,33 +805,36 @@ export class ClassroomRepository {
         maxAttempts: a.maxAttempts,
         createdAt: a.createdAt,
         _count: { submissions: 1 }, // For student view, just indicate if they have submitted
-        submission: mySubmission ? {
-          id: mySubmission.id,
-          score: mySubmission.score,
-          status: mySubmission.score !== null ? 'graded' : 'submitted',
-          attempt: mySubmission.attemptCount,
-          submittedAt: mySubmission.submittedAt?.toISOString() || null,
-        } : null,
-        activities: a.assignmentActivities?.map(activity => ({
-          id: activity.id,
-          type: activity.type,
-          title: activity.title,
-          instructions: activity.instructions,
-          content: activity.content,
-          points: activity.points,
-          timeLimit: activity.timeLimit,
-          maxAttempts: activity.maxAttempts,
-          passingScore: activity.passingScore,
-          difficulty: activity.difficulty,
-          hints: activity.hints,
-          createdAt: activity.createdAt,
-          updatedAt: activity.updatedAt,
-        })) ?? [],
+        submission: mySubmission
+          ? {
+              id: mySubmission.id,
+              score: mySubmission.score,
+              status: mySubmission.score !== null ? 'graded' : 'submitted',
+              attempt: mySubmission.attemptCount,
+              submittedAt: mySubmission.submittedAt?.toISOString() || null,
+            }
+          : null,
+        activities:
+          a.assignmentActivities?.map((activity) => ({
+            id: activity.id,
+            type: activity.type,
+            title: activity.title,
+            instructions: activity.instructions,
+            content: activity.content,
+            points: activity.points,
+            timeLimit: activity.timeLimit,
+            maxAttempts: activity.maxAttempts,
+            passingScore: activity.passingScore,
+            difficulty: activity.difficulty,
+            hints: activity.hints,
+            createdAt: activity.createdAt,
+            updatedAt: activity.updatedAt,
+          })) ?? [],
       };
     });
 
     // Format announcements
-    const announcements = classroom.announcements.map(an => ({
+    const announcements = classroom.announcements.map((an) => ({
       id: an.id,
       title: an.title,
       content: an.content,
@@ -567,22 +845,26 @@ export class ClassroomRepository {
     }));
 
     // Format lessons + activities với progress unlocking logic
-    const lessons = classroom.course?.lessons?.length ? 
-      await this.lessonRepository.listLessonsOfCourseWithProgress(classroom.course.id, studentId)
+    const lessons = classroom.course?.lessons?.length
+      ? await this.lessonRepository.listLessonsOfCourseWithProgress(
+          classroom.course.id,
+          studentId,
+        )
       : [];
 
-    const formattedLessons = lessons.map(lesson => ({
+    const formattedLessons = lessons.map((lesson) => ({
       id: lesson.id,
       title: lesson.title,
       orderNo: lesson.orderNo,
       estimatedTime: lesson.estimatedTime,
       difficulty: lesson.difficulty,
       isLocked: lesson.isLocked, // Sử dụng dynamic isLocked từ progress logic
-      activities: lesson.activities?.map(activity => ({
-        id: activity.id,
-        type: activity.type,
-        passingScore: activity.passingScore,
-      })) ?? [],
+      activities:
+        lesson.activities?.map((activity) => ({
+          id: activity.id,
+          type: activity.type,
+          passingScore: activity.passingScore,
+        })) ?? [],
       // Thêm progress data nếu có (using type assertion for dynamic property)
       ...((lesson as any).progress && { progress: (lesson as any).progress }),
     }));
@@ -606,13 +888,14 @@ export class ClassroomRepository {
       createdAt: classroom.createdAt,
       updatedAt: classroom.updatedAt,
       expiresAt: classroom.expiresAt,
+      course: classroom.course,
       settings,
       schedule,
       _count,
       students,
       assignments,
       announcements,
-      lessons,
+      lessons: formattedLessons,
     };
   }
 }
