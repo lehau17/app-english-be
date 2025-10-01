@@ -18,7 +18,7 @@ import {
   ValidatorConstraint,
   ValidatorConstraintInterface,
 } from 'class-validator';
-import * as uuid from "uuid";
+import * as uuid from 'uuid';
 import { ACTIVITY_TYPES, ActivityTypeValue } from '../../course/dto';
 
 // Custom validator for content based on activity type
@@ -46,14 +46,19 @@ export class ActivityContentValidator implements ValidatorConstraintInterface {
           content.correctIndex < content.options.length
         );
       case 'listening':
+        // New format: audioUrl + multiple questions
         return (
           typeof content.audioUrl === 'string' &&
-          typeof content.prompt === 'string' &&
-          Array.isArray(content.options) &&
-          content.options.length > 0 &&
-          typeof content.correctIndex === 'number' &&
-          content.correctIndex >= 0 &&
-          content.correctIndex < content.options.length
+          Array.isArray(content.questions) &&
+          content.questions.every(
+            (q: any) =>
+              typeof q.question === 'string' &&
+              Array.isArray(q.options) &&
+              q.options.length > 0 &&
+              typeof q.correctIndex === 'number' &&
+              q.correctIndex >= 0 &&
+              q.correctIndex < q.options.length,
+          )
         );
       case 'vocab':
         return Array.isArray(content.items);
@@ -71,64 +76,83 @@ export class ActivityContentValidator implements ValidatorConstraintInterface {
 }
 
 export class AssignmentActivityDto {
-  @ApiProperty({ description: 'Internal assignment activity ID', example: 'activity-1' })
+  @ApiProperty({
+    description: 'Internal assignment activity ID',
+    example: 'activity-1',
+  })
   @IsString()
-    @IsOptional()
-  id: string = uuid.v4()
+  @IsOptional()
+  id: string = uuid.v4();
 
   @ApiProperty({ enum: ACTIVITY_TYPES, description: 'Activity type' })
   @IsEnum(ACTIVITY_TYPES)
-  type!: ActivityTypeValue
+  type!: ActivityTypeValue;
 
   @ApiProperty({ description: 'Activity title' })
   @IsString()
   @IsNotEmpty()
-  title!: string
+  title!: string;
 
   @ApiPropertyOptional({ description: 'Activity instructions' })
   @IsOptional()
   @IsString()
-  instructions?: string
+  instructions?: string;
 
-  @ApiProperty({ description: 'Activity content (structured based on activity type)' })
+  @ApiProperty({
+    description: 'Activity content (structured based on activity type)',
+  })
   @IsObject()
   @Validate(ActivityContentValidator)
-  content!: any
+  content!: any;
 
-  @ApiPropertyOptional({ description: 'XP/Points for this activity', default: 10 })
+  @ApiPropertyOptional({
+    description: 'XP/Points for this activity',
+    default: 10,
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
-  points?: number
+  points?: number;
 
   @ApiPropertyOptional({ description: 'Time limit (minutes)' })
   @IsOptional()
   @IsInt()
   @Min(1)
-  timeLimit?: number
+  timeLimit?: number;
 
   @ApiPropertyOptional({ description: 'Maximum attempts allowed' })
   @IsOptional()
   @IsInt()
   @Min(1)
-  maxAttempts?: number
+  maxAttempts?: number;
 
   @ApiPropertyOptional({ description: 'Passing score (0-100)' })
   @IsOptional()
   @IsInt()
   @Min(0)
-  passingScore?: number
+  passingScore?: number;
 
-  @ApiPropertyOptional({ enum: DifficultyLevel, description: 'Difficulty level' })
+  @ApiPropertyOptional({
+    enum: DifficultyLevel,
+    description: 'Difficulty level',
+  })
   @IsOptional()
   @IsEnum(DifficultyLevel)
-  difficulty?: DifficultyLevel
+  difficulty?: DifficultyLevel;
 
   @ApiPropertyOptional({ type: [String], description: 'Hints (plain text)' })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  hints?: string[]
+  hints?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Media URLs (audio, video, images)',
+    example: { audio: 'https://example.com/audio.mp3' },
+  })
+  @IsOptional()
+  @IsObject()
+  mediaUrls?: any;
 }
 
 export class CreateAssignmentDto {
@@ -147,46 +171,71 @@ export class CreateAssignmentDto {
   @IsOptional()
   instructions?: string;
 
-
-  @ApiPropertyOptional({ description: 'Due date for assignment', example: '2024-12-31T17:00:00Z' })
+  @ApiPropertyOptional({
+    description: 'Due date for assignment',
+    example: '2024-12-31T17:00:00Z',
+  })
   @IsDateString()
   @IsOptional()
   dueDate?: string;
 
-  @ApiPropertyOptional({ description: 'Total points possible', minimum: 1, default: 100 })
+  @ApiPropertyOptional({
+    description: 'Total points possible',
+    minimum: 1,
+    default: 100,
+  })
   @IsInt()
   @Min(1)
   @IsOptional()
-  @Transform(({ value }) => typeof value === 'number' ? value : parseInt(value))
+  @Transform(({ value }) =>
+    typeof value === 'number' ? value : parseInt(value),
+  )
   totalPoints?: number = 100;
 
   @ApiPropertyOptional({ description: 'Time limit in minutes' })
   @IsInt()
   @Min(1)
   @IsOptional()
-  @Transform(({ value }) => typeof value === 'number' ? value : parseInt(value))
+  @Transform(({ value }) =>
+    typeof value === 'number' ? value : parseInt(value),
+  )
   timeLimit?: number;
 
-  @ApiPropertyOptional({ description: 'Maximum attempts allowed', minimum: 1, default: 1 })
+  @ApiPropertyOptional({
+    description: 'Maximum attempts allowed',
+    minimum: 1,
+    default: 1,
+  })
   @IsInt()
   @Min(1)
   @IsOptional()
-  @Transform(({ value }) => typeof value === 'number' ? value : parseInt(value))
+  @Transform(({ value }) =>
+    typeof value === 'number' ? value : parseInt(value),
+  )
   maxAttempts?: number = 1;
 
-  @ApiPropertyOptional({ description: 'Publish assignment immediately', default: false })
+  @ApiPropertyOptional({
+    description: 'Publish assignment immediately',
+    default: false,
+  })
   @IsBoolean()
   @IsOptional()
   @Transform(({ value }) => value === 'true' || value === true)
   isPublished?: boolean = false;
 
-  @ApiPropertyOptional({ description: 'Assign to specific students (user IDs)', type: [String] })
+  @ApiPropertyOptional({
+    description: 'Assign to specific students (user IDs)',
+    type: [String],
+  })
   @IsArray()
   @IsString({ each: true })
   @IsOptional()
   assignedTo?: string[] = [];
 
-  @ApiProperty({ description: 'Activities in this assignment', type: [AssignmentActivityDto] })
+  @ApiProperty({
+    description: 'Activities in this assignment',
+    type: [AssignmentActivityDto],
+  })
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => AssignmentActivityDto)

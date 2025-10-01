@@ -16,245 +16,323 @@ import {
 // Common interfaces
 export class VocabItem {
   @ApiProperty({ description: 'Word or phrase' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   word!: string;
 
   @ApiProperty({ description: 'Definition of the word' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   definition!: string;
 
   @ApiProperty({ description: 'Example sentences', type: [String] })
-  @IsArray() @IsString({ each: true })
+  @IsArray()
+  @IsString({ each: true })
   examples!: string[];
 
   @ApiPropertyOptional({ description: 'Image URL for the word' })
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   imageUrl?: string;
 
   @ApiPropertyOptional({ description: 'Audio URL for pronunciation' })
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   audioUrl?: string;
 }
 
 export class FlashCard {
   @ApiProperty({ description: 'Front side of the card' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   front!: string;
 
   @ApiProperty({ description: 'Back side of the card' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   back!: string;
 
   @ApiPropertyOptional({ description: 'Image URL for the card' })
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   imageUrl?: string;
 }
 
 export class ConversationMessage {
-  @ApiProperty({ description: 'Role of the speaker', enum: ['user', 'assistant'] })
-  @IsString() @IsIn(['user', 'assistant'])
+  @ApiProperty({
+    description: 'Role of the speaker',
+    enum: ['user', 'assistant'],
+  })
+  @IsString()
+  @IsIn(['user', 'assistant'])
   role!: string;
 
   @ApiProperty({ description: 'Message text' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   text!: string;
 }
 
 export class MatchingPair {
   @ApiProperty({ description: 'Left side of the matching pair' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   left!: string;
 
   @ApiProperty({ description: 'Right side of the matching pair' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   right!: string;
 }
 
 // Content types for each activity
 export class QuizContent {
   @ApiProperty({ description: 'Quiz question' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   question!: string;
 
   @ApiProperty({ description: 'Answer options', type: [String] })
-  @IsArray() @IsString({ each: true })
+  @IsArray()
+  @IsString({ each: true })
   options!: string[];
 
   @ApiProperty({ description: 'Index of correct answer' })
-  @IsInt() @Min(0)
+  @IsInt()
+  @Min(0)
   correctIndex!: number;
 
   @ApiPropertyOptional({ description: 'Explanation for the answer' })
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   explanation?: string;
 }
 
 export class VocabContent {
   @ApiProperty({ description: 'Vocabulary items', type: [VocabItem] })
-  @IsArray() @ValidateNested({ each: true })
+  @IsArray()
+  @ValidateNested({ each: true })
   @Type(() => VocabItem)
   items!: VocabItem[];
 }
 
-export class ListeningContent {
-  @ApiProperty({ description: 'Audio URL for listening' })
-  @IsString() @IsNotEmpty()
-  audioUrl!: string;
-
-  @ApiProperty({ description: 'Listening prompt or question' })
-  @IsString() @IsNotEmpty()
-  prompt!: string;
+export class ListeningQuestion {
+  @ApiProperty({ description: 'Question text' })
+  @IsString()
+  @IsNotEmpty()
+  question!: string;
 
   @ApiProperty({ description: 'Answer options', type: [String] })
-  @IsArray() @IsString({ each: true })
+  @IsArray()
+  @IsString({ each: true })
   options!: string[];
 
   @ApiProperty({ description: 'Index of correct answer' })
-  @IsInt() @Min(0)
+  @IsInt()
+  @Min(0)
   correctIndex!: number;
+
+  @ApiPropertyOptional({ description: 'Explanation for the answer' })
+  @IsOptional()
+  @IsString()
+  explanation?: string;
+}
+
+export class ListeningContent {
+  @ApiProperty({ description: 'Audio URL for listening' })
+  @IsString()
+  @IsNotEmpty()
+  audioUrl!: string;
+
+  @ApiPropertyOptional({ description: 'Overall listening instructions' })
+  @IsOptional()
+  @IsString()
+  instructions?: string;
+
+  @ApiProperty({
+    description: 'Listening questions',
+    type: [ListeningQuestion],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ListeningQuestion)
+  questions!: ListeningQuestion[];
 }
 
 export class PronunciationContent {
   @ApiProperty({ description: 'Target phrase to pronounce' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   phrase!: string;
 
   @ApiProperty({ description: 'Pronunciation tips', type: [String] })
-  @IsArray() @IsString({ each: true })
+  @IsArray()
+  @IsString({ each: true })
   tips!: string[];
 
   @ApiPropertyOptional({ description: 'Sample audio URL' })
-  @IsOptional() @IsString()
+  @IsOptional()
+  @IsString()
   sampleUrl?: string;
 }
 
 export class SpeakingContent {
   @ApiProperty({ description: 'Speaking prompt' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   prompt!: string;
 
   @ApiProperty({ description: 'Minimum speaking duration in seconds' })
-  @IsInt() @Min(1)
+  @IsInt()
+  @Min(1)
   minSeconds!: number;
 
   @ApiProperty({ description: 'Speaking tips', type: [String] })
-  @IsArray() @IsString({ each: true })
+  @IsArray()
+  @IsString({ each: true })
   tips!: string[];
 }
 
 export class MiniGameContent {
   @ApiProperty({ description: 'Target word or phrase for the game' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   target!: string;
 
   @ApiProperty({ description: 'Word pool for the game', type: [String] })
-  @IsArray() @IsString({ each: true })
+  @IsArray()
+  @IsString({ each: true })
   pool!: string[];
 
   @ApiProperty({ description: 'Number of game rounds' })
-  @IsInt() @Min(1)
+  @IsInt()
+  @Min(1)
   rounds!: number;
 }
 
 export class ReadingContent {
   @ApiProperty({ description: 'Reading passage' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   passage!: string;
 
   @ApiProperty({ description: 'Reading comprehension question' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   question!: string;
 
   @ApiProperty({ description: 'Answer options', type: [String] })
-  @IsArray() @IsString({ each: true })
+  @IsArray()
+  @IsString({ each: true })
   options!: string[];
 
   @ApiProperty({ description: 'Index of correct answer' })
-  @IsInt() @Min(0)
+  @IsInt()
+  @Min(0)
   correctIndex!: number;
 }
 
 export class WritingContent {
   @ApiProperty({ description: 'Writing prompt' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   prompt!: string;
 
   @ApiProperty({ description: 'Minimum word count' })
-  @IsInt() @Min(1)
+  @IsInt()
+  @Min(1)
   minWords!: number;
 
   @ApiProperty({ description: 'Writing rubric criteria', type: [String] })
-  @IsArray() @IsString({ each: true })
+  @IsArray()
+  @IsString({ each: true })
   rubric!: string[];
 }
 
 export class GrammarContent {
   @ApiProperty({ description: 'Grammar rule explanation' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   rule!: string;
 
   @ApiProperty({ description: 'Grammar question' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   question!: string;
 
   @ApiProperty({ description: 'Answer options', type: [String] })
-  @IsArray() @IsString({ each: true })
+  @IsArray()
+  @IsString({ each: true })
   options!: string[];
 
   @ApiProperty({ description: 'Index of correct answer' })
-  @IsInt() @Min(0)
+  @IsInt()
+  @Min(0)
   correctIndex!: number;
 }
 
 export class FlashcardContent {
   @ApiProperty({ description: 'Flashcards', type: [FlashCard] })
-  @IsArray() @ValidateNested({ each: true })
+  @IsArray()
+  @ValidateNested({ each: true })
   @Type(() => FlashCard)
   cards!: FlashCard[];
 }
 
 export class ConversationContent {
   @ApiProperty({ description: 'Conversation scenario' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   scenario!: string;
 
-  @ApiProperty({ description: 'Initial dialog messages', type: [ConversationMessage] })
-  @IsArray() @ValidateNested({ each: true })
+  @ApiProperty({
+    description: 'Initial dialog messages',
+    type: [ConversationMessage],
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
   @Type(() => ConversationMessage)
   initialDialog!: ConversationMessage[];
 
   @ApiProperty({ description: 'Conversation suggestions', type: [String] })
-  @IsArray() @IsString({ each: true })
+  @IsArray()
+  @IsString({ each: true })
   suggestions!: string[];
 }
 
 export class FillBlankContent {
   @ApiProperty({ description: 'Passage with blanks (use ___ for blanks)' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   passage!: string;
 
   @ApiProperty({ description: 'Correct answers for blanks', type: [String] })
-  @IsArray() @IsString({ each: true })
+  @IsArray()
+  @IsString({ each: true })
   blanks!: string[];
 }
 
 export class DictationContent {
   @ApiProperty({ description: 'Audio URL for dictation' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   audioUrl!: string;
 
   @ApiProperty({ description: 'Correct transcript' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   transcript!: string;
 
   @ApiProperty({ description: 'Minimum word count for submission' })
-  @IsInt() @Min(0)
+  @IsInt()
+  @Min(0)
   minWords!: number;
 }
 
 export class MatchingContent {
   @ApiProperty({ description: 'Matching pairs', type: [MatchingPair] })
-  @IsArray() @ValidateNested({ each: true })
+  @IsArray()
+  @ValidateNested({ each: true })
   @Type(() => MatchingPair)
   pairs!: MatchingPair[];
 }
@@ -279,7 +357,8 @@ export type ActivityContent =
 // Wrapper class to match frontend format { kind, data }
 export class ActivityContentWrapper {
   @ApiProperty({ description: 'Activity content kind' })
-  @IsString() @IsNotEmpty()
+  @IsString()
+  @IsNotEmpty()
   kind!: string;
 
   @ApiProperty({ description: 'Activity content data' })

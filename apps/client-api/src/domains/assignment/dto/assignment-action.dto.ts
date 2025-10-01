@@ -1,15 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import {
-  IsInt,
-  IsObject,
-  IsOptional,
-  IsString,
-  Min,
-} from 'class-validator';
+import { IsInt, IsObject, IsOptional, IsString, Min } from 'class-validator';
 
 export class SubmitAssignmentDto {
-  @ApiProperty({ description: 'Student answers as JSON object', example: { "activity1": { "q1": "answer1", "q2": "answer2" }, "activity2": {  } } })
+  @ApiProperty({
+    description: 'Student answers as JSON object',
+    example: { activity1: { q1: 'answer1', q2: 'answer2' }, activity2: {} },
+  })
   @IsObject()
   answers: any;
 
@@ -45,19 +42,31 @@ export class QueryAssignmentsDto {
   @IsOptional()
   classroomId?: string;
 
-  @ApiPropertyOptional({ description: 'Assignment status', enum: ['draft', 'published', 'completed', 'overdue', 'submitted', 'graded'] })
+  @ApiPropertyOptional({
+    description: 'Assignment status',
+    enum: ['draft', 'published', 'completed', 'overdue', 'submitted', 'graded'],
+  })
   @IsString()
   @IsOptional()
   status?: string;
 
-  @ApiPropertyOptional({ description: 'Page number for pagination', minimum: 1, default: 1 })
+  @ApiPropertyOptional({
+    description: 'Page number for pagination',
+    minimum: 1,
+    default: 1,
+  })
   @IsInt()
   @Min(1)
   @IsOptional()
   @Transform(({ value }) => parseInt(value))
   page?: number = 1;
 
-  @ApiPropertyOptional({ description: 'Items per page', minimum: 1, maximum: 100, default: 20 })
+  @ApiPropertyOptional({
+    description: 'Items per page',
+    minimum: 1,
+    maximum: 100,
+    default: 20,
+  })
   @IsInt()
   @Min(1)
   @IsOptional()
