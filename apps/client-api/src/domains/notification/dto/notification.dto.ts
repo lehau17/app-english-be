@@ -60,7 +60,10 @@ export class CreateClassroomNotificationDto {
   @IsJSON()
   data?: string;
 
-  @ApiProperty({ enum: NotificationChannel, example: NotificationChannel.socket })
+  @ApiProperty({
+    enum: NotificationChannel,
+    example: NotificationChannel.socket,
+  })
   @IsEnum(NotificationChannel)
   channel: NotificationChannel;
 }
