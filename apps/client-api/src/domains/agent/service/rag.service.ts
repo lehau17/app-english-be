@@ -5,7 +5,7 @@
 
 import { PrismaRepository } from '@app/database';
 import { Injectable, Logger } from '@nestjs/common';
-import { GeminiService } from './gemini.service';
+import { GeminiService } from '@app/shared';
 
 // DTO bạn đã có trong dto/query.dto (AddDocumentDto)
 type AddDocumentDto = {
@@ -50,7 +50,9 @@ export class RagService {
         WHERE id = ${doc.id}
       `;
     } catch (e) {
-      this.logger.warn(`Không thể lưu embedding_vector (pgvector) cho doc ${doc.id}: ${(e as any)?.message}`);
+      this.logger.warn(
+        `Không thể lưu embedding_vector (pgvector) cho doc ${doc.id}: ${(e as any)?.message}`,
+      );
     }
     this.logger.log(`✅ Đã lưu tài liệu ID: ${doc.id}`);
     return doc;
@@ -133,12 +135,17 @@ YÊU CẦU:
       }));
 
       if (normalized.length > 0) {
-        this.logger.log(`✅ Found ${normalized.length} documents using pgvector ANN query`);
+        this.logger.log(
+          `✅ Found ${normalized.length} documents using pgvector ANN query`,
+        );
         return normalized;
       }
     } catch (e) {
       // Fallback: nếu có lỗi (ví dụ pgvector chưa có), dùng cách cũ
-      this.logger.warn('ANN query failed, falling back to in-memory similarity: ' + (e as any)?.message);
+      this.logger.warn(
+        'ANN query failed, falling back to in-memory similarity: ' +
+          (e as any)?.message,
+      );
     }
 
     // Fallback to in-memory similarity calculation

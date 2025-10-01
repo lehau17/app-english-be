@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AgentChatDto, AgentChatResponseDto, AgentRecommendationDto } from './dto/agent.dto';
+import {
+  AgentChatDto,
+  AgentChatResponseDto,
+  AgentRecommendationDto,
+} from './dto/agent.dto';
 import { LangChainAgentService } from './service/langchain-agent.service';
 
 @Injectable()
@@ -10,9 +14,13 @@ export class AgentService {
 
   async chatWithAI(chatDto: AgentChatDto): Promise<AgentChatResponseDto> {
     try {
-      this.logger.log(`💬 Agent chat request: ${chatDto.message?.substring(0, 100)}...`);
+      this.logger.log(
+        `💬 Agent chat request: ${chatDto.message?.substring(0, 100)}...`,
+      );
 
-      const result = await this.langchainAgent.processUserQuery(chatDto.message);
+      const result = await this.langchainAgent.processUserQuery(
+        chatDto.message,
+      );
 
       return {
         response: result.answer,
@@ -27,7 +35,8 @@ export class AgentService {
     } catch (error) {
       this.logger.error('Chat with AI failed:', error);
       return {
-        response: 'Xin lỗi, tôi gặp sự cố khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.',
+        response:
+          'Xin lỗi, tôi gặp sự cố khi xử lý yêu cầu của bạn. Vui lòng thử lại sau.',
         confidence: 0,
         toolsUsed: [],
         processingTime: 0,
@@ -46,23 +55,26 @@ export class AgentService {
           id: 'rec_study_plan',
           type: 'learning',
           title: 'Tối ưu kế hoạch học tập',
-          description: 'Dựa trên tiến độ hiện tại, bạn nên tập trung vào các bài học có độ khó trung bình trước.',
+          description:
+            'Dựa trên tiến độ hiện tại, bạn nên tập trung vào các bài học có độ khó trung bình trước.',
           confidence: 0.85,
         },
         {
           id: 'rec_weak_areas',
           type: 'improvement',
           title: 'Cải thiện điểm yếu',
-          description: 'Phát hiện bạn gặp khó khăn với bài tập nghe hiểu. Khuyến nghị tăng cường luyện tập.',
+          description:
+            'Phát hiện bạn gặp khó khăn với bài tập nghe hiểu. Khuyến nghị tăng cường luyện tập.',
           confidence: 0.78,
         },
         {
           id: 'rec_engagement',
           type: 'engagement',
           title: 'Tăng cường tương tác',
-          description: 'Tham gia thảo luận nhóm và chat với AI để cải thiện kỹ năng giao tiếp.',
+          description:
+            'Tham gia thảo luận nhóm và chat với AI để cải thiện kỹ năng giao tiếp.',
           confidence: 0.72,
-        }
+        },
       ];
 
       return recommendations;
@@ -92,7 +104,10 @@ export class AgentService {
     }
 
     // Decrease confidence if there were errors in execution steps
-    if (result.executionSteps && result.executionSteps.some((step: any) => step.error)) {
+    if (
+      result.executionSteps &&
+      result.executionSteps.some((step: any) => step.error)
+    ) {
       confidence -= 0.2;
     }
 
@@ -109,9 +124,11 @@ export class AgentService {
           try {
             const obs = JSON.parse(step.observation);
             if (obs.sources) {
-              sources.push(...obs.sources.map((s: any) => s.title || s.source || s.id));
+              sources.push(
+                ...obs.sources.map((s: any) => s.title || s.source || s.id),
+              );
             }
-          } catch (e) {
+          } catch {
             // ignore parsing errors
           }
         }

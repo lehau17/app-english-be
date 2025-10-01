@@ -1,7 +1,7 @@
 import { PrismaRepository } from '@app/database';
 import { normalizeBigInt, safeStringify } from '@app/shared/utils/json.util';
 import { Injectable, Logger } from '@nestjs/common';
-import { GeminiService } from './gemini.service';
+import { GeminiService } from '@app/shared';
 
 @Injectable()
 export class SqlService {
