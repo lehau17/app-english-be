@@ -1,10 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsArray,
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class NotificationSettingsDto {
   @ApiProperty({
     description: 'Bật/tắt thông báo cho parent',
-    default: true
+    default: true,
   })
   @IsBoolean()
   notificationsEnabled: boolean;
@@ -12,7 +19,13 @@ export class NotificationSettingsDto {
   @ApiProperty({
     description: 'Các loại thông báo parent muốn nhận',
     type: [String],
-    default: ['achievement', 'progress', 'activity_completed', 'streak_lost', 'daily_goal_reached']
+    default: [
+      'achievement',
+      'progress',
+      'activity_completed',
+      'streak_lost',
+      'daily_goal_reached',
+    ],
   })
   @IsArray()
   @IsString({ each: true })
@@ -21,14 +34,14 @@ export class NotificationSettingsDto {
   @ApiProperty({
     description: 'Lịch gửi thông báo',
     enum: ['realtime', 'daily_summary', 'weekly_summary', 'disabled'],
-    default: 'realtime'
+    default: 'realtime',
   })
   @IsString()
   notificationSchedule: string;
 
   @ApiPropertyOptional({
     description: 'Giờ bắt đầu không gửi thông báo (format: HH:mm)',
-    example: '22:00'
+    example: '22:00',
   })
   @IsOptional()
   @IsString()
@@ -36,7 +49,7 @@ export class NotificationSettingsDto {
 
   @ApiPropertyOptional({
     description: 'Giờ kết thúc không gửi thông báo (format: HH:mm)',
-    example: '07:00'
+    example: '07:00',
   })
   @IsOptional()
   @IsString()
@@ -44,14 +57,14 @@ export class NotificationSettingsDto {
 
   @ApiProperty({
     description: 'Timezone',
-    default: 'Asia/Ho_Chi_Minh'
+    default: 'Asia/Ho_Chi_Minh',
   })
   @IsString()
   timezone: string;
 
   @ApiProperty({
     description: 'Ngưỡng tiến độ tối thiểu để thông báo (%)',
-    default: 10
+    default: 10,
   })
   @IsInt()
   @Min(0)
@@ -59,7 +72,7 @@ export class NotificationSettingsDto {
 
   @ApiProperty({
     description: 'Số ngày streak tối thiểu để thông báo',
-    default: 3
+    default: 3,
   })
   @IsInt()
   @Min(1)
@@ -67,14 +80,14 @@ export class NotificationSettingsDto {
 
   @ApiProperty({
     description: 'Thông báo khi hoàn thành activity',
-    default: true
+    default: true,
   })
   @IsBoolean()
   activityCompletionNotify: boolean;
 
   @ApiProperty({
     description: 'Thông báo khi đạt mục tiêu hàng ngày',
-    default: true
+    default: true,
   })
   @IsBoolean()
   goalReachedNotify: boolean;
@@ -96,23 +109,34 @@ export class UpdateParentChildSettingsDto extends NotificationSettingsDto {
   @IsBoolean()
   canControlTime?: boolean;
 
-  @ApiPropertyOptional({ description: 'Giới hạn thời gian học hàng ngày (phút)' })
+  @ApiPropertyOptional({
+    description: 'Giới hạn thời gian học hàng ngày (phút)',
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
   dailyTimeLimit?: number;
 
-  @ApiPropertyOptional({ description: 'Giờ đi ngủ (format: HH:mm)', example: '21:30' })
+  @ApiPropertyOptional({
+    description: 'Giờ đi ngủ (format: HH:mm)',
+    example: '21:30',
+  })
   @IsOptional()
   @IsString()
   bedtimeStart?: string;
 
-  @ApiPropertyOptional({ description: 'Giờ thức dậy (format: HH:mm)', example: '06:30' })
+  @ApiPropertyOptional({
+    description: 'Giờ thức dậy (format: HH:mm)',
+    example: '06:30',
+  })
   @IsOptional()
   @IsString()
   bedtimeEnd?: string;
 
-  @ApiPropertyOptional({ description: 'Các activity được phép', type: [String] })
+  @ApiPropertyOptional({
+    description: 'Các activity được phép',
+    type: [String],
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })

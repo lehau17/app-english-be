@@ -1,9 +1,17 @@
 import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ParentChildService } from '../../parent-child/service/parent-child.service';
 import { ParentDashboardDto, UpdateParentChildSettingsDto } from '../dto';
-import { CreateParentRewardDto, UpdateParentRewardDto, UiRewardType } from '../dto/parent-reward.dto';
+import {
+  CreateParentRewardDto,
+  UiRewardType,
+  UpdateParentRewardDto,
+} from '../dto/parent-reward.dto';
 
 @Injectable()
 export class ParentService {
@@ -39,19 +47,24 @@ export class ParentService {
         const profile = child.Profile;
         const todayProgress = child.Progress || [];
 
-        const completedActivities = todayProgress.filter(p => p.state === 'done').length;
+        const completedActivities = todayProgress.filter(
+          (p) => p.state === 'done',
+        ).length;
         const totalActivities = todayProgress.length;
 
         return {
           id: child.id,
-          name: child.displayName || child.firstName || child.email || 'Unknown',
+          name:
+            child.displayName || child.firstName || child.email || 'Unknown',
           avatar: child.avatarUrl || undefined,
           level: parseInt(profile?.currentLevel) || 1,
           todayStudyTime: profile?.totalStudyTime || 0,
           completedActivities,
           totalActivities,
           recentActivity: 'Đang học tiếng Anh', // Placeholder
-          lastActive: child.lastActiveAt ? new Date(child.lastActiveAt).toLocaleString('vi-VN') : 'Chưa hoạt động',
+          lastActive: child.lastActiveAt
+            ? new Date(child.lastActiveAt).toLocaleString('vi-VN')
+            : 'Chưa hoạt động',
         };
       });
 
@@ -61,7 +74,7 @@ export class ParentService {
         orderBy: { createdAt: 'desc' },
       });
 
-      const transformedRewards = rewards.map(reward => ({
+      const transformedRewards = rewards.map((reward) => ({
         id: reward.id,
         title: reward.title,
         description: reward.description || undefined,
@@ -76,13 +89,13 @@ export class ParentService {
       const notifications = await this.prisma.notification.findMany({
         where: {
           userId,
-          type: { in: ['achievement', 'parent_child'] }
+          type: { in: ['achievement', 'parent_child'] },
         },
         orderBy: { createdAt: 'desc' },
         take: 10,
       });
 
-      const transformedNotifications = notifications.map(notification => ({
+      const transformedNotifications = notifications.map((notification) => ({
         id: notification.id,
         type: notification.type,
         body: notification.body || '',
@@ -92,10 +105,20 @@ export class ParentService {
       }));
 
       // Calculate totals
-      const totalStudyTime = children.reduce((sum, child) => sum + child.todayStudyTime, 0);
-      const totalCompleted = children.reduce((sum, child) => sum + child.completedActivities, 0);
-      const totalActivities = children.reduce((sum, child) => sum + child.totalActivities, 0);
-      const completionRate = totalActivities > 0 ? (totalCompleted / totalActivities) * 100 : 0;
+      const totalStudyTime = children.reduce(
+        (sum, child) => sum + child.todayStudyTime,
+        0,
+      );
+      const totalCompleted = children.reduce(
+        (sum, child) => sum + child.completedActivities,
+        0,
+      );
+      const totalActivities = children.reduce(
+        (sum, child) => sum + child.totalActivities,
+        0,
+      );
+      const completionRate =
+        totalActivities > 0 ? (totalCompleted / totalActivities) * 100 : 0;
 
       return {
         children,
@@ -125,7 +148,11 @@ export class ParentService {
 
       return parentChildRelations.map((relation) => ({
         id: relation.child.id,
-        name: relation.child.displayName || relation.child.firstName || relation.child.email || 'Unknown',
+        name:
+          relation.child.displayName ||
+          relation.child.firstName ||
+          relation.child.email ||
+          'Unknown',
         avatar: relation.child.avatarUrl || null,
         level: parseInt(relation.child.Profile?.currentLevel) || 1,
         lastActive: relation.child.lastActiveAt,
@@ -159,7 +186,7 @@ export class ParentService {
         orderBy: { createdAt: 'desc' },
       });
 
-      return rewards.map(reward => ({
+      return rewards.map((reward) => ({
         id: reward.id,
         title: reward.title,
         description: reward.description,
@@ -182,7 +209,8 @@ export class ParentService {
     const rel = await this.prisma.parentChild.findUnique({
       where: { parentId_childId: { parentId, childId: dto.targetChildId } },
     });
-    if (!rel) throw new NotFoundException('Parent-child relationship not found');
+    if (!rel)
+      throw new NotFoundException('Parent-child relationship not found');
 
     const created = await this.prisma.customReward.create({
       data: {
@@ -201,10 +229,17 @@ export class ParentService {
     return { id: created.id };
   }
 
-  async updateReward(parentId: string, rewardId: string, dto: UpdateParentRewardDto) {
-    const existing = await this.prisma.customReward.findUnique({ where: { id: rewardId } });
+  async updateReward(
+    parentId: string,
+    rewardId: string,
+    dto: UpdateParentRewardDto,
+  ) {
+    const existing = await this.prisma.customReward.findUnique({
+      where: { id: rewardId },
+    });
     if (!existing) throw new NotFoundException('Reward not found');
-    if (existing.parentId !== parentId) throw new ForbiddenException('Not owner of reward');
+    if (existing.parentId !== parentId)
+      throw new ForbiddenException('Not owner of reward');
 
     const updated = await this.prisma.customReward.update({
       where: { id: rewardId },
@@ -222,17 +257,23 @@ export class ParentService {
   }
 
   async deleteReward(parentId: string, rewardId: string) {
-    const existing = await this.prisma.customReward.findUnique({ where: { id: rewardId } });
+    const existing = await this.prisma.customReward.findUnique({
+      where: { id: rewardId },
+    });
     if (!existing) throw new NotFoundException('Reward not found');
-    if (existing.parentId !== parentId) throw new ForbiddenException('Not owner of reward');
+    if (existing.parentId !== parentId)
+      throw new ForbiddenException('Not owner of reward');
     await this.prisma.customReward.delete({ where: { id: rewardId } });
     return true;
   }
 
   async toggleReward(parentId: string, rewardId: string) {
-    const existing = await this.prisma.customReward.findUnique({ where: { id: rewardId } });
+    const existing = await this.prisma.customReward.findUnique({
+      where: { id: rewardId },
+    });
     if (!existing) throw new NotFoundException('Reward not found');
-    if (existing.parentId !== parentId) throw new ForbiddenException('Not owner of reward');
+    if (existing.parentId !== parentId)
+      throw new ForbiddenException('Not owner of reward');
     const updated = await this.prisma.customReward.update({
       where: { id: rewardId },
       data: { isActive: !existing.isActive },
@@ -240,7 +281,10 @@ export class ParentService {
     return { id: updated.id, isActive: updated.isActive };
   }
 
-  async getNotifications(parentId: string, options: { page?: number; limit?: number }) {
+  async getNotifications(
+    parentId: string,
+    options: { page?: number; limit?: number },
+  ) {
     try {
       const page = options.page || 1;
       const limit = options.limit || 20;
@@ -248,7 +292,7 @@ export class ParentService {
       const totalItems = await this.prisma.notification.count({
         where: {
           userId: parentId,
-          type: { in: ['achievement', 'parent_child'] }
+          type: { in: ['achievement', 'parent_child'] },
         },
       });
 
@@ -258,14 +302,14 @@ export class ParentService {
       const notifications = await this.prisma.notification.findMany({
         where: {
           userId: parentId,
-          type: { in: ['achievement', 'parent_child'] }
+          type: { in: ['achievement', 'parent_child'] },
         },
         orderBy: { createdAt: 'desc' },
         skip: (safePage - 1) * limit,
         take: limit,
       });
 
-      const data = notifications.map(notification => ({
+      const data = notifications.map((notification) => ({
         id: notification.id,
         type: notification.type,
         title: notification.title,
@@ -286,7 +330,7 @@ export class ParentService {
     try {
       const parentChild = await this.prisma.parentChild.findUnique({
         where: {
-          parentId_childId: { parentId, childId }
+          parentId_childId: { parentId, childId },
         },
       });
 
@@ -320,12 +364,16 @@ export class ParentService {
     }
   }
 
-  async updateChildSettings(parentId: string, childId: string, dto: UpdateParentChildSettingsDto) {
+  async updateChildSettings(
+    parentId: string,
+    childId: string,
+    dto: UpdateParentChildSettingsDto,
+  ) {
     try {
       // Verify parent-child relationship exists
       const existing = await this.prisma.parentChild.findUnique({
         where: {
-          parentId_childId: { parentId, childId }
+          parentId_childId: { parentId, childId },
         },
       });
 
@@ -335,7 +383,7 @@ export class ParentService {
 
       const updated = await this.prisma.parentChild.update({
         where: {
-          parentId_childId: { parentId, childId }
+          parentId_childId: { parentId, childId },
         },
         data: dto,
       });
@@ -362,17 +410,21 @@ export class ParentService {
     }
   }
 
-  async getChildProgress(parentId: string, childId: string, options: {
-    from?: string;
-    to?: string;
-    page?: number;
-    limit?: number;
-  }) {
+  async getChildProgress(
+    parentId: string,
+    childId: string,
+    options: {
+      from?: string;
+      to?: string;
+      page?: number;
+      limit?: number;
+    },
+  ) {
     try {
       // Verify parent-child relationship
       const parentChild = await this.prisma.parentChild.findUnique({
         where: {
-          parentId_childId: { parentId, childId }
+          parentId_childId: { parentId, childId },
         },
       });
 
@@ -383,7 +435,9 @@ export class ParentService {
       const page = options.page || 1;
       const limit = options.limit || 50;
 
-      const fromDate = options.from ? new Date(options.from) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
+      const fromDate = options.from
+        ? new Date(options.from)
+        : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days ago
       const toDate = options.to ? new Date(options.to) : new Date();
 
       const totalItems = await this.prisma.progress.count({
@@ -421,7 +475,7 @@ export class ParentService {
         take: limit,
       });
 
-      const data = progressData.map(progress => ({
+      const data = progressData.map((progress) => ({
         id: progress.id,
         activityTitle: progress.activity?.title || 'Unknown Activity',
         activityType: progress.activity?.type || 'Unknown',
@@ -438,13 +492,16 @@ export class ParentService {
     }
   }
 
-  async getActivities(parentId: string, options: {
-    page?: number;
-    limit?: number;
-    childId?: string;
-    type?: string;
-    status?: string;
-  }) {
+  async getActivities(
+    parentId: string,
+    options: {
+      page?: number;
+      limit?: number;
+      childId?: string;
+      type?: string;
+      status?: string;
+    },
+  ) {
     try {
       // Get all children under parent's control
       const parentChildRelations = await this.prisma.parentChild.findMany({
@@ -456,7 +513,9 @@ export class ParentService {
         return PageResponseDto.of([], 1, 20, 0);
       }
 
-      const childrenIds = parentChildRelations.map(relation => relation.childId);
+      const childrenIds = parentChildRelations.map(
+        (relation) => relation.childId,
+      );
 
       // Filter by specific child if requested
       const targetChildIds = options.childId ? [options.childId] : childrenIds;
@@ -504,15 +563,20 @@ export class ParentService {
         take: limit,
       });
 
-      const data = activities.map(progress => ({
+      const data = activities.map((progress) => ({
         id: progress.id,
         childId: progress.userId,
-        childName: progress.user.displayName || progress.user.firstName || 'Unknown',
+        childName:
+          progress.user.displayName || progress.user.firstName || 'Unknown',
         childAvatar: progress.user.avatarUrl || undefined,
         type: progress.activity?.type || 'unknown',
         title: progress.activity?.title || 'Unknown Activity',
-        status: progress.state === 'done' ? 'completed' :
-               progress.state === 'in_progress' ? 'in_progress' : 'failed',
+        status:
+          progress.state === 'done'
+            ? 'completed'
+            : progress.state === 'in_progress'
+              ? 'in_progress'
+              : 'failed',
         score: progress.score || undefined,
         timeSpent: Math.floor((progress.timeSpentSec || 0) / 60), // Convert to minutes
         startedAt: progress.createdAt,
@@ -567,6 +631,159 @@ export class ParentService {
         return UiRewardType.privilege;
       default:
         return UiRewardType.experience;
+    }
+  }
+
+  async getUnpaidClassrooms(parentId: string) {
+    try {
+      // Get children of the parent
+      const parentChildRelations = await this.prisma.parentChild.findMany({
+        where: { parentId },
+        include: {
+          child: true,
+        },
+      });
+
+      const childIds = parentChildRelations.map(rel => rel.childId);
+
+      if (childIds.length === 0) {
+        return [];
+      }
+
+      // Get unpaid classroom enrollments for these children
+      const unpaidEnrollments = await this.prisma.classroomStudent.findMany({
+        where: {
+          studentId: { in: childIds },
+          isActive: true,
+          isPurchased: false, // Only unpaid
+        },
+        include: {
+          classroom: {
+            include: {
+              course: {
+                select: {
+                  id: true,
+                  title: true,
+                  price: true,
+                  currency: true,
+                },
+              },
+              teacher: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  displayName: true,
+                  avatarUrl: true,
+                },
+              },
+            },
+          },
+          student: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              displayName: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      });
+
+      const unpaidClassrooms = [];
+
+      for (const enrollment of unpaidEnrollments) {
+        const classroom = enrollment.classroom;
+        const child = enrollment.student;
+
+        // Only include classrooms with paid courses
+        if (classroom.course?.price && classroom.course.price > 0) {
+          unpaidClassrooms.push({
+            id: classroom.id,
+            name: classroom.name,
+            classCode: classroom.classCode,
+            status: classroom.status,
+            periodStart: classroom.periodStart,
+            periodEnd: classroom.periodEnd,
+            child: {
+              id: child.id,
+              firstName: child.firstName,
+              lastName: child.lastName,
+              displayName: child.displayName,
+              avatarUrl: child.avatarUrl,
+            },
+            course: classroom.course,
+            teacher: classroom.teacher,
+            _count: {
+              students: await this.prisma.classroomStudent.count({
+                where: { classroomId: classroom.id, isActive: true },
+              }),
+              assignments: await this.prisma.assignment.count({
+                where: { classroomId: classroom.id },
+              }),
+            },
+          });
+        }
+      }
+
+      return unpaidClassrooms;
+    } catch (error) {
+      console.error('Error fetching unpaid classrooms:', error);
+      return [];
+    }
+  }
+
+  async getPaymentSummary(parentId: string) {
+    try {
+      const unpaidClassrooms = await this.getUnpaidClassrooms(parentId);
+
+      const totalUnpaid = unpaidClassrooms.length;
+      const totalAmount = unpaidClassrooms.reduce(
+        (sum, classroom) => sum + (classroom.course?.price || 0),
+        0,
+      );
+
+      // Count urgent payments (ongoing classes)
+      const urgentPayments = unpaidClassrooms.filter(
+        (classroom) => classroom.status === 'ongoing',
+      ).length;
+
+      // Group by children
+      const childrenSummary = unpaidClassrooms.reduce((acc, classroom) => {
+        const childId = classroom.child.id;
+        if (!acc[childId]) {
+          acc[childId] = {
+            child: classroom.child,
+            unpaidCount: 0,
+            totalAmount: 0,
+            urgentCount: 0,
+          };
+        }
+
+        acc[childId].unpaidCount++;
+        acc[childId].totalAmount += classroom.course?.price || 0;
+        if (classroom.status === 'ongoing') {
+          acc[childId].urgentCount++;
+        }
+
+        return acc;
+      }, {} as Record<string, any>);
+
+      return {
+        totalUnpaid,
+        totalAmount,
+        urgentPayments,
+        children: Object.values(childrenSummary),
+      };
+    } catch (error) {
+      console.error('Error fetching payment summary:', error);
+      return {
+        totalUnpaid: 0,
+        totalAmount: 0,
+        urgentPayments: 0,
+        children: [],
+      };
     }
   }
 }

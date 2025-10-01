@@ -1,6 +1,7 @@
 import { PrismaRepository } from '@app/database';
 import { KafkaService } from '@app/shared/kafka/kafka.service';
 import { Injectable, Logger } from '@nestjs/common';
+import { NotificationChannel, NotificationType } from '@prisma/client';
 
 export interface ParentNotificationData {
   childId: string;
@@ -54,7 +55,13 @@ export class ParentNotificationService {
         if (!relation.activityCompletionNotify) continue;
 
         // Check quiet hours
-        if (this.isQuietHours(relation.quietHoursStart, relation.quietHoursEnd, relation.timezone)) {
+        if (
+          this.isQuietHours(
+            relation.quietHoursStart,
+            relation.quietHoursEnd,
+            relation.timezone,
+          )
+        ) {
           continue;
         }
 
@@ -82,7 +89,10 @@ export class ParentNotificationService {
         });
       }
     } catch (error) {
-      this.logger.error('Failed to send activity completion notification', error);
+      this.logger.error(
+        'Failed to send activity completion notification',
+        error,
+      );
     }
   }
 
@@ -113,14 +123,23 @@ export class ParentNotificationService {
       });
 
       for (const relation of parentChildRelations) {
-        if (this.isQuietHours(relation.quietHoursStart, relation.quietHoursEnd, relation.timezone)) {
+        if (
+          this.isQuietHours(
+            relation.quietHoursStart,
+            relation.quietHoursEnd,
+            relation.timezone,
+          )
+        ) {
           continue;
         }
 
         let title = '';
         let body = '';
 
-        if (data.streakDays && data.streakDays >= (relation.streakNotificationDays || 3)) {
+        if (
+          data.streakDays &&
+          data.streakDays >= (relation.streakNotificationDays || 3)
+        ) {
           title = `🔥 ${data.childName} đạt chuỗi học ${data.streakDays} ngày!`;
           body = `Thật tuyệt vời! ${data.childName} đã duy trì việc học liên tục ${data.streakDays} ngày.`;
         } else if (data.goalType) {
@@ -157,13 +176,17 @@ export class ParentNotificationService {
   /**
    * Send daily/weekly progress summary to parents
    */
-  async notifyProgressSummary(childId: string, period: 'daily' | 'weekly' = 'daily') {
+  async notifyProgressSummary(
+    childId: string,
+    period: 'daily' | 'weekly' = 'daily',
+  ) {
     try {
       // Get progress data for the period
       const now = new Date();
-      const startDate = period === 'daily'
-        ? new Date(now.setHours(0, 0, 0, 0))
-        : new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const startDate =
+        period === 'daily'
+          ? new Date(now.setHours(0, 0, 0, 0))
+          : new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
       const progressData = await this.prisma.progress.findMany({
         where: {
@@ -185,11 +208,20 @@ export class ParentNotificationService {
       });
 
       const childName = child?.displayName || child?.firstName || 'Con';
-      const completedCount = progressData.filter(p => p.state === 'done').length;
-      const totalTime = progressData.reduce((sum, p) => sum + (p.timeSpentSec || 0), 0);
-      const avgScore = progressData.length > 0
-        ? progressData.filter(p => p.score).reduce((sum, p) => sum + (p.score || 0), 0) / progressData.filter(p => p.score).length
-        : 0;
+      const completedCount = progressData.filter(
+        (p) => p.state === 'done',
+      ).length;
+      const totalTime = progressData.reduce(
+        (sum, p) => sum + (p.timeSpentSec || 0),
+        0,
+      );
+      const avgScore =
+        progressData.length > 0
+          ? progressData
+              .filter((p) => p.score)
+              .reduce((sum, p) => sum + (p.score || 0), 0) /
+            progressData.filter((p) => p.score).length
+          : 0;
 
       const parentChildRelations = await this.prisma.parentChild.findMany({
         where: {
@@ -229,11 +261,11 @@ export class ParentNotificationService {
 
   private async sendNotificationToParent(params: {
     parentId: string;
-    type: string;
+    type: NotificationType;
     title: string;
     body: string;
     data: any;
-    channel: string;
+    channel: NotificationChannel;
   }) {
     try {
       // Create notification record in database
@@ -251,13 +283,19 @@ export class ParentNotificationService {
       // Send to Kafka for Socket.IO and email processing
       this.kafkaService.send('notifications', notification);
 
-      this.logger.log(`Sent parent notification: ${params.title} to ${params.parentId}`);
+      this.logger.log(
+        `Sent parent notification: ${params.title} to ${params.parentId}`,
+      );
     } catch (error) {
       this.logger.error('Failed to send notification to parent', error);
     }
   }
 
-  private isQuietHours(quietStart?: string, quietEnd?: string, timezone?: string): boolean {
+  private isQuietHours(
+    quietStart?: string,
+    quietEnd?: string,
+    timezone?: string,
+  ): boolean {
     if (!quietStart || !quietEnd) return false;
 
     try {
@@ -278,18 +316,24 @@ export class ParentNotificationService {
 
       // Handle overnight quiet hours (e.g., 22:00 - 07:00)
       if (startTotalMinutes > endTotalMinutes) {
-        return currentTotalMinutes >= startTotalMinutes || currentTotalMinutes <= endTotalMinutes;
+        return (
+          currentTotalMinutes >= startTotalMinutes ||
+          currentTotalMinutes <= endTotalMinutes
+        );
       }
 
       // Normal quiet hours (e.g., 12:00 - 14:00)
-      return currentTotalMinutes >= startTotalMinutes && currentTotalMinutes <= endTotalMinutes;
+      return (
+        currentTotalMinutes >= startTotalMinutes &&
+        currentTotalMinutes <= endTotalMinutes
+      );
     } catch (error) {
       this.logger.warn('Failed to check quiet hours', error);
       return false;
     }
   }
 
-  private getNotificationChannel(schedule?: string): string {
+  private getNotificationChannel(schedule?: string): NotificationChannel {
     switch (schedule) {
       case 'email_only':
         return 'email';

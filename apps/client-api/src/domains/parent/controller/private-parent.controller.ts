@@ -1,20 +1,23 @@
 import { ResponseMessage } from '@app/shared';
 import { RequestContext } from '@app/shared/request-context';
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    ParseUUIDPipe,
-    Patch,
-    Post,
-    Put,
-    Query
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Put,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UpdateParentChildSettingsDto } from '../dto';
-import { CreateParentRewardDto, UpdateParentRewardDto } from '../dto/parent-reward.dto';
+import {
+  CreateParentRewardDto,
+  UpdateParentRewardDto,
+} from '../dto/parent-reward.dto';
 import { ParentService } from '../service/parent.service';
 
 @ApiTags('Parent')
@@ -111,7 +114,7 @@ export class PrivateParentController {
   @ResponseMessage('Notifications list fetched successfully')
   getNotifications(
     @Query('page') page?: number,
-    @Query('limit') limit?: number
+    @Query('limit') limit?: number,
   ) {
     const user = RequestContext.getValue('user');
     if (!user || !user.sub) {
@@ -129,22 +132,26 @@ export class PrivateParentController {
     @Query('limit') limit?: number,
     @Query('childId') childId?: string,
     @Query('type') type?: string,
-    @Query('status') status?: string
+    @Query('status') status?: string,
   ) {
     const user = RequestContext.getValue('user');
     if (!user || !user.sub) {
       throw new Error('User not authenticated');
     }
 
-    return this.parentService.getActivities(user.sub, { page, limit, childId, type, status });
+    return this.parentService.getActivities(user.sub, {
+      page,
+      limit,
+      childId,
+      type,
+      status,
+    });
   }
 
   @Get('children/:childId/settings')
   @ApiOperation({ summary: 'Get notification settings for child' })
   @ResponseMessage('Child settings fetched successfully')
-  getChildSettings(
-    @Param('childId', new ParseUUIDPipe()) childId: string
-  ) {
+  getChildSettings(@Param('childId', new ParseUUIDPipe()) childId: string) {
     const user = RequestContext.getValue('user');
     if (!user || !user.sub) {
       throw new Error('User not authenticated');
@@ -154,11 +161,13 @@ export class PrivateParentController {
   }
 
   @Patch('children/:childId/settings')
-  @ApiOperation({ summary: 'Update notification and monitoring settings for child' })
+  @ApiOperation({
+    summary: 'Update notification and monitoring settings for child',
+  })
   @ResponseMessage('Child settings updated successfully')
   updateChildSettings(
     @Param('childId', new ParseUUIDPipe()) childId: string,
-    @Body() dto: UpdateParentChildSettingsDto
+    @Body() dto: UpdateParentChildSettingsDto,
   ) {
     const user = RequestContext.getValue('user');
     if (!user || !user.sub) {
@@ -176,13 +185,42 @@ export class PrivateParentController {
     @Query('from') from?: string,
     @Query('to') to?: string,
     @Query('page') page?: number,
-    @Query('limit') limit?: number
+    @Query('limit') limit?: number,
   ) {
     const user = RequestContext.getValue('user');
     if (!user || !user.sub) {
       throw new Error('User not authenticated');
     }
 
-    return this.parentService.getChildProgress(user.sub, childId, { from, to, page, limit });
+    return this.parentService.getChildProgress(user.sub, childId, {
+      from,
+      to,
+      page,
+      limit,
+    });
+  }
+
+  @Get('unpaid-classrooms')
+  @ApiOperation({ summary: 'Get unpaid classrooms for children' })
+  @ResponseMessage('Unpaid classrooms fetched successfully')
+  getUnpaidClassrooms() {
+    const user = RequestContext.getValue('user');
+    if (!user || !user.sub) {
+      throw new Error('User not authenticated');
+    }
+
+    return this.parentService.getUnpaidClassrooms(user.sub);
+  }
+
+  @Get('payment-summary')
+  @ApiOperation({ summary: 'Get payment summary for all children' })
+  @ResponseMessage('Payment summary fetched successfully')
+  getPaymentSummary() {
+    const user = RequestContext.getValue('user');
+    if (!user || !user.sub) {
+      throw new Error('User not authenticated');
+    }
+
+    return this.parentService.getPaymentSummary(user.sub);
   }
 }
