@@ -10,7 +10,7 @@
 - `scripts/reindex-embeddings.ts` rebuilds RAG vectors; `uploads/` stores files; `dist/` holds builds.
 
 ## Build & Run
-- `docker compose up -d postgres redpanda minio redis` boots Postgres (pgvector), Kafka/Redpanda, Redis, MinIO.
+- `docker compose up -d postgres redpanda minio redis piper-tts vosk-asr` boots all infrastructure services including Postgres (pgvector), Kafka/Redpanda, Redis, MinIO, Piper TTS, and Vosk ASR.
 - `npm run start:client-api:dev` serves `localhost:3334` with Swagger, Socket.IO, and agent tooling.
 - `npx nest start background-worker --watch` executes cron jobs; share the API `.env` (notably `DATABASE_URL`).
 - `npm run start:notification:dev` launches the Kafka mailer; ensure `KAFKA_BROKERS` and mail SMTP envs.
@@ -20,6 +20,11 @@
 ### Quick start (local)
 - `npm install` → `npm run prisma:generate` → `npm run prisma:migrate` → `npm run start:client-api:dev`.
 - Swagger UI: `http://localhost:3334/api/docs` (hoặc cổng đặt trong `CLIENT_API_PORT`).
+
+### AI Speaking Services
+- `docker compose up -d piper-tts vosk-asr` starts TTS and ASR services.
+- Alternative: `npm run mock:ai-speaking` runs mock TTS/ASR servers for development without Docker.
+- See `apps/client-api/src/domains/ai-speaking/README.md` for detailed documentation.
 
 ### Notifications & Realtime
 - Producer: any backend module can publish to Kafka via `KafkaService.send('notifications', payload)`; the Notification domain does this on create/broadcast.
@@ -32,6 +37,7 @@
 
 ## Configuration
 - Environment expectations: `DATABASE_URL`, `JWT_SECRET`, `ACCESS_TOKEN_EXPIRES_IN`, `REFRESH_TOKEN_EXPIRES_IN`, `KAFKA_BROKERS`, `SMTP_HOST`, `SMTP_PORT`, `FROM`, `S3_REGION`, `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET_NAME`, `GEMINI_API_KEY`, `API_BASE_URL`, optional `AGENT_ALLOW_WRITE`, `AGENT_FALLBACK_BEARER`.
+- AI Speaking requires: `AI_SPEAKING_TTS_USE_HTTP`, `AI_SPEAKING_TTS_HTTP_URL`, `AI_SPEAKING_ASR_WS_URL`. See `.env.example` for full configuration.
 - Keep Swagger output in sync so `SwaggerService` and agent tools (`api_search`, `call_api`) resolve new routes.
 
 ## Architecture Notes
