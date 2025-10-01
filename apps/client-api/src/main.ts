@@ -43,6 +43,7 @@ async function bootstrap() {
       'Authorization',
     ) // tên security scheme: Authorization
     .addServer('http://localhost:3000', 'Local')
+    .addServer('https://api.haudev.io.vn', 'Production')
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
