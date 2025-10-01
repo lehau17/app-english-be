@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Post,
-  Req
-} from '@nestjs/common';
+import { Controller, Get, Param, Post, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { LessonService } from '../service/lesson.service';
 
@@ -24,11 +18,10 @@ export class LessonStudentController {
   }
 
   @Post(':lessonId/unlock-next')
-  @ApiOperation({ summary: 'Unlock next lesson after completing current lesson' })
-  async unlockNextLesson(
-    @Param('lessonId') lessonId: string,
-    @Req() req
-  ) {
+  @ApiOperation({
+    summary: 'Unlock next lesson after completing current lesson',
+  })
+  async unlockNextLesson(@Param('lessonId') lessonId: string, @Req() req) {
     const userId = req.user.id;
     return this.lessonService.unlockNextLesson(lessonId, userId);
   }
