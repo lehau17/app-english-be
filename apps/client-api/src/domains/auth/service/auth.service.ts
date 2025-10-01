@@ -10,7 +10,16 @@ import { ConfigService } from '@nestjs/config';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
-import { ChangePasswordDto, ForgotPasswordDto, LoginDto, LogoutDto, RefreshTokenDto, RegisterDto, ResetPasswordDto, UpdateProfileDto } from '../dto';
+import {
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  LoginDto,
+  LogoutDto,
+  RefreshTokenDto,
+  RegisterDto,
+  ResetPasswordDto,
+  UpdateProfileDto,
+} from '../dto';
 import { AuthRepository } from '../repository';
 
 @Injectable()
@@ -79,7 +88,7 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email ?? undefined,
-      role: user.role
+      role: user.role,
     };
 
     const token = await this.tokenRepository.generateToken(payload);
@@ -114,7 +123,9 @@ export class AuthService {
     return { success: true };
   }
   async forgotPassword(dto: ForgotPasswordDto) {
-    const user = await this.authRepository.findByEmail(dto.email.trim().toLowerCase());
+    const user = await this.authRepository.findByEmail(
+      dto.email.trim().toLowerCase(),
+    );
 
     if (!user) {
       return { success: true };
@@ -123,12 +134,20 @@ export class AuthService {
     await this.authRepository.invalidateUserResetTokens(user.id);
 
     const rawToken = crypto.randomBytes(32).toString('hex');
-    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(rawToken)
+      .digest('hex');
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-    await this.authRepository.createPasswordResetToken(user.id, tokenHash, expiresAt);
+    await this.authRepository.createPasswordResetToken(
+      user.id,
+      tokenHash,
+      expiresAt,
+    );
 
-    const appUrl = this.configService.get<string>('APP_URL') ?? 'http://localhost:3000';
+    const appUrl =
+      this.configService.get<string>('APP_URL') ?? 'http://localhost:3000';
     const resetLink = `${appUrl}/reset-password?token=${rawToken}`;
 
     this.kafkaService.send('notifications', {
@@ -155,8 +174,12 @@ export class AuthService {
   }
 
   async resetPassword(dto: ResetPasswordDto) {
-    const tokenHash = crypto.createHash('sha256').update(dto.token).digest('hex');
-    const record = await this.authRepository.findValidPasswordResetToken(tokenHash);
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(dto.token)
+      .digest('hex');
+    const record =
+      await this.authRepository.findValidPasswordResetToken(tokenHash);
 
     if (!record) {
       throw new BadRequestException('Reset token invalid or expired');
@@ -251,7 +274,6 @@ export class AuthService {
 
   async me(userId: string) {
     const user = await this.authRepository.findById(userId);
-
 
     return {
       ...user,

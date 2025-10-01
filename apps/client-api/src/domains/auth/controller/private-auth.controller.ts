@@ -57,5 +57,4 @@ export class PrivateAuthController {
     const userId: string = tokenPayload.sub;
     return this.authService.updateProfile(userId, dto);
   }
-
 }

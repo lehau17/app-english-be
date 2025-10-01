@@ -1,6 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import { IsEmail, IsOptional, IsString, MinLength, MaxLength, Matches } from 'class-validator';
+import {
+  IsEmail,
+  IsOptional,
+  IsString,
+  MinLength,
+  MaxLength,
+  Matches,
+} from 'class-validator';
 
 export class LoginDto {
   @ApiProperty({
@@ -120,7 +127,9 @@ export class UpdateProfileDto {
   @ApiProperty({ required: false, example: 'student@example.com' })
   @IsOptional()
   @IsEmail()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @Transform(({ value }) =>
+    typeof value === 'string' ? value.trim().toLowerCase() : value,
+  )
   email?: string;
 
   @ApiProperty({ required: false, example: 'Nguyen' })
