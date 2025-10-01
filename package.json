@@ -33,6 +33,7 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node --transpile-only prisma/seed.ts",
     "reindex:embeddings": "ts-node scripts/reindex-embeddings.ts",
+    "reindex:models": "ts-node scripts/index-model-data.ts",
     "mock:tts": "node mock-tts-server.js",
     "mock:asr": "node mock-asr-server.js",
     "mock:ai-speaking": "npm run mock:tts & npm run mock:asr"
