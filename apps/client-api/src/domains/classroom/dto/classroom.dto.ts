@@ -3,19 +3,19 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ClassroomStatus, TimezoneCode } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
-    IsArray,
-    IsBoolean,
-    IsDate,
-    IsEnum,
-    IsInt,
-    IsISO8601,
-    IsNotEmpty,
-    IsOptional,
-    IsString,
-    IsUUID,
-    Max,
-    Min,
-    ValidateNested,
+  IsArray,
+  IsBoolean,
+  IsDate,
+  IsEnum,
+  IsInt,
+  IsISO8601,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+  ValidateNested,
 } from 'class-validator';
 
 export enum Weekday {
@@ -158,7 +158,8 @@ export class FilterClassroomRequestDto extends RequestPagingDto {
   status?: ClassroomStatus;
 
   @ApiPropertyOptional({
-    description: 'Filter by student ID to get classrooms where student is enrolled',
+    description:
+      'Filter by student ID to get classrooms where student is enrolled',
     example: 'f8a8b8e0-5b7a-4b0e-8b0a-0b8b8b8b8b8b',
   })
   @IsOptional()

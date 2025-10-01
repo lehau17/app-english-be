@@ -1,5 +1,15 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PaymentProvider, PaymentStatus, TransactionType } from '@prisma/client';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  PaymentProvider,
+  PaymentStatus,
+  TransactionType,
+} from '@prisma/client';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { PaymentRepository } from '../repository/payment.repository';
 import { VNPayReturnData, VNPayService } from './vnpay.service';
@@ -21,23 +31,28 @@ export class PaymentService {
     dto: CreatePaymentDto,
     ipAddress?: string,
     requesterId?: string,
-  ){
-    this.logger.log(`Creating payment for student ${studentId}, course ${dto.courseId}`);
+  ) {
+    this.logger.log(
+      `Creating payment for student ${studentId}, course ${dto.courseId}`,
+    );
 
     // Nếu có studentId trong DTO, nghĩa là phụ huynh đang thanh toán cho con
     if (dto.studentId && requesterId) {
       // Kiểm tra quyền: requesterId phải là phụ huynh của studentId
-      const parentChildRelation = await this.paymentRepository.parentChild.findUnique({
-        where: {
-          parentId_childId: {
-            parentId: requesterId,
-            childId: dto.studentId,
+      const parentChildRelation =
+        await this.paymentRepository.parentChild.findUnique({
+          where: {
+            parentId_childId: {
+              parentId: requesterId,
+              childId: dto.studentId,
+            },
           },
-        },
-      });
+        });
 
       if (!parentChildRelation) {
-        throw new NotFoundException('Bạn không có quyền thanh toán cho học sinh này');
+        throw new NotFoundException(
+          'Bạn không có quyền thanh toán cho học sinh này',
+        );
       }
     }
 
@@ -52,18 +67,21 @@ export class PaymentService {
     }
 
     if (!course.price || course.price <= 0) {
-      throw new BadRequestException('Khóa học này miễn phí, không cần thanh toán');
+      throw new BadRequestException(
+        'Khóa học này miễn phí, không cần thanh toán',
+      );
     }
 
     // Kiểm tra học sinh có trong lớp
-    const classroomStudent = await this.paymentRepository.classroomStudent.findUnique({
-      where: {
-        classroomId_studentId: {
-          classroomId: dto.classroomId,
-          studentId,
+    const classroomStudent =
+      await this.paymentRepository.classroomStudent.findUnique({
+        where: {
+          classroomId_studentId: {
+            classroomId: dto.classroomId,
+            studentId,
+          },
         },
-      },
-    });
+      });
 
     if (!classroomStudent) {
       throw new NotFoundException('Bạn chưa tham gia lớp học này');
@@ -74,14 +92,17 @@ export class PaymentService {
     }
 
     // Kiểm tra giao dịch trùng lặp
-    const existingTransaction = await this.paymentRepository.checkDuplicateTransaction(
-      studentId,
-      dto.courseId,
-      dto.classroomId,
-    );
+    const existingTransaction =
+      await this.paymentRepository.checkDuplicateTransaction(
+        studentId,
+        dto.courseId,
+        dto.classroomId,
+      );
 
     if (existingTransaction) {
-      throw new ConflictException('Bạn đã thanh toán thành công cho khóa học này');
+      throw new ConflictException(
+        'Bạn đã thanh toán thành công cho khóa học này',
+      );
     }
 
     // Tạo order ID
@@ -112,21 +133,24 @@ export class PaymentService {
       ipAddress,
     });
 
-    this.logger.log(`Created payment transaction ${transaction.id} for student ${studentId}`);
+    this.logger.log(
+      `Created payment transaction ${transaction.id} for student ${studentId}`,
+    );
 
     return {
-        id: transaction.id,
-        paymentUrl,
-        amount: transaction.amount,
-        currency: transaction.currency,
-        status: transaction.status,
-        provider: transaction.provider,
-        type: transaction.type,
-        transactionId: transaction.id,
-        orderId: transaction.vnpayTxnRef!,
-        vnpayTxnRef: transaction.vnpayTxnRef!,
-        createdAt: transaction.createdAt,
-  }}
+      id: transaction.id,
+      paymentUrl,
+      amount: transaction.amount,
+      currency: transaction.currency,
+      status: transaction.status,
+      provider: transaction.provider,
+      type: transaction.type,
+      transactionId: transaction.id,
+      orderId: transaction.vnpayTxnRef!,
+      vnpayTxnRef: transaction.vnpayTxnRef!,
+      createdAt: transaction.createdAt,
+    };
+  }
 
   /**
    * Xử lý callback từ VNPay
@@ -141,7 +165,9 @@ export class PaymentService {
     // Xác thực checksum
     const isValidHash = this.vnpayService.verifyReturnData(returnData);
     if (!isValidHash) {
-      this.logger.error(`Invalid checksum for transaction ${returnData.vnp_TxnRef}`);
+      this.logger.error(
+        `Invalid checksum for transaction ${returnData.vnp_TxnRef}`,
+      );
       return {
         success: false,
         message: 'Checksum không hợp lệ',
@@ -149,7 +175,9 @@ export class PaymentService {
     }
 
     // Tìm transaction
-    const transaction = await this.paymentRepository.findTransactionByTxnRef(returnData.vnp_TxnRef);
+    const transaction = await this.paymentRepository.findTransactionByTxnRef(
+      returnData.vnp_TxnRef,
+    );
     if (!transaction) {
       this.logger.error(`Transaction not found: ${returnData.vnp_TxnRef}`);
       return {
@@ -161,7 +189,9 @@ export class PaymentService {
     // Kiểm tra amount
     const expectedAmount = (transaction.amount * 100).toString(); // VNPay trả về x100
     if (returnData.vnp_Amount !== expectedAmount) {
-      this.logger.error(`Amount mismatch: expected ${expectedAmount}, got ${returnData.vnp_Amount}`);
+      this.logger.error(
+        `Amount mismatch: expected ${expectedAmount}, got ${returnData.vnp_Amount}`,
+      );
       return {
         success: false,
         message: 'Số tiền không khớp',
@@ -169,8 +199,12 @@ export class PaymentService {
     }
 
     // Xử lý theo response code
-    const isSuccess = this.vnpayService.isPaymentSuccess(returnData.vnp_ResponseCode);
-    const message = this.vnpayService.getResponseMessage(returnData.vnp_ResponseCode);
+    const isSuccess = this.vnpayService.isPaymentSuccess(
+      returnData.vnp_ResponseCode,
+    );
+    const message = this.vnpayService.getResponseMessage(
+      returnData.vnp_ResponseCode,
+    );
 
     try {
       if (isSuccess) {
@@ -202,7 +236,7 @@ export class PaymentService {
         };
       } else {
         // Thanh toán thất bại
-        let status : PaymentStatus = PaymentStatus.failed;
+        let status: PaymentStatus = PaymentStatus.failed;
         if (returnData.vnp_ResponseCode === '24') {
           status = PaymentStatus.cancelled; // User cancelled
         }
@@ -218,7 +252,9 @@ export class PaymentService {
           },
         );
 
-        this.logger.warn(`Payment failed for transaction ${transaction.id}: ${message}`);
+        this.logger.warn(
+          `Payment failed for transaction ${transaction.id}: ${message}`,
+        );
 
         return {
           success: false,
@@ -227,7 +263,10 @@ export class PaymentService {
         };
       }
     } catch (error) {
-      this.logger.error(`Error processing VNPay return: ${error.message}`, error.stack);
+      this.logger.error(
+        `Error processing VNPay return: ${error.message}`,
+        error.stack,
+      );
       return {
         success: false,
         message: 'Lỗi xử lý giao dịch',
@@ -238,15 +277,26 @@ export class PaymentService {
   /**
    * Lấy danh sách giao dịch của học sinh
    */
-  async getStudentTransactions(studentId: string, limit: number = 10, cursor?: string) {
-    return this.paymentRepository.getStudentTransactions(studentId, limit, cursor);
+  async getStudentTransactions(
+    studentId: string,
+    limit: number = 10,
+    cursor?: string,
+  ) {
+    return this.paymentRepository.getStudentTransactions(
+      studentId,
+      limit,
+      cursor,
+    );
   }
 
   /**
    * Kiểm tra trạng thái thanh toán của học sinh cho lớp học
    */
   async checkStudentPurchaseStatus(studentId: string, classroomId: string) {
-    const result = await this.paymentRepository.getStudentPurchaseStatus(studentId, classroomId);
+    const result = await this.paymentRepository.getStudentPurchaseStatus(
+      studentId,
+      classroomId,
+    );
     return {
       isPurchased: result?.isPurchased || false,
     };

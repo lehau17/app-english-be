@@ -9,7 +9,17 @@ import { AssignmentPdfService } from './services/assignment-pdf.service';
 @Module({
   imports: [SharedModule],
   controllers: [PrivateAssignmentController],
-  providers: [AssignmentService, AssignmentRepository, AssignmentImportService, AssignmentPdfService],
-  exports: [AssignmentService, AssignmentRepository, AssignmentImportService, AssignmentPdfService],
+  providers: [
+    AssignmentService,
+    AssignmentRepository,
+    AssignmentImportService,
+    AssignmentPdfService,
+  ],
+  exports: [
+    AssignmentService,
+    AssignmentRepository,
+    AssignmentImportService,
+    AssignmentPdfService,
+  ],
 })
 export class AssignmentModule {}

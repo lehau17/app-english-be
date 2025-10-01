@@ -19,7 +19,14 @@ export class AdminParentService {
   constructor(private readonly prisma: PrismaRepository) {}
 
   async getParents(query: ParentListQueryDto) {
-    const { page = 1, limit = 20, search, isActive, sortBy = 'createdAt', sortOrder = 'desc' } = query;
+    const {
+      page = 1,
+      limit = 20,
+      search,
+      isActive,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = query;
 
     const where: any = {
       role: UserRole.parent,

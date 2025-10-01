@@ -1,40 +1,40 @@
 import { JwtPayload } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-    ForbiddenException,
-    Injectable,
-    NotFoundException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import {
-    Classroom,
-    Prisma,
-    SessionStatus,
-    TimezoneCode,
-    UserRole,
+  Classroom,
+  Prisma,
+  SessionStatus,
+  TimezoneCode,
+  UserRole,
 } from '@prisma/client';
 import { EventsGateway } from 'apps/client-api/src/events/events.gateway';
 import * as bcrypt from 'bcrypt';
 import { Readable } from 'stream';
 import * as XLSX from 'xlsx';
 import {
-    AddStudentToClassroomDto,
-    AssignTeacherToClassroomDto,
-    ClassroomAnnouncementQueryDto,
-    CreateClassroomDto,
-    FilterClassroomRequestDto,
-    ImportStudentsResultDto,
-    StudentDailyScheduleQueryDto,
-    StudentWeeklyScheduleQueryDto,
-    UpdateClassroomDto,
+  AddStudentToClassroomDto,
+  AssignTeacherToClassroomDto,
+  ClassroomAnnouncementQueryDto,
+  CreateClassroomDto,
+  FilterClassroomRequestDto,
+  ImportStudentsResultDto,
+  StudentDailyScheduleQueryDto,
+  StudentWeeklyScheduleQueryDto,
+  UpdateClassroomDto,
 } from '../dto/classroom.dto';
 import { ClassroomRepository } from '../repository/classroom.repository';
 import {
-    calculateClassroomSchedule,
-    generateClassroomSessions,
+  calculateClassroomSchedule,
+  generateClassroomSessions,
 } from '../utils/classroom-schedule.util';
 import {
-    generateClassCode,
-    getCsvTransformStream,
+  generateClassCode,
+  getCsvTransformStream,
 } from '../utils/classroom.util';
 
 const TIMEZONE_OFFSETS: Record<TimezoneCode, number> = {
@@ -146,10 +146,15 @@ export class ClassroomService {
     const { studentIds } = dto;
 
     // Kiểm tra course có miễn phí không
-    const course = await this.classroomRepository.getCourseByClassroomId(classroomId);
+    const course =
+      await this.classroomRepository.getCourseByClassroomId(classroomId);
     const isPurchased = !course?.price || course.price <= 0;
 
-    await this.classroomRepository.addStudents(classroomId, studentIds, isPurchased);
+    await this.classroomRepository.addStudents(
+      classroomId,
+      studentIds,
+      isPurchased,
+    );
   }
 
   async removeStudentFromClassroom(
@@ -189,7 +194,10 @@ export class ClassroomService {
       return [];
     }
 
-    if (status && ['upcoming', 'ongoing', 'completed', 'cancelled'].includes(status)) {
+    if (
+      status &&
+      ['upcoming', 'ongoing', 'completed', 'cancelled'].includes(status)
+    ) {
       params.status = status as any;
     }
 

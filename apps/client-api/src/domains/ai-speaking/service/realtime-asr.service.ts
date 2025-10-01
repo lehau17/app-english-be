@@ -48,7 +48,8 @@ class AsrConnection implements RealtimeAsrSessionHandle {
 
     this.ws = new WebSocket(this.url);
     this.ws.on('open', () => this.handleOpen());
-    this.ws.on('message', (data) => this.handleMessage(data.toString()))
+    this.ws
+      .on('message', (data) => this.handleMessage(data.toString()))
       .on('close', () => this.handleClose())
       .on('error', (error) => this.handleError(error));
   }
@@ -92,7 +93,9 @@ class AsrConnection implements RealtimeAsrSessionHandle {
     try {
       this.ws.close();
     } catch (error) {
-      this.logger.warn(`Error closing ASR websocket: ${(error as Error).message}`);
+      this.logger.warn(
+        `Error closing ASR websocket: ${(error as Error).message}`,
+      );
     }
   }
 
@@ -121,14 +124,19 @@ class AsrConnection implements RealtimeAsrSessionHandle {
       const parsed = JSON.parse(message);
 
       if (parsed.partial) {
-        await this.callbacks.onPartial(parsed.partial, parsed?.confidence ?? undefined);
+        await this.callbacks.onPartial(
+          parsed.partial,
+          parsed?.confidence ?? undefined,
+        );
       }
 
       if (parsed.result || parsed.text) {
         if (!this.finalised) {
           this.finalised = true;
-          const text: string = parsed.text ?? this.extractTextFromResult(parsed.result);
-          const confidence = parsed.confidence ?? this.averageConfidence(parsed.result);
+          const text: string =
+            parsed.text ?? this.extractTextFromResult(parsed.result);
+          const confidence =
+            parsed.confidence ?? this.averageConfidence(parsed.result);
           await this.callbacks.onFinal({
             text,
             confidence,
@@ -142,7 +150,9 @@ class AsrConnection implements RealtimeAsrSessionHandle {
         }
       }
     } catch (error) {
-      this.logger.error(`Failed to parse ASR message: ${(error as Error).message}`);
+      this.logger.error(
+        `Failed to parse ASR message: ${(error as Error).message}`,
+      );
       this.callbacks.onError?.(error as Error);
     }
   }
@@ -200,7 +210,9 @@ export class RealtimeAsrService {
     );
   }
 
-  async ensureSession(params: EnsureSessionParams): Promise<RealtimeAsrSessionHandle> {
+  async ensureSession(
+    params: EnsureSessionParams,
+  ): Promise<RealtimeAsrSessionHandle> {
     const { sessionId, turnId, callbacks } = params;
     if (!this.wsUrl) {
       throw new Error('AI_SPEAKING_ASR_WS_URL is not configured');

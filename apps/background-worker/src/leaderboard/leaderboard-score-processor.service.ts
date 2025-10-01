@@ -42,17 +42,17 @@ export class LeaderboardScoreProcessorService {
     };
 
     try {
-      const {
-        classroomPeriods,
-        monthlyPeriods,
-        yearlyPeriods,
-      } = await this.resolveAffectedPeriods(events, currentPeriod);
+      const { classroomPeriods, monthlyPeriods, yearlyPeriods } =
+        await this.resolveAffectedPeriods(events, currentPeriod);
 
       await this.rebuildClassroomLeaderboards(classroomPeriods);
       await this.rebuildMonthlyLeaderboards(monthlyPeriods);
       await this.rebuildYearlyLeaderboards(yearlyPeriods);
     } catch (error) {
-      this.logger.error('Failed to process leaderboard rebuild', error as Error);
+      this.logger.error(
+        'Failed to process leaderboard rebuild',
+        error as Error,
+      );
     }
   }
 
@@ -322,13 +322,18 @@ export class LeaderboardScoreProcessorService {
     return Number.isNaN(parsed.getTime()) ? undefined : parsed;
   }
 
-  private async rebuildClassroomLeaderboards(classroomPeriods: ClassroomPeriod[]) {
+  private async rebuildClassroomLeaderboards(
+    classroomPeriods: ClassroomPeriod[],
+  ) {
     for (const context of classroomPeriods) {
       try {
-        await this.leaderboardService.getClassroomLeaderboard(context.classroomId, {
-          year: context.year,
-          month: context.month,
-        });
+        await this.leaderboardService.getClassroomLeaderboard(
+          context.classroomId,
+          {
+            year: context.year,
+            month: context.month,
+          },
+        );
       } catch (error) {
         this.logger.error(
           `Failed to rebuild classroom leaderboard for classroom=${context.classroomId} period=${context.year}-${context.month}`,

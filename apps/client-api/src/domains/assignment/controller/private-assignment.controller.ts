@@ -272,8 +272,6 @@ export class PrivateAssignmentController {
       false,
     );
 
-
-
     try {
       // Generate PDF
       const pdfBuffer = await this.pdfService.generateAssignmentPdf(assignment);

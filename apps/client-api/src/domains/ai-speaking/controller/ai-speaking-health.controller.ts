@@ -15,16 +15,16 @@ export class AiSpeakingHealthController {
       services: {
         asr: {
           status: 'available',
-          url: process.env.AI_SPEAKING_ASR_WS_URL || 'not configured'
+          url: process.env.AI_SPEAKING_ASR_WS_URL || 'not configured',
         },
         tts: {
           status: 'available',
           useHttp: process.env.AI_SPEAKING_TTS_USE_HTTP === 'true',
           httpUrl: process.env.AI_SPEAKING_TTS_HTTP_URL || 'not configured',
-          command: process.env.AI_SPEAKING_TTS_COMMAND || 'not configured'
-        }
+          command: process.env.AI_SPEAKING_TTS_COMMAND || 'not configured',
+        },
       },
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
   }
 

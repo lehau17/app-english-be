@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   postgres:
     image: pgvector/pgvector:0.8.0-pg17-trixie
@@ -106,7 +105,29 @@ services:
       '
     restart: "no"
 
+  # Piper TTS HTTP API Server
+  piper-tts:
+    image: rhasspy/wyoming-piper:latest
+    container_name: piper-tts
+    command: --voice en_US-lessac-medium
+    ports:
+      - "10200:10200"
+    volumes:
+      - piper_data:/data
+    restart: unless-stopped
+
+  # Vosk ASR WebSocket Server
+  vosk-asr:
+    image: alphacep/kaldi-en:latest
+    container_name: vosk-asr
+    ports:
+      - "2700:2700"
+    environment:
+      - MODEL_VERSION=vosk-model-small-en-us-0.15
+    restart: unless-stopped
+
 volumes:
   pg_data:
   redis_data:
   minio_data:
+  piper_data:

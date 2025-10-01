@@ -1,16 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
-    IsArray,
-    IsEmail,
-    IsEnum,
-    IsInt,
-    IsOptional,
-    IsString,
-    IsUUID,
-    Max,
-    Min,
-    MinLength,
+  IsArray,
+  IsEmail,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+  MinLength,
 } from 'class-validator';
 
 export class CreateParentDto {
@@ -31,12 +31,18 @@ export class CreateParentDto {
   @IsString()
   lastName: string;
 
-  @ApiPropertyOptional({ description: 'Parent display name', example: 'Nguyen Van A' })
+  @ApiPropertyOptional({
+    description: 'Parent display name',
+    example: 'Nguyen Van A',
+  })
   @IsOptional()
   @IsString()
   displayName?: string;
 
-  @ApiPropertyOptional({ description: 'Parent phone number', example: '+84901234567' })
+  @ApiPropertyOptional({
+    description: 'Parent phone number',
+    example: '+84901234567',
+  })
   @IsOptional()
   @IsString()
   phoneNumber?: string;
@@ -87,7 +93,12 @@ export class ParentListQueryDto {
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ description: 'Items per page', default: 20, minimum: 1, maximum: 100 })
+  @ApiPropertyOptional({
+    description: 'Items per page',
+    default: 20,
+    minimum: 1,
+    maximum: 100,
+  })
   @IsOptional()
   @Transform(({ value }) => parseInt(value))
   @IsInt()
@@ -105,19 +116,29 @@ export class ParentListQueryDto {
   @Transform(({ value }) => value === 'true')
   isActive?: boolean;
 
-  @ApiPropertyOptional({ description: 'Sort by field', enum: ['createdAt', 'firstName', 'lastName', 'email'] })
+  @ApiPropertyOptional({
+    description: 'Sort by field',
+    enum: ['createdAt', 'firstName', 'lastName', 'email'],
+  })
   @IsOptional()
   @IsString()
   sortBy?: string;
 
-  @ApiPropertyOptional({ description: 'Sort order', enum: ['asc', 'desc'], default: 'desc' })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    enum: ['asc', 'desc'],
+    default: 'desc',
+  })
   @IsOptional()
   @IsEnum(['asc', 'desc'])
   sortOrder?: 'asc' | 'desc';
 }
 
 export class AssignParentDto {
-  @ApiProperty({ description: 'Array of student IDs to assign to parent', type: [String] })
+  @ApiProperty({
+    description: 'Array of student IDs to assign to parent',
+    type: [String],
+  })
   @IsArray()
   @IsUUID('4', { each: true })
   studentIds: string[];

@@ -10,7 +10,8 @@ export class AiSpeakingHealthService implements OnModuleInit {
   private readonly timeoutMs: number;
 
   constructor(private readonly configService: ConfigService) {
-    this.shouldSkip = this.configService.get('AI_SPEAKING_HEALTH_SKIP') === 'true';
+    this.shouldSkip =
+      this.configService.get('AI_SPEAKING_HEALTH_SKIP') === 'true';
     this.timeoutMs = Number(
       this.configService.get<string>('AI_SPEAKING_HEALTH_TIMEOUT_MS', '3000'),
     );
@@ -26,14 +27,18 @@ export class AiSpeakingHealthService implements OnModuleInit {
   }
 
   private async checkTtsCommand(): Promise<void> {
-    const useHttp = this.configService.get<string>('AI_SPEAKING_TTS_USE_HTTP') === 'true';
+    const useHttp =
+      this.configService.get<string>('AI_SPEAKING_TTS_USE_HTTP') === 'true';
 
     if (useHttp) {
       this.logger.log('TTS using HTTP API - skipping command check');
       return;
     }
 
-    const command = this.configService.get<string>('AI_SPEAKING_TTS_COMMAND', 'piper');
+    const command = this.configService.get<string>(
+      'AI_SPEAKING_TTS_COMMAND',
+      'piper',
+    );
     if (!command) {
       this.logger.warn('AI_SPEAKING_TTS_COMMAND is not configured');
       return;
@@ -123,4 +128,3 @@ export class AiSpeakingHealthService implements OnModuleInit {
     });
   }
 }
-

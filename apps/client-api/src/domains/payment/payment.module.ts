@@ -3,7 +3,10 @@ import { SharedModule } from '@app/shared';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
-import { PaymentController, PaymentWebhookController } from './controller/payment.controller';
+import {
+  PaymentController,
+  PaymentWebhookController,
+} from './controller/payment.controller';
 import { PaymentRepository } from './repository/payment.repository';
 import { PaymentService } from './service/payment.service';
 import { VNPayService } from './service/vnpay.service';
