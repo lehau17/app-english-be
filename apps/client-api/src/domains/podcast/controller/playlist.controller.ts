@@ -11,8 +11,16 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { AddToPlaylistDto, RemoveFromPlaylistDto } from '../dto/playlist-item.dto';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+import {
+  AddToPlaylistDto,
+  RemoveFromPlaylistDto,
+} from '../dto/playlist-item.dto';
 import {
   CreatePlaylistDto,
   GetPlaylistsQueryDto,
@@ -41,14 +49,20 @@ export class PlaylistController {
   @ApiOperation({ summary: 'Get playlist by ID' })
   @ApiParam({ name: 'id', description: 'Playlist ID' })
   @ResponseMessage('Playlist retrieved successfully')
-  async findOne(@Param('id', ParseUUIDPipe) id: string, @PayloadToken() payload: JwtPayload) {
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @PayloadToken() payload: JwtPayload,
+  ) {
     return this.playlistService.findOne(id, payload.sub);
   }
 
   @Post()
   @ApiOperation({ summary: 'Create a new playlist' })
   @ResponseMessage('Playlist created successfully')
-  async create(@Body() createPlaylistDto: CreatePlaylistDto, @PayloadToken() payload: JwtPayload) {
+  async create(
+    @Body() createPlaylistDto: CreatePlaylistDto,
+    @PayloadToken() payload: JwtPayload,
+  ) {
     return this.playlistService.create(createPlaylistDto, payload.sub);
   }
 
@@ -68,7 +82,10 @@ export class PlaylistController {
   @ApiOperation({ summary: 'Delete playlist' })
   @ApiParam({ name: 'id', description: 'Playlist ID' })
   @ResponseMessage('Playlist deleted successfully')
-  async remove(@Param('id', ParseUUIDPipe) id: string, @PayloadToken() payload: JwtPayload) {
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @PayloadToken() payload: JwtPayload,
+  ) {
     return this.playlistService.remove(id, payload.sub);
   }
 
@@ -97,14 +114,21 @@ export class PlaylistController {
     @PayloadToken() payload: JwtPayload,
   ) {
     const removeFromPlaylistDto: RemoveFromPlaylistDto = { podcastId };
-    return this.playlistService.removePodcast(id, removeFromPlaylistDto, payload.sub);
+    return this.playlistService.removePodcast(
+      id,
+      removeFromPlaylistDto,
+      payload.sub,
+    );
   }
 
   @Get(':id/items')
   @ApiOperation({ summary: 'Get playlist items' })
   @ApiParam({ name: 'id', description: 'Playlist ID' })
   @ResponseMessage('Playlist items retrieved successfully')
-  async getPlaylistItems(@Param('id', ParseUUIDPipe) id: string, @PayloadToken() payload: JwtPayload): Promise<any> {
+  async getPlaylistItems(
+    @Param('id', ParseUUIDPipe) id: string,
+    @PayloadToken() payload: JwtPayload,
+  ): Promise<any> {
     return this.playlistService.getPlaylistItems(id, payload.sub);
   }
 }
