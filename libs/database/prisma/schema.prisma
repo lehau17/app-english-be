@@ -104,6 +104,13 @@ enum Gender {
   prefer_not_to_say
 }
 
+enum ClassroomStatus {
+  upcoming    // Sắp diễn ra
+  ongoing     // Đang diễn ra
+  completed   // Đã hoàn thành
+  cancelled   // Đã hủy
+}
+
 enum LanguageCode {
   en
 
@@ -268,6 +275,50 @@ enum RewardType {
   activity
 }
 
+enum PaymentStatus {
+  pending
+
+  success
+
+  failed
+
+  cancelled
+
+  refunded
+
+  expired
+}
+
+enum PaymentProvider {
+  vnpay
+
+  momo
+
+  zalopay
+
+  stripe
+
+  paypal
+}
+
+enum TransactionType {
+  course_purchase
+
+  lesson_unlock
+
+  refund
+
+  bonus
+}
+
+enum LeaderboardScope {
+  classroom
+
+  monthly
+
+  yearly
+}
+
 enum DifficultyLevel {
   beginner
 
@@ -312,6 +363,42 @@ enum EnrollmentStatus {
   dropped // Bỏ học
 
   suspended // Tạm ngưng
+}
+
+enum AiSpeakingSessionState {
+  pending
+
+  ai_speaking
+
+  user_speaking
+
+  evaluating
+
+  finished
+
+  aborted
+}
+
+enum AiSpeakingTurnStatus {
+  pending
+
+  streaming
+
+  waiting_user
+
+  evaluating
+
+  completed
+
+  cancelled
+}
+
+enum AiSpeakingTurnRole {
+  system
+
+  ai
+
+  user
 }
 
 // ===================== MODELS =====================
@@ -421,6 +508,7 @@ model User {
   Attempts Attempt[]
 
   RefreshToken RefreshToken[]
+  PasswordResetTokens PasswordResetToken[]
 
   DeviceTokens DeviceToken[]
 
@@ -496,6 +584,13 @@ model User {
 
   playlists Playlist[] @relation("UserPlaylists")
 
+  aiSpeakingSessions AiSpeakingSession[]
+
+  leaderboardSnapshots LeaderboardSnapshot[]
+
+  // Payment transactions
+  transactions Transaction[] @relation("StudentTransactions")
+
   @@index([status])
   @@index([provider, providerId])
   @@index([lastActiveAt])
@@ -567,6 +662,9 @@ model Course {
 
   classrooms Classroom[] // 1 course → nhiều classroom
 
+  // Payment transactions
+  transactions Transaction[] @relation("CourseTransactions")
+
   @@index([instructorId])
   @@index([orderNo])
   @@index([difficulty])
@@ -634,7 +732,6 @@ model Room {
 
   updatedAt DateTime @updatedAt
 
-  sessions ClassroomSession[] // phòng gán cho các buổi
 
   @@index([code])
   @@index([isActive])
@@ -898,6 +995,25 @@ model Profile {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model PasswordResetToken {
+  id String @id @default(uuid())
+
+  userId String
+
+  tokenHash String
+
+  expiresAt DateTime
+
+  usedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
 model Progress {
   id String @id @default(uuid())
 
@@ -990,6 +1106,9 @@ model Classroom {
 
   maxStudents Int?
 
+  // Trạng thái lớp học
+  status ClassroomStatus @default(upcoming)
+
   // Thông tin thời gian của CẢ LỚP (khung chạy của cohort)
 
   periodStart DateTime // Ngày bắt đầu lớp (theo lịch)
@@ -1031,10 +1150,16 @@ model Classroom {
   sessions      ClassroomSession[] // Generated sessions from pattern or manual creation
   conversations Conversation[]
 
+  leaderboardSnapshots LeaderboardSnapshot[]
+
+  // Payment transactions
+  transactions Transaction[] @relation("ClassroomTransactions")
+
   @@index([courseId])
   @@index([teacherId])
   @@index([classCode])
   @@index([isActive])
+  @@index([status])
   @@index([periodStart])
   @@index([periodEnd])
 }
@@ -1103,23 +1228,12 @@ model ClassroomSession {
 
   status SessionStatus @default(scheduled)
 
-  maxStudents Int?
-
-  // Địa điểm/meeting
-
-  roomId String?
-
   meetingUrl String?
-
-  location String?
 
   // Nội dung
 
   agenda Json?
-
   materials Json?
-
-  homework Json?
 
   // Meta
 
@@ -1138,8 +1252,6 @@ model ClassroomSession {
   instructor User @relation(fields: [instructorId], references: [id], onDelete: Cascade)
 
   attendance SessionAttendance[]
-
-  room Room? @relation(fields: [roomId], references: [id])
 
   @@index([classroomId])
   @@index([instructorId])
@@ -1185,6 +1297,9 @@ model ClassroomStudent {
 
   isActive Boolean @default(true)
 
+  // Payment status
+  isPurchased Boolean @default(false)
+
   // Metadata
 
   notes String?
@@ -1197,6 +1312,7 @@ model ClassroomStudent {
 
   @@id([classroomId, studentId])
   @@index([studentId])
+  @@index([isPurchased])
 }
 
 model Assignment {
@@ -2093,6 +2209,37 @@ model Dashboard {
   @@map("dashboards")
 }
 
+model LeaderboardSnapshot {
+  id String @id @default(uuid())
+
+  scope LeaderboardScope
+
+  classroomId String?
+
+  year Int
+
+  month Int?
+
+  userId String
+
+  totalScore Int @default(0)
+
+  rank Int?
+
+  payload Json?
+
+  calculatedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  classroom Classroom? @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  @@unique([scope, classroomId, year, month, userId], map: "leaderboard_snapshot_unique")
+  @@index([scope, classroomId, year, month], map: "leaderboard_snapshot_scope_idx")
+  @@index([scope, year, month, totalScore], map: "leaderboard_snapshot_score_idx")
+  @@map("leaderboard_snapshots")
+}
+
 // ===================== ADVANCED FEATURES =====================
 
 model AIAnalysis {
@@ -2231,6 +2378,134 @@ model Recommendation {
   @@index([type])
   @@index([expiresAt])
   @@index([viewed, clicked, dismissed])
+}
+
+// ===================== AI SPEAKING PRACTICE =====================
+
+model AiSpeakingSession {
+  id String @id @default(uuid())
+
+  userId String
+
+  conversationId String @default(uuid())
+
+  topic String?
+
+  goal String?
+
+  state AiSpeakingSessionState @default(pending)
+
+  maxTurns Int @default(8)
+
+  turnCount Int @default(0)
+
+  targetDifficulty DifficultyLevel @default(beginner)
+
+  currentDifficulty DifficultyLevel?
+
+  silenceWarnings Int @default(0)
+
+  offTopicWarnings Int @default(0)
+
+  config Json?
+
+  metadata Json?
+
+  analytics Json?
+
+  summary String?
+
+  summaryPayload Json?
+
+  startedAt DateTime @default(now())
+
+  lastActivityAt DateTime @default(now())
+
+  endedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  turns AiSpeakingTurn[]
+
+  @@index([userId, createdAt])
+  @@index([userId, conversationId])
+  @@index([state, lastActivityAt])
+  @@map("ai_speaking_sessions")
+}
+
+model AiSpeakingTurn {
+  id String @id @default(uuid())
+
+  sessionId String
+
+  turnIndex Int
+
+  state AiSpeakingTurnStatus @default(pending)
+
+  aiPrompt String?
+
+  aiAudioUrl String?
+
+  userTranscript String?
+
+  userAudioUrl String?
+
+  userDurationSec Int?
+
+  metrics Json?
+
+  evaluation Json?
+
+  suggestions String[] @default([])
+
+  score Int?
+
+  relevanceScore Float?
+
+  silenceDetected Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  session AiSpeakingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  segments AiSpeakingTurnSegment[]
+
+  @@unique([sessionId, turnIndex])
+  @@index([sessionId])
+  @@index([state, createdAt])
+  @@map("ai_speaking_turns")
+}
+
+model AiSpeakingTurnSegment {
+  id String @id @default(uuid())
+
+  turnId String
+
+  role AiSpeakingTurnRole
+
+  orderNo Int @default(0)
+
+  transcript String?
+
+  audioUrl String?
+
+  durationSec Int?
+
+  payload Json?
+
+  createdAt DateTime @default(now())
+
+  turn AiSpeakingTurn @relation(fields: [turnId], references: [id], onDelete: Cascade)
+
+  @@unique([turnId, role, orderNo])
+  @@index([turnId, orderNo])
+  @@map("ai_speaking_turn_segments")
 }
 
 // ===================== PODCAST & LISTENING PRACTICE SYSTEM =====================
@@ -2640,4 +2915,55 @@ model PodcastAnalytics {
   @@index([podcastId])
   @@index([date])
   @@map("podcast_analytics")
+}
+
+// ===================== PAYMENT SYSTEM =====================
+
+model Transaction {
+  id String @id @default(uuid())
+
+  // Basic info
+  amount Float
+  currency String @default("VND")
+  type TransactionType @default(course_purchase)
+
+  // Payment info
+  provider PaymentProvider @default(vnpay)
+  status PaymentStatus @default(pending)
+
+  // VNPay specific
+  vnpayTransactionNo String? // vnp_TransactionNo
+  vnpayTxnRef String? // vnp_TxnRef (order ID)
+  vnpayResponseCode String? // vnp_ResponseCode
+  vnpaySecureHash String? // vnp_SecureHash
+
+  // Relations
+  studentId String
+  courseId String?
+  classroomId String?
+
+  // Metadata
+  description String?
+  returnUrl String?
+  ipAddress String?
+
+  // Response data from VNPay
+  responseData Json? // Full response từ VNPay
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  completedAt DateTime? // Khi thanh toán thành công
+
+  // Relations
+  student User @relation("StudentTransactions", fields: [studentId], references: [id], onDelete: Cascade)
+  course Course? @relation("CourseTransactions", fields: [courseId], references: [id], onDelete: SetNull)
+  classroom Classroom? @relation("ClassroomTransactions", fields: [classroomId], references: [id], onDelete: SetNull)
+
+  @@index([studentId])
+  @@index([courseId])
+  @@index([classroomId])
+  @@index([status])
+  @@index([vnpayTxnRef])
+  @@index([createdAt])
 }

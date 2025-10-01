@@ -20,15 +20,17 @@ export class AccessTokenGuard implements CanActivate {
     console.log('Request URL:', req.url);
     const path = req.path || req.url || '';
     // Lấy header bất kể viết hoa/thường
-    const authHeader = req.headers['authorization'] || req.headers['Authorization'] || req.headers['AUTHORIZATION'] || '';
-    console.log('Auth Header:', authHeader);
+    const authHeader =
+      req.headers['authorization'] ||
+      req.headers['Authorization'] ||
+      req.headers['AUTHORIZATION'] ||
+      '';
     let token: string | null = null;
     if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
       token = authHeader.slice(7).trim();
     } else if (typeof authHeader === 'string') {
       token = authHeader.trim(); // Nếu client gửi thẳng token không có Bearer
     }
-    console.log('Extracted token:', token);
 
     const attachUserFromToken = (jwt: string) => {
       try {

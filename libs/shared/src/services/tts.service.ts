@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 
 export interface IUploadService {
-  uploadBuffer(buffer: Buffer, filename: string, contentType: string): Promise<{ url: string }>;
+  uploadBuffer(
+    buffer: Buffer,
+    filename: string,
+    contentType: string,
+  ): Promise<{ url: string }>;
 }
 
 @Injectable()
@@ -13,14 +17,18 @@ export class TtsService {
   /**
    * Tạo audio từ văn bản sử dụng Google Translate TTS miễn phí
    */
-  async createAudioWithUrl(text: string, language: string = 'en'): Promise<{ url: string }> {
+  async createAudioWithUrl(
+    text: string,
+    language: string = 'en',
+  ): Promise<{ url: string }> {
     const options = {
       method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'audio/mpeg',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        Accept: 'audio/mpeg',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': 'https://translate.google.com/',
+        Referer: 'https://translate.google.com/',
       },
     };
 
@@ -35,7 +43,7 @@ export class TtsService {
         if (sentence.length <= maxLen) {
           // try to merge into previous chunk if possible
           const last = chunks.at(-1);
-          if (last && (last.length + 1 + sentence.length) <= maxLen) {
+          if (last && last.length + 1 + sentence.length <= maxLen) {
             chunks[chunks.length - 1] = `${last} ${sentence}`;
           } else {
             chunks.push(sentence);
@@ -68,7 +76,9 @@ export class TtsService {
         const response = await fetch(url, options);
 
         if (!response.ok) {
-          throw new Error(`TTS request failed: ${response.status} ${response.statusText}`);
+          throw new Error(
+            `TTS request failed: ${response.status} ${response.statusText}`,
+          );
         }
 
         const arrayBuffer = await response.arrayBuffer();
@@ -83,7 +93,9 @@ export class TtsService {
       }
 
       if (allAudioBuffer.length === 0) {
-        throw new Error('Failed to generate audio: all chunks resulted in empty buffers');
+        throw new Error(
+          'Failed to generate audio: all chunks resulted in empty buffers',
+        );
       }
 
       // Generate unique filename
@@ -95,18 +107,22 @@ export class TtsService {
       const uploadResult = await this.uploadService?.uploadBuffer(
         allAudioBuffer,
         filename,
-        'audio/mpeg'
+        'audio/mpeg',
       );
 
       if (!uploadResult?.url) {
         throw new Error('Failed to upload generated audio file');
       }
 
-      this.logger.debug(`Generated TTS audio for "${text}" (${language}): ${uploadResult.url}`);
+      this.logger.debug(
+        `Generated TTS audio for "${text}" (${language}): ${uploadResult.url}`,
+      );
 
       return { url: uploadResult.url };
     } catch (error) {
-      this.logger.error(`Failed to create audio for text "${text}": ${error.message}`);
+      this.logger.error(
+        `Failed to create audio for text "${text}": ${error.message}`,
+      );
       throw error;
     }
   }
@@ -116,8 +132,26 @@ export class TtsService {
    */
   isLanguageSupported(language: string): boolean {
     const supportedLanguages = [
-      'en', 'es', 'fr', 'de', 'it', 'pt', 'ru', 'ja', 'ko', 'zh',
-      'ar', 'hi', 'th', 'vi', 'id', 'ms', 'tl', 'nl', 'pl', 'tr'
+      'en',
+      'es',
+      'fr',
+      'de',
+      'it',
+      'pt',
+      'ru',
+      'ja',
+      'ko',
+      'zh',
+      'ar',
+      'hi',
+      'th',
+      'vi',
+      'id',
+      'ms',
+      'tl',
+      'nl',
+      'pl',
+      'tr',
     ];
 
     const lang = language.split('-')[0].toLowerCase();
