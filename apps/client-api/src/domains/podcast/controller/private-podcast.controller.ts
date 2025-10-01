@@ -9,13 +9,22 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
-  Query
+  Query,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
-import { CreatePodcastDto, GetPodcastsQueryDto, UpdatePodcastDto } from '../dto/podcast.dto';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
+import {
+  CreatePodcastDto,
+  GetPodcastsQueryDto,
+  UpdatePodcastDto,
+} from '../dto/podcast.dto';
 import {
   CreateRatingDto,
-  GetRatingsQueryDto
+  GetRatingsQueryDto,
 } from '../dto/user-interaction.dto';
 import { PodcastService } from '../service/podcast.service';
 import { TextToPodcastService } from '../service/text-to-podcast.service';
@@ -27,30 +36,34 @@ export class PodcastController {
   constructor(
     private readonly podcastService: PodcastService,
     private readonly textToPodcastService: TextToPodcastService,
-  ) { }
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all podcasts with filtering and pagination' })
   @ResponseMessage('Podcasts retrieved successfully')
-  async findAll(@PayloadToken() payload: JwtPayload, @Query() query: GetPodcastsQueryDto) {
+  async findAll(
+    @PayloadToken() payload: JwtPayload,
+    @Query() query: GetPodcastsQueryDto,
+  ) {
     const userId = payload.sub;
     return this.podcastService.findAll(userId, query);
   }
-
 
   @Get(':id')
   @ApiOperation({ summary: 'Get podcast by ID' })
   @ApiParam({ name: 'id', description: 'Podcast ID' })
   @ResponseMessage('Podcast retrieved successfully')
-  async findOne(@Param('id', ParseUUIDPipe) id: string, @PayloadToken() payload: JwtPayload) {
-    const userId = payload.sub;
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.podcastService.getPodcastById(id);
   }
 
   @Post()
   @ApiOperation({ summary: 'Create a new podcast' })
   @ResponseMessage('Podcast created successfully')
-  async create(@Body() createPodcastDto: CreatePodcastDto, @PayloadToken() payload: JwtPayload) {
+  async create(
+    @Body() createPodcastDto: CreatePodcastDto,
+    @PayloadToken() payload: JwtPayload,
+  ) {
     return this.podcastService.createPodcast(createPodcastDto, payload.sub);
   }
 
@@ -70,10 +83,12 @@ export class PodcastController {
   @ApiOperation({ summary: 'Delete podcast' })
   @ApiParam({ name: 'id', description: 'Podcast ID' })
   @ResponseMessage('Podcast deleted successfully')
-  async remove(@Param('id', ParseUUIDPipe) id: string, @PayloadToken() payload: JwtPayload) {
+  async remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @PayloadToken() payload: JwtPayload,
+  ) {
     return this.podcastService.remove(id, payload.sub);
   }
-
 
   @Post(':id/rating')
   @ApiOperation({ summary: 'Create or update rating for podcast' })
@@ -91,15 +106,20 @@ export class PodcastController {
   @ApiOperation({ summary: 'Get ratings for podcast' })
   @ApiParam({ name: 'id', description: 'Podcast ID' })
   @ResponseMessage('Ratings retrieved successfully')
-  async getRatings(@Param('id', ParseUUIDPipe) id: string, @Query() query: GetRatingsQueryDto): Promise<PageResponseDto<any>> {
+  async getRatings(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() query: GetRatingsQueryDto,
+  ): Promise<PageResponseDto<any>> {
     return this.podcastService.getRatings(id, query);
   }
 
-    @Post(':id/start')
-  async startPodcast(@Param('id') id: string, @PayloadToken() payload: JwtPayload) {
+  @Post(':id/start')
+  async startPodcast(
+    @Param('id') id: string,
+    @PayloadToken() payload: JwtPayload,
+  ) {
     return this.podcastService.startPodcastAttempt(id, payload.sub);
   }
-
 
   @Post(':id/submit')
   async submitAttempt(
@@ -116,7 +136,12 @@ export class PodcastController {
   @Post(':id/save-draft')
   async saveDraft(
     @Param('id') podcastId: string,
-    @Body() body: { attemptId: string; answers: Record<string, string>, timeSpent?: number },
+    @Body()
+    body: {
+      attemptId: string;
+      answers: Record<string, string>;
+      timeSpent?: number;
+    },
   ) {
     return this.podcastService.saveDraft(
       podcastId,
@@ -126,7 +151,6 @@ export class PodcastController {
     );
   }
 
-
   @Get(':id/attempts')
   async getAttempts(
     @Param('id') podcastId: string,
@@ -135,7 +159,4 @@ export class PodcastController {
     const userId = payload.sub;
     return this.podcastService.getPodcastAttempts(podcastId, userId);
   }
-
-
-
 }

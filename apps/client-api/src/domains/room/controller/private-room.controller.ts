@@ -22,7 +22,10 @@ export class PrivateRoomController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new room' })
-  @ApiResponse({ status: 201, description: 'The room has been successfully created.' })
+  @ApiResponse({
+    status: 201,
+    description: 'The room has been successfully created.',
+  })
   @ResponseMessage('Room created successfully')
   create(@Body() createRoomDto: CreateRoomDto): Promise<Room> {
     return this.roomService.create(createRoomDto);
@@ -31,7 +34,9 @@ export class PrivateRoomController {
   @Get()
   @ApiOperation({ summary: 'Get a list of rooms' })
   @ApiResponse({ status: 200, description: 'List of rooms.' })
-  findAll(@Query() filter: FilterRoomRequestDto): Promise<PageResponseDto<Room>> {
+  findAll(
+    @Query() filter: FilterRoomRequestDto,
+  ): Promise<PageResponseDto<Room>> {
     return this.roomService.findAll(filter);
   }
 
@@ -44,18 +49,26 @@ export class PrivateRoomController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update a room' })
-  @ApiResponse({ status: 200, description: 'The room has been successfully updated.' })
+  @ApiResponse({
+    status: 200,
+    description: 'The room has been successfully updated.',
+  })
   @ResponseMessage('Room updated successfully')
-  update(@Param('id') id: string, @Body() updateRoomDto: UpdateRoomDto): Promise<Room> {
+  update(
+    @Param('id') id: string,
+    @Body() updateRoomDto: UpdateRoomDto,
+  ): Promise<Room> {
     return this.roomService.update(id, updateRoomDto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a room' })
-  @ApiResponse({ status: 200, description: 'The room has been successfully deleted.' })
+  @ApiResponse({
+    status: 200,
+    description: 'The room has been successfully deleted.',
+  })
   @ResponseMessage('Room deleted successfully')
   async remove(@Param('id') id: string): Promise<void> {
     await this.roomService.remove(id);
   }
 }
-

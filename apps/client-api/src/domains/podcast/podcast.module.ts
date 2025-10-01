@@ -8,6 +8,7 @@ import { PodcastController } from './controller/private-podcast.controller';
 import { PlaylistService } from './service/playlist.service';
 import { PodcastService } from './service/podcast.service';
 import { TextToPodcastService } from './service/text-to-podcast.service';
+import { PodcastRepository } from './repository/podcast.repository';
 
 @Module({
   imports: [DatabaseModule, ConfigModule],
@@ -20,12 +21,9 @@ import { TextToPodcastService } from './service/text-to-podcast.service';
     PodcastService,
     PlaylistService,
     TextToPodcastService,
-    UploadService
+    UploadService,
+    PodcastRepository,
   ],
-  exports: [
-    PodcastService,
-    PlaylistService,
-    TextToPodcastService,
-  ],
+  exports: [PodcastService, PlaylistService, TextToPodcastService],
 })
 export class PodcastModule {}

@@ -1,11 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsNumber, IsObject, IsOptional, Min } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  Min,
+} from 'class-validator';
 
 export class SubmitPodcastTestDto {
   @ApiProperty({
     description: 'User answers for fill-in-the-blank questions',
-    example: { "q1": "Five", "q2": "English", "q3": "BBC" },
+    example: { q1: 'Five', q2: 'English', q3: 'BBC' },
   })
   @IsNotEmpty()
   @IsObject()
@@ -41,14 +47,14 @@ export class PodcastTestResponseDto {
     example: {
       sentences: [
         {
-          id: "q1",
-          sentence: "Hello, this is _____ Minute _____ from _____.",
-          correctAnswers: ["Five", "English", "BBC"]
-        }
+          id: 'q1',
+          sentence: 'Hello, this is _____ Minute _____ from _____.',
+          correctAnswers: ['Five', 'English', 'BBC'],
+        },
       ],
       timeLimit: 300,
-      totalQuestions: 5
-    }
+      totalQuestions: 5,
+    },
   })
   fillBlankContent?: any;
 

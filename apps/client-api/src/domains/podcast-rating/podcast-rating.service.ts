@@ -1,9 +1,7 @@
 import { PrismaRepository } from '@app/database';
 import { Injectable } from '@nestjs/common';
 
-import {
-  CreatePodcastRatingDto
-} from './podcast-rating.dto';
+import { CreatePodcastRatingDto } from './podcast-rating.dto';
 
 @Injectable()
 export class PodcastRatingService {
@@ -100,7 +98,7 @@ export class PodcastRatingService {
               displayName: true,
               avatarUrl: true,
               firstName: true,
-              lastName: true
+              lastName: true,
             },
           },
         },
@@ -112,7 +110,9 @@ export class PodcastRatingService {
   }
 
   async hasUserRated(userId: string, podcastId: string) {
-    const existing = await this.prisma.podcastRating.findFirst({ where: { userId, podcastId } });
+    const existing = await this.prisma.podcastRating.findFirst({
+      where: { userId, podcastId },
+    });
     return existing;
   }
 }

@@ -1,7 +1,14 @@
 import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { AddToPlaylistDto, RemoveFromPlaylistDto } from '../dto/playlist-item.dto';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  AddToPlaylistDto,
+  RemoveFromPlaylistDto,
+} from '../dto/playlist-item.dto';
 import {
   CreatePlaylistDto,
   GetPlaylistsQueryDto,
@@ -74,9 +81,10 @@ export class PlaylistService {
       this.prisma.playlist.count({ where }),
     ]);
 
-    const playlistsWithCounts = playlists.map(playlist => ({
+    const playlistsWithCounts = playlists.map((playlist) => ({
       ...playlist,
-      podcastCount: playlist.podcastCount || playlist._count?.playlistPodcasts || 0,
+      podcastCount:
+        playlist.podcastCount || playlist._count?.playlistPodcasts || 0,
       playlistPodcasts: undefined,
       _count: undefined,
     }));
@@ -88,10 +96,7 @@ export class PlaylistService {
     const playlist = await this.prisma.playlist.findFirst({
       where: {
         id,
-        OR: [
-          { userId },
-          { isPublic: true },
-        ],
+        OR: [{ userId }, { isPublic: true }],
       },
       include: {
         user: {
@@ -132,19 +137,28 @@ export class PlaylistService {
 
     return {
       ...playlist,
-      podcastCount: playlist.podcastCount || playlist._count?.playlistPodcasts || 0,
-      podcasts: playlist.playlistPodcasts?.map(pp => ({
-        ...pp.podcast,
-        orderNo: pp.orderNo,
-        addedAt: pp.addedAt,
-      })) || [],
+      podcastCount:
+        playlist.podcastCount || playlist._count?.playlistPodcasts || 0,
+      podcasts:
+        playlist.playlistPodcasts?.map((pp) => ({
+          ...pp.podcast,
+          orderNo: pp.orderNo,
+          addedAt: pp.addedAt,
+        })) || [],
       playlistPodcasts: undefined,
       _count: undefined,
     };
   }
 
   async create(createPlaylistDto: CreatePlaylistDto, userId: string) {
-    const { name, description, isPublic = false, thumbnailUrl, tags = [], category } = createPlaylistDto;
+    const {
+      name,
+      description,
+      isPublic = false,
+      thumbnailUrl,
+      tags = [],
+      category,
+    } = createPlaylistDto;
 
     // Check if user already has a playlist with this name
     const existingPlaylist = await this.prisma.playlist.findFirst({
@@ -155,7 +169,9 @@ export class PlaylistService {
     });
 
     if (existingPlaylist) {
-      throw new BadRequestException('You already have a playlist with this name');
+      throw new BadRequestException(
+        'You already have a playlist with this name',
+      );
     }
 
     const playlist = await this.prisma.playlist.create({
@@ -192,8 +208,13 @@ export class PlaylistService {
     };
   }
 
-  async update(id: string, updatePlaylistDto: UpdatePlaylistDto, userId: string) {
-    const { name, description, isPublic, thumbnailUrl, tags, category } = updatePlaylistDto;
+  async update(
+    id: string,
+    updatePlaylistDto: UpdatePlaylistDto,
+    userId: string,
+  ) {
+    const { name, description, isPublic, thumbnailUrl, tags, category } =
+      updatePlaylistDto;
 
     // Check if playlist exists and user owns it
     const existingPlaylist = await this.prisma.playlist.findFirst({
@@ -215,7 +236,9 @@ export class PlaylistService {
       });
 
       if (duplicatePlaylist) {
-        throw new BadRequestException('You already have a playlist with this name');
+        throw new BadRequestException(
+          'You already have a playlist with this name',
+        );
       }
     }
 
@@ -247,7 +270,8 @@ export class PlaylistService {
 
     return {
       ...playlist,
-      podcastCount: playlist.podcastCount || playlist._count?.playlistPodcasts || 0,
+      podcastCount:
+        playlist.podcastCount || playlist._count?.playlistPodcasts || 0,
       _count: undefined,
     };
   }
@@ -272,7 +296,11 @@ export class PlaylistService {
 
   // ===================== PLAYLIST ITEMS MANAGEMENT =====================
 
-  async addPodcast(id: string, addToPlaylistDto: AddToPlaylistDto, userId: string) {
+  async addPodcast(
+    id: string,
+    addToPlaylistDto: AddToPlaylistDto,
+    userId: string,
+  ) {
     const { podcastId } = addToPlaylistDto;
 
     // Check if playlist exists and user owns it
@@ -337,7 +365,11 @@ export class PlaylistService {
     return { message: 'Podcast added to playlist successfully' };
   }
 
-  async removePodcast(playlistId: string, removeFromPlaylistDto: RemoveFromPlaylistDto, userId: string) {
+  async removePodcast(
+    playlistId: string,
+    removeFromPlaylistDto: RemoveFromPlaylistDto,
+    userId: string,
+  ) {
     const { podcastId } = removeFromPlaylistDto;
 
     // Check if playlist exists and user owns it
@@ -469,7 +501,7 @@ export class PlaylistService {
         createdAt: playlist.createdAt,
         updatedAt: playlist.updatedAt,
       },
-      items: playlistItems.map(item => ({
+      items: playlistItems.map((item) => ({
         orderNo: item.orderNo,
         addedAt: item.addedAt,
         podcast: item.podcast,

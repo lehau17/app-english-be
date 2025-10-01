@@ -1,12 +1,24 @@
 import { PrismaRepository } from '@app/database';
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { CreatePodcastCommentDto, ReportCommentDto, UpdatePodcastCommentDto } from './podcast-comment.dto';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import {
+  CreatePodcastCommentDto,
+  ReportCommentDto,
+  UpdatePodcastCommentDto,
+} from './podcast-comment.dto';
 
 @Injectable()
 export class PodcastCommentService {
   constructor(private readonly prisma: PrismaRepository) {}
 
-  async createComment(userId: string, createCommentDto: CreatePodcastCommentDto) {
+  async createComment(
+    userId: string,
+    createCommentDto: CreatePodcastCommentDto,
+  ) {
     const { podcastId, parentId, content } = createCommentDto;
 
     // Verify podcast exists
@@ -128,7 +140,11 @@ export class PodcastCommentService {
     };
   }
 
-  async getReplies(parentCommentId: string, page: number = 1, limit: number = 10) {
+  async getReplies(
+    parentCommentId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
     const skip = (page - 1) * limit;
 
     const replies = await this.prisma.podcastComment.findMany({
@@ -168,7 +184,11 @@ export class PodcastCommentService {
     };
   }
 
-  async updateComment(userId: string, commentId: string, updateCommentDto: UpdatePodcastCommentDto) {
+  async updateComment(
+    userId: string,
+    commentId: string,
+    updateCommentDto: UpdatePodcastCommentDto,
+  ) {
     const comment = await this.prisma.podcastComment.findUnique({
       where: { id: commentId },
     });
@@ -219,10 +239,7 @@ export class PodcastCommentService {
     // Delete comment and all its replies
     await this.prisma.podcastComment.deleteMany({
       where: {
-        OR: [
-          { id: commentId },
-          { parentId: commentId },
-        ],
+        OR: [{ id: commentId }, { parentId: commentId }],
       },
     });
 
@@ -266,7 +283,12 @@ export class PodcastCommentService {
     return { likeCount: updatedComment.likeCount, isLiked };
   }
 
-  async reportComment(userId: string, commentId: string, reportDto: ReportCommentDto) {
+  async reportComment(
+    userId: string,
+    commentId: string,
+    reportDto: ReportCommentDto,
+  ) {
+    void reportDto;
     const comment = await this.prisma.podcastComment.findUnique({
       where: { id: commentId },
     });
