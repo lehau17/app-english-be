@@ -8,7 +8,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Course, UserRole } from '@prisma/client';
+import { Course, Prisma, UserRole } from '@prisma/client';
 import { GoogleTranslateFreeService } from '../../google-translate/google-translate.service';
 import {
   CreateCourseDto,
@@ -22,9 +22,6 @@ function normalizeCurrency(code?: string): string | undefined {
   return code.trim().toUpperCase();
 }
 
-
-
-
 @Injectable()
 export class CourseService {
   private readonly logger = new Logger(CourseService.name);
@@ -34,15 +31,22 @@ export class CourseService {
     private readonly prisma: PrismaRepository,
     private readonly googleTranslateFreeService: GoogleTranslateFreeService,
     private readonly kafkaService: KafkaService,
-  ) { }
+  ) {}
 
   // service.ts (đoạn create)
   async create(dto: CreateCourseDto): Promise<Course> {
     // 1) Validate instructor
-    const instructor = await this.prisma.user.findUnique({ where: { id: dto.instructorId } });
+    const instructor = await this.prisma.user.findUnique({
+      where: { id: dto.instructorId },
+    });
     if (!instructor) throw new BadRequestException('Instructor không tồn tại');
-    if (instructor.role !== UserRole.teacher && instructor.role !== UserRole.admin) {
-      throw new BadRequestException('Instructor phải có vai trò TEACHER hoặc ADMIN');
+    if (
+      instructor.role !== UserRole.teacher &&
+      instructor.role !== UserRole.admin
+    ) {
+      throw new BadRequestException(
+        'Instructor phải có vai trò TEACHER hoặc ADMIN',
+      );
     }
     if (dto.price != null && dto.price < 0) {
       throw new BadRequestException('Giá không được âm');
@@ -50,22 +54,29 @@ export class CourseService {
 
     // 2) Optional: orderNo unique ở cấp Course
     if (dto.orderNo != null) {
-      const sameOrder = await this.prisma.course.findFirst({ where: { orderNo: dto.orderNo } });
-      if (sameOrder) throw new ConflictException('orderNo đã được dùng cho khóa học khác');
+      const sameOrder = await this.prisma.course.findFirst({
+        where: { orderNo: dto.orderNo },
+      });
+      if (sameOrder)
+        throw new ConflictException('orderNo đã được dùng cho khóa học khác');
     }
 
     // 3) Validate trùng order trong lesson/activity (trước khi ghi DB)
     const lessonOrders = new Set<number>();
     for (const ls of dto.lessons) {
       if (lessonOrders.has(ls.orderNo)) {
-        throw new BadRequestException(`Trùng orderNo giữa các lesson: ${ls.orderNo}`);
+        throw new BadRequestException(
+          `Trùng orderNo giữa các lesson: ${ls.orderNo}`,
+        );
       }
       lessonOrders.add(ls.orderNo);
 
       const actOrders = new Set<number>();
       for (const ac of ls.activities) {
         if (actOrders.has(ac.orderNo)) {
-          throw new BadRequestException(`Trùng orderNo trong activities của lesson "${ls.title}": ${ac.orderNo}`);
+          throw new BadRequestException(
+            `Trùng orderNo trong activities của lesson "${ls.title}": ${ac.orderNo}`,
+          );
         }
         actOrders.add(ac.orderNo);
       }
@@ -73,7 +84,9 @@ export class CourseService {
 
     // 4) Convert minutes -> hours cho course
     const estimatedHours =
-      dto.estimatedTime != null ? Math.round((dto.estimatedTime / 60) * 100) / 100 : undefined;
+      dto.estimatedTime != null
+        ? Math.round((dto.estimatedTime / 60) * 100) / 100
+        : undefined;
 
     // 5) Transaction
     // We'll collect audio generation tasks during the transaction and run them after commit
@@ -124,34 +137,31 @@ export class CourseService {
         totalDuration += lessonDto.estimatedTime ?? 0;
 
         for (const activityDto of lessonDto.activities) {
-          // --- Normalize content cho vocab: cho phép dữ liệu cũ 1 từ -> items[] ---
-          const normalizedContent =
-            activityDto.type === 'vocab'
-              ? await this.normalizeVocabContent(activityDto.content)
-              : activityDto.content;
-
           const createdActivity = await tx.activity.create({
             data: {
               lesson: { connect: { id: lesson.id } },
               type: activityDto.type as any, // nếu Prisma enum trùng literal
               orderNo: activityDto.orderNo,
               title: activityDto.title,
-              content: normalizedContent,  // JSONB
+              content: activityDto.content as any, // JSONB - content theo cấu trúc mới từ DTO
               timeLimit: activityDto.timeLimit ?? undefined,
               maxAttempts: activityDto.maxAttempts ?? undefined,
               passingScore: activityDto.passingScore ?? undefined,
-              difficulty: activityDto.difficulty ?? lessonDto.difficulty ?? dto.difficulty,
+              difficulty:
+                activityDto.difficulty ??
+                lessonDto.difficulty ??
+                dto.difficulty,
               points: activityDto.points ?? 10,
               instructions: activityDto.instructions ?? undefined,
               hints: activityDto.hints ?? [],
               mediaUrls: activityDto.mediaUrls ?? [],
             },
-
           });
 
           // If this is a vocab activity, check items without audioUrl and schedule generation
-          if (normalizedContent && normalizedContent.kind === 'vocab') {
-            const items = normalizedContent.data?.items || [];
+          if (activityDto.type === 'vocab' && activityDto.content) {
+            const vocabContent = activityDto.content as any;
+            const items = vocabContent.items || [];
             const indices: number[] = [];
             for (let i = 0; i < items.length; i++) {
               const it = items[i];
@@ -181,7 +191,9 @@ export class CourseService {
 
     // After transaction commit, emit TTS tasks to background worker via Kafka
     if (pendingAudioTasks.length > 0) {
-      this.logger.log(`Emitting ${pendingAudioTasks.length} TTS tasks to background worker`);
+      this.logger.log(
+        `Emitting ${pendingAudioTasks.length} TTS tasks to background worker`,
+      );
 
       for (const task of pendingAudioTasks) {
         const message: TTSTaskMessage = {
@@ -206,42 +218,81 @@ export class CourseService {
     return result;
   }
 
-/**
- * Hỗ trợ cả 2 shape:
- *  - MỚI: { kind:'vocab', data:{ items:[ {word,definition,...}, ...] } }
- *  - CŨ : { kind:'vocab', data:{ word, definition, examples?, imageUrl?, audioUrl? } }
- * Trả về luôn shape MỚI.
- */
- async normalizeVocabContent(content: any) {
-    if (!content || content.kind !== 'vocab') return content;
+  /**
+   * Helper method to generate audio URLs for vocab items that don't have them
+   */
+  private async generateMissingAudioUrls(
+    vocabContent: any,
+    language: string = 'en',
+  ): Promise<void> {
+    if (!vocabContent?.items || !Array.isArray(vocabContent.items)) return;
 
-    const data = content.data ?? {};
-    if (Array.isArray(data.items)) return content;
-
-    if (data.word && data.definition) {
-      return {
-        kind: 'vocab',
-        data: {
-          items: [
-            {
-              word: data.word,
-              definition: data.definition,
-              examples: data.examples ?? [],
-              imageUrl: data.imageUrl ?? undefined,
-              audioUrl: data.audioUrl ?? (await this.googleTranslateFreeService.createAudioWithUrl(data.word, "en")).url
-            },
-          ],
-        },
-      };
+    for (const item of vocabContent.items) {
+      if (!item.audioUrl && item.word) {
+        try {
+          const audioResult =
+            await this.googleTranslateFreeService.createAudioWithUrl(
+              item.word,
+              language,
+            );
+          item.audioUrl = audioResult.url;
+        } catch (error) {
+          this.logger.warn(
+            `Failed to generate audio for word: ${item.word}`,
+            error,
+          );
+        }
+      }
     }
-    // fallback giữ nguyên nếu không match
-    return content;
   }
 
-
-
-  async findById(id: string): Promise<Course> {
-    const course = await this.courseRepository.findById(id);
+  async findById(id: string): Promise<
+    Prisma.CourseGetPayload<{
+      include: {
+        instructor: {
+          select: {
+            id: true;
+            firstName: true;
+            lastName: true;
+            email: true;
+            displayName: true;
+            avatarUrl: true;
+          };
+        };
+        lessons: {
+          orderBy: { orderNo: 'asc' };
+          include: {
+            activities: {
+              orderBy: { orderNo: 'asc' };
+            };
+          };
+        };
+      };
+    }>
+  > {
+    const course = await this.prisma.course.findUnique({
+      where: { id },
+      include: {
+        instructor: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+        lessons: {
+          orderBy: { orderNo: 'asc' },
+          include: {
+            activities: {
+              orderBy: { orderNo: 'asc' },
+            },
+          },
+        },
+      },
+    });
     if (!course) throw new NotFoundException(`Course with id ${id} not found`);
     return course;
   }

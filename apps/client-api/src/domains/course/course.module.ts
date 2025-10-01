@@ -10,7 +10,13 @@ import { CoursesImportService } from './service/couse-import.service';
 
 @Module({
   imports: [GoogleTranslateModule, SharedModule],
-  controllers: [CourseController, ],
-  providers: [CourseService, CourseRepository, CoursesImportService, GoogleTranslateFreeService, UploadService],
+  controllers: [CourseController],
+  providers: [
+    CourseService,
+    CourseRepository,
+    CoursesImportService,
+    GoogleTranslateFreeService,
+    UploadService,
+  ],
 })
 export class CourseModule {}

@@ -6,18 +6,26 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   ParseUUIDPipe,
   Patch,
   Post,
   Put,
   Query,
+  Res,
   UploadedFiles,
-  UseInterceptors
+  UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Course } from '@prisma/client';
+import { Response } from 'express';
 import {
   CreateCourseDto,
   FilterCourseRequestDto,
@@ -31,8 +39,9 @@ import { CoursesImportService } from '../service/couse-import.service';
 @ApiBearerAuth('Authorization')
 @Controller('/private/v1/courses')
 export class CourseController {
-  constructor(private readonly courseService: CourseService,
-    private readonly svc: CoursesImportService
+  constructor(
+    private readonly courseService: CourseService,
+    private readonly svc: CoursesImportService,
   ) {}
 
   @Post()
@@ -89,10 +98,10 @@ export class CourseController {
     return this.courseService.unpublish(id);
   }
 
-
   @Post('import-excel')
-  importExcel(@Body() dto: ImportCoursesDto,
-    @PayloadToken() payload : JwtPayload
+  importExcel(
+    @Body() dto: ImportCoursesDto,
+    @PayloadToken() payload: JwtPayload,
   ) {
     return this.svc.importFromExcel(dto, payload.sub);
   }
@@ -104,7 +113,7 @@ export class CourseController {
   importMultipleExcels(
     @UploadedFiles() files: Express.Multer.File[],
     @Body() dto: Omit<ImportCoursesDto, 'url'>,
-    @PayloadToken() payload : JwtPayload
+    @PayloadToken() payload: JwtPayload,
   ) {
     if (!files || files.length === 0) {
       throw new BadRequestException('Không có file nào được upload');
@@ -115,9 +124,27 @@ export class CourseController {
     }
 
     // Lấy instructorId từ JWT token nếu không có trong DTO
-    const defaultInstructorId = dto.defaultInstructorId || payload.sub
+    const defaultInstructorId = dto.defaultInstructorId || payload.sub;
     const finalDto = { ...dto, defaultInstructorId };
 
     return this.svc.importMultipleExcels(files, finalDto, payload.sub);
+  }
+
+  @Get('templates/download')
+  @ApiOperation({ summary: 'Download template Excel for course import' })
+  @Header(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  async downloadTemplate(@Res() res: Response) {
+    const template = await this.svc.downloadTemplate();
+
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${template.filename}"`,
+    );
+    res.setHeader('Content-Type', template.contentType);
+
+    return res.send(template.buffer);
   }
 }
