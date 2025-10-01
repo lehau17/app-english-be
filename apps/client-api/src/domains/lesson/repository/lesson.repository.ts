@@ -13,7 +13,7 @@ export class LessonRepository {
   // ============ CRUD cơ bản ============
 
   async create(data: CreateLessonDto): Promise<Lesson> {
-      return this.prisma.lesson.create({ data: data as any });
+    return this.prisma.lesson.create({ data: data as any });
   }
 
   async findById(id: string): Promise<Lesson | null> {
@@ -117,13 +117,13 @@ export class LessonRepository {
       return await Promise.all(
         activities.map(async (activity) => {
           const questionCount = await this.prisma.question.count({
-            where: { activityId: activity.id }
+            where: { activityId: activity.id },
           });
           return {
             ...activity,
-            _count: { questions: questionCount }
+            _count: { questions: questionCount },
           };
-        })
+        }),
       );
     }
 
@@ -267,14 +267,14 @@ export class LessonRepository {
       const prev = await this.prisma.activity.findFirst({
         where: {
           lessonId: act.lessonId,
-          orderNo: act.orderNo - 1
+          orderNo: act.orderNo - 1,
         },
         select: { id: true, passingScore: true },
       });
       if (prev) {
         const prevProg = await this.prisma.progress.findUnique({
           where: {
-            userId_activityId: { userId, activityId: prev.id }
+            userId_activityId: { userId, activityId: prev.id },
           },
           select: { state: true, score: true, bestScore: true },
         });
@@ -336,9 +336,6 @@ export class LessonRepository {
       return { allowed: false, reason: 'unmet_prerequisites', unmet };
     return { allowed: true };
   }
-
-
-
 
   /**
    * Khởi động/đánh dấu user "bắt đầu" activity (tạo Progress nếu chưa có).
@@ -440,20 +437,21 @@ export class LessonRepository {
       include: {
         classroom: {
           include: {
-            course: true
-          }
-        }
-      }
+            course: true,
+          },
+        },
+      },
     });
 
     // Lọc ra những course duy nhất và loại bỏ null
     const courses = enrollments
-      .map(e => e.classroom?.course)
-      .filter(course => course != null);
+      .map((e) => e.classroom?.course)
+      .filter((course) => course != null);
 
     // Loại bỏ duplicate courses
-    const uniqueCourses = courses.filter((course, index, self) =>
-      index === self.findIndex(c => c.id === course.id)
+    const uniqueCourses = courses.filter(
+      (course, index, self) =>
+        index === self.findIndex((c) => c.id === course.id),
     );
 
     return uniqueCourses;
@@ -477,11 +475,15 @@ export class LessonRepository {
       this.prisma.activity.count({ where: { lessonId } }),
       this.prisma.question.count({
         where: {
-          activityId: { in: await this.prisma.activity.findMany({
-            where: { lessonId },
-            select: { id: true }
-          }).then(acts => acts.map(a => a.id)) }
-        }
+          activityId: {
+            in: await this.prisma.activity
+              .findMany({
+                where: { lessonId },
+                select: { id: true },
+              })
+              .then((acts) => acts.map((a) => a.id)),
+          },
+        },
       }),
     ]);
 
@@ -508,16 +510,18 @@ export class LessonRepository {
             id: true,
             type: true,
             passingScore: true,
-            ...(userId ? {
-              progress: {
-                where: { userId },
-                select: {
-                  state: true,
-                  score: true,
-                  bestScore: true,
-                },
-              },
-            } : {}),
+            ...(userId
+              ? {
+                  progress: {
+                    where: { userId },
+                    select: {
+                      state: true,
+                      score: true,
+                      bestScore: true,
+                    },
+                  },
+                }
+              : {}),
           },
         },
         _count: {
@@ -535,12 +539,18 @@ export class LessonRepository {
 
         for (const activity of activities) {
           const progress = (activity as any).progress?.[0];
-          if (progress && (progress.state === 'done' || progress.state === 'mastered')) {
+          if (
+            progress &&
+            (progress.state === 'done' || progress.state === 'mastered')
+          ) {
             completedActivities++;
           }
         }
 
-        const completion = totalActivities > 0 ? Math.round((completedActivities * 100) / totalActivities) : 0;
+        const completion =
+          totalActivities > 0
+            ? Math.round((completedActivities * 100) / totalActivities)
+            : 0;
 
         // LESSON UNLOCKING LOGIC:
         // Lesson đầu tiên luôn được unlock
@@ -558,13 +568,21 @@ export class LessonRepository {
 
           for (const activity of prevActivities) {
             const progress = (activity as any).progress?.[0];
-            if (progress && (progress.state === 'done' || progress.state === 'mastered')) {
+            if (
+              progress &&
+              (progress.state === 'done' || progress.state === 'mastered')
+            ) {
               prevCompletedActivities++;
             }
           }
 
-          const prevCompletion = prevTotalActivities > 0 ? Math.round((prevCompletedActivities * 100) / prevTotalActivities) : 0;
-          
+          const prevCompletion =
+            prevTotalActivities > 0
+              ? Math.round(
+                  (prevCompletedActivities * 100) / prevTotalActivities,
+                )
+              : 0;
+
           // Unlock nếu lesson trước hoàn thành 100%
           if (prevCompletion >= 100) {
             dynamicIsLocked = false;
@@ -596,10 +614,9 @@ export class LessonRepository {
   async listLessonsOfCourse(courseId: string) {
     return this.prisma.lesson.findMany({
       where: { courseId },
-      orderBy: { orderNo: 'asc' }
+      orderBy: { orderNo: 'asc' },
     });
   }
-
 
   async getProgressByUserIdAndActivityId(userId: string, activityId: string) {
     return this.prisma.progress.findUnique({
