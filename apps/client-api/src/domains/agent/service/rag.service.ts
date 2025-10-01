@@ -23,8 +23,13 @@ export class RagService {
     private prisma: PrismaRepository,
     private geminiService: GeminiService,
   ) {
-    // Tự seed tài liệu mẫu
-    this.loadSampleDocuments();
+    // Tự seed tài liệu mẫu - don't block constructor
+    // Use setTimeout to avoid blocking and handle errors gracefully
+    setTimeout(() => {
+      this.loadSampleDocuments().catch((e) => {
+        this.logger.error('Failed to load sample documents:', e);
+      });
+    }, 0);
   }
 
   async addDocument(addDocumentDto: AddDocumentDto) {
@@ -42,13 +47,19 @@ export class RagService {
 
     // Ghi vector vào cột embedding_vector (kiểu pgvector) bằng raw SQL cast
     try {
+      // Validate embedding is an array of numbers
+      if (!Array.isArray(embedding) || embedding.some(v => typeof v !== 'number')) {
+        throw new Error('Invalid embedding format: must be array of numbers');
+      }
+      
       const vectorText = `[${embedding.join(',')}]`;
-      // ✅ Safe: Use $executeRaw with proper parameterization
-      await this.prisma.$executeRaw`
-        UPDATE knowledge_documents
-        SET embedding_vector = ${vectorText}::vector
-        WHERE id = ${doc.id}
-      `;
+      // Use $executeRawUnsafe but with sanitized input (numbers only)
+      // This is safe because we validated embedding contains only numbers
+      await this.prisma.$executeRawUnsafe(
+        `UPDATE knowledge_documents SET embedding_vector = $1::vector WHERE id = $2`,
+        vectorText,
+        doc.id
+      );
     } catch (e) {
       this.logger.warn(
         `Không thể lưu embedding_vector (pgvector) cho doc ${doc.id}: ${(e as any)?.message}`,
@@ -110,19 +121,31 @@ YÊU CẦU:
   }
 
   private async findSimilarDocuments(queryEmbedding: number[], topK = 3) {
+    // Validate input
+    if (!Array.isArray(queryEmbedding) || queryEmbedding.length === 0) {
+      this.logger.warn('Invalid query embedding provided');
+      return [];
+    }
+    if (queryEmbedding.some(v => typeof v !== 'number' || !isFinite(v))) {
+      this.logger.warn('Query embedding contains invalid values');
+      return [];
+    }
+
     // Nếu cột embedding_vector đã có dữ liệu, dùng truy vấn ANN của Postgres (pgvector)
     try {
-      // ✅ Safe: Use parameterized query with Prisma's $queryRaw
+      // Safe: Use parameterized query with $queryRawUnsafe
       const vectorText = `[${queryEmbedding.join(',')}]`;
 
-      // Use $queryRaw with template literal for type safety
-      const rows = await this.prisma.$queryRaw<any[]>`
-        SELECT id, title, content, document_type, source, embedding
-        FROM knowledge_documents
-        WHERE embedding_vector IS NOT NULL
-        ORDER BY embedding_vector <-> ${vectorText}::vector
-        LIMIT ${topK}
-      `;
+      // Use $queryRawUnsafe with proper parameterization
+      const rows = await this.prisma.$queryRawUnsafe<any[]>(
+        `SELECT id, title, content, document_type, source, embedding
+         FROM knowledge_documents
+         WHERE embedding_vector IS NOT NULL
+         ORDER BY embedding_vector <-> $1::vector
+         LIMIT $2`,
+        vectorText,
+        topK
+      );
 
       // Normalize column names so caller gets { id, title, documentType, content, source }
       const normalized = (rows || []).map((r: any) => ({

@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { config } from 'dotenv';
-import fetch from 'node-fetch';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 config();
 
@@ -22,22 +22,19 @@ async function main() {
     process.exit(1);
   }
 
+  const genAI = new GoogleGenerativeAI(GEMINI_KEY);
+
   async function generateEmbedding(text: string): Promise<number[]> {
-    const resp = await fetch('https://generativeai.googleapis.com/v1beta2/models/text-embedding-004:embed', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${GEMINI_KEY}`,
-      },
-      body: JSON.stringify({ text }),
-    });
-    if (!resp.ok) {
-      const t = await resp.text();
-      throw new Error(`Embedding API failed: ${resp.status} ${t}`);
+    try {
+      const embeddingModel = genAI.getGenerativeModel({
+        model: 'text-embedding-004',
+      });
+      const result: any = await embeddingModel.embedContent(text);
+      return result?.embedding?.values || [];
+    } catch (error) {
+      console.error('Error generating embedding:', error);
+      throw error;
     }
-    const j: any = await resp.json();
-    const embedding = (j && (j.embedding?.values || j.data?.[0]?.embedding)) || [];
-    return embedding;
   }
 
   const batchSize = Number(process.env.BATCH_SIZE) || 100;
@@ -84,9 +81,17 @@ async function main() {
           continue;
         }
 
+        // Validate embedding
+        if (emb.some(v => typeof v !== 'number' || !isFinite(v))) {
+          console.warn(`Invalid embedding values for doc ${d.id}`);
+          continue;
+        }
+
         const vectorText = `[${emb.join(',')}]`;
+        // Use parameterized query to prevent SQL injection
         await prisma.$executeRawUnsafe(
-          `UPDATE knowledge_documents SET embedding_vector = '${vectorText}'::vector WHERE id = $1`,
+          `UPDATE knowledge_documents SET embedding_vector = $1::vector WHERE id = $2`,
+          vectorText,
           d.id,
         );
         console.log(`Updated doc ${d.id}`);
