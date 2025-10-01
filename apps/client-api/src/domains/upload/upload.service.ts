@@ -16,8 +16,11 @@ export class UploadService {
   constructor(private readonly configService: ConfigService) {
     this.s3Region = this.configService.getOrThrow<string>('S3_REGION');
     this.s3Endpoint = this.configService.getOrThrow<string>('S3_ENDPOINT');
-    this.s3AccessKeyId = this.configService.getOrThrow<string>('S3_ACCESS_KEY_ID');
-    this.s3SecretAccessKey = this.configService.getOrThrow<string>('S3_SECRET_ACCESS_KEY');
+    this.s3AccessKeyId =
+      this.configService.getOrThrow<string>('S3_ACCESS_KEY_ID');
+    this.s3SecretAccessKey = this.configService.getOrThrow<string>(
+      'S3_SECRET_ACCESS_KEY',
+    );
     this.s3BucketName = this.configService.getOrThrow<string>('S3_BUCKET_NAME');
 
     this.s3Client = new S3Client({
@@ -63,7 +66,11 @@ export class UploadService {
     return `${this.s3Endpoint}/${this.s3BucketName}/${key}`;
   }
 
-  async uploadBuffer(buffer: Buffer, filename: string, contentType: string): Promise<{ url: string }> {
+  async uploadBuffer(
+    buffer: Buffer,
+    filename: string,
+    contentType: string,
+  ): Promise<{ url: string }> {
     const key = `${uuidv4()}-${filename}`;
 
     const command = new PutObjectCommand({
