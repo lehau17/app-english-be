@@ -13,8 +13,12 @@ export class TtsProcessorService {
   ) {}
 
   @MessagePattern('tts-audio-generation')
-  async processTtsTask(@Payload() message: TTSTaskMessage): Promise<TTSTaskResult> {
-    this.logger.log(`Processing TTS task: ${message.taskId} for activity: ${message.activityId}`);
+  async processTtsTask(
+    @Payload() message: TTSTaskMessage,
+  ): Promise<TTSTaskResult> {
+    this.logger.log(
+      `Processing TTS task: ${message.taskId} for activity: ${message.activityId}`,
+    );
 
     const startTime = Date.now();
     let processedItems = 0;
@@ -22,7 +26,7 @@ export class TtsProcessorService {
     try {
       // Fetch latest activity content
       const activity = await this.prisma.activity.findUnique({
-        where: { id: message.activityId }
+        where: { id: message.activityId },
       });
 
       if (!activity) {
@@ -32,7 +36,9 @@ export class TtsProcessorService {
       const content: any = activity.content ?? {};
 
       if (content.kind !== 'vocab') {
-        this.logger.warn(`Activity ${message.activityId} is not vocab type, skipping TTS processing`);
+        this.logger.warn(
+          `Activity ${message.activityId} is not vocab type, skipping TTS processing`,
+        );
         return {
           activityId: message.activityId,
           taskId: message.taskId,
@@ -54,19 +60,25 @@ export class TtsProcessorService {
         if (!word) continue;
 
         try {
-          this.logger.debug(`Generating audio for word: "${word}" in language: ${message.language}`);
+          this.logger.debug(
+            `Generating audio for word: "${word}" in language: ${message.language}`,
+          );
 
           const { url } = await this.ttsService.createAudioWithUrl(
             word,
-            message.language.split('-')[0] ?? 'en'
+            message.language.split('-')[0] ?? 'en',
           );
 
           items[idx].audioUrl = url;
           processedItems++;
 
-          this.logger.debug(`Successfully generated audio for "${word}": ${url}`);
+          this.logger.debug(
+            `Successfully generated audio for "${word}": ${url}`,
+          );
         } catch (error) {
-          this.logger.error(`Failed to generate audio for word "${word}": ${error.message}`);
+          this.logger.error(
+            `Failed to generate audio for word "${word}": ${error.message}`,
+          );
           // Continue processing other words even if one fails
         }
       }
@@ -79,7 +91,7 @@ export class TtsProcessorService {
 
       const duration = Date.now() - startTime;
       this.logger.log(
-        `TTS task ${message.taskId} completed: ${processedItems}/${message.itemsIndex.length} items processed in ${duration}ms`
+        `TTS task ${message.taskId} completed: ${processedItems}/${message.itemsIndex.length} items processed in ${duration}ms`,
       );
 
       return {
@@ -93,7 +105,7 @@ export class TtsProcessorService {
       const duration = Date.now() - startTime;
       this.logger.error(
         `TTS task ${message.taskId} failed after ${duration}ms: ${error.message}`,
-        error.stack
+        error.stack,
       );
 
       return {
