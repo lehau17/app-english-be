@@ -16,6 +16,7 @@ import {
   UpdateCourseDto,
 } from '../dto/course.dto';
 import { CourseRepository } from '../repository/course.repository';
+import { SessionScheduleService } from './session-schedule.service';
 
 function normalizeCurrency(code?: string): string | undefined {
   if (!code) return undefined;
@@ -31,6 +32,7 @@ export class CourseService {
     private readonly prisma: PrismaRepository,
     private readonly googleTranslateFreeService: GoogleTranslateFreeService,
     private readonly kafkaService: KafkaService,
+    private readonly sessionScheduleService: SessionScheduleService,
   ) {}
 
   // service.ts (đoạn create)
@@ -82,6 +84,39 @@ export class CourseService {
       }
     }
 
+    // 3.1) Validate session schedule nếu có
+    if (dto.sessionSchedules && dto.sessionSchedules.length > 0) {
+      const sessionNumbers = new Set<number>();
+      for (const schedule of dto.sessionSchedules) {
+        if (sessionNumbers.has(schedule.sessionNumber)) {
+          throw new BadRequestException(
+            `Trùng số buổi trong lịch học: ${schedule.sessionNumber}`,
+          );
+        }
+        sessionNumbers.add(schedule.sessionNumber);
+
+        // Kiểm tra các activity có tồn tại trong course không
+        const activityIds = new Set<string>();
+        for (const ls of dto.lessons) {
+          for (const act of ls.activities) {
+            // Giả lập ID tạm thời để so sánh
+            activityIds.add(act.title);
+          }
+        }
+
+        // Kiểm tra trùng lặp trong order activities
+        const activityOrders = new Set<number>();
+        for (const activity of schedule.activities) {
+          if (activityOrders.has(activity.orderNo)) {
+            throw new BadRequestException(
+              `Trùng orderNo trong activities của buổi học ${schedule.sessionNumber}: ${activity.orderNo}`,
+            );
+          }
+          activityOrders.add(activity.orderNo);
+        }
+      }
+    }
+
     // 4) Convert minutes -> hours cho course
     const estimatedHours =
       dto.estimatedTime != null
@@ -97,6 +132,7 @@ export class CourseService {
     }> = [];
 
     const result = await this.prisma.$transaction(async (tx) => {
+      // Tạo Course
       const course = await tx.course.create({
         data: {
           title: dto.title,
@@ -113,11 +149,15 @@ export class CourseService {
           language: dto.language ?? undefined,
           prerequisites: dto.prerequisites ?? [],
           isPublished: dto.isPublished ?? false,
+          plannedSessions: dto.plannedSessions ?? 8, // Mặc định 8 buổi nếu không chỉ định
         },
       });
 
       let totalLessons = 0;
       let totalDuration = 0; // minutes
+
+      // Tạo Lessons và Activities
+      const createdActivities = new Map<string, string>(); // Map title -> id
 
       for (const lessonDto of dto.lessons) {
         const lesson = await tx.lesson.create({
@@ -158,6 +198,11 @@ export class CourseService {
             },
           });
 
+          // Lưu ID của activity đã tạo để dùng cho session schedule
+          // Sử dụng lesson orderNo và activity orderNo để tạo key duy nhất
+          const activityKey = `L${lessonDto.orderNo}A${activityDto.orderNo}`;
+          createdActivities.set(activityKey, createdActivity.id);
+
           // If this is a vocab activity, check items without audioUrl and schedule generation
           if (activityDto.type === 'vocab' && activityDto.content) {
             const vocabContent = activityDto.content as any;
@@ -185,6 +230,45 @@ export class CourseService {
           totalDuration, // minutes
         },
       });
+
+      // Tạo SessionSchedules nếu có
+      if (dto.sessionSchedules && dto.sessionSchedules.length > 0) {
+        for (const scheduleDto of dto.sessionSchedules) {
+          // Tạo session schedule với các activities
+          await tx.sessionSchedule.create({
+            data: {
+              courseId: course.id,
+              sessionNumber: scheduleDto.sessionNumber,
+              title: scheduleDto.title,
+              description: scheduleDto.description,
+              activities: {
+                create: scheduleDto.activities.map(activityItem => {
+                  let actualActivityId: string | undefined;
+
+                  // Kiểm tra xem activityId là UUID hay reference format (L1A2)
+                  if (activityItem.activityId.match(/^L\d+A\d+$/i)) {
+                    // Format L1A2 - lấy từ map
+                    actualActivityId = createdActivities.get(activityItem.activityId);
+                  } else {
+                    // Assume it's a UUID - kiểm tra xem có trong map không (dành cho trường hợp activity đã tồn tại)
+                    actualActivityId = activityItem.activityId;
+                  }
+
+                  if (!actualActivityId) {
+                    this.logger.warn(`Activity với reference ${activityItem.activityId} không tìm thấy`);
+                    return null;
+                  }
+
+                  return {
+                    activityId: actualActivityId,
+                    orderNo: activityItem.orderNo,
+                  };
+                }).filter(Boolean) // Lọc bỏ các mục null
+              }
+            },
+          });
+        }
+      }
 
       return course;
     });
@@ -267,6 +351,17 @@ export class CourseService {
             };
           };
         };
+        sessionSchedules: {
+          orderBy: { sessionNumber: 'asc' };
+          include: {
+            activities: {
+              orderBy: { orderNo: 'asc' };
+              include: {
+                activity: true;
+              };
+            };
+          };
+        };
       };
     }>
   > {
@@ -288,6 +383,17 @@ export class CourseService {
           include: {
             activities: {
               orderBy: { orderNo: 'asc' },
+            },
+          },
+        },
+        sessionSchedules: {
+          orderBy: { sessionNumber: 'asc' },
+          include: {
+            activities: {
+              orderBy: { orderNo: 'asc' },
+              include: {
+                activity: true,
+              },
             },
           },
         },
@@ -314,6 +420,30 @@ export class CourseService {
         throw new ConflictException('orderNo đã được dùng cho khóa học khác');
     }
 
+    // Session schedule validation if provided
+    if (dto.sessionSchedules && dto.sessionSchedules.length > 0) {
+      const sessionNumbers = new Set<number>();
+      for (const schedule of dto.sessionSchedules) {
+        if (sessionNumbers.has(schedule.sessionNumber)) {
+          throw new BadRequestException(
+            `Trùng số buổi trong lịch học: ${schedule.sessionNumber}`,
+          );
+        }
+        sessionNumbers.add(schedule.sessionNumber);
+
+        // Kiểm tra trùng lặp trong order activities
+        const activityOrders = new Set<number>();
+        for (const activity of schedule.activities) {
+          if (activityOrders.has(activity.orderNo)) {
+            throw new BadRequestException(
+              `Trùng orderNo trong activities của buổi học ${schedule.sessionNumber}: ${activity.orderNo}`,
+            );
+          }
+          activityOrders.add(activity.orderNo);
+        }
+      }
+    }
+
     const data = {
       ...(dto.title != null && { title: dto.title }),
       ...(dto.description != null && { description: dto.description }),
@@ -331,9 +461,18 @@ export class CourseService {
       ...(dto.isPublished != null && { isPublished: dto.isPublished }),
       ...(dto.totalLessons != null && { totalLessons: dto.totalLessons }),
       ...(dto.totalDuration != null && { totalDuration: dto.totalDuration }),
+      ...(dto.plannedSessions != null && { plannedSessions: dto.plannedSessions }),
     };
 
-    return this.courseRepository.update(id, data);
+    // Cập nhật thông tin cơ bản của Course
+    const course = await this.courseRepository.update(id, data);
+
+    // Cập nhật session schedules nếu có
+    if (dto.sessionSchedules && dto.sessionSchedules.length > 0) {
+      await this.sessionScheduleService.createSessionSchedules(id, dto.sessionSchedules);
+    }
+
+    return course;
   }
 
   async delete(id: string): Promise<Course> {

@@ -40,12 +40,14 @@ async function createTestData() {
 
     console.log('Created paid classroom:', paidClassroom.id);
 
-    // Thêm student vào classroom (chưa thanh toán)
+    // Thêm student vào classroom
+    // isPurchased = true nếu course price <= 0, ngược lại false
+    const coursePrice = 299000; // Giá course này
     await prisma.classroomStudent.create({
       data: {
         classroomId: paidClassroom.id,
         studentId: '4319086b-68e7-4129-b3d7-b15c9a6c2934', // Same user as test
-        isPurchased: false, // Chưa thanh toán
+        isPurchased: coursePrice <= 0, // Tự động true nếu miễn phí
         isActive: true,
       },
     });

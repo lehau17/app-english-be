@@ -1,3 +1,4 @@
+import { PrismaRepository } from '@app/database';
 import { JwtPayload } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
@@ -52,13 +53,57 @@ export class ClassroomService {
   constructor(
     private readonly classroomRepository: ClassroomRepository,
     private readonly gateway: EventsGateway,
+    private readonly prisma: PrismaRepository,
   ) {}
 
   async create(dto: CreateClassroomDto): Promise<Classroom> {
+    // Lấy thông tin khóa học bao gồm session schedules
+    const course = await this.prisma.course.findUnique({
+      where: { id: dto.courseId },
+      include: {
+        sessionSchedules: {
+          include: {
+            activities: {
+              include: {
+                activity: true
+              }
+            }
+          },
+          orderBy: {
+            sessionNumber: 'asc'
+          }
+        }
+      }
+    });
+
+    if (!course) {
+      throw new NotFoundException(`Course with id ${dto.courseId} not found`);
+    }
+
+    // Nếu người dùng yêu cầu tính toán tự động thời gian dựa trên khóa học
+    let periodStart = dto.periodStart;
+    let periodEnd = dto.periodEnd;
+
+    if (dto.autoCalculateDates) {
+      // Nếu khóa học có plannedSessions, sử dụng nó để tính toán
+      if (course.plannedSessions) {
+        const { autoCalculateClassroomPeriod } = await import('../utils');
+        const calculatedDates = autoCalculateClassroomPeriod(
+          course.plannedSessions,
+          dto.slots,
+          periodStart,
+          periodEnd
+        );
+
+        periodStart = calculatedDates.periodStart;
+        periodEnd = calculatedDates.periodEnd;
+      }
+    }
+
     // Calculate planned sessions and hours from period and slots
     const scheduleCalculation = calculateClassroomSchedule(
-      dto.periodStart,
-      dto.periodEnd,
+      periodStart,
+      periodEnd,
       dto.slots,
     );
 
@@ -77,9 +122,9 @@ export class ClassroomService {
       },
       classCode: generateClassCode(6),
       maxStudents: dto.maxStudents,
-      isActive: dto.isActive || true,
-      periodStart: dto.periodStart,
-      periodEnd: dto.periodEnd,
+      isActive: dto.isActive ?? true,
+      periodStart,
+      periodEnd,
       // Auto-calculated from schedule
       plannedHours: scheduleCalculation.plannedHours,
       plannedSessions: scheduleCalculation.plannedSessions,
@@ -106,6 +151,25 @@ export class ClassroomService {
 
       // Create sessions in batch
       await this.classroomRepository.createSessions(sessionData);
+
+      // If course has session schedules, map them to classroom sessions
+      if (course.sessionSchedules && Array.isArray(course.sessionSchedules) && course.sessionSchedules.length > 0) {
+        console.log(`🔄 Mapping ${course.sessionSchedules.length} session schedules to classroom ${classroom.id}`);
+
+        // Lấy lại danh sách sessions vừa tạo để mapping
+        const createdSessions = await this.classroomRepository.getClassroomSessions(classroom.id);
+        console.log(`📝 Found ${createdSessions.length} created sessions to map`);
+
+        await this.mapCourseSessionSchedulesToClassroom(
+          classroom.id,
+          course.sessionSchedules,
+          createdSessions
+        );
+
+        console.log(`✅ Session schedule mapping completed for classroom ${classroom.id}`);
+      } else {
+        console.log(`⚠️ No session schedules found for course ${course.id} - skipping mapping`);
+      }
     } catch (error) {
       console.error('Failed to create classroom sessions:', error);
       // Don't fail the classroom creation if session generation fails
@@ -184,6 +248,8 @@ export class ClassroomService {
   async myClassrooms(user: JwtPayload, status?: string) {
     const params: FilterClassroomRequestDto = {
       includePaymentStatus: true,
+      page: 1,
+      limit: 100,  // Giới hạn đủ lớn để lấy tất cả các lớp học
     };
 
     if (user.role === UserRole.teacher) {
@@ -388,7 +454,11 @@ export class ClassroomService {
 
     // Add all students to classroom
     if (studentIdsToAdd.length > 0) {
-      await this.classroomRepository.addStudents(classroomId, studentIdsToAdd);
+      // Kiểm tra course có miễn phí không
+      const course = await this.classroomRepository.getCourseByClassroomId(classroomId);
+      const isPurchased = !course?.price || course.price <= 0;
+
+      await this.classroomRepository.addStudents(classroomId, studentIdsToAdd, isPurchased);
     }
 
     return result;
@@ -706,8 +776,35 @@ export class ClassroomService {
       : new Date();
     const days = query.days ?? 7;
 
+    console.log('📅 Weekly Schedule Debug:');
+    console.log(`   Query weekStart: ${query.weekStart}`);
+    console.log(`   Reference date: ${referenceDate.toISOString()}`);
+    console.log(`   Reference day of week: ${referenceDate.getUTCDay()} (0=Sunday, 1=Monday, etc.)`);
+    console.log(`   Timezone: ${timezone}`);
+    console.log(`   Today is: ${new Date().toISOString()}`);
+
+    // Debug the specific calculation
+    const debugDate = new Date('2025-09-28T17:00:00.000Z');
+    console.log(`   🧮 Debug calculation for 2025-09-28:`);
+    console.log(`      Input date: ${debugDate.toISOString()}`);
+    console.log(`      Day of week: ${debugDate.getUTCDay()} (should be 0=Sunday)`);
+
+    const dayOfWeek = debugDate.getUTCDay();
+    const daysToGoBack = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    console.log(`      Days to go back: ${daysToGoBack} (should be 6 for Sunday)`);
+
+    const mondayDate = new Date(debugDate);
+    mondayDate.setUTCDate(mondayDate.getUTCDate() - daysToGoBack);
+    console.log(`      Monday should be: ${mondayDate.toISOString()}`);
+    console.log(`      Expected Monday: 2025-09-22 (if 28th is Sunday)`);
+
     const { startUtc, endUtc, weekStartLabel, weekEndLabel, dayLabels } =
       this.resolveWeekRange(referenceDate, timezone, days);
+
+    console.log(`   Calculated startUtc: ${startUtc.toISOString()}`);
+    console.log(`   Calculated endUtc: ${endUtc.toISOString()}`);
+    console.log(`   Week range: ${weekStartLabel} - ${weekEndLabel}`);
+    console.log(`   🤔 Issue: If we want current week (Sept 30 - Oct 6), need different logic`);
 
     const sessions = await this.classroomRepository.getStudentWeeklySessions(
       studentId,
@@ -738,6 +835,48 @@ export class ClassroomService {
           }
         : null;
 
+      // Extract course và lesson info từ metadata và classroom
+      const courseInfo = session.classroom.course
+        ? {
+            id: session.classroom.course.id,
+            title: session.classroom.course.title,
+            description: session.classroom.course.description,
+          }
+        : null;
+
+      // Parse metadata để lấy session schedule info và activities (giáo trình)
+      let sessionScheduleInfo = null;
+      let activities = [];
+
+      // Debug metadata
+      if (session.id === '7b871ee2-c2a3-4d41-8cb3-b0cf99f9f6de' ||
+          session.id === 'cfd221d8-cad3-4593-9632-25dc9e1ac678') {
+        console.log(`🔍 Session ${session.id} metadata debug:`);
+        console.log(`   Metadata: ${JSON.stringify(session.metadata)}`);
+        console.log(`   Classroom: ${session.classroom?.id}`);
+      }
+
+      if (session.metadata && typeof session.metadata === 'object') {
+        const metadata = session.metadata as any;
+        if (metadata.courseSessionScheduleId) {
+          sessionScheduleInfo = {
+            courseSessionScheduleId: metadata.courseSessionScheduleId,
+            sessionNumber: metadata.sessionNumber,
+          };
+        }
+        if (metadata.activities && Array.isArray(metadata.activities)) {
+          activities = metadata.activities.map((activity: any) => ({
+            activityId: activity.activityId,
+            orderNo: activity.orderNo,
+            activity: {
+              id: activity.activity?.id,
+              title: activity.activity?.title,
+              type: activity.activity?.type,
+            },
+          }));
+        }
+      }
+
       return {
         sessionId: session.id,
         classroomId: session.classroom.id,
@@ -759,6 +898,10 @@ export class ClassroomService {
         stateLabel: state.label,
         startsInMinutes: state.startsInMinutes,
         endsInMinutes: state.endsInMinutes,
+        // Thêm thông tin course và giáo trình cho từng buổi học
+        course: courseInfo,
+        sessionSchedule: sessionScheduleInfo,
+        activities: activities,
       };
     });
 
@@ -922,17 +1065,40 @@ export class ClassroomService {
     days: number,
   ) {
     const startOfWeek = new Date(referenceDate);
-    const dayOfWeek = startOfWeek.getUTCDay();
-    const diff = (dayOfWeek + 6) % 7; // Difference in days to last Monday
-    startOfWeek.setUTCDate(startOfWeek.getUTCDate() - diff);
-    startOfWeek.setUTCHours(0, 0, 0, 0);
+    const dayOfWeek = startOfWeek.getUTCDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
 
-    const endOfWeek = new Date(startOfWeek);
+    console.log('🔧 FIXED: resolveWeekRange logic');
+    console.log(`   Input date: ${referenceDate.toISOString()}`);
+    console.log(`   Day of week: ${dayOfWeek} (0=Sun, 1=Mon)`);
+
+    // FIXED LOGIC: If Sunday, treat it as start of NEW week (go forward to Monday)
+    // If other days, go back to Monday of same week
+    let daysToGoBack;
+    if (dayOfWeek === 0) {
+      // Sunday: go forward 1 day to get Monday of NEXT week
+      daysToGoBack = -1; // Negative means go forward
+      console.log('   Sunday detected: treating as start of NEW week');
+    } else {
+      // Other days: go back to Monday of same week
+      daysToGoBack = dayOfWeek - 1;
+      console.log('   Other day: going back to Monday of same week');
+    }
+
+    console.log(`   Days adjustment: ${daysToGoBack} (negative = forward)`);
+
+    startOfWeek.setUTCDate(startOfWeek.getUTCDate() - daysToGoBack);
+    startOfWeek.setUTCHours(0, 0, 0, 0);    const endOfWeek = new Date(startOfWeek);
     endOfWeek.setUTCDate(startOfWeek.getUTCDate() + days - 1);
     endOfWeek.setUTCHours(23, 59, 59, 999);
 
+    console.log(`   Final Monday: ${startOfWeek.toISOString()}`);
+    console.log(`   Final Sunday: ${endOfWeek.toISOString()}`);
+
     const weekStartLabel = this.formatDateInTimezone(startOfWeek, timezone);
     const weekEndLabel = this.formatDateInTimezone(endOfWeek, timezone);
+
+    console.log(`   Week range: ${weekStartLabel} - ${weekEndLabel}`);
+    console.log(`   ✅ For 2025-09-28 (Sun) should now return: 29/09 - 05/10`);
 
     const dayLabels = [];
     for (let i = 0; i < days; i++) {
@@ -969,5 +1135,61 @@ export class ClassroomService {
       hour12: false,
     };
     return new Intl.DateTimeFormat('en-GB', options).format(date);
+  }
+
+  /**
+   * Map course session schedules to classroom sessions
+   */
+  private async mapCourseSessionSchedulesToClassroom(
+    classroomId: string,
+    courseSessionSchedules: any[],
+    classroomSessions: any[]
+  ): Promise<void> {
+    try {
+      console.log(`🎯 Starting session mapping for classroom ${classroomId}`);
+      console.log(`   Course session schedules: ${courseSessionSchedules.length}`);
+      console.log(`   Classroom sessions: ${classroomSessions.length}`);
+
+      // Sort classroom sessions by start time to match them with course session schedules
+      const sortedClassroomSessions = classroomSessions.sort((a, b) =>
+        new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+      );
+
+      for (let i = 0; i < courseSessionSchedules.length && i < sortedClassroomSessions.length; i++) {
+        const courseSessionSchedule = courseSessionSchedules[i];
+        const classroomSession = sortedClassroomSessions[i];
+
+        console.log(`🔗 Mapping session ${i + 1}: ${courseSessionSchedule.title} → ${classroomSession.id}`);
+        console.log(`   Activities: ${courseSessionSchedule.activities?.length || 0}`);
+
+        // Update classroom session with course session schedule info
+        await this.classroomRepository.updateSession(classroomSession.id, {
+          title: courseSessionSchedule.title || `Session ${courseSessionSchedule.sessionNumber}`,
+          description: courseSessionSchedule.description,
+          // Store the session schedule activities as metadata
+          metadata: {
+            courseSessionScheduleId: courseSessionSchedule.id,
+            sessionNumber: courseSessionSchedule.sessionNumber,
+            activities: courseSessionSchedule.activities?.map((sa: any) => ({
+              activityId: sa.activityId,
+              orderNo: sa.orderNo,
+              activity: {
+                id: sa.activity.id,
+                title: sa.activity.title,
+                type: sa.activity.type
+              }
+            })) || []
+          }
+        });
+
+        console.log(`✅ Updated session ${classroomSession.id} with metadata`);
+      }
+
+      console.log(`🎉 Session mapping completed successfully for ${courseSessionSchedules.length} sessions`);
+    } catch (error) {
+      console.error('❌ Failed to map course session schedules to classroom:', error);
+      console.error('Error details:', error.stack);
+      // Don't throw error to avoid breaking classroom creation
+    }
   }
 }

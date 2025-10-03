@@ -3,24 +3,26 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DifficultyLevel, LanguageCode } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
-  ArrayMaxSize,
-  ArrayMinSize,
-  ArrayUnique,
-  IsArray,
-  IsBoolean,
-  IsEnum,
-  IsInt,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUUID,
-  IsUrl,
-  Matches,
-  MaxLength,
-  Min,
-  MinLength,
+    ArrayMaxSize,
+    ArrayMinSize,
+    ArrayUnique,
+    IsArray,
+    IsBoolean,
+    IsEnum,
+    IsInt,
+    IsNumber,
+    IsOptional,
+    IsString,
+    IsUUID,
+    IsUrl,
+    Matches,
+    MaxLength,
+    Min,
+    MinLength,
+    ValidateNested,
 } from 'class-validator';
 import { CreateLessonDto } from '../../lesson/dto/lesson.dto';
+import { CreateSessionScheduleDto } from './session-schedule.dto';
 export const ACTIVITY_TYPES = [
   'vocab',
   'pronunciation',
@@ -138,6 +140,23 @@ export class CreateCourseDto {
   @IsBoolean()
   isPublished?: boolean;
 
+  @ApiPropertyOptional({ example: 8, description: 'Số buổi học dự kiến' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  plannedSessions?: number;
+
+  @ApiPropertyOptional({
+    type: [CreateSessionScheduleDto],
+    description: 'Lộ trình học theo buổi'
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateSessionScheduleDto)
+  sessionSchedules?: CreateSessionScheduleDto[];
+
   // server sẽ tính lại nên để optional, bỏ qua nếu client gửi
   @ApiPropertyOptional({ example: 12 })
   @IsOptional()
@@ -244,6 +263,23 @@ export class UpdateCourseDto {
   @IsOptional()
   @IsBoolean()
   isPublished?: boolean;
+
+  @ApiPropertyOptional({ example: 8, description: 'Số buổi học dự kiến' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  plannedSessions?: number;
+
+  @ApiPropertyOptional({
+    type: [CreateSessionScheduleDto],
+    description: 'Lộ trình học theo buổi'
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateSessionScheduleDto)
+  sessionSchedules?: CreateSessionScheduleDto[];
 
   @ApiPropertyOptional({ example: 16 })
   @IsOptional()

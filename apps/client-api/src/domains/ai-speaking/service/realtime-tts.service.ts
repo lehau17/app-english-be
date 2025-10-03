@@ -142,6 +142,17 @@ export class RealtimeTtsService {
       throw new Error('AI_SPEAKING_TTS_MODEL_PATH is not configured');
     }
 
+    // Validate required config
+    if (!this.command || this.command.trim() === '') {
+      this.logger.error('TTS command is not configured (AI_SPEAKING_TTS_COMMAND)');
+      throw new Error('TTS command not configured');
+    }
+
+    if (!this.modelPath || this.modelPath.trim() === '') {
+      this.logger.error('TTS model path is not configured (AI_SPEAKING_TTS_MODEL_PATH)');
+      throw new Error('TTS model path not configured');
+    }
+
     const voice = params.voiceHint ?? this.defaultVoice;
     const args: string[] = ['--model', this.modelPath, '--output_file', '-'];
 

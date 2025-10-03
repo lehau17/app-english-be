@@ -34,6 +34,7 @@
     "prisma:seed": "ts-node --transpile-only prisma/seed.ts",
     "reindex:embeddings": "ts-node scripts/reindex-embeddings.ts",
     "reindex:models": "ts-node scripts/index-model-data.ts",
+    "test:auto-reindex": "node scripts/test-auto-reindex.js",
     "mock:tts": "node mock-tts-server.js",
     "mock:asr": "node mock-asr-server.js",
     "mock:ai-speaking": "npm run mock:tts & npm run mock:asr"
@@ -60,7 +61,7 @@
     "@nestjs/websockets": "^10.4.20",
     "@prisma/client": "^6.13.0",
     "@types/puppeteer": "^5.4.7",
-    "axios": "^1.11.0",
+    "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",

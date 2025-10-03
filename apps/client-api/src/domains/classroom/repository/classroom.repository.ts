@@ -21,7 +21,7 @@ export class ClassroomRepository {
   }
 
   async createSessions(sessionsData: any[]): Promise<void> {
-    await this.prisma.classroomSession.createMany({
+     await this.prisma.classroomSession.createMany({
       data: sessionsData,
       skipDuplicates: true,
     });
@@ -153,11 +153,31 @@ export class ClassroomRepository {
           },
         },
       },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        status: true,
+        type: true,
+        startTime: true,
+        endTime: true,
+        timezone: true,
+        durationHours: true,
+        meetingUrl: true,
+        agenda: true,
+        materials: true,
+        metadata: true, // Include metadata với course session schedule info
         classroom: {
           select: {
             id: true,
             name: true,
+            course: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+              },
+            },
           },
         },
         instructor: {
@@ -203,6 +223,20 @@ export class ClassroomRepository {
     return this.prisma.classroom.delete({ where: { id } });
   }
 
+  async getClassroomSessions(classroomId: string) {
+    return this.prisma.classroomSession.findMany({
+      where: { classroomId },
+      orderBy: { startTime: 'asc' }
+    });
+  }
+
+  async updateSession(sessionId: string, data: any) {
+    return this.prisma.classroomSession.update({
+      where: { id: sessionId },
+      data
+    });
+  }
+
   async list(
     params: FilterClassroomRequestDto,
   ): Promise<PageResponseDto<Classroom>> {
@@ -239,7 +273,7 @@ export class ClassroomRepository {
     const totalPages = Math.max(1, Math.ceil(totalItems / limit));
     const safePage = Math.min(Math.max(page, 1), totalPages);
 
-    const data = await this.prisma.classroom.findMany({
+    const classrooms = await this.prisma.classroom.findMany({
       where,
       skip: (safePage - 1) * limit,
       take: limit,
@@ -274,10 +308,34 @@ export class ClassroomRepository {
             currency: true,
           },
         },
+        _count: {
+          select: {
+            students: {
+              where: { isActive: true },
+            },
+            assignments: true,
+          },
+        },
       },
     });
 
-    return PageResponseDto.of(data, safePage, limit, totalItems);
+    // Transform data để xử lý logic isPurchased cho course miễn phí
+    const transformedData = classrooms.map((classroom) => {
+      if (includePaymentStatus && Array.isArray(classroom.students)) {
+        const isCourseFree = !classroom.course?.price || classroom.course.price <= 0;
+
+        return {
+          ...classroom,
+          students: classroom.students.map((cs: any) => ({
+            ...cs,
+            isPurchased: isCourseFree ? true : cs.isPurchased, // Course free thì auto purchased
+          })),
+        };
+      }
+      return classroom;
+    });
+
+    return PageResponseDto.of(transformedData, safePage, limit, totalItems);
   }
 
   async addStudents(
@@ -503,6 +561,8 @@ export class ClassroomRepository {
     return PageResponseDto.of(data, safePage, limit, totalItems);
   }
 
+
+
   async findClassroomsByTeacherId(teacherId: string) {
     return this.prisma.classroom.findMany({
       where: {
@@ -538,7 +598,24 @@ export class ClassroomRepository {
             lessons: {
               include: { activities: true },
             },
+            sessionSchedules: {
+              include: {
+                activities: {
+                  include: {
+                    activity: true
+                  }
+                }
+              },
+              orderBy: {
+                sessionNumber: 'asc'
+              }
+            }
           },
+        },
+        sessions: {
+          orderBy: {
+            startTime: 'asc'
+          }
         },
       },
     });

@@ -3,19 +3,19 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ClassroomStatus, TimezoneCode } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
-  IsArray,
-  IsBoolean,
-  IsDate,
-  IsEnum,
-  IsInt,
-  IsISO8601,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Max,
-  Min,
-  ValidateNested,
+    IsArray,
+    IsBoolean,
+    IsDate,
+    IsEnum,
+    IsInt,
+    IsISO8601,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    IsUUID,
+    Max,
+    Min,
+    ValidateNested,
 } from 'class-validator';
 
 export enum Weekday {
@@ -87,15 +87,22 @@ export class CreateClassroomDto {
   @IsOptional()
   isActive?: boolean;
 
-  @ApiProperty({ type: Date, description: 'Class start date' })
+  @ApiPropertyOptional({ type: Date, description: 'Class start date', example: '2024-07-01' })
+  @IsOptional()
   @Type(() => Date)
   @IsDate()
-  periodStart: Date;
+  periodStart?: Date;
 
-  @ApiProperty({ type: Date, description: 'Class end date' })
+  @ApiPropertyOptional({ type: Date, description: 'Class end date', example: '2024-08-30' })
+  @IsOptional()
   @Type(() => Date)
   @IsDate()
-  periodEnd: Date;
+  periodEnd?: Date;
+
+  @ApiPropertyOptional({ example: true, description: 'Tự động tính toán thời gian dựa trên số buổi học của khóa học' })
+  @IsOptional()
+  @IsBoolean()
+  autoCalculateDates?: boolean;
 
   @ApiProperty({
     type: [CreateClassroomSlotDto],

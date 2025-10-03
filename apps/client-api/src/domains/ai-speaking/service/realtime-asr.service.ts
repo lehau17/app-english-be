@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import WebSocket from 'ws';
+import * as WebSocket from 'ws';
 
 export interface RealtimeAsrCallbacks {
   onPartial: (text: string, confidence?: number) => Promise<void> | void;

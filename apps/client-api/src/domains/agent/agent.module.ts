@@ -5,6 +5,7 @@ import { IntelligentController } from './agent.controller';
 import { AgentService as AgentServiceTWi } from './agent.service';
 import { PrivateAgentController } from './controller/private-agent.controller';
 import { AgentService } from './service';
+import { AutoReindexService } from './service/auto-reindex.service';
 import { LangChainAgentService } from './service/langchain-agent.service';
 import { RagService } from './service/rag.service';
 import { SqlService } from './service/sql.service';
@@ -16,6 +17,7 @@ import { ApiSearchTool } from './tools/api-search.tool';
   providers: [
     AgentService,
     AgentServiceTWi,
+    AutoReindexService,
     LangChainAgentService,
     RagService,
     SqlService,
@@ -26,6 +28,7 @@ import { ApiSearchTool } from './tools/api-search.tool';
     AgentService,
     AgentServiceTWi,
     AiModule,
+    AutoReindexService,
     RagService,
     LangChainAgentService,
   ], // Export services for other modules

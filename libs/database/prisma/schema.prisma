@@ -632,6 +632,9 @@ model Course {
 
   language LanguageCode @default(vi)
 
+  // Số buổi học (thêm mới)
+  plannedSessions Int? @default(8) // Số buổi học dự kiến
+
   // Content metrics (tùy chọn)
 
   totalLessons Int? @default(0)
@@ -661,6 +664,9 @@ model Course {
   courseEnrollments CourseEnrollment[]
 
   classrooms Classroom[] // 1 course → nhiều classroom
+
+  // Lộ trình buổi học
+  sessionSchedules SessionSchedule[]
 
   // Payment transactions
   transactions Transaction[] @relation("CourseTransactions")
@@ -858,6 +864,9 @@ model Activity {
 
   attempts Attempt[]
 
+  // Quan hệ với lộ trình buổi học
+  sessionActivities SessionActivity[]
+
   @@unique([lessonId, orderNo])
   @@index([lessonId, orderNo])
   @@index([type])
@@ -887,6 +896,51 @@ model Question {
 
   @@index([activityId])
   @@index([activityId, orderNo])
+}
+
+// ===================== COURSE SESSION SCHEDULE =====================
+
+model SessionSchedule {
+  id String @id @default(uuid())
+
+  courseId String
+
+  sessionNumber Int // Số thứ tự buổi học (1, 2, 3, ...)
+
+  title String? // Tiêu đề buổi học (có thể để trống)
+
+  description String? // Mô tả ngắn
+
+  // Tham chiếu tới Course
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // Mối quan hệ với Activity
+  activities SessionActivity[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([courseId, sessionNumber]) // Mỗi buổi học phải có số thứ tự duy nhất trong khóa học
+  @@index([courseId])
+}
+
+model SessionActivity {
+  id String @id @default(uuid())
+
+  sessionScheduleId String
+
+  activityId String
+
+  orderNo Int // Thứ tự trong buổi học
+
+  // Tham chiếu
+  sessionSchedule SessionSchedule @relation(fields: [sessionScheduleId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionScheduleId, orderNo]) // Đảm bảo thứ tự các hoạt động trong buổi học là duy nhất
+  @@index([sessionScheduleId])
+  @@index([activityId])
 }
 
 // ===================== ORIGINAL MODELS (UNCHANGED) =====================
@@ -1240,6 +1294,9 @@ model ClassroomSession {
   notes String?
 
   recordingUrl String?
+
+  // Store course session schedule info and activities for this session
+  metadata Json?
 
   createdAt DateTime @default(now())
 

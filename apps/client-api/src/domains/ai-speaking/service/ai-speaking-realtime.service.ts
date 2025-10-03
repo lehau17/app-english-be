@@ -138,6 +138,11 @@ export class AiSpeakingRealtimeService {
     holder.buffers.push(buffer);
     holder.totalBytes += buffer.length;
 
+    // Debug streaming flow
+    this.logger.debug(
+      `🎤 Audio chunk received: session=${sessionId} turn=${turnId} chunkSize=${buffer.length} totalSize=${holder.totalBytes}`
+    );
+
     if (holder.totalBytes > this.maxBufferedBytes) {
       this.logger.warn(
         `Audio buffer overflow for session=${sessionId} turn=${turnId} (${holder.totalBytes} bytes)`,
@@ -159,7 +164,7 @@ export class AiSpeakingRealtimeService {
     if (!holder.hasTransitionedToUserSpeaking) {
       holder.hasTransitionedToUserSpeaking = true;
       await this.repository.updateTurn(turnId, {
-        state: AiSpeakingTurnStatus.user_speaking,
+        state: AiSpeakingTurnStatus.waiting_user,
       });
       await this.repository.updateSession(sessionId, {
         state: AiSpeakingSessionState.user_speaking,

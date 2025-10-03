@@ -28,6 +28,7 @@ type CourseMetaRow = {
   tags?: string; // tag1,tag2
   imageUrl?: string;
   instructorId?: string;
+  plannedSessions?: number | string;
 };
 
 type CourseContentRow = {
@@ -119,6 +120,15 @@ export class CoursesImportService {
     if (!metaRows.length)
       throw new BadRequestException('Sheet Course Meta không có dữ liệu');
 
+    // Find optional Session Schedules sheet
+    const schedulesSheetName = wb.SheetNames.find(
+      (n) => n.toLowerCase() === 'session schedules',
+    );
+    // Parse session schedules if sheet exists
+    const schedulesRows = schedulesSheetName
+      ? XLSX.utils.sheet_to_json(wb.Sheets[schedulesSheetName], { defval: '' })
+      : [];
+
     const errors: string[] = [];
     const results: any[] = [];
     const actions: (() => Promise<void>)[] = [];
@@ -150,6 +160,10 @@ export class CoursesImportService {
     }
     if (errors.length) throw new BadRequestException(errors.join('; '));
 
+    // A map to store lesson activities for session schedules
+    // Structure: Map<courseCode, Map<lessonNo, Map<activityNo, activityId>>>
+    const courseActivitiesMap = new Map<string, Map<string, Map<number, any>>>();
+
     // build per course
     for (const mRaw of metaRows) {
       const m = this.normalizeMeta(mRaw);
@@ -168,12 +182,18 @@ export class CoursesImportService {
       const lessons = await this.rowsToLessons(rows);
       const totals = this.computeTotals(lessons);
 
+      // Initialize activities map for this course
+      if (!courseActivitiesMap.has(m.code)) {
+        courseActivitiesMap.set(m.code, new Map<string, Map<number, any>>());
+      }
+
       const preview = {
         code: m.code,
         title: m.title,
         lessons: lessons.length,
         activities: totals.activities,
         rows: rows.length,
+        plannedSessions: m.plannedSessions,
       };
 
       if (dto.dryRun) {
@@ -212,7 +232,12 @@ export class CoursesImportService {
               where: { courseId: existing.id },
             });
 
-            await this.prisma.course.update({
+            // Store the lesson activity IDs for session schedules
+            const lessonActivityMap = new Map<string, Map<number, any>>();
+            courseActivitiesMap.set(m.code, lessonActivityMap);
+
+            // Update course with basic info
+            const updatedCourse = await this.prisma.course.update({
               where: { id: existing.id },
               data: {
                 title: m.title,
@@ -227,6 +252,7 @@ export class CoursesImportService {
                 price: m.price ?? 0,
                 language: m.language,
                 isPublished: dto.publish ?? m.isPublished ?? false,
+                plannedSessions: m.plannedSessions,
                 lessons: {
                   create: lessons.map((l) => ({
                     title: l.title,
@@ -257,10 +283,34 @@ export class CoursesImportService {
                 totalLessons: lessons.length,
                 totalDuration: totals.estimatedTime,
               },
+              include: {
+                lessons: {
+                  include: {
+                    activities: true,
+                  }
+                }
+              }
             });
+
+            // Store activities for session schedule processing
+            for (const lesson of updatedCourse.lessons) {
+              const lessonNo = String(lesson.orderNo);
+              if (!lessonActivityMap.has(lessonNo)) {
+                lessonActivityMap.set(lessonNo, new Map<number, any>());
+              }
+
+              const activityMap = lessonActivityMap.get(lessonNo)!;
+              for (const activity of lesson.activities) {
+                activityMap.set(activity.orderNo, activity);
+              }
+            }
 
             results.push({ ...preview, updated: 'yes' });
           } else {
+            // Store the lesson activity IDs for session schedules
+            const lessonActivityMap = new Map<string, Map<number, any>>();
+            courseActivitiesMap.set(m.code, lessonActivityMap);
+
             const created = await this.prisma.course.create({
               data: {
                 title: m.title,
@@ -274,6 +324,7 @@ export class CoursesImportService {
                 },
                 price: m.price ?? 0,
                 language: m.language,
+                plannedSessions: m.plannedSessions,
                 isPublished: dto.publish ?? m.isPublished ?? false,
               },
             });
@@ -293,8 +344,15 @@ export class CoursesImportService {
                 },
               });
 
+              // Initialize lesson in the activities map
+              const lessonNo = String(l.orderNo);
+              if (!lessonActivityMap.has(lessonNo)) {
+                lessonActivityMap.set(lessonNo, new Map<number, any>());
+              }
+              const activityMap = lessonActivityMap.get(lessonNo)!;
+
               for (const a of l.activities) {
-                await this.prisma.activity.create({
+                const activity = await this.prisma.activity.create({
                   data: {
                     lessonId: lesson.id,
                     type: a.type,
@@ -311,6 +369,9 @@ export class CoursesImportService {
                     mediaUrls: a.mediaUrls?.length ? a.mediaUrls : [],
                   },
                 });
+
+                // Store activity info for session schedule processing
+                activityMap.set(a.orderNo, activity);
               }
             }
 
@@ -330,7 +391,44 @@ export class CoursesImportService {
     }
 
     if (!dto.dryRun) {
+      // Execute all course creation/update actions
       for (const act of actions) await act();
+
+      // Process session schedules if available
+      if (schedulesRows.length > 0) {
+        // Process session schedules from the sheet
+        const sessionSchedulesByCourse = this.processSessionSchedules(schedulesRows, courseActivitiesMap);
+
+        // Apply session schedules to courses
+        for (const [courseCode, sessionSchedules] of sessionSchedulesByCourse.entries()) {
+          if (sessionSchedules.length === 0) continue;
+
+          // Find the course by code
+          const course = await this.prisma.course.findFirst({
+            where: {
+              // Use code from Excel as it's a stable identifier across imports
+              OR: metaRows
+                .filter(row => String(row.code).trim() === courseCode)
+                .map(row => {
+                  const normalizedMeta = this.normalizeMeta(row);
+                  return dto.matchBy === 'orderNo' && normalizedMeta.orderNo != null
+                    ? { orderNo: normalizedMeta.orderNo }
+                    : { title: normalizedMeta.title };
+                })
+            }
+          });
+
+          if (course) {
+            // Update the course with session schedules
+            await this.prisma.course.update({
+              where: { id: course.id },
+              data: {
+                sessionSchedules: sessionSchedules as any
+              }
+            });
+          }
+        }
+      }
     }
 
     return {
@@ -339,6 +437,7 @@ export class CoursesImportService {
       publish: !!dto.publish,
       matchBy: dto.matchBy ?? 'title',
       totalCourses: metaRows.length,
+      totalSessionSchedules: schedulesRows.length,
       results,
     };
   }
@@ -370,6 +469,7 @@ export class CoursesImportService {
         .filter(Boolean),
       imageUrl: String(r.imageUrl || '').trim() || undefined,
       instructorId: r.instructorId ? String(r.instructorId).trim() : undefined,
+      plannedSessions: this.numOrUndef(r.plannedSessions),
     };
   }
 
@@ -945,6 +1045,79 @@ export class CoursesImportService {
   }
 
   // Normalize various human-friendly activity type strings from Excel into keys matching ActivityType
+  /**
+   * Process session schedules from Excel sheet
+   * @param schedulesSheet The sheet containing session schedules
+   * @param courseActivitiesMap Map of activities by course, lesson and activity number
+   * @returns Array of session schedule DTOs grouped by courseCode
+   */
+  private processSessionSchedules(schedulesSheet: any[] | undefined, courseActivitiesMap: Map<string, Map<string, Map<number, any>>>) {
+    if (!schedulesSheet || !schedulesSheet.length) return new Map<string, any[]>();
+
+    const sessionSchedulesByCourse = new Map<string, any[]>();
+
+    for (const row of schedulesSheet) {
+      // Skip empty rows or rows without courseCode or sessionNumber
+      if (!row.courseCode || row.sessionNumber == null) continue;
+
+      const courseCode = String(row.courseCode).trim();
+      const sessionNumber = this.numOrZero(row.sessionNumber);
+      if (!courseCode || !sessionNumber) continue;
+
+      const title = row.title ? String(row.title).trim() : undefined;
+      const description = row.description ? String(row.description).trim() : undefined;
+
+      // Process activity references in format "L1A2,L1A3,L2A1"
+      // Where L1A2 means "Lesson 1, Activity 2"
+      const activityRefs = String(row.activityRefs || '').trim();
+      const activities: Array<{ activityId: string; orderNo: number }> = [];
+
+      if (activityRefs) {
+        const refs = activityRefs.split(',').map(ref => ref.trim()).filter(Boolean);
+        let orderNo = 1;
+
+        // Get the activities map for this course
+        const courseActivities = courseActivitiesMap.get(courseCode);
+        if (!courseActivities) continue;
+
+        for (const ref of refs) {
+          // Parse reference like "L1A2" into lesson=1, activity=2
+          const match = ref.match(/L(\d+)A(\d+)/i);
+          if (!match) continue;
+
+          const lessonNo = String(match[1]);
+          const activityNo = parseInt(match[2], 10);
+
+          // Get the actual activity ID from the map
+          const lessonMap = courseActivities.get(lessonNo);
+          if (!lessonMap) continue;
+
+          const activity = lessonMap.get(activityNo);
+          if (!activity) continue;
+
+          activities.push({
+            activityId: activity.id,
+            orderNo: orderNo++
+          });
+        }
+      }
+
+      // Add the session schedule to the map for this course
+      if (!sessionSchedulesByCourse.has(courseCode)) {
+        sessionSchedulesByCourse.set(courseCode, []);
+      }
+
+      sessionSchedulesByCourse.get(courseCode)!.push({
+        sessionNumber,
+        title,
+        description,
+        activities
+      });
+    }
+
+    return sessionSchedulesByCourse;
+  }
+
   private normalizeActivityKey(raw: string) {
     const s = String(raw || '')
       .trim()
@@ -1062,6 +1235,7 @@ export class CoursesImportService {
         tags: 'english,animals,beginner,vocabulary',
         imageUrl: 'https://example.com/animals-course.jpg',
         instructorId: '',
+        plannedSessions: 5, // New field for number of planned sessions
       },
     ];
 
@@ -1364,13 +1538,76 @@ export class CoursesImportService {
       });
     });
 
+    // Create session schedules example data
+    const sessionSchedules = [];
+
+    // Identify the course code
+    const courseCode = courseMeta[0].code;
+
+    // Calculate how many activities are in each lesson on average (e.g., 10)
+    // For this template, distribute them across 5 sessions (as defined in plannedSessions)
+
+    // Session 1: Farm Animals and Wild Animals (Lessons 1-2)
+    sessionSchedules.push({
+      courseCode: courseCode,
+      sessionNumber: 1,
+      title: 'Introduction to Farm and Wild Animals',
+      description: 'Learn about animals found on farms and in the wild',
+      activityRefs: 'L1A1,L1A2,L1A3,L1A4,L2A1,L2A2'
+    });
+
+    // Session 2: Continuing Wild Animals and Sea Animals (Lessons 2-3)
+    sessionSchedules.push({
+      courseCode: courseCode,
+      sessionNumber: 2,
+      title: 'Wild and Sea Animals',
+      description: 'Continue learning about wild animals and discover sea creatures',
+      activityRefs: 'L2A3,L2A4,L2A5,L3A1,L3A2,L3A3'
+    });
+
+    // Session 3: Sea Animals and Birds (Lessons 3-4)
+    sessionSchedules.push({
+      courseCode: courseCode,
+      sessionNumber: 3,
+      title: 'Sea Life and Birds',
+      description: 'Finish sea creatures and start learning about birds',
+      activityRefs: 'L3A4,L3A5,L3A6,L4A1,L4A2,L4A3'
+    });
+
+    // Session 4: Birds and Pets (Lessons 4-5)
+    sessionSchedules.push({
+      courseCode: courseCode,
+      sessionNumber: 4,
+      title: 'Birds and Household Pets',
+      description: 'Continue with birds and learn about common household pets',
+      activityRefs: 'L4A4,L4A5,L4A6,L5A1,L5A2,L5A3'
+    });
+
+    // Session 5: Pets and Review (Lesson 5)
+    sessionSchedules.push({
+      courseCode: courseCode,
+      sessionNumber: 5,
+      title: 'Pet Care and Course Review',
+      description: 'Complete pet studies and review everything we learned',
+      activityRefs: 'L5A4,L5A5,L5A6,L5A7,L5A8'
+    });
+
     // Create worksheets
     const metaSheet = XLSX.utils.json_to_sheet(courseMeta);
     const contentSheet = XLSX.utils.json_to_sheet(courseContent);
+    const schedulesSheet = XLSX.utils.json_to_sheet(sessionSchedules);
+
+    // Add helper notes to the schedules sheet
+    XLSX.utils.sheet_add_aoa(schedulesSheet, [
+      ['NOTE: activityRefs format is "L<lessonNo>A<activityNo>" to reference activities in Course Content sheet.'],
+      ['Example: "L1A2,L1A3,L2A1" means Lesson 1 Activity 2, Lesson 1 Activity 3, and Lesson 2 Activity 1.'],
+      ['Multiple activities are separated by commas without spaces.']
+    ], { origin: { r: sessionSchedules.length + 2, c: 0 } });
 
     // Add worksheets to workbook
     XLSX.utils.book_append_sheet(workbook, metaSheet, 'Course Meta');
     XLSX.utils.book_append_sheet(workbook, contentSheet, 'Course Content');
+    XLSX.utils.book_append_sheet(workbook, schedulesSheet, 'Session Schedules');
 
     // Generate buffer
     const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
