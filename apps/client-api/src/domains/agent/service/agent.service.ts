@@ -161,4 +161,29 @@ export class AgentService {
       return [];
     }
   }
+
+  async getUserConversations(userId: string, limit = 20, offset = 0) {
+    return this.agentChatRepository.findUserConversations(userId, {
+      limit,
+      offset,
+    });
+  }
+
+  async getConversation(conversationId: string, userId: string) {
+    const conversation =
+      await this.agentChatRepository.findConversationById(conversationId);
+    if (!conversation || conversation.userId !== userId) {
+      throw new Error('Conversation not found or access denied');
+    }
+    return conversation;
+  }
+
+  async deleteConversation(conversationId: string, userId: string) {
+    const conversation =
+      await this.agentChatRepository.findConversationById(conversationId);
+    if (!conversation || conversation.userId !== userId) {
+      throw new Error('Conversation not found or access denied');
+    }
+    return this.agentChatRepository.deleteConversation(conversationId);
+  }
 }

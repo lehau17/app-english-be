@@ -74,3 +74,60 @@ export class AgentRecommendationDto {
   @ApiProperty()
   confidence: number;
 }
+
+export class AgentConversationDto {
+  @ApiProperty({ description: 'Conversation ID' })
+  id: string;
+
+  @ApiProperty({ description: 'User ID' })
+  userId: string;
+
+  @ApiProperty({ description: 'Conversation title', required: false })
+  title?: string;
+
+  @ApiProperty({ description: 'Created at timestamp' })
+  createdAt: Date;
+
+  @ApiProperty({ description: 'Updated at timestamp' })
+  updatedAt: Date;
+}
+
+export class AgentMessageDto {
+  @ApiProperty({ description: 'Message ID' })
+  id: string;
+
+  @ApiProperty({
+    description: 'Role: user or assistant',
+    enum: ['user', 'assistant'],
+  })
+  role: string;
+
+  @ApiProperty({ description: 'Message content' })
+  content: string;
+
+  @ApiProperty({ description: 'Created at timestamp' })
+  createdAt: Date;
+}
+
+export class AgentConversationWithMessagesDto {
+  @ApiProperty({ description: 'Conversation ID' })
+  id: string;
+
+  @ApiProperty({ description: 'User ID' })
+  userId: string;
+
+  @ApiProperty({ description: 'Conversation title', required: false })
+  title?: string;
+
+  @ApiProperty({ description: 'Created at timestamp' })
+  createdAt: Date;
+
+  @ApiProperty({ description: 'Updated at timestamp' })
+  updatedAt: Date;
+
+  @ApiProperty({
+    description: 'Messages in the conversation',
+    type: [AgentMessageDto],
+  })
+  messages: AgentMessageDto[];
+}

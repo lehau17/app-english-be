@@ -45,6 +45,53 @@ export class PrivateAgentController {
     return this.agentService.getRecommendations();
   }
 
+  @Get('conversations')
+  @ApiOperation({ summary: 'Get user conversations with AI agent' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of conversations',
+  })
+  async getConversations(
+    @PayloadToken() payload: JwtPayload,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 20;
+    const parsedOffset = offset ? parseInt(offset, 10) : 0;
+    return this.agentService.getUserConversations(
+      payload.sub,
+      parsedLimit,
+      parsedOffset,
+    );
+  }
+
+  @Get('conversations/:id')
+  @ApiOperation({ summary: 'Get conversation details with messages' })
+  @ApiResponse({
+    status: 200,
+    description: 'Conversation with messages',
+  })
+  async getConversation(
+    @PayloadToken() payload: JwtPayload,
+    @Query('id') conversationId: string,
+  ) {
+    return this.agentService.getConversation(conversationId, payload.sub);
+  }
+
+  @Post('conversations/:id/delete')
+  @ApiOperation({ summary: 'Delete a conversation' })
+  @ApiResponse({
+    status: 200,
+    description: 'Conversation deleted',
+  })
+  async deleteConversation(
+    @PayloadToken() payload: JwtPayload,
+    @Query('id') conversationId: string,
+  ) {
+    await this.agentService.deleteConversation(conversationId, payload.sub);
+    return { success: true, message: 'Conversation deleted successfully' };
+  }
+
   @Post('knowledge/reindex')
   @ApiOperation({
     summary: 'Reindex all model data into knowledge base',
