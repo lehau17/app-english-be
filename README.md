@@ -78,11 +78,13 @@ export IMAGE_TAG=latest
 ```
 
 ### Documentation
+- ⚡ **[Quick Start CI/CD](./QUICK_START_CICD.md)** - 5-minute setup guide
 - 📖 **[Complete Deployment Guide](./DEPLOYMENT.md)** - Full CI/CD setup instructions (English)
 - 🇻🇳 **[Hướng Dẫn Deploy](./DEPLOY_GUIDE_VI.md)** - Vietnamese deployment guide
 - 🐳 **[Docker Compose Production](./docker-compose.prod.yml)** - Production configuration
 - 🚀 **[Deploy Script](./deploy.sh)** - Automated deployment script
 - ⚙️ **[Makefile](./Makefile)** - Helpful commands for building and deploying
+- 🔧 **[Troubleshoot Script](./troubleshoot.sh)** - Diagnostic tool for deployment issues
 
 ### Prerequisites
 1. Docker Hub account and repositories
