@@ -21,7 +21,10 @@ export class AutoReindexService implements OnModuleInit {
     private readonly ragService: RagService,
   ) {
     // Set up event listener
-    this.eventEmitter.on('knowledge.reindex', this.handleReindexEvent.bind(this));
+    this.eventEmitter.on(
+      'knowledge.reindex',
+      this.handleReindexEvent.bind(this),
+    );
   }
 
   async onModuleInit() {
@@ -42,7 +45,13 @@ export class AutoReindexService implements OnModuleInit {
 
       // Only handle specific models and operations
       const watchedModels = ['course', 'lesson', 'activity', 'vocabulary'];
-      const watchedActions = ['create', 'update', 'delete', 'createMany', 'updateMany'];
+      const watchedActions = [
+        'create',
+        'update',
+        'delete',
+        'createMany',
+        'updateMany',
+      ];
 
       if (
         watchedModels.includes(params.model?.toLowerCase() || '') &&
@@ -85,7 +94,7 @@ export class AutoReindexService implements OnModuleInit {
   async handleReindexEvent(event: ReindexEvent) {
     try {
       this.logger.log(
-        `📚 Auto-reindexing ${event.model} (${event.action}) - ID: ${event.id}`
+        `📚 Auto-reindexing ${event.model} (${event.action}) - ID: ${event.id}`,
       );
 
       switch (event.model) {
@@ -107,7 +116,7 @@ export class AutoReindexService implements OnModuleInit {
     } catch (error) {
       this.logger.error(
         `❌ Failed to auto-reindex ${event.model} ${event.id}:`,
-        error
+        error,
       );
     }
   }
@@ -337,7 +346,10 @@ Ví dụ: ${examples}
         this.logger.log(`✅ Created knowledge document: ${doc.source}`);
       }
     } catch (error) {
-      this.logger.error(`❌ Failed to upsert knowledge document ${doc.source}:`, error);
+      this.logger.error(
+        `❌ Failed to upsert knowledge document ${doc.source}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -351,10 +363,15 @@ Ví dụ: ${examples}
       if (deleted.count > 0) {
         this.logger.log(`✅ Removed knowledge document: ${source}`);
       } else {
-        this.logger.warn(`Knowledge document not found for deletion: ${source}`);
+        this.logger.warn(
+          `Knowledge document not found for deletion: ${source}`,
+        );
       }
     } catch (error) {
-      this.logger.error(`❌ Failed to remove knowledge document ${source}:`, error);
+      this.logger.error(
+        `❌ Failed to remove knowledge document ${source}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -362,7 +379,11 @@ Ví dụ: ${examples}
   /**
    * Manual trigger for reindexing specific entity
    */
-  async manualReindex(model: string, id: string, action: 'create' | 'update' | 'delete' = 'update') {
+  async manualReindex(
+    model: string,
+    id: string,
+    action: 'create' | 'update' | 'delete' = 'update',
+  ) {
     this.eventEmitter.emit('knowledge.reindex', {
       model: model.toLowerCase(),
       action,

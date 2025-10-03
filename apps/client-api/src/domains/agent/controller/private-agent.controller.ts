@@ -1,9 +1,11 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PayloadToken } from '@app/shared';
+import { JwtPayload } from '@app/shared/payload';
 import {
-    AgentChatDto,
-    AgentChatResponseDto,
-    AgentRecommendationDto,
+  AgentChatDto,
+  AgentChatResponseDto,
+  AgentRecommendationDto,
 } from '../dto/agent.dto';
 import { AgentService } from '../service/agent.service';
 import { AutoReindexService } from '../service/auto-reindex.service';
@@ -25,8 +27,11 @@ export class PrivateAgentController {
     description: 'AI response',
     type: AgentChatResponseDto,
   })
-  async chat(@Body() chatDto: AgentChatDto): Promise<AgentChatResponseDto> {
-    return this.agentService.chatWithAI(chatDto);
+  async chat(
+    @Body() chatDto: AgentChatDto,
+    @PayloadToken() payload: JwtPayload,
+  ): Promise<AgentChatResponseDto> {
+    return this.agentService.chatWithAI(chatDto, payload.sub);
   }
 
   @Get('recommendations')
@@ -122,7 +127,8 @@ export class PrivateAgentController {
   @Get('knowledge/auto-reindex/status')
   @ApiOperation({
     summary: 'Get auto-reindex status and statistics',
-    description: 'Check if auto-reindex is enabled and get statistics about knowledge base'
+    description:
+      'Check if auto-reindex is enabled and get statistics about knowledge base',
   })
   @ApiResponse({
     status: 200,
@@ -140,7 +146,8 @@ export class PrivateAgentController {
   @Post('knowledge/auto-reindex/trigger')
   @ApiOperation({
     summary: 'Manually trigger auto-reindex for specific entity',
-    description: 'Manually trigger reindexing for a specific course, lesson, activity, or vocabulary'
+    description:
+      'Manually trigger reindexing for a specific course, lesson, activity, or vocabulary',
   })
   @ApiResponse({
     status: 200,
@@ -155,8 +162,14 @@ export class PrivateAgentController {
       throw new Error('Model and ID are required');
     }
 
-    if (!['course', 'lesson', 'activity', 'vocabulary'].includes(model.toLowerCase())) {
-      throw new Error('Invalid model. Must be one of: course, lesson, activity, vocabulary');
+    if (
+      !['course', 'lesson', 'activity', 'vocabulary'].includes(
+        model.toLowerCase(),
+      )
+    ) {
+      throw new Error(
+        'Invalid model. Must be one of: course, lesson, activity, vocabulary',
+      );
     }
 
     await this.autoReindexService.manualReindex(model, id, action);
@@ -170,4 +183,3 @@ export class PrivateAgentController {
     };
   }
 }
-

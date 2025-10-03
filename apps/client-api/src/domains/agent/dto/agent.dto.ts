@@ -6,6 +6,11 @@ export class AgentChatDto {
   @IsString()
   message: string;
 
+  @ApiProperty({ description: 'Conversation ID to continue', required: false })
+  @IsOptional()
+  @IsString()
+  conversationId?: string;
+
   @ApiProperty({ description: 'Conversation context', required: false })
   @IsOptional()
   @IsString()
@@ -24,6 +29,9 @@ export class AgentChatDto {
 export class AgentChatResponseDto {
   @ApiProperty({ description: 'AI response message' })
   response: string;
+
+  @ApiProperty({ description: 'Conversation ID', required: false })
+  conversationId?: string;
 
   @ApiProperty({ description: 'Confidence score (0-1)' })
   confidence: number;
