@@ -1,0 +1,229 @@
+services:
+  client-api:
+    image: ${DOCKER_USERNAME}/english-learning-client-api:${IMAGE_TAG:-latest}
+    container_name: english-learning-api
+    restart: unless-stopped
+    ports:
+      - "${CLIENT_API_PORT:-3334}:3334"
+    environment:
+      - APP_NAME=client-api
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - ACCESS_TOKEN_EXPIRES_IN=${ACCESS_TOKEN_EXPIRES_IN:-15m}
+      - REFRESH_TOKEN_EXPIRES_IN=${REFRESH_TOKEN_EXPIRES_IN:-7d}
+      - KAFKA_BROKERS=${KAFKA_BROKERS}
+      - S3_REGION=${S3_REGION:-us-east-1}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - CLIENT_API_PORT=${CLIENT_API_PORT:-3334}
+      - API_BASE_URL=${API_BASE_URL}
+      - GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID}
+      - GOOGLE_CLOUD_KEY_FILE=${GOOGLE_CLOUD_KEY_FILE}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - AI_SPEAKING_TTS_USE_HTTP=${AI_SPEAKING_TTS_USE_HTTP:-true}
+      - AI_SPEAKING_TTS_HTTP_URL=${AI_SPEAKING_TTS_HTTP_URL}
+      - AI_SPEAKING_TTS_VOICE=${AI_SPEAKING_TTS_VOICE:-en_US-lessac-medium}
+      - AI_SPEAKING_ASR_WS_URL=${AI_SPEAKING_ASR_WS_URL}
+      - AI_SPEAKING_ASR_AUDIO_FORMAT=${AI_SPEAKING_ASR_AUDIO_FORMAT:-pcm16}
+      - AI_SPEAKING_ASR_SAMPLE_RATE=${AI_SPEAKING_ASR_SAMPLE_RATE:-16000}
+      - AI_SPEAKING_HEALTH_SKIP=${AI_SPEAKING_HEALTH_SKIP:-false}
+      - AI_SPEAKING_HEALTH_TIMEOUT_MS=${AI_SPEAKING_HEALTH_TIMEOUT_MS:-3000}
+    depends_on:
+      - postgres
+      - redis
+      - redpanda
+      - minio
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3334/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  background-worker:
+    image: ${DOCKER_USERNAME}/english-learning-background-worker:${IMAGE_TAG:-latest}
+    container_name: english-learning-worker
+    restart: unless-stopped
+    environment:
+      - APP_NAME=background-worker
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - KAFKA_BROKERS=${KAFKA_BROKERS}
+      - S3_REGION=${S3_REGION:-us-east-1}
+      - S3_ENDPOINT=${S3_ENDPOINT}
+      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      - postgres
+      - redis
+      - redpanda
+    networks:
+      - app-network
+
+  notification:
+    image: ${DOCKER_USERNAME}/english-learning-notification:${IMAGE_TAG:-latest}
+    container_name: english-learning-notification
+    restart: unless-stopped
+    environment:
+      - APP_NAME=notification
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - KAFKA_BROKERS=${KAFKA_BROKERS}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - FROM=${FROM}
+    depends_on:
+      - postgres
+      - redpanda
+    networks:
+      - app-network
+
+  postgres:
+    image: pgvector/pgvector:0.8.0-pg17-trixie
+    container_name: english_learning_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-english_learning}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.6
+    container_name: redpanda
+    restart: unless-stopped
+    command:
+      - redpanda
+      - start
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr internal://redpanda:8082,external://localhost:18082
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --rpc-addr redpanda:33145
+      - --advertise-rpc-addr redpanda:33145
+      - --mode dev-container
+      - --smp 1
+      - --default-log-level=info
+    ports:
+      - 19092:19092
+      - 18081:18081
+      - 18082:18082
+      - 19644:9644
+    networks:
+      - app-network
+    healthcheck:
+      test: ['CMD', 'rpk', 'cluster', 'info']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    restart: unless-stopped
+    command: server --console-address ":9001" /data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: minio-init
+    depends_on:
+      - minio
+    environment:
+      MC_HOST_local: http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-minio123}@minio:9000
+    entrypoint: >
+      /bin/sh -c '
+      echo ">> Waiting for MinIO...";
+      until mc ls local >/dev/null 2>&1; do sleep 2; done;
+      echo ">> Creating bucket (idempotent)...";
+      mc mb -p local/${S3_BUCKET_NAME:-english-learning-bucket} || true;
+      echo ">> Set anonymous READ (public-download) on bucket...";
+      mc anonymous set download local/${S3_BUCKET_NAME:-english-learning-bucket} || true;
+      mc policy set public local/${S3_BUCKET_NAME:-english-learning-bucket} || true;
+      echo ">> Done.";
+      '
+    restart: "no"
+    networks:
+      - app-network
+
+  piper-tts:
+    image: rhasspy/wyoming-piper:latest
+    container_name: piper-tts
+    restart: unless-stopped
+    command: --voice en_US-lessac-medium
+    ports:
+      - "${PIPER_PORT:-10200}:10200"
+    volumes:
+      - piper_data:/data
+    networks:
+      - app-network
+
+  vosk-asr:
+    image: alphacep/kaldi-en:latest
+    container_name: vosk-asr
+    restart: unless-stopped
+    ports:
+      - "${VOSK_PORT:-2700}:2700"
+    environment:
+      - MODEL_VERSION=vosk-model-small-en-us-0.15
+    networks:
+      - app-network
+
+volumes:
+  pg_data:
+  redis_data:
+  minio_data:
+  piper_data:
+
+networks:
+  app-network:
+    driver: bridge

@@ -1,0 +1,63 @@
+# Dependencies
+node_modules
+npm-debug.log
+package-lock.json
+
+# Build outputs
+dist
+coverage
+.nyc_output
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+.github
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+temp-uploads
+uploads
+*.log
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+*.md
+!README.md
+docs
+
+# Test files
+test
+*.spec.ts
+*.test.ts
+
+# Scripts
+scripts
+mock-*.js
+test-*.ts
+test-*.js
+
+# Misc
+.prettierrc
+.eslintrc.js
+.puppeteerrc.cjs
+.~sample-courses.xlsx
+webpack-hmr.config.js
