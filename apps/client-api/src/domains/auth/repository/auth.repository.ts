@@ -105,7 +105,7 @@ export class AuthRepository {
 
   async findParentRelation(childId: string) {
     return this.prisma.parentChild.findFirst({
-      where: { 
+      where: {
         childId
       },
       include: {

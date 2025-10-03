@@ -2,13 +2,13 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
 import { Body, Controller, Get, Post, Put } from '@nestjs/common';
 import {
-  ApiBadRequestResponse,
-  ApiBearerAuth,
-  ApiBody,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-  ApiUnauthorizedResponse,
+    ApiBadRequestResponse,
+    ApiBearerAuth,
+    ApiBody,
+    ApiOkResponse,
+    ApiOperation,
+    ApiTags,
+    ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { ChangePasswordDto, UpdateProfileDto } from '../dto';
 import { AuthService } from '../service/auth.service';
