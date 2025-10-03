@@ -28,6 +28,15 @@ export class PrivateAuthController {
     return this.authService.me(tokenPayload.sub);
   }
 
+  @Get('has-parent')
+  @ApiOperation({ summary: 'Check if student has parent' })
+  @ApiOkResponse({ description: 'Parent status checked successfully' })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
+  @ResponseMessage('Parent status checked successfully')
+  async hasParent(@PayloadToken() tokenPayload: JwtPayload) {
+    return this.authService.hasParent(tokenPayload.sub);
+  }
+
   @Post('change-password')
   @ApiOperation({ summary: 'Change password (authenticated user)' })
   @ApiBody({ type: ChangePasswordDto })

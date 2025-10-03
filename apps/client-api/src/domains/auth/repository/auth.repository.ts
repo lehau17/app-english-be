@@ -103,6 +103,25 @@ export class AuthRepository {
     });
   }
 
+  async findParentRelation(childId: string) {
+    return this.prisma.parentChild.findFirst({
+      where: { 
+        childId
+      },
+      include: {
+        parent: {
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
+  }
+
   async findByEmail(email: string) {
     if (!email) return null;
     return this.prisma.user.findUnique({ where: { email } });

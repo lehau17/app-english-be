@@ -1,19 +1,19 @@
-import { UploadService } from '../../upload/upload.service';
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
-  AiSpeakingSessionState,
-  AiSpeakingTurnStatus,
-  Prisma,
+    AiSpeakingSessionState,
+    AiSpeakingTurnStatus,
+    Prisma,
 } from '@prisma/client';
+import { UploadService } from '../../upload/upload.service';
 import { AiSpeakingGateway } from '../gateway/ai-speaking.gateway';
 import { AiSpeakingRepository } from '../repository/ai-speaking.repository';
+import { AiSpeakingTurnManager } from './ai-speaking-turn-manager.service';
 import {
-  RealtimeAsrService,
-  RealtimeAsrSessionHandle,
+    RealtimeAsrService,
+    RealtimeAsrSessionHandle,
 } from './realtime-asr.service';
 import { RealtimeTtsService } from './realtime-tts.service';
-import { AiSpeakingTurnManager } from './ai-speaking-turn-manager.service';
 
 interface StreamAiTurnOptions {
   voiceHint?: string;

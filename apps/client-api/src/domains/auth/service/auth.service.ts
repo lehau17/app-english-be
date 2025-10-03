@@ -279,4 +279,19 @@ export class AuthService {
       ...user,
     };
   }
+
+  /**
+   * Check if student has parent
+   */
+  async hasParent(userId: string) {
+    const parentRelation = await this.authRepository.findParentRelation(userId);
+    return {
+      hasParent: !!parentRelation,
+      parentInfo: parentRelation ? {
+        id: parentRelation.parent.id,
+        displayName: parentRelation.parent.displayName,
+        email: parentRelation.parent.email
+      } : null
+    };
+  }
 }
