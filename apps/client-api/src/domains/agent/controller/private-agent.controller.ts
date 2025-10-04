@@ -1,12 +1,12 @@
-import { Body, Controller, Get, Post, Query, Res, Logger } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PayloadToken } from '@app/shared';
 import { JwtPayload } from '@app/shared/payload';
+import { Body, Controller, Get, Logger, Post, Query, Res } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import {
-  AgentChatDto,
-  AgentChatResponseDto,
-  AgentRecommendationDto,
+    AgentChatDto,
+    AgentChatResponseDto,
+    AgentRecommendationDto,
 } from '../dto/agent.dto';
 import { AgentService } from '../service/agent.service';
 import { AutoReindexService } from '../service/auto-reindex.service';
@@ -74,7 +74,7 @@ export class PrivateAgentController {
         const data = JSON.stringify(chunk);
         this.logger.debug(`📤 Chunk ${chunkCount}: ${data.substring(0, 100)}...`);
         res.write(`data: ${data}\n\n`);
-        
+
         // Flush the response to ensure data is sent immediately
         if ((res as any).flush) {
           (res as any).flush();

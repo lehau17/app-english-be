@@ -187,7 +187,7 @@ Quy tắc:
                 const output = op.value?.output;
                 if (output && typeof output === 'string') {
                   this.logger.debug(`📝 Final output: "${output.substring(0, 100)}..."`);
-                  
+
                   // Manual tokenization: split by words and stream word-by-word
                   const words = output.split(/(\s+)/); // Keep whitespace
                   for (const word of words) {
