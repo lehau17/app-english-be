@@ -5,6 +5,7 @@ import {
     AiSpeakingTurnStatus,
     Prisma,
 } from '@prisma/client';
+import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import { UploadService } from '../../upload/upload.service';
 import { AiSpeakingGateway } from '../gateway/ai-speaking.gateway';
 import { AiSpeakingRepository } from '../repository/ai-speaking.repository';
@@ -28,6 +29,13 @@ interface ActiveAsrSession {
   silenceTimer?: NodeJS.Timeout;
   silenceCount: number;
   totalBytes: number;
+  totalPcmBytes: number;
+  pcmStream?: {
+    process: ChildProcessWithoutNullStreams;
+    stdin: NodeJS.WritableStream;
+    stdout: NodeJS.ReadableStream;
+    closing: boolean;
+  };
 }
 
 @Injectable()
@@ -38,6 +46,9 @@ export class AiSpeakingRealtimeService {
   private readonly silenceTimeoutMs: number;
   private readonly silenceWarningThreshold: number;
   private readonly maxBufferedBytes: number;
+  private readonly minAudioBytes: number;
+  private readonly transcoderCommand: string;
+  private readonly asrSampleRate: number;
 
   constructor(
     @Inject(forwardRef(() => AiSpeakingGateway))
@@ -67,6 +78,16 @@ export class AiSpeakingRealtimeService {
         'AI_SPEAKING_MAX_BUFFER_BYTES',
         `${5 * 1024 * 1024}`,
       ),
+    );
+    this.minAudioBytes = Number(
+      this.configService.get<string>('AI_SPEAKING_MIN_AUDIO_BYTES', '4096'),
+    );
+    this.transcoderCommand = this.configService.get<string>(
+      'AI_SPEAKING_TRANSCODER_COMMAND',
+      'ffmpeg',
+    );
+    this.asrSampleRate = Number(
+      this.configService.get<string>('AI_SPEAKING_ASR_SAMPLE_RATE', '16000'),
     );
   }
 
@@ -175,7 +196,25 @@ export class AiSpeakingRealtimeService {
       });
     }
 
-    holder.handle.sendAudioChunk(buffer);
+    // Initialize PCM transcoder if not yet created
+    if (!holder.pcmStream) {
+      holder.pcmStream = this.createPcmTranscoder(sessionId, turnId, holder);
+    }
+
+    // Write WebM chunk to ffmpeg stdin for PCM conversion
+    if (holder.pcmStream && !holder.pcmStream.closing) {
+      try {
+        holder.pcmStream.stdin.write(buffer);
+        this.logger.debug(
+          `📤 Wrote ${buffer.length} bytes to ffmpeg: session=${sessionId} turn=${turnId}`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `Failed to write to ffmpeg: ${error instanceof Error ? error.message : error}`,
+        );
+      }
+    }
+
     this.refreshSilenceTimer(sessionId, turnId, holder);
   }
 
@@ -196,6 +235,20 @@ export class AiSpeakingRealtimeService {
     }
 
     this.clearSilenceTimer(holder);
+
+    // Close ffmpeg stdin to signal end of input
+    if (holder.pcmStream && !holder.pcmStream.closing) {
+      try {
+        holder.pcmStream.stdin.end();
+        this.logger.debug(
+          `Closed ffmpeg stdin for session=${sessionId} turn=${turnId}`,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Error closing ffmpeg stdin: ${error instanceof Error ? error.message : error}`,
+        );
+      }
+    }
 
     try {
       await holder.handle.finalize();
@@ -288,6 +341,20 @@ export class AiSpeakingRealtimeService {
 
     if (!holder) return;
 
+    // Kill ffmpeg process if exists
+    if (holder.pcmStream && !holder.pcmStream.closing) {
+      try {
+        holder.pcmStream.process.kill('SIGTERM');
+        this.logger.debug(
+          `Killed ffmpeg process for session=${sessionId} turn=${turnId}`,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Error killing ffmpeg: ${error instanceof Error ? error.message : error}`,
+        );
+      }
+    }
+
     holder.handle.close();
     this.clearSilenceTimer(holder);
     this.asrSessions.delete(key);
@@ -315,6 +382,10 @@ export class AiSpeakingRealtimeService {
       turnId,
       callbacks: {
         onPartial: async (text, confidence) => {
+          this.logger.debug(
+            `[ASR Partial] sessionId=${sessionId}, turnId=${turnId}, text="${text}", confidence=${confidence}`,
+          );
+
           await this.repository.updateTurn(turnId, {
             userTranscript: text,
             metrics: {
@@ -367,12 +438,72 @@ export class AiSpeakingRealtimeService {
       hasTransitionedToUserSpeaking: false,
       silenceCount: 0,
       totalBytes: 0,
+      totalPcmBytes: 0,
+      pcmStream: undefined,
     });
 
     const holder = this.asrSessions.get(key);
     if (holder) {
       this.refreshSilenceTimer(sessionId, turnId, holder);
     }
+  }
+
+  private createPcmTranscoder(
+    sessionId: string,
+    turnId: string,
+    holder: ActiveAsrSession,
+  ): ActiveAsrSession['pcmStream'] {
+    const ffmpeg = spawn(this.transcoderCommand, [
+      '-i',
+      'pipe:0', // Read from stdin
+      '-f',
+      's16le', // PCM signed 16-bit little-endian
+      '-ar',
+      this.asrSampleRate.toString(), // Sample rate 16000
+      '-ac',
+      '1', // Mono channel
+      'pipe:1', // Write to stdout
+    ]);
+
+    const pcmStream: ActiveAsrSession['pcmStream'] = {
+      process: ffmpeg,
+      stdin: ffmpeg.stdin,
+      stdout: ffmpeg.stdout,
+      closing: false,
+    };
+
+    // Pipe PCM output from ffmpeg to ASR WebSocket
+    ffmpeg.stdout.on('data', (pcmChunk: Buffer) => {
+      holder.totalPcmBytes += pcmChunk.length;
+      this.logger.debug(
+        `🎵 PCM chunk: ${pcmChunk.length} bytes (total: ${holder.totalPcmBytes})`,
+      );
+      holder.handle.sendAudioChunk(pcmChunk);
+    });
+
+    ffmpeg.stderr.on('data', (data: Buffer) => {
+      const message = data.toString();
+      if (message.includes('error') || message.includes('Error')) {
+        this.logger.warn(`ffmpeg stderr: ${message}`);
+      }
+    });
+
+    ffmpeg.on('error', (error) => {
+      this.logger.error(
+        `ffmpeg process error for session=${sessionId} turn=${turnId}: ${error.message}`,
+      );
+    });
+
+    ffmpeg.on('close', (code) => {
+      this.logger.debug(
+        `ffmpeg closed for session=${sessionId} turn=${turnId} with code ${code}`,
+      );
+      if (pcmStream) {
+        pcmStream.closing = true;
+      }
+    });
+
+    return pcmStream;
   }
 
   private extractExtension(mimeType: string): string {

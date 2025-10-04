@@ -32,7 +32,10 @@ export class AiSpeakingGateway
   ) {}
 
   handleConnection(client: Socket) {
-    const sessionId = (client.handshake.query?.sessionId as string) || null;
+    const sessionId =
+      (client.handshake.auth?.sessionId as string) ||
+      (client.handshake.query?.sessionId as string) ||
+      null;
     if (sessionId) {
       client.join(this.sessionRoom(sessionId));
       this.logger.debug(
@@ -40,7 +43,11 @@ export class AiSpeakingGateway
       );
       this.clientSessions.set(client.id, new Set());
     } else {
-      this.logger.warn(`Client ${client.id} connected without sessionId`);
+      this.logger.warn(
+        `Client ${client.id} connected without sessionId (auth=${JSON.stringify(
+          client.handshake.auth,
+        )}, query=${JSON.stringify(client.handshake.query)})`,
+      );
     }
   }
 

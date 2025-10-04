@@ -14,7 +14,7 @@ export interface RealtimeAsrCallbacks {
 }
 
 export interface RealtimeAsrSessionHandle {
-  sendAudioChunk(buffer: Buffer): void;
+  sendAudioChunk(payload: Buffer | string): void;
   finalize(): Promise<void>;
   close(): void;
 }
@@ -29,7 +29,7 @@ interface EnsureSessionParams {
 class AsrConnection implements RealtimeAsrSessionHandle {
   private readonly logger = new Logger(AsrConnection.name);
   private readonly ws: WebSocket;
-  private readonly pendingQueue: string[] = [];
+  private readonly pendingQueue: Array<string | Buffer> = [];
   private ready = false;
   private closed = false;
   private finalised = false;
@@ -54,17 +54,19 @@ class AsrConnection implements RealtimeAsrSessionHandle {
       .on('error', (error) => this.handleError(error));
   }
 
-  sendAudioChunk(buffer: Buffer): void {
+  sendAudioChunk(payload: Buffer | string): void {
     if (this.closed) {
       return;
     }
 
-    const payload = JSON.stringify({
-      audio: buffer.toString('base64'),
-    });
-
     if (this.ready) {
-      this.ws.send(payload);
+      this.safeSend(payload, (error) => {
+        if (error?.code === 'EPIPE' || error?.code === 'ECONNRESET') {
+          this.logger.warn(
+            `ASR socket closed while sending chunk: ${(error as Error).message}`,
+          );
+        }
+      });
     } else {
       this.pendingQueue.push(payload);
     }
@@ -76,9 +78,9 @@ class AsrConnection implements RealtimeAsrSessionHandle {
     }
 
     if (!this.finalised) {
-      const eofPayload = JSON.stringify({ eof: 1 });
+      const eofPayload = '{"eof" : 1}';
       if (this.ready) {
-        this.ws.send(eofPayload);
+        this.safeSend(eofPayload);
       } else {
         this.pendingQueue.push(eofPayload);
       }
@@ -107,12 +109,12 @@ class AsrConnection implements RealtimeAsrSessionHandle {
         format: this.options.format,
       },
     });
-    this.ws.send(configPayload);
+    this.safeSend(configPayload);
 
     while (this.pendingQueue.length > 0) {
       const next = this.pendingQueue.shift();
       if (next) {
-        this.ws.send(next);
+        this.safeSend(next);
       }
     }
   }
@@ -122,8 +124,10 @@ class AsrConnection implements RealtimeAsrSessionHandle {
 
     try {
       const parsed = JSON.parse(message);
+      this.logger.debug(`[ASR Message] ${JSON.stringify(parsed)}`);
 
       if (parsed.partial) {
+        this.logger.debug(`[ASR Partial Detected] "${parsed.partial}"`);
         await this.callbacks.onPartial(
           parsed.partial,
           parsed?.confidence ?? undefined,
@@ -188,6 +192,41 @@ class AsrConnection implements RealtimeAsrSessionHandle {
     if (!confidences.length) return undefined;
     const sum = confidences.reduce((total, value) => total + value, 0);
     return sum / confidences.length;
+  }
+
+  private safeSend(
+    payload: string | Buffer,
+    onError?: (error: NodeJS.ErrnoException | null) => void,
+  ): void {
+    if (this.closed) {
+      return;
+    }
+
+    try {
+      this.ws.send(payload, (error) => {
+        if (error) {
+          if (error.code === 'EPIPE' || error.code === 'ECONNRESET') {
+            this.logger.warn(
+              `ASR websocket send callback error: ${error.message}`,
+            );
+          } else {
+            this.logger.error(
+              `ASR websocket send callback error: ${error.message}`,
+            );
+          }
+          this.callbacks.onError?.(error);
+          this.close();
+        }
+        onError?.(error ?? null);
+      });
+    } catch (error) {
+      this.logger.error(
+        `ASR websocket send failed: ${(error as Error).message}`,
+      );
+      this.callbacks.onError?.(error as Error);
+      this.close();
+      onError?.(error as NodeJS.ErrnoException);
+    }
   }
 }
 

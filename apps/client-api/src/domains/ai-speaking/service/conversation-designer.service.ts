@@ -35,7 +35,7 @@ export class ConversationDesignerService {
     const hint =
       DIFFICULTY_HINT[options.difficulty] ?? DIFFICULTY_HINT.beginner;
 
-    const prompt = `Xin chào! Chúng ta hãy bắt đầu luyện nói về chủ đề "${topic}". ${hint} Bạn có thể kể cho tôi nghe vài ý đầu tiên không?`;
+    const prompt = `Hello! Let's practice speaking about "${topic}". Could you share some initial thoughts about this topic?`;
 
     return {
       prompt,
