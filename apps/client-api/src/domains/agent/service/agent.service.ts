@@ -186,4 +186,105 @@ export class AgentService {
     }
     return this.agentChatRepository.deleteConversation(conversationId);
   }
+
+  async *streamChatWithAI(
+    chatDto: AgentChatDto,
+    userId: string,
+  ): AsyncGenerator<{
+    type: 'token' | 'tool' | 'complete' | 'error' | 'metadata';
+    content?: string;
+    tool?: string;
+    toolInput?: any;
+    data?: any;
+  }> {
+    try {
+      const startTime = Date.now();
+
+      // Get or create conversation
+      let conversationId = chatDto.conversationId;
+      let chatHistory: Array<{ role: string; content: string }> = [];
+
+      if (conversationId) {
+        const conversation =
+          await this.agentChatRepository.findConversationById(conversationId);
+        if (conversation && conversation.userId === userId) {
+          chatHistory = conversation.messages.slice(-10).map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+          }));
+        } else {
+          conversationId = undefined;
+        }
+      }
+
+      if (!conversationId) {
+        const newConversation =
+          await this.agentChatRepository.createConversation({
+            userId,
+            title: chatDto.message.substring(0, 50),
+          });
+        conversationId = newConversation.id;
+      }
+
+      // Save user message
+      await this.agentChatRepository.createMessage({
+        conversationId,
+        role: 'user',
+        content: chatDto.message,
+      });
+
+      // Send metadata first
+      yield {
+        type: 'metadata',
+        data: { conversationId },
+      };
+
+      // Stream response from LangChain
+      let fullAnswer = '';
+      let toolsUsed: string[] = [];
+      let reasoning = '';
+      let executionSteps: any[] = [];
+
+      for await (const chunk of this.langchainAgent.streamUserQuery(
+        chatDto.message,
+        chatHistory,
+      )) {
+        yield chunk;
+
+        if (chunk.type === 'token' && chunk.content) {
+          fullAnswer += chunk.content;
+        } else if (chunk.type === 'complete' && chunk.data) {
+          fullAnswer = chunk.data.answer;
+          toolsUsed = chunk.data.toolsUsed;
+          reasoning = chunk.data.reasoning;
+          executionSteps = chunk.data.executionSteps;
+        }
+      }
+
+      // Save AI response
+      await this.agentChatRepository.createMessage({
+        conversationId,
+        role: 'assistant',
+        content: fullAnswer,
+        metadata: {
+          toolsUsed,
+          reasoning,
+          processingTime: Date.now() - startTime,
+        },
+      });
+
+      // Update conversation timestamp
+      await this.agentChatRepository.updateConversation(conversationId, {
+        updatedAt: new Date(),
+      });
+    } catch (error) {
+      console.error('❌ Error in streaming chat:', error);
+      yield {
+        type: 'error',
+        content:
+          error.message ||
+          'I apologize, but I encountered an error. Please try again.',
+      };
+    }
+  }
 }

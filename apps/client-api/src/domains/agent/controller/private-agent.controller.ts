@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Res, Logger } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { PayloadToken } from '@app/shared';
 import { JwtPayload } from '@app/shared/payload';
+import { Response } from 'express';
 import {
   AgentChatDto,
   AgentChatResponseDto,
@@ -12,8 +13,10 @@ import { AutoReindexService } from '../service/auto-reindex.service';
 import { RagService } from '../service/rag.service';
 
 @ApiTags('Agent')
-@Controller('agent')
+@Controller('/private/v1/agent')
 export class PrivateAgentController {
+  private readonly logger = new Logger(PrivateAgentController.name);
+
   constructor(
     private readonly agentService: AgentService,
     private readonly ragService: RagService,
@@ -32,6 +35,62 @@ export class PrivateAgentController {
     @PayloadToken() payload: JwtPayload,
   ): Promise<AgentChatResponseDto> {
     return this.agentService.chatWithAI(chatDto, payload.sub);
+  }
+
+  @Get('chat/stream')
+  @ApiOperation({ summary: 'Stream chat with AI Agent using SSE' })
+  @ApiResponse({
+    status: 200,
+    description: 'SSE stream of AI response',
+  })
+  async streamChat(
+    @Query('message') message: string,
+    @Query('conversationId') conversationId: string | undefined,
+    @PayloadToken() payload: JwtPayload,
+    @Res() res: Response,
+  ): Promise<void> {
+    this.logger.log(
+      `🌊 Stream request: message="${message}" conversationId=${conversationId} userId=${payload.sub}`,
+    );
+
+    // Set SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+
+    try {
+      const chatDto: AgentChatDto = {
+        message,
+        conversationId,
+      };
+
+      let chunkCount = 0;
+      for await (const chunk of this.agentService.streamChatWithAI(
+        chatDto,
+        payload.sub,
+      )) {
+        chunkCount++;
+        const data = JSON.stringify(chunk);
+        this.logger.debug(`📤 Chunk ${chunkCount}: ${data.substring(0, 100)}...`);
+        res.write(`data: ${data}\n\n`);
+        
+        // Flush the response to ensure data is sent immediately
+        if ((res as any).flush) {
+          (res as any).flush();
+        }
+      }
+
+      this.logger.log(`✅ Stream completed: ${chunkCount} chunks sent`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } catch (error) {
+      this.logger.error(`❌ Stream error: ${error.message}`, error.stack);
+      res.write(
+        `data: ${JSON.stringify({ type: 'error', content: error.message })}\n\n`,
+      );
+      res.end();
+    }
   }
 
   @Get('recommendations')

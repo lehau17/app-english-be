@@ -33,6 +33,7 @@ export class LangChainAgentService {
         model: 'gemini-2.5-flash',
         apiKey: process.env.GEMINI_API_KEY,
         temperature: 0.1,
+        streaming: true, // Enable streaming
       });
 
       const tools = [
@@ -125,5 +126,132 @@ Quy tắc:
       executionSteps: result.intermediateSteps || [],
       processingTime: Date.now() - start,
     };
+  }
+
+  async *streamUserQuery(
+    question: string,
+    chatHistory: Array<{ role: string; content: string }> = [],
+  ): AsyncGenerator<{
+    type: 'token' | 'tool' | 'complete' | 'error';
+    content?: string;
+    tool?: string;
+    toolInput?: any;
+    data?: any;
+  }> {
+    const start = Date.now();
+
+    try {
+      this.logger.debug(`🌊 Starting stream for: "${question}"`);
+
+      // Convert chat history to LangChain format
+      const formattedHistory = chatHistory.map((msg) => {
+        if (msg.role === 'user') {
+          return ['human', msg.content];
+        } else {
+          return ['assistant', msg.content];
+        }
+      });
+
+      let fullAnswer = '';
+      const toolsUsedSet = new Set<string>();
+      const steps: any[] = [];
+
+      // Use streamLog instead of stream for better token-by-token streaming
+      const stream = await this.agent.streamLog({
+        input: question,
+        chat_history: formattedHistory,
+      });
+
+      for await (const chunk of stream) {
+        this.logger.debug('📦 Stream chunk:', JSON.stringify(chunk).substring(0, 200));
+
+        // Handle LLM token streaming
+        if (chunk.ops) {
+          for (const op of chunk.ops) {
+            // Check for streamed tokens
+            if (op.op === 'add') {
+              const path = op.path || '';
+
+              // LLM streaming tokens (during thinking)
+              if (path.includes('/streamed_output_str/-')) {
+                const token = op.value;
+                if (token && typeof token === 'string') {
+                  this.logger.debug(`💬 Token: "${token}"`);
+                  fullAnswer += token;
+                  yield { type: 'token', content: token };
+                }
+              }
+
+              // Final output (after tool execution) - needs manual tokenization
+              if (path === '/streamed_output/-') {
+                const output = op.value?.output;
+                if (output && typeof output === 'string') {
+                  this.logger.debug(`📝 Final output: "${output.substring(0, 100)}..."`);
+                  
+                  // Manual tokenization: split by words and stream word-by-word
+                  const words = output.split(/(\s+)/); // Keep whitespace
+                  for (const word of words) {
+                    if (word) {
+                      fullAnswer += word;
+                      yield { type: 'token', content: word };
+                      // Small delay for smooth streaming (optional)
+                      await new Promise(resolve => setTimeout(resolve, 10));
+                    }
+                  }
+                }
+              }
+
+              // Tool calls
+              if (path.includes('/actions/-')) {
+                const action = op.value;
+                if (action?.tool) {
+                  this.logger.debug(`🔧 Tool: ${action.tool}`);
+                  toolsUsedSet.add(action.tool);
+                  yield {
+                    type: 'tool',
+                    tool: action.tool,
+                    toolInput: action.toolInput,
+                  };
+                }
+              }
+            }
+          }
+        }
+
+        // Collect final steps
+        if ((chunk as any).state?.intermediateSteps) {
+          steps.push(...(chunk as any).state.intermediateSteps);
+        }
+      }
+
+      this.logger.log(`✅ Streaming complete. Total length: ${fullAnswer.length}`);
+
+      // Send completion event
+      const toolsUsed = Array.from(toolsUsedSet);
+      const reasoning = steps
+        .map((s: any, i: number) => {
+          const tool = s.action?.tool || 'thinking';
+          const input = s.action?.toolInput || s.action?.log || '';
+          return `Bước ${i + 1}: ${tool} - ${JSON.stringify(input)}`;
+        })
+        .join('\n');
+
+      yield {
+        type: 'complete',
+        data: {
+          answer: fullAnswer,
+          reasoning,
+          toolsUsed,
+          executionSteps: steps,
+          processingTime: Date.now() - start,
+        },
+      };
+    } catch (error) {
+      this.logger.error('❌ Streaming error:', error);
+      yield {
+        type: 'error',
+        content: error.message || 'Unknown error occurred',
+      };
+    }
   }
 }
