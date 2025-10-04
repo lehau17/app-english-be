@@ -4,6 +4,7 @@ import { SwaggerService } from '../swagger/swagger.service';
 import { IntelligentController } from './agent.controller';
 import { AgentService as AgentServiceTWi } from './agent.service';
 import { PrivateAgentController } from './controller/private-agent.controller';
+import { AgentChatRepository } from './repository';
 import { AgentService } from './service';
 import { AutoReindexService } from './service/auto-reindex.service';
 import { LangChainAgentService } from './service/langchain-agent.service';
@@ -17,6 +18,7 @@ import { ApiSearchTool } from './tools/api-search.tool';
   providers: [
     AgentService,
     AgentServiceTWi,
+    AgentChatRepository,
     AutoReindexService,
     LangChainAgentService,
     RagService,
@@ -27,6 +29,7 @@ import { ApiSearchTool } from './tools/api-search.tool';
   exports: [
     AgentService,
     AgentServiceTWi,
+    AgentChatRepository,
     AiModule,
     AutoReindexService,
     RagService,

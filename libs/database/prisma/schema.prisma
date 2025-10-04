@@ -591,6 +591,9 @@ model User {
   // Payment transactions
   transactions Transaction[] @relation("StudentTransactions")
 
+  // Agent conversations
+  agentConversations AgentConversation[] @relation("AgentConversations")
+
   @@index([status])
   @@index([provider, providerId])
   @@index([lastActiveAt])
@@ -3022,5 +3025,40 @@ model Transaction {
   @@index([classroomId])
   @@index([status])
   @@index([vnpayTxnRef])
+  @@index([createdAt])
+}
+
+// ===================== AGENT CHAT =====================
+
+model AgentConversation {
+  id     String @id @default(uuid())
+  userId String
+
+  title    String?
+  metadata Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User           @relation("AgentConversations", fields: [userId], references: [id], onDelete: Cascade)
+  messages AgentMessage[]
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model AgentMessage {
+  id             String @id @default(uuid())
+  conversationId String
+  role           String // 'user' or 'assistant'
+  content        String @db.Text
+
+  metadata Json?
+
+  createdAt DateTime @default(now())
+
+  conversation AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
   @@index([createdAt])
 }

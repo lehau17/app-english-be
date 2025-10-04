@@ -48,17 +48,20 @@ export class RagService {
     // Ghi vector vào cột embedding_vector (kiểu pgvector) bằng raw SQL cast
     try {
       // Validate embedding is an array of numbers
-      if (!Array.isArray(embedding) || embedding.some(v => typeof v !== 'number')) {
+      if (
+        !Array.isArray(embedding) ||
+        embedding.some((v) => typeof v !== 'number')
+      ) {
         throw new Error('Invalid embedding format: must be array of numbers');
       }
-      
+
       const vectorText = `[${embedding.join(',')}]`;
       // Use $executeRawUnsafe but with sanitized input (numbers only)
       // This is safe because we validated embedding contains only numbers
       await this.prisma.$executeRawUnsafe(
         `UPDATE knowledge_documents SET embedding_vector = $1::vector WHERE id = $2`,
         vectorText,
-        doc.id
+        doc.id,
       );
     } catch (e) {
       this.logger.warn(
@@ -127,7 +130,7 @@ YÊU CẦU:
       this.logger.warn('Invalid query embedding provided');
       return [];
     }
-    if (queryEmbedding.some(v => typeof v !== 'number' || !isFinite(v))) {
+    if (queryEmbedding.some((v) => typeof v !== 'number' || !isFinite(v))) {
       this.logger.warn('Query embedding contains invalid values');
       return [];
     }
@@ -145,7 +148,7 @@ YÊU CẦU:
          ORDER BY embedding_vector <-> $1::vector
          LIMIT $2`,
         vectorText,
-        topK
+        topK,
       );
 
       // Normalize column names so caller gets { id, title, documentType, content, source }
@@ -295,7 +298,8 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
 
           if (existing) {
             // Update existing document
-            const embedding = await this.geminiService.generateEmbedding(content);
+            const embedding =
+              await this.geminiService.generateEmbedding(content);
             await this.prisma.knowledgeDocument.update({
               where: { id: existing.id },
               data: {
@@ -307,16 +311,21 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
 
             // Update pgvector column
             try {
-              if (Array.isArray(embedding) && embedding.every(v => typeof v === 'number')) {
+              if (
+                Array.isArray(embedding) &&
+                embedding.every((v) => typeof v === 'number')
+              ) {
                 const vectorText = `[${embedding.join(',')}]`;
                 await this.prisma.$executeRawUnsafe(
                   `UPDATE knowledge_documents SET embedding_vector = $1::vector WHERE id = $2`,
                   vectorText,
-                  existing.id
+                  existing.id,
                 );
               }
             } catch (e) {
-              this.logger.warn(`Không thể update embedding_vector cho course ${course.id}`);
+              this.logger.warn(
+                `Không thể update embedding_vector cho course ${course.id}`,
+              );
             }
           } else {
             // Create new document
@@ -330,7 +339,9 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
 
           indexed++;
         } catch (e) {
-          this.logger.error(`❌ Lỗi index course ${course.id}: ${(e as any)?.message}`);
+          this.logger.error(
+            `❌ Lỗi index course ${course.id}: ${(e as any)?.message}`,
+          );
           errors++;
         }
       }
@@ -372,7 +383,8 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
           });
 
           if (existing) {
-            const embedding = await this.geminiService.generateEmbedding(content);
+            const embedding =
+              await this.geminiService.generateEmbedding(content);
             await this.prisma.knowledgeDocument.update({
               where: { id: existing.id },
               data: {
@@ -383,16 +395,21 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
             });
 
             try {
-              if (Array.isArray(embedding) && embedding.every(v => typeof v === 'number')) {
+              if (
+                Array.isArray(embedding) &&
+                embedding.every((v) => typeof v === 'number')
+              ) {
                 const vectorText = `[${embedding.join(',')}]`;
                 await this.prisma.$executeRawUnsafe(
                   `UPDATE knowledge_documents SET embedding_vector = $1::vector WHERE id = $2`,
                   vectorText,
-                  existing.id
+                  existing.id,
                 );
               }
             } catch (e) {
-              this.logger.warn(`Không thể update embedding_vector cho lesson ${lesson.id}`);
+              this.logger.warn(
+                `Không thể update embedding_vector cho lesson ${lesson.id}`,
+              );
             }
           } else {
             await this.addDocument({
@@ -405,7 +422,9 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
 
           indexed++;
         } catch (e) {
-          this.logger.error(`❌ Lỗi index lesson ${lesson.id}: ${(e as any)?.message}`);
+          this.logger.error(
+            `❌ Lỗi index lesson ${lesson.id}: ${(e as any)?.message}`,
+          );
           errors++;
         }
       }
@@ -442,7 +461,8 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
           });
 
           if (existing) {
-            const embedding = await this.geminiService.generateEmbedding(content);
+            const embedding =
+              await this.geminiService.generateEmbedding(content);
             await this.prisma.knowledgeDocument.update({
               where: { id: existing.id },
               data: {
@@ -453,16 +473,21 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
             });
 
             try {
-              if (Array.isArray(embedding) && embedding.every(v => typeof v === 'number')) {
+              if (
+                Array.isArray(embedding) &&
+                embedding.every((v) => typeof v === 'number')
+              ) {
                 const vectorText = `[${embedding.join(',')}]`;
                 await this.prisma.$executeRawUnsafe(
                   `UPDATE knowledge_documents SET embedding_vector = $1::vector WHERE id = $2`,
                   vectorText,
-                  existing.id
+                  existing.id,
                 );
               }
             } catch (e) {
-              this.logger.warn(`Không thể update embedding_vector cho vocab ${vocab.id}`);
+              this.logger.warn(
+                `Không thể update embedding_vector cho vocab ${vocab.id}`,
+              );
             }
           } else {
             await this.addDocument({
@@ -475,7 +500,9 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
 
           indexed++;
         } catch (e) {
-          this.logger.error(`❌ Lỗi index vocab ${vocab.word}: ${(e as any)?.message}`);
+          this.logger.error(
+            `❌ Lỗi index vocab ${vocab.word}: ${(e as any)?.message}`,
+          );
           errors++;
         }
       }
@@ -523,7 +550,8 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
           });
 
           if (existing) {
-            const embedding = await this.geminiService.generateEmbedding(content);
+            const embedding =
+              await this.geminiService.generateEmbedding(content);
             await this.prisma.knowledgeDocument.update({
               where: { id: existing.id },
               data: {
@@ -534,16 +562,21 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
             });
 
             try {
-              if (Array.isArray(embedding) && embedding.every(v => typeof v === 'number')) {
+              if (
+                Array.isArray(embedding) &&
+                embedding.every((v) => typeof v === 'number')
+              ) {
                 const vectorText = `[${embedding.join(',')}]`;
                 await this.prisma.$executeRawUnsafe(
                   `UPDATE knowledge_documents SET embedding_vector = $1::vector WHERE id = $2`,
                   vectorText,
-                  existing.id
+                  existing.id,
                 );
               }
             } catch (e) {
-              this.logger.warn(`Không thể update embedding_vector cho activity ${activity.id}`);
+              this.logger.warn(
+                `Không thể update embedding_vector cho activity ${activity.id}`,
+              );
             }
           } else {
             await this.addDocument({
@@ -556,7 +589,9 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
 
           indexed++;
         } catch (e) {
-          this.logger.error(`❌ Lỗi index activity ${activity.id}: ${(e as any)?.message}`);
+          this.logger.error(
+            `❌ Lỗi index activity ${activity.id}: ${(e as any)?.message}`,
+          );
           errors++;
         }
       }

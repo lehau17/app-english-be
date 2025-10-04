@@ -85,11 +85,24 @@ Quy tắc:
     }
   }
 
-  async processUserQuery(question: string) {
+  async processUserQuery(
+    question: string,
+    chatHistory: Array<{ role: string; content: string }> = [],
+  ) {
     const start = Date.now();
+
+    // Convert chat history to LangChain format
+    const formattedHistory = chatHistory.map((msg) => {
+      if (msg.role === 'user') {
+        return ['human', msg.content];
+      } else {
+        return ['assistant', msg.content];
+      }
+    });
+
     const result = await this.agent.invoke({
       input: question,
-      chat_history: [],
+      chat_history: formattedHistory,
     });
 
     const toolsUsed = (result.intermediateSteps || [])

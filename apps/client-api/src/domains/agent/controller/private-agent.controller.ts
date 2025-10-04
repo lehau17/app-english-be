@@ -1,9 +1,11 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { PayloadToken } from '@app/shared';
+import { JwtPayload } from '@app/shared/payload';
 import {
-    AgentChatDto,
-    AgentChatResponseDto,
-    AgentRecommendationDto,
+  AgentChatDto,
+  AgentChatResponseDto,
+  AgentRecommendationDto,
 } from '../dto/agent.dto';
 import { AgentService } from '../service/agent.service';
 import { AutoReindexService } from '../service/auto-reindex.service';
@@ -25,8 +27,11 @@ export class PrivateAgentController {
     description: 'AI response',
     type: AgentChatResponseDto,
   })
-  async chat(@Body() chatDto: AgentChatDto): Promise<AgentChatResponseDto> {
-    return this.agentService.chatWithAI(chatDto);
+  async chat(
+    @Body() chatDto: AgentChatDto,
+    @PayloadToken() payload: JwtPayload,
+  ): Promise<AgentChatResponseDto> {
+    return this.agentService.chatWithAI(chatDto, payload.sub);
   }
 
   @Get('recommendations')
@@ -38,6 +43,53 @@ export class PrivateAgentController {
   })
   async getRecommendations(): Promise<AgentRecommendationDto[]> {
     return this.agentService.getRecommendations();
+  }
+
+  @Get('conversations')
+  @ApiOperation({ summary: 'Get user conversations with AI agent' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of conversations',
+  })
+  async getConversations(
+    @PayloadToken() payload: JwtPayload,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 20;
+    const parsedOffset = offset ? parseInt(offset, 10) : 0;
+    return this.agentService.getUserConversations(
+      payload.sub,
+      parsedLimit,
+      parsedOffset,
+    );
+  }
+
+  @Get('conversations/:id')
+  @ApiOperation({ summary: 'Get conversation details with messages' })
+  @ApiResponse({
+    status: 200,
+    description: 'Conversation with messages',
+  })
+  async getConversation(
+    @PayloadToken() payload: JwtPayload,
+    @Query('id') conversationId: string,
+  ) {
+    return this.agentService.getConversation(conversationId, payload.sub);
+  }
+
+  @Post('conversations/:id/delete')
+  @ApiOperation({ summary: 'Delete a conversation' })
+  @ApiResponse({
+    status: 200,
+    description: 'Conversation deleted',
+  })
+  async deleteConversation(
+    @PayloadToken() payload: JwtPayload,
+    @Query('id') conversationId: string,
+  ) {
+    await this.agentService.deleteConversation(conversationId, payload.sub);
+    return { success: true, message: 'Conversation deleted successfully' };
   }
 
   @Post('knowledge/reindex')
@@ -122,7 +174,8 @@ export class PrivateAgentController {
   @Get('knowledge/auto-reindex/status')
   @ApiOperation({
     summary: 'Get auto-reindex status and statistics',
-    description: 'Check if auto-reindex is enabled and get statistics about knowledge base'
+    description:
+      'Check if auto-reindex is enabled and get statistics about knowledge base',
   })
   @ApiResponse({
     status: 200,
@@ -140,7 +193,8 @@ export class PrivateAgentController {
   @Post('knowledge/auto-reindex/trigger')
   @ApiOperation({
     summary: 'Manually trigger auto-reindex for specific entity',
-    description: 'Manually trigger reindexing for a specific course, lesson, activity, or vocabulary'
+    description:
+      'Manually trigger reindexing for a specific course, lesson, activity, or vocabulary',
   })
   @ApiResponse({
     status: 200,
@@ -155,8 +209,14 @@ export class PrivateAgentController {
       throw new Error('Model and ID are required');
     }
 
-    if (!['course', 'lesson', 'activity', 'vocabulary'].includes(model.toLowerCase())) {
-      throw new Error('Invalid model. Must be one of: course, lesson, activity, vocabulary');
+    if (
+      !['course', 'lesson', 'activity', 'vocabulary'].includes(
+        model.toLowerCase(),
+      )
+    ) {
+      throw new Error(
+        'Invalid model. Must be one of: course, lesson, activity, vocabulary',
+      );
     }
 
     await this.autoReindexService.manualReindex(model, id, action);
@@ -170,4 +230,3 @@ export class PrivateAgentController {
     };
   }
 }
-
