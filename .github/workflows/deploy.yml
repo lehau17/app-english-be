@@ -1,0 +1,158 @@
+name: Build and Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        app: [client-api, background-worker, notification]
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 🏗️ Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🐳 Build and push ${{ matrix.app }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/english-learning-${{ matrix.app }}:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/english-learning-${{ matrix.app }}:latest
+          build-args: |
+            APP_NAME=${{ matrix.app }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/english-learning-${{ matrix.app }}:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/english-learning-${{ matrix.app }}:buildcache,mode=max
+          platforms: linux/amd64
+
+      - name: ✅ Image built successfully
+        run: |
+          echo "✅ ${{ matrix.app }} image built and pushed successfully"
+          echo "🏷️ Tag: ${{ github.sha }}"
+
+  deploy:
+    name: Deploy to VPS
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🔐 Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: 📦 Prepare deployment files
+        run: |
+          mkdir -p deploy
+          cp docker-compose.prod.yml deploy/
+          cp deploy.sh deploy/
+          cp .env.example deploy/.env.example
+
+      - name: 🚀 Deploy to VPS via SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Create deployment directory on VPS
+          sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no -p $VPS_PORT $VPS_USER@$VPS_HOST << 'ENDSSH'
+            mkdir -p ~/english-learning-backend
+            cd ~/english-learning-backend
+          ENDSSH
+
+          # Copy deployment files to VPS
+          sshpass -p "$VPS_PASSWORD" scp -o StrictHostKeyChecking=no -P $VPS_PORT -r deploy/* $VPS_USER@$VPS_HOST:~/english-learning-backend/
+
+          # Execute deployment on VPS
+          sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no -p $VPS_PORT $VPS_USER@$VPS_HOST << ENDSSH
+            cd ~/english-learning-backend
+            
+            # Export environment variables
+            export DOCKER_USERNAME=$DOCKER_USERNAME
+            export IMAGE_TAG=$IMAGE_TAG
+            
+            # Load .env if exists
+            if [ -f .env ]; then
+              export \$(cat .env | grep -v '^#' | xargs)
+            else
+              echo "⚠️  Warning: .env file not found on VPS"
+              echo "📝 Please create .env file based on .env.example"
+            fi
+            
+            # Make deploy script executable
+            chmod +x deploy.sh
+            
+            # Run deployment
+            ./deploy.sh
+          ENDSSH
+
+      - name: ✅ Deployment completed
+        run: |
+          echo "✅ Deployment to VPS completed successfully!"
+          echo "🔗 VPS: ${{ secrets.VPS_HOST }}"
+          echo "🏷️ Image tag: ${{ github.sha }}"
+
+      - name: 🔍 Health check
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
+          VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+        run: |
+          sleep 15
+          sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no -p $VPS_PORT $VPS_USER@$VPS_HOST << 'ENDSSH'
+            cd ~/english-learning-backend
+            echo "🔍 Checking service status..."
+            docker compose -f docker-compose.prod.yml ps
+          ENDSSH
+
+  notify:
+    name: Send Notification
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: 📢 Deployment Status
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "✅ Deployment successful!"
+          else
+            echo "❌ Deployment failed!"
+            exit 1
+          fi

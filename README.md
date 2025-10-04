@@ -60,16 +60,39 @@ $ npm run test:cov
 
 ## Deployment
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+This project includes a complete CI/CD pipeline for automated deployment to VPS using Docker and GitHub Actions.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Quick Deployment
 
+**Automatic deployment via GitHub Actions:**
+- Push to `main` or `develop` branch triggers automatic build and deployment
+- Images are built and pushed to Docker Hub
+- Deployment script automatically runs on VPS via SSH
+
+**Manual deployment on VPS:**
 ```bash
-$ npm install -g mau
-$ mau deploy
+cd ~/english-learning-backend
+export DOCKER_USERNAME=your-dockerhub-username
+export IMAGE_TAG=latest
+./deploy.sh
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Documentation
+- ⚡ **[Quick Start CI/CD](./QUICK_START_CICD.md)** - 5-minute setup guide
+- 📖 **[Complete Deployment Guide](./DEPLOYMENT.md)** - Full CI/CD setup instructions (English)
+- 🇻🇳 **[Hướng Dẫn Deploy](./DEPLOY_GUIDE_VI.md)** - Vietnamese deployment guide
+- 🐳 **[Docker Compose Production](./docker-compose.prod.yml)** - Production configuration
+- 🚀 **[Deploy Script](./deploy.sh)** - Automated deployment script
+- ⚙️ **[Makefile](./Makefile)** - Helpful commands for building and deploying
+- 🔧 **[Troubleshoot Script](./troubleshoot.sh)** - Diagnostic tool for deployment issues
+
+### Prerequisites
+1. Docker Hub account and repositories
+2. VPS with Docker and Docker Compose installed
+3. GitHub Secrets configured (DOCKER_USERNAME, DOCKER_PASSWORD, VPS_HOST, VPS_USER, VPS_PASSWORD)
+4. `.env` file on VPS with production configuration
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed setup instructions.
 
 ## Resources
 
