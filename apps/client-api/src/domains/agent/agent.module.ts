@@ -1,6 +1,5 @@
 import { AiModule } from '@app/shared';
 import { Module } from '@nestjs/common';
-import { SwaggerService } from '../swagger/swagger.service';
 import { IntelligentController } from './agent.controller';
 import { AgentService as AgentServiceTWi } from './agent.service';
 import { PrivateAgentController } from './controller/private-agent.controller';
@@ -10,7 +9,8 @@ import { AutoReindexService } from './service/auto-reindex.service';
 import { LangChainAgentService } from './service/langchain-agent.service';
 import { RagService } from './service/rag.service';
 import { SqlService } from './service/sql.service';
-import { ApiSearchTool } from './tools/api-search.tool';
+import { ChartGeneratorTool } from './tools/chart-generator.tool';
+import { ExcelExportTool } from './tools/excel-export.tool';
 
 @Module({
   imports: [AiModule],
@@ -23,8 +23,8 @@ import { ApiSearchTool } from './tools/api-search.tool';
     LangChainAgentService,
     RagService,
     SqlService,
-    ApiSearchTool,
-    SwaggerService,
+    ChartGeneratorTool,
+    ExcelExportTool,
   ],
   exports: [
     AgentService,
@@ -34,6 +34,6 @@ import { ApiSearchTool } from './tools/api-search.tool';
     AutoReindexService,
     RagService,
     LangChainAgentService,
-  ], // Export services for other modules
+  ],
 })
 export class AgentModule {}

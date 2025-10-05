@@ -2,9 +2,8 @@ import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { Injectable, Logger } from '@nestjs/common';
 import { AgentExecutor, createToolCallingAgent } from 'langchain/agents';
-import { SwaggerService } from '../../swagger/swagger.service';
-import { ApiSearchTool } from '../tools/api-search.tool';
-import { ApiTool } from '../tools/api.tool';
+import { ChartGeneratorTool } from '../tools/chart-generator.tool';
+import { ExcelExportTool } from '../tools/excel-export.tool';
 import { RagTool } from '../tools/rag.tool';
 import { SqlTool } from '../tools/sql.tool';
 import { RagService } from './rag.service';
@@ -18,8 +17,8 @@ export class LangChainAgentService {
   constructor(
     private ragService: RagService,
     private sqlService: SqlService,
-    private swaggerService: SwaggerService,
-    private apiSearch: ApiSearchTool,
+    private chartGenerator: ChartGeneratorTool,
+    private excelExport: ExcelExportTool,
   ) {
     // không await trong ctor: gọi initialize() ở nơi thích hợp nếu cần
     void this.initializeAgent();
@@ -39,26 +38,50 @@ export class LangChainAgentService {
       const tools = [
         new RagTool(this.ragService),
         new SqlTool(this.sqlService),
-        new ApiTool(this.swaggerService),
-        new ApiSearchTool(this.swaggerService),
+        this.chartGenerator,
+        this.excelExport,
       ];
 
       const prompt = ChatPromptTemplate.fromMessages([
         [
           'system',
           `
-Bạn có 4 công cụ:
-- api_search: TÌM endpoint phù hợp từ Swagger (không cần operationId).
-- call_api: GỌI endpoint bằng method+path. Tự gắn Bearer token từ request.
-- database_query: SELECT-only cho thống kê nếu không có endpoint phù hợp.
-- knowledge_search: Tra cứu knowledge base (quy định/FAQ/khóa học/bài học/từ vựng/hoạt động).
+Bạn là trợ lý AI thông minh với 4 công cụ:
 
-Quy tắc:
-1) Khi người dùng muốn dữ liệu từ hệ thống → GỌI api_search với từ khoá (vi/en), ưu tiên vi để lấy candidates.
-2) Chọn candidate phù hợp nhất rồi GỌI call_api(method+path, query/body/pathParams).
-3) Khi người dùng hỏi về khóa học, bài học, từ vựng, hoạt động → ưu tiên dùng knowledge_search để tìm thông tin chi tiết.
-4) Nếu Swagger không có endpoint phù hợp → fallback database_query hoặc knowledge_search.
-5) Trả lời **Markdown** ngắn gọn, nêu rõ dữ liệu đến từ API nào (method path) hoặc knowledge base.
+1. **knowledge_search**: Tra cứu knowledge base (quy định/FAQ/khóa học/bài học/từ vựng/hoạt động/nội dung học tập)
+2. **database_query**: Truy vấn cơ sở dữ liệu (SELECT only) để lấy thống kê, danh sách học viên, điểm số, v.v.
+3. **chart_generator**: Tạo biểu đồ trực quan từ dữ liệu (bar/line/pie/area/radar)
+4. **excel_export**: Xuất dữ liệu ra file Excel (.xlsx) với styling chuyên nghiệp
+
+**QUY TẮC SỬ DỤNG:**
+
+🔍 **Khi người dùng hỏi về nội dung/kiến thức:**
+   → Dùng knowledge_search để tìm thông tin về khóa học, bài học, từ vựng, hoạt động
+   → Ví dụ: "Khóa học IELTS có gì?", "Bài học về thì hiện tại", "Từ vựng chủ đề du lịch"
+
+📊 **Khi người dùng hỏi về dữ liệu/thống kê:**
+   → Dùng database_query để lấy dữ liệu từ DB
+   → Ví dụ: "10 học viên điểm cao nhất", "Số lượng học viên mới", "Thống kê điểm danh"
+   → Schema quan trọng: Student, Parent, Course, Lesson, Assignment, Classroom, User
+
+📈 **Khi người dùng yêu cầu biểu đồ:**
+   1. Lấy dữ liệu bằng database_query
+   2. GỌI chart_generator với dữ liệu đã có
+   3. **QUAN TRỌNG:** KHÔNG viết lại chart JSON trong response!
+   4. CHỈ NÓI: "Biểu đồ đã được tạo" + giải thích ngắn về dữ liệu
+   → Tool tự động gửi chart config đến frontend
+
+📄 **Khi người dùng yêu cầu xuất Excel:**
+   1. Lấy dữ liệu bằng database_query
+   2. GỌI excel_export với dữ liệu (filename, data array, title, sheetName)
+   3. CHỈ NÓI: "File Excel đã sẵn sàng để tải xuống"
+   → Tool tự động gửi download link đến frontend
+
+**LƯU Ý:**
+- Luôn dùng database_query để lấy dữ liệu thực từ DB, KHÔNG bịa số liệu
+- Trả lời ngắn gọn bằng Markdown
+- Khi query DB, sử dụng tên bảng và cột chính xác từ schema
+- Giải thích rõ ràng dữ liệu đến từ đâu
 `,
         ],
         ['placeholder', '{chat_history}'],
@@ -132,11 +155,13 @@ Quy tắc:
     question: string,
     chatHistory: Array<{ role: string; content: string }> = [],
   ): AsyncGenerator<{
-    type: 'token' | 'tool' | 'complete' | 'error';
+    type: 'token' | 'tool' | 'complete' | 'error' | 'chart' | 'file';
     content?: string;
     tool?: string;
     toolInput?: any;
     data?: any;
+    chart?: any;
+    file?: any;
   }> {
     const start = Date.now();
 
@@ -154,7 +179,9 @@ Quy tắc:
 
       let fullAnswer = '';
       const toolsUsedSet = new Set<string>();
-      const steps: any[] = [];
+      let steps: any[] = [];
+      let finalIntermediateSteps: any[] = [];
+      let hasStreamedTokens = false; // Track if we got real-time tokens
 
       // Use streamLog instead of stream for better token-by-token streaming
       const stream = await this.agent.streamLog({
@@ -178,25 +205,49 @@ Quy tắc:
                 if (token && typeof token === 'string') {
                   this.logger.debug(`💬 Token: "${token}"`);
                   fullAnswer += token;
+                  hasStreamedTokens = true; // Mark that we got streaming tokens
                   yield { type: 'token', content: token };
                 }
               }
 
-              // Final output (after tool execution) - needs manual tokenization
+              // Final output (after tool execution) - only tokenize if we didn't stream
               if (path === '/streamed_output/-') {
-                const output = op.value?.output;
+                const value = op.value;
+                let output = value?.output;
+
+                // Capture intermediate steps from final output
+                if (value?.intermediateSteps && Array.isArray(value.intermediateSteps)) {
+                  this.logger.log(`🎯 Found ${value.intermediateSteps.length} intermediate steps in final output!`);
+                  finalIntermediateSteps = value.intermediateSteps;
+                }
+
                 if (output && typeof output === 'string') {
                   this.logger.debug(`📝 Final output: "${output.substring(0, 100)}..."`);
+                  this.logger.debug(`📊 Has streamed tokens: ${hasStreamedTokens}`);
 
-                  // Manual tokenization: split by words and stream word-by-word
-                  const words = output.split(/(\s+)/); // Keep whitespace
-                  for (const word of words) {
-                    if (word) {
-                      fullAnswer += word;
-                      yield { type: 'token', content: word };
-                      // Small delay for smooth streaming (optional)
-                      await new Promise(resolve => setTimeout(resolve, 10));
+                  // Only manual tokenize if we DIDN'T get streaming tokens (avoid duplicate)
+                  if (!hasStreamedTokens) {
+                    // Remove chart JSON blocks from text (AI sometimes includes them in response)
+                    output = output.replace(/```json\s*\n?\{[^}]*"type":\s*"chart"[^}]*\}[^`]*```/gs, '');
+                    output = output.replace(/\{[^}]*"type":\s*"chart"[^}]*"chartType":[^}]*\}/gs, '');
+                    output = output.trim();
+
+                    if (output) {
+                      this.logger.log('🔄 Manual tokenization (no streaming tokens received)');
+                      // Manual tokenization: split by words and stream word-by-word
+                      const words = output.split(/(\s+)/); // Keep whitespace
+                      for (const word of words) {
+                        if (word) {
+                          fullAnswer += word;
+                          yield { type: 'token', content: word };
+                          await new Promise(resolve => setTimeout(resolve, 10));
+                        }
+                      }
                     }
+                  } else {
+                    this.logger.log('✅ Skipping manual tokenization (already streamed)');
+                    // Just update fullAnswer to match what was streamed
+                    fullAnswer = output;
                   }
                 }
               }
@@ -214,6 +265,71 @@ Quy tắc:
                   };
                 }
               }
+
+              // Tool results (check for chart_generator and excel_export output)
+              if (path.includes('/logs/') && op.value) {
+                const logValue = op.value;
+                this.logger.debug(`🔍 Log value: ${JSON.stringify(logValue).substring(0, 300)}`);
+
+                // Check if this is chart_generator result
+                if (logValue.name === 'chart_generator' && logValue.type === 'tool_end') {
+                  try {
+                    const chartResult = JSON.parse(logValue.output || '{}');
+                    this.logger.debug(`📊 Parsed chart result: ${JSON.stringify(chartResult).substring(0, 300)}`);
+
+                    if (chartResult.success && chartResult.chart) {
+                      this.logger.log('✅ Chart detected, sending chart chunk');
+                      yield {
+                        type: 'chart',
+                        chart: chartResult.chart,
+                      };
+                    }
+                  } catch (e) {
+                    this.logger.warn('⚠️ Failed to parse chart result:', e);
+                  }
+                }
+
+                // Check if this is excel_export result
+                if (logValue.name === 'excel_export' && logValue.type === 'tool_end') {
+                  try {
+                    const fileResult = JSON.parse(logValue.output || '{}');
+                    this.logger.debug(`📄 Parsed file result: ${JSON.stringify(fileResult).substring(0, 300)}`);
+
+                    if (fileResult.success && fileResult.downloadUrl) {
+                      this.logger.log('✅ Excel file detected, sending file chunk');
+                      yield {
+                        type: 'file',
+                        file: {
+                          filename: fileResult.filename,
+                          downloadUrl: fileResult.downloadUrl,
+                          recordCount: fileResult.recordCount,
+                        },
+                      };
+                    }
+                  } catch (e) {
+                    this.logger.warn('⚠️ Failed to parse file result:', e);
+                  }
+                }
+              }
+
+              // Also check tool results in actions path
+              if (path.includes('/actions/') && op.value?.output) {
+                try {
+                  const toolResult = typeof op.value.output === 'string'
+                    ? JSON.parse(op.value.output)
+                    : op.value.output;
+
+                  if (toolResult.success && toolResult.chart) {
+                    this.logger.log('📊 Chart found in action result!');
+                    yield {
+                      type: 'chart',
+                      chart: toolResult.chart,
+                    };
+                  }
+                } catch (e) {
+                  // Not a chart result, ignore
+                }
+              }
             }
           }
         }
@@ -225,6 +341,79 @@ Quy tắc:
       }
 
       this.logger.log(`✅ Streaming complete. Total length: ${fullAnswer.length}`);
+      this.logger.log(`📝 Full answer content: "${fullAnswer}"`);
+
+      // Use finalIntermediateSteps if steps is empty
+      if (steps.length === 0 && finalIntermediateSteps.length > 0) {
+        this.logger.log(`🔄 Using finalIntermediateSteps: ${finalIntermediateSteps.length} steps`);
+        steps = finalIntermediateSteps;
+      }
+
+      this.logger.log(`🔍 Total steps: ${steps.length}`);
+
+      // Check for chart in intermediate steps (fallback if not detected during streaming)
+      for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
+        this.logger.log(`📋 Step ${i}: tool=${step.action?.tool}, has observation=${!!step.observation}`);
+
+        if (step.action?.tool === 'chart_generator') {
+          this.logger.log(`🎯 Found chart_generator step!`);
+          this.logger.log(`📊 Observation: ${JSON.stringify(step.observation).substring(0, 500)}`);
+
+          if (step.observation) {
+            try {
+              const chartResult = typeof step.observation === 'string'
+                ? JSON.parse(step.observation)
+                : step.observation;
+
+              this.logger.log(`✅ Parsed result:`, JSON.stringify(chartResult).substring(0, 300));
+
+              if (chartResult.success && chartResult.chart) {
+                this.logger.log('� Sending chart chunk NOW!');
+                yield {
+                  type: 'chart',
+                  chart: chartResult.chart,
+                };
+              } else {
+                this.logger.warn('⚠️ Chart result missing success/chart field');
+              }
+            } catch (e) {
+              this.logger.error('❌ Failed to parse chart from step:', e);
+            }
+          }
+        }
+
+        if (step.action?.tool === 'excel_export') {
+          this.logger.log(`🎯 Found excel_export step!`);
+          this.logger.log(`📄 Observation: ${JSON.stringify(step.observation).substring(0, 500)}`);
+
+          if (step.observation) {
+            try {
+              const fileResult = typeof step.observation === 'string'
+                ? JSON.parse(step.observation)
+                : step.observation;
+
+              this.logger.log(`✅ Parsed file result:`, JSON.stringify(fileResult).substring(0, 300));
+
+              if (fileResult.success && fileResult.downloadUrl) {
+                this.logger.log('📄 Sending file chunk NOW!');
+                yield {
+                  type: 'file',
+                  file: {
+                    filename: fileResult.filename,
+                    downloadUrl: fileResult.downloadUrl,
+                    recordCount: fileResult.recordCount,
+                  },
+                };
+              } else {
+                this.logger.warn('⚠️ File result missing success/downloadUrl field');
+              }
+            } catch (e) {
+              this.logger.error('❌ Failed to parse file from step:', e);
+            }
+          }
+        }
+      }
 
       // Send completion event
       const toolsUsed = Array.from(toolsUsedSet);

@@ -3,10 +3,16 @@ import {
   Controller,
   Get,
   Logger,
+  Param,
   Post,
+  Res,
+  StreamableFile,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
+import { Response } from 'express';
+import { createReadStream } from 'fs';
+import { join } from 'path';
 import { AddDocumentDto, QueryDto } from './dto/query.dto';
 import { LangChainAgentService } from './service/langchain-agent.service';
 import { RagService } from './service/rag.service';
@@ -113,5 +119,33 @@ export class IntelligentController {
       },
       timestamp: new Date().toISOString(),
     };
+  }
+
+  @Get('download/:filename')
+  @ApiOperation({
+    summary: 'Download exported Excel file (Public)',
+    description: 'Public endpoint to download Excel files without authentication. Files are temporary and auto-generated.'
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Excel file download',
+  })
+  async downloadFile(
+    @Param('filename') filename: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    this.logger.log(`📥 Public download request: ${filename}`);
+
+    const uploadsDir = join(process.cwd(), 'uploads', 'exports');
+    const filePath = join(uploadsDir, filename);
+
+    // Set response headers
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    });
+
+    const file = createReadStream(filePath);
+    return new StreamableFile(file);
   }
 }

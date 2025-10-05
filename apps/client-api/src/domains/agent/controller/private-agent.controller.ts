@@ -1,18 +1,21 @@
 import { PayloadToken } from '@app/shared';
 import { JwtPayload } from '@app/shared/payload';
-import { Body, Controller, Get, Logger, Post, Query, Res } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Logger, Post, Query, Res, StreamableFile } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
+import { createReadStream } from 'fs';
+import { join } from 'path';
 import {
-    AgentChatDto,
-    AgentChatResponseDto,
-    AgentRecommendationDto,
+  AgentChatDto,
+  AgentChatResponseDto,
+  AgentRecommendationDto,
 } from '../dto/agent.dto';
 import { AgentService } from '../service/agent.service';
 import { AutoReindexService } from '../service/auto-reindex.service';
 import { RagService } from '../service/rag.service';
 
 @ApiTags('Agent')
+@ApiBearerAuth('Authorization')
 @Controller('/private/v1/agent')
 export class PrivateAgentController {
   private readonly logger = new Logger(PrivateAgentController.name);
@@ -50,8 +53,10 @@ export class PrivateAgentController {
     @Res() res: Response,
   ): Promise<void> {
     this.logger.log(
-      `🌊 Stream request: message="${message}" conversationId=${conversationId} userId=${payload.sub}`,
+      `🌊 Stream request: message="${message}" conversationId=${conversationId}`,
     );
+    this.logger.log(`🔐 Payload object:`, JSON.stringify(payload));
+    this.logger.log(`👤 userId=${payload?.sub || 'UNDEFINED'}`);
 
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
@@ -287,5 +292,31 @@ export class PrivateAgentController {
       id,
       action,
     };
+  }
+
+  @Get('download/:filename')
+  @ApiOperation({ summary: 'Download exported Excel file' })
+  @ApiResponse({
+    status: 200,
+    description: 'Excel file download',
+  })
+  async downloadFile(
+    @Query('filename') filename: string,
+    @PayloadToken() payload: JwtPayload,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    this.logger.log(`📥 Download request: ${filename} by user ${payload.sub}`);
+
+    const uploadsDir = join(process.cwd(), 'uploads', 'exports');
+    const filePath = join(uploadsDir, filename);
+
+    // Set response headers
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+    });
+
+    const file = createReadStream(filePath);
+    return new StreamableFile(file);
   }
 }
