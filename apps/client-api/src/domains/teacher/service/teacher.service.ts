@@ -1,21 +1,25 @@
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
+    BadRequestException,
+    Injectable,
+    NotFoundException,
 } from '@nestjs/common';
 import { Gender, User, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { UploadService } from '../../upload/upload.service';
 import {
-  CreateTeacherDto,
-  FilterTeacherRequestDto,
-  UpdateTeacherDto,
+    CreateTeacherDto,
+    FilterTeacherRequestDto,
+    UpdateTeacherDto,
 } from '../dto/teacher.dto';
 import { TeacherRepository } from '../repository/teacher.repository';
 
 @Injectable()
 export class TeacherService {
-  constructor(private readonly teacherRepository: TeacherRepository) {}
+  constructor(
+    private readonly teacherRepository: TeacherRepository,
+    private readonly uploadService: UploadService,
+  ) {}
 
   async create(dto: CreateTeacherDto): Promise<User> {
     const existingTeacher = await this.teacherRepository.findByEmail(dto.email);
@@ -43,6 +47,12 @@ export class TeacherService {
   async update(id: string, dto: UpdateTeacherDto): Promise<User> {
     await this.findById(id);
     return this.teacherRepository.update(id, dto);
+  }
+
+  async uploadAvatar(id: string, file: Express.Multer.File): Promise<User> {
+    await this.findById(id);
+    const avatarUrl = await this.uploadService.uploadFile(file);
+    return this.teacherRepository.update(id, { avatarUrl });
   }
 
   async delete(id: string): Promise<User> {

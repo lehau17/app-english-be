@@ -4,9 +4,8 @@ import {
   Controller,
   Get,
   Param,
-  ParseUUIDPipe,
   Post,
-  Query,
+  Query
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FinalizeAiSpeakingSessionDto } from '../dto/finalize-session.dto';
@@ -43,7 +42,7 @@ export class AiSpeakingController {
   @ResponseMessage('Chi tiết conversation')
   async getConversation(
     @PayloadToken() payload: JwtPayload,
-    @Param('conversationId', ParseUUIDPipe) conversationId: string,
+    @Param('conversationId') conversationId: string,
   ) {
     return this.aiSpeakingService.getConversation(payload.sub, conversationId);
   }
@@ -82,7 +81,7 @@ export class AiSpeakingController {
   @ResponseMessage('Thông tin phiên luyện nói')
   async getSession(
     @PayloadToken() payload: JwtPayload,
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
   ): Promise<AiSpeakingSessionResponseDto | null> {
     return this.aiSpeakingService.getSession(payload.sub, id);
   }
@@ -92,7 +91,7 @@ export class AiSpeakingController {
   @ResponseMessage('Đã kết thúc phiên luyện nói')
   async finalizeSession(
     @PayloadToken() payload: JwtPayload,
-    @Param('id', ParseUUIDPipe) id: string,
+    @Param('id') id: string,
     @Body() dto: FinalizeAiSpeakingSessionDto,
   ): Promise<AiSpeakingSessionResponseDto | null> {
     return this.aiSpeakingService.finalizeSession(payload.sub, id, dto);

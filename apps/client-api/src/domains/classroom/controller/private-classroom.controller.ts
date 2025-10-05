@@ -145,11 +145,34 @@ export class PrivateClassroomController {
     @Param('teacherId', new ParseUUIDPipe()) teacherId: string,
     @Query('weekStart') weekStart?: string,
     @Query('weekEnd') weekEnd?: string,
+    @Query('timezone') timezone?: string,
+    @Query('days') days?: number,
   ) {
     return this.classroomService.getTeacherSchedule(
       teacherId,
       weekStart,
       weekEnd,
+      timezone as any,
+      days,
+    );
+  }
+
+  @Get('parents/:parentId/children-schedule/weekly')
+  @ApiOperation({ summary: 'Get parent children weekly schedule' })
+  @ResponseMessage('Parent children weekly schedule fetched successfully')
+  getParentChildrenWeeklySchedule(
+    @Param('parentId', new ParseUUIDPipe()) parentId: string,
+    @Query('weekStart') weekStart?: string,
+    @Query('weekEnd') weekEnd?: string,
+    @Query('timezone') timezone: string = 'Asia_Ho_Chi_Minh',
+    @Query('days') days: number = 7,
+  ) {
+    return this.classroomService.getParentChildrenWeeklySchedule(
+      parentId,
+      weekStart,
+      weekEnd,
+      timezone,
+      days,
     );
   }
 

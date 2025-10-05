@@ -58,6 +58,11 @@ export class UpdateTeacherDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @ApiPropertyOptional({ description: 'Avatar URL', example: 'https://example.com/avatar.jpg' })
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string;
 }
 
 export class FilterTeacherRequestDto extends RequestPagingDto {

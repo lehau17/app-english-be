@@ -1,21 +1,25 @@
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
+    BadRequestException,
+    Injectable,
+    NotFoundException,
 } from '@nestjs/common';
 import { User } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { UploadService } from '../../upload/upload.service';
 import {
-  CreateStudentDto,
-  FilterStudentRequestDto,
-  UpdateStudentDto,
+    CreateStudentDto,
+    FilterStudentRequestDto,
+    UpdateStudentDto,
 } from '../dto/student.dto';
 import { StudentRepository } from '../repository';
 
 @Injectable()
 export class StudentService {
-  constructor(private readonly studentRepository: StudentRepository) {}
+  constructor(
+    private readonly studentRepository: StudentRepository,
+    private readonly uploadService: UploadService,
+  ) {}
 
   /**
    * Creates a new student record in the database.
@@ -67,6 +71,16 @@ export class StudentService {
 
   async list(params: FilterStudentRequestDto): Promise<PageResponseDto<User>> {
     return this.studentRepository.list(params);
+  }
+
+  async uploadAvatar(id: string, file: Express.Multer.File): Promise<User> {
+    await this.ensureExists(id);
+
+    // Upload to S3/MinIO
+    const avatarUrl = await this.uploadService.uploadFile(file);
+
+    // Update student with new avatar URL
+    return this.studentRepository.update(id, { avatarUrl });
   }
 
   private async ensureExists(id: string): Promise<void> {

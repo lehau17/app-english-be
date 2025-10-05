@@ -2,22 +2,26 @@
 import { ResponseMessage } from '@app/shared'; // decorator message bạn đã tạo
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Post,
-  Put,
-  Query,
+    BadRequestException,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    ParseUUIDPipe,
+    Patch,
+    Post,
+    Query,
+    UploadedFile,
+    UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { User } from '@prisma/client';
 import {
-  CreateStudentDto,
-  FilterStudentRequestDto,
-  UpdateStudentDto,
+    CreateStudentDto,
+    FilterStudentRequestDto,
+    UpdateStudentDto,
 } from '../dto/student.dto';
 import { StudentService } from '../service/student.service';
 
@@ -25,13 +29,41 @@ import { StudentService } from '../service/student.service';
 @ApiBearerAuth('Authorization')
 @Controller('/private/v1/students')
 export class StudentController {
-  constructor(private readonly studentService: StudentService) {}
+  constructor(
+    private readonly studentService: StudentService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a student' })
   @ResponseMessage('Student created successfully')
   create(@Body() dto: CreateStudentDto) {
     return this.studentService.create(dto);
+  }
+
+  @Post(':id/avatar')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload student avatar' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ResponseMessage('Avatar uploaded successfully')
+  async uploadAvatar(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+    return this.studentService.uploadAvatar(id, file);
   }
 
   @Get(':id')
@@ -41,7 +73,7 @@ export class StudentController {
     return this.studentService.findById(id);
   }
 
-  @Put(':id')
+  @Patch(':id')
   @ApiOperation({ summary: 'Update student by id' })
   @ResponseMessage('Student updated successfully')
   update(

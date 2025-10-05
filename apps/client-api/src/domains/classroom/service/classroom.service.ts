@@ -468,83 +468,186 @@ export class ClassroomService {
     teacherId: string,
     weekStart?: string,
     weekEnd?: string,
+    timezone: TimezoneCode = TimezoneCode.Asia_Ho_Chi_Minh,
+    days: number = 7,
   ) {
-    const startDate = weekStart ? new Date(weekStart) : new Date();
-    const endDate = weekEnd
-      ? new Date(weekEnd)
-      : new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-    const scheduleData = await this.classroomRepository.getTeacherSchedule(
-      teacherId,
-      startDate,
-      endDate,
-    );
-
-    // Process and format the schedule data
-    const schedule: { [dayOfWeek: string]: any[] } = {
-      mon: [],
-      tue: [],
-      wed: [],
-      thu: [],
-      fri: [],
-      sat: [],
-      sun: [],
+    // Use same format as student schedule for consistency
+    const query: StudentWeeklyScheduleQueryDto = {
+      weekStart,
+      timezone,
+      days,
     };
 
-    // Add classroom slots (recurring weekly schedule)
-    scheduleData.classroomSlots.forEach((slot) => {
-      const classroom = slot.classroom;
-      const now = new Date();
+    return this.buildTeacherWeeklySchedule(teacherId, query);
+  }
 
-      // Check if classroom is currently active
-      const isActive =
-        classroom.periodStart <= now && classroom.periodEnd >= now;
+  private async buildTeacherWeeklySchedule(
+    teacherId: string,
+    query: StudentWeeklyScheduleQueryDto,
+  ) {
+    const timezone = query.timezone ?? TimezoneCode.Asia_Ho_Chi_Minh;
+    const referenceDate = query.weekStart
+      ? new Date(query.weekStart)
+      : new Date();
+    const days = query.days ?? 7;
 
-      if (isActive) {
-        schedule[slot.dayOfWeek].push({
-          type: 'classroom_slot',
-          dayOfWeek: slot.dayOfWeek,
-          startMinuteOfDay: slot.startMinuteOfDay,
-          endMinuteOfDay: slot.endMinuteOfDay,
-          classroomId: classroom.id,
-          classroomName: classroom.name,
-          status: 'occupied',
-        });
+    const { startUtc, endUtc, weekStartLabel, weekEndLabel, dayLabels } =
+      this.resolveWeekRange(referenceDate, timezone, days);
+
+    // Get all sessions for this teacher in the date range
+    const sessions = await this.prisma.classroomSession.findMany({
+      where: {
+        instructorId: teacherId,
+        startTime: {
+          gte: startUtc,
+          lt: endUtc,
+        },
+      },
+      include: {
+        classroom: {
+          select: {
+            id: true,
+            name: true,
+            course: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+              },
+            },
+          },
+        },
+        instructor: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: {
+        startTime: 'asc',
+      },
+    });
+
+    const now = new Date();
+
+    const formattedSessions = sessions.map((session) => {
+      const state = this.computeSessionState(
+        session.startTime,
+        session.endTime,
+        now,
+        session.status,
+      );
+
+      const instructor = session.instructor
+        ? {
+            id: session.instructor.id,
+            displayName:
+              session.instructor.displayName ||
+              [session.instructor.firstName, session.instructor.lastName]
+                .filter(Boolean)
+                .join(' ')
+                .trim(),
+            avatarUrl: session.instructor.avatarUrl,
+          }
+        : null;
+
+      const courseInfo = session.classroom.course
+        ? {
+            id: session.classroom.course.id,
+            title: session.classroom.course.title,
+            description: session.classroom.course.description,
+          }
+        : null;
+
+      // Parse metadata for session schedule info and activities
+      let sessionScheduleInfo = null;
+      let activities = [];
+
+      if (session.metadata && typeof session.metadata === 'object') {
+        const metadata = session.metadata as any;
+        if (metadata.courseSessionScheduleId) {
+          sessionScheduleInfo = {
+            courseSessionScheduleId: metadata.courseSessionScheduleId,
+            sessionNumber: metadata.sessionNumber,
+          };
+        }
+        if (metadata.activities && Array.isArray(metadata.activities)) {
+          activities = metadata.activities.map((activity: any) => ({
+            activityId: activity.activityId,
+            orderNo: activity.orderNo,
+            activity: {
+              id: activity.activity?.id,
+              title: activity.activity?.title,
+              type: activity.activity?.type,
+            },
+          }));
+        }
+      }
+
+      return {
+        sessionId: session.id,
+        classroomId: session.classroom.id,
+        classroomName: session.classroom.name,
+        title: session.title || session.classroom.name,
+        description: session.description,
+        status: session.status,
+        type: session.type,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        timezone: session.timezone,
+        durationHours: session.durationHours,
+        meetingUrl: session.meetingUrl,
+        agenda: session.agenda,
+        materials: session.materials,
+        instructor,
+        state: state.state,
+        stateLabel: state.label,
+        startsInMinutes: state.startsInMinutes,
+        endsInMinutes: state.endsInMinutes,
+        course: courseInfo,
+        sessionSchedule: sessionScheduleInfo,
+        activities: activities,
+      };
+    });
+
+    const summaryByState: Record<string, number> = {};
+    formattedSessions.forEach((session) => {
+      summaryByState[session.state] = (summaryByState[session.state] ?? 0) + 1;
+    });
+
+    const dayMap = new Map<string, any[]>();
+    dayLabels.forEach((day) => {
+      dayMap.set(day.key, []);
+    });
+
+    formattedSessions.forEach((session) => {
+      const key = this.getDayKey(session.startTime, timezone);
+      if (dayMap.has(key)) {
+        dayMap.get(key)!.push(session);
       }
     });
 
-    // Add actual sessions
-    scheduleData.sessions.forEach((session) => {
-      const dayOfWeek = this.getDayOfWeek(session.startTime);
-      const startMinute =
-        session.startTime.getHours() * 60 + session.startTime.getMinutes();
-      const endMinute =
-        session.endTime.getHours() * 60 + session.endTime.getMinutes();
-
-      schedule[dayOfWeek].push({
-        type: 'session',
-        dayOfWeek,
-        startMinuteOfDay: startMinute,
-        endMinuteOfDay: endMinute,
-        classroomId: session.classroom.id,
-        classroomName: session.classroom.name,
-        status: 'occupied',
-        sessionId: session.id,
-        sessionTitle: session.title,
-        sessionStatus: session.status,
-      });
-    });
-
-    // Sort each day's schedule by start time
-    Object.keys(schedule).forEach((day) => {
-      schedule[day].sort((a, b) => a.startMinuteOfDay - b.startMinuteOfDay);
-    });
+    const daysArray = dayLabels.map((day) => ({
+      date: day.date,
+      dayOfWeek: day.key,
+      label: day.label,
+      sessions: dayMap.get(day.key) || [],
+    }));
 
     return {
-      teacherId: scheduleData.teacherId,
-      weekStart: scheduleData.weekStart,
-      weekEnd: scheduleData.weekEnd,
-      schedule,
+      teacherId,
+      timezone,
+      weekStart: weekStartLabel,
+      weekEnd: weekEndLabel,
+      days: daysArray,
+      summary: {
+        totalSessions: formattedSessions.length,
+        byState: summaryByState,
+      },
     };
   }
 
@@ -1120,6 +1223,132 @@ export class ClassroomService {
       weekStartLabel,
       weekEndLabel,
       dayLabels,
+    };
+  }
+
+  async getParentChildrenWeeklySchedule(
+    parentId: string,
+    weekStart?: string,
+    weekEnd?: string,
+    timezone: string = 'Asia_Ho_Chi_Minh',
+    days: number = 7,
+  ) {
+    // Get all children of this parent via ParentChild relationship
+    const parentChildRelations = await this.prisma.parentChild.findMany({
+      where: { parentId },
+      include: {
+        child: {
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    if (!parentChildRelations || parentChildRelations.length === 0) {
+      return {
+        parentId,
+        children: [],
+        timezone,
+        weekStart: weekStart || new Date().toISOString(),
+        weekEnd: weekEnd || new Date().toISOString(),
+        combinedSchedule: {
+          days: [],
+          summary: {
+            totalSessions: 0,
+            byState: {},
+          },
+        },
+      };
+    }
+
+    // Build query for weekly schedule
+    const query: StudentWeeklyScheduleQueryDto = {
+      weekStart,
+      timezone: timezone as TimezoneCode,
+      days,
+    };
+
+    // Get schedule for each child
+    const childrenSchedules = await Promise.all(
+      parentChildRelations.map(async (relation) => {
+        const child = relation.child;
+        const schedule = await this.buildStudentWeeklySchedule(child.id, query);
+        return {
+          childId: child.id,
+          childName: child.displayName || `${child.firstName} ${child.lastName}`.trim(),
+          childEmail: child.email,
+          schedule,
+        };
+      }),
+    );
+
+    // Combine all sessions from all children
+    const allDays = childrenSchedules[0]?.schedule.days || [];
+    const combinedDays = allDays.map((day, dayIndex) => {
+      const allSessionsForDay = childrenSchedules.flatMap((childSchedule) => {
+        const childDay = childSchedule.schedule.days[dayIndex];
+        return (childDay?.sessions || []).map((session) => ({
+          ...session,
+          childId: childSchedule.childId,
+          childName: childSchedule.childName,
+        }));
+      });
+
+      // Sort sessions by start time
+      allSessionsForDay.sort(
+        (a, b) =>
+          new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+      );
+
+      return {
+        date: day.date,
+        dayOfWeek: day.dayOfWeek,
+        label: day.label,
+        sessions: allSessionsForDay,
+      };
+    });
+
+    // Calculate combined summary
+    const summaryByState: Record<string, number> = {};
+    const totalSessions = combinedDays.reduce((sum, day) => {
+      day.sessions.forEach((session) => {
+        summaryByState[session.state] =
+          (summaryByState[session.state] ?? 0) + 1;
+      });
+      return sum + day.sessions.length;
+    }, 0);
+
+    return {
+      parentId,
+      children: parentChildRelations.map((relation) => ({
+        id: relation.child.id,
+        displayName: relation.child.displayName,
+        email: relation.child.email,
+        firstName: relation.child.firstName,
+        lastName: relation.child.lastName,
+      })),
+      timezone,
+      weekStart: childrenSchedules[0]?.schedule.weekStart,
+      weekEnd: childrenSchedules[0]?.schedule.weekEnd,
+      combinedSchedule: {
+        days: combinedDays,
+        summary: {
+          totalSessions,
+          byState: summaryByState,
+        },
+      },
+      childrenSchedules: childrenSchedules.map((cs) => ({
+        childId: cs.childId,
+        childName: cs.childName,
+        childEmail: cs.childEmail,
+        totalSessions: cs.schedule.summary.totalSessions,
+        byState: cs.schedule.summary.byState,
+      })),
     };
   }
 

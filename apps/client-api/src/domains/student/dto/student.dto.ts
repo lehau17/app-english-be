@@ -2,13 +2,13 @@ import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Gender, LanguageCode, TimezoneCode } from '@prisma/client';
 import {
-  IsEmail,
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Matches,
-  MinLength,
+    IsEmail,
+    IsEnum,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    Matches,
+    MinLength,
 } from 'class-validator';
 
 export class FilterStudentRequestDto extends RequestPagingDto {
@@ -32,10 +32,10 @@ export class UpdateStudentDto {
   @Matches(/^(0|\+84)\d{9}$/, { message: 'Số điện thoại không hợp lệ' })
   phone?: string;
 
-  @ApiPropertyOptional({ example: 'username123' })
+  @ApiPropertyOptional({ example: 'John Doe' })
   @IsOptional()
   @IsString()
-  username?: string;
+  displayName?: string;
 
   @ApiPropertyOptional({ example: 'secret123' })
   @IsOptional()
@@ -51,6 +51,11 @@ export class UpdateStudentDto {
   @IsOptional()
   @IsString()
   lastName?: string;
+
+  @ApiPropertyOptional({ example: 'https://example.com/avatar.jpg' })
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string;
 
   @ApiPropertyOptional({ enum: Gender, example: Gender.male })
   @IsOptional()

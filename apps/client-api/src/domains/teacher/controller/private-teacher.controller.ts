@@ -1,35 +1,36 @@
 import { ResponseMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Post,
-  Put,
-  Query,
-  UseInterceptors,
-  UploadedFile,
-  Res,
-  BadRequestException,
+    BadRequestException,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    ParseUUIDPipe,
+    Post,
+    Put,
+    Query,
+    Res,
+    UploadedFile,
+    UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-  ApiConsumes,
+    ApiBearerAuth,
+    ApiBody,
+    ApiConsumes,
+    ApiOperation,
+    ApiTags,
 } from '@nestjs/swagger';
 import { User } from '@prisma/client';
+import { Response } from 'express';
 import {
-  CreateTeacherDto,
-  FilterTeacherRequestDto,
-  UpdateTeacherDto,
+    CreateTeacherDto,
+    FilterTeacherRequestDto,
+    UpdateTeacherDto,
 } from '../dto/teacher.dto';
 import { TeacherService } from '../service/teacher.service';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { Response } from 'express';
 
 @ApiTags('Teachers')
 @ApiBearerAuth('Authorization')
@@ -84,6 +85,32 @@ export class PrivateTeacherController {
     @Body() dto: UpdateTeacherDto,
   ) {
     return this.teacherService.update(id, dto);
+  }
+
+  @Post(':id/avatar')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ApiOperation({ summary: 'Upload teacher avatar' })
+  @ResponseMessage('Avatar uploaded successfully')
+  async uploadAvatar(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ): Promise<User> {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+    return this.teacherService.uploadAvatar(id, file);
   }
 
   @Delete(':id')
