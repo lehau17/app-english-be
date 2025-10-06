@@ -1,12 +1,12 @@
+import { PrismaRepository } from '@app/database';
 import { Injectable } from '@nestjs/common';
 import {
-  AgentChatDto,
-  AgentChatResponseDto,
-  AgentRecommendationDto,
+    AgentChatDto,
+    AgentChatResponseDto,
+    AgentRecommendationDto,
 } from '../dto/agent.dto';
 import { AgentChatRepository } from '../repository';
 import { LangChainAgentService } from './langchain-agent.service';
-import { PrismaRepository } from '@app/database';
 
 @Injectable()
 export class AgentService {
@@ -63,7 +63,7 @@ export class AgentService {
 
     // Build full name from firstName + lastName
     const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.displayName || 'Chưa cập nhật';
-    
+
     let info = `- Tên: ${fullName}\n`;
     info += `- Email: ${user.email || 'Chưa có'}\n`;
     info += `- Vai trò: ${user.role}\n`;
