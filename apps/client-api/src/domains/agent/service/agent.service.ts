@@ -1,22 +1,109 @@
 import { Injectable } from '@nestjs/common';
 import {
-    AgentChatDto,
-    AgentChatResponseDto,
-    AgentRecommendationDto,
+  AgentChatDto,
+  AgentChatResponseDto,
+  AgentRecommendationDto,
 } from '../dto/agent.dto';
 import { AgentChatRepository } from '../repository';
 import { LangChainAgentService } from './langchain-agent.service';
+import { PrismaRepository } from '@app/database';
 
 @Injectable()
 export class AgentService {
   constructor(
     private langchainAgent: LangChainAgentService,
     private agentChatRepository: AgentChatRepository,
+    private prisma: PrismaRepository,
   ) {}
+
+  /**
+   * Get user information formatted for AI context
+   */
+  private async getUserInfo(userId: string): Promise<string> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        classroomsStudying: {
+          include: {
+            classroom: {
+              include: {
+                course: true,
+              },
+            },
+          },
+        },
+        classroomsTeaching: {
+          include: {
+            course: true,
+          },
+        },
+        childRelations: {
+          include: {
+            child: {
+              include: {
+                classroomsStudying: {
+                  include: {
+                    classroom: {
+                      include: {
+                        course: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return 'Không tìm thấy thông tin người dùng.';
+    }
+
+    // Build full name from firstName + lastName
+    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.displayName || 'Chưa cập nhật';
+    
+    let info = `- Tên: ${fullName}\n`;
+    info += `- Email: ${user.email || 'Chưa có'}\n`;
+    info += `- Vai trò: ${user.role}\n`;
+
+    // Student info
+    if (user.role === 'student' && user.classroomsStudying.length > 0) {
+      const classrooms = user.classroomsStudying.map(
+        (cs) => `${cs.classroom.name} (${cs.classroom.course.title})`,
+      );
+      info += `- Lớp học hiện tại: ${classrooms.join(', ')}\n`;
+    }
+
+    // Teacher info
+    if (user.role === 'teacher' && user.classroomsTeaching.length > 0) {
+      const classrooms = user.classroomsTeaching.map(
+        (c) => `${c.name} (${c.course.title})`,
+      );
+      info += `- Lớp giảng dạy: ${classrooms.join(', ')}\n`;
+    }
+
+    // Parent info
+    if (user.role === 'parent' && user.childRelations.length > 0) {
+      const children = user.childRelations.map((relation) => {
+        const child = relation.child;
+        const childName = [child.firstName, child.lastName].filter(Boolean).join(' ') || child.displayName || 'Con';
+        const childClasses = child.classroomsStudying.map(
+          (cs) => `${cs.classroom.name}`,
+        );
+        return `${childName} (${childClasses.length > 0 ? childClasses.join(', ') : 'chưa tham gia lớp'})`;
+      });
+      info += `- Con em: ${children.join(', ')}\n`;
+    }
+
+    return info;
+  }
 
   async chatWithAI(
     chatDto: AgentChatDto,
     userId: string,
+    userRole: string = 'student',
   ): Promise<AgentChatResponseDto> {
     try {
       const startTime = Date.now();
@@ -42,10 +129,11 @@ export class AgentService {
       }
 
       if (!conversationId) {
-        // Create new conversation
+        // Create new conversation with role
         const newConversation =
           await this.agentChatRepository.createConversation({
             userId,
+            role: userRole,
             title: chatDto.message.substring(0, 50),
           });
         conversationId = newConversation.id;
@@ -58,21 +146,27 @@ export class AgentService {
         content: chatDto.message,
       });
 
-      // Use LangChain agent for actual AI processing with chat history
+      // Get user info for context
+      const userInfo = await this.getUserInfo(userId);
+
+      // Use LangChain agent for actual AI processing with chat history and role
       const result = await this.langchainAgent.processUserQuery(
         chatDto.message,
         chatHistory,
+        userRole,
+        userInfo,
       );
 
       // Save AI response
+      const aiContent = (result as any).response || (result as any).answer || '';
       await this.agentChatRepository.createMessage({
         conversationId,
         role: 'assistant',
-        content: result.answer,
+        content: aiContent,
         metadata: {
-          toolsUsed: result.toolsUsed,
-          reasoning: result.reasoning,
-          processingTime: result.processingTime,
+          toolsUsed: (result as any).toolsUsed,
+          reasoning: (result as any).reasoning,
+          processingTime: (result as any).processingTime,
         },
       });
 
@@ -84,7 +178,7 @@ export class AgentService {
       const processingTime = Date.now() - startTime;
 
       return {
-        response: result.answer,
+  response: aiContent,
         conversationId,
         confidence: 0.85, // Could be calculated based on result quality
         sources: ['Knowledge Base', 'Database', 'API Documentation'],
@@ -190,15 +284,25 @@ export class AgentService {
   async *streamChatWithAI(
     chatDto: AgentChatDto,
     userId: string,
-  ): AsyncGenerator<{
-    type: 'token' | 'tool' | 'complete' | 'error' | 'metadata';
-    content?: string;
-    tool?: string;
-    toolInput?: any;
-    data?: any;
-  }> {
+    userRole: string = 'student',
+  ): AsyncGenerator<any, void, unknown> {
     try {
       const startTime = Date.now();
+
+      // ✅ Validate userId exists in database
+      if (!userId) {
+        throw new Error('User ID is required');
+      }
+
+      // Verify user exists in database
+      const userExists = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true },
+      });
+
+      if (!userExists) {
+        throw new Error(`User with ID ${userId} does not exist in database`);
+      }
 
       // Get or create conversation
       let conversationId = chatDto.conversationId;
@@ -221,6 +325,7 @@ export class AgentService {
         const newConversation =
           await this.agentChatRepository.createConversation({
             userId,
+            role: userRole,
             title: chatDto.message.substring(0, 50),
           });
         conversationId = newConversation.id;
@@ -239,6 +344,9 @@ export class AgentService {
         data: { conversationId },
       };
 
+      // Get user info for context
+      const userInfo = await this.getUserInfo(userId);
+
       // Stream response from LangChain
       let fullAnswer = '';
       let toolsUsed: string[] = [];
@@ -248,6 +356,8 @@ export class AgentService {
       for await (const chunk of this.langchainAgent.streamUserQuery(
         chatDto.message,
         chatHistory,
+        userRole,
+        userInfo,
       )) {
         yield chunk;
 

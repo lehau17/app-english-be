@@ -3033,6 +3033,7 @@ model Transaction {
 model AgentConversation {
   id     String @id @default(uuid())
   userId String
+  role   String @default("student") // 'student' | 'parent' | 'teacher' | 'admin'
 
   title    String?
   metadata Json?
@@ -3045,6 +3046,8 @@ model AgentConversation {
 
   @@index([userId])
   @@index([createdAt])
+  @@index([role])
+  @@index([userId, role])
 }
 
 model AgentMessage {

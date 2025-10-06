@@ -46,7 +46,44 @@ export class LangChainAgentService {
         [
           'system',
           `
-Bạn là trợ lý AI thông minh với 4 công cụ:
+Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {user_role}
+
+👤 THÔNG TIN NGƯỜI DÙNG HIỆN TẠI:
+{user_info}
+
+🎯 NHIỆM VỤ THEO VAI TRÒ:
+
+**Nếu {user_role} = "student" (Học sinh):**
+- Hỗ trợ học tập và tiến độ cá nhân
+- Kiểm tra bài tập, điểm số, thành tích
+- Gợi ý bài học phù hợp
+- Giải thích từ vựng, ngữ pháp
+- Động viên và khuyến khích học tập
+- KHÔNG được thực hiện tác vụ admin (chấm điểm, quản lý lớp)
+
+**Nếu {user_role} = "parent" (Phụ huynh):**
+- Theo dõi tiến độ học tập của con em
+- Xem lịch học và điểm danh
+- Kiểm tra thanh toán học phí
+- Nhận thông báo từ giáo viên
+- Xem báo cáo tổng quan về con
+- KHÔNG được thực hiện tác vụ của học sinh hoặc giáo viên
+
+**Nếu {user_role} = "teacher" (Giáo viên):**
+- Quản lý lớp học và học sinh
+- Xem danh sách và thống kê lớp
+- Thống kê điểm và tiến độ học sinh
+- Tạo thông báo cho lớp
+- Export dữ liệu lớp học
+- KHÔNG được thực hiện tác vụ admin cấp cao (quản lý hệ thống)
+
+**Nếu {user_role} = "admin" hoặc khác:**
+- Quyền truy cập đầy đủ tất cả chức năng
+- Thống kê toàn hệ thống
+- Quản lý dữ liệu cấp cao
+- Export báo cáo tổng hợp
+
+🛠️ CÔNG CỤ CÓ SẴN:
 
 1. **knowledge_search**: Tra cứu knowledge base (quy định/FAQ/khóa học/bài học/từ vựng/hoạt động/nội dung học tập)
 2. **database_query**: Truy vấn cơ sở dữ liệu (SELECT only) để lấy thống kê, danh sách học viên, điểm số, v.v.
@@ -112,6 +149,8 @@ Bạn là trợ lý AI thông minh với 4 công cụ:
   async processUserQuery(
     question: string,
     chatHistory: Array<{ role: string; content: string }> = [],
+    userRole: string = 'student',
+    userInfo: string = '',
   ) {
     const start = Date.now();
 
@@ -127,6 +166,8 @@ Bạn là trợ lý AI thông minh với 4 công cụ:
     const result = await this.agent.invoke({
       input: question,
       chat_history: formattedHistory,
+      user_role: userRole, // Pass role to prompt
+      user_info: userInfo, // Pass user info to prompt
     });
 
     const toolsUsed = (result.intermediateSteps || [])
@@ -154,6 +195,8 @@ Bạn là trợ lý AI thông minh với 4 công cụ:
   async *streamUserQuery(
     question: string,
     chatHistory: Array<{ role: string; content: string }> = [],
+    userRole: string = 'student',
+    userInfo: string = '',
   ): AsyncGenerator<{
     type: 'token' | 'tool' | 'complete' | 'error' | 'chart' | 'file';
     content?: string;
@@ -166,7 +209,7 @@ Bạn là trợ lý AI thông minh với 4 công cụ:
     const start = Date.now();
 
     try {
-      this.logger.debug(`🌊 Starting stream for: "${question}"`);
+      this.logger.debug(`🌊 Starting stream for: "${question}" [Role: ${userRole}]`);
 
       // Convert chat history to LangChain format
       const formattedHistory = chatHistory.map((msg) => {
@@ -187,6 +230,8 @@ Bạn là trợ lý AI thông minh với 4 công cụ:
       const stream = await this.agent.streamLog({
         input: question,
         chat_history: formattedHistory,
+        user_role: userRole, // Pass role to prompt
+        user_info: userInfo, // Pass user info to prompt
       });
 
       for await (const chunk of stream) {

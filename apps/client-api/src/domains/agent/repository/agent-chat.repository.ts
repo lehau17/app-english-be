@@ -4,6 +4,7 @@ import { AgentConversation, AgentMessage, Prisma } from '@prisma/client';
 
 export interface CreateAgentConversationDto {
   userId: string;
+  role?: string;
   title?: string;
   metadata?: any;
 }
@@ -29,6 +30,7 @@ export class AgentChatRepository {
     return this.prisma.agentConversation.create({
       data: {
         userId: data.userId,
+        role: data.role || 'student',
         title: data.title,
         metadata: data.metadata as Prisma.JsonObject,
       },

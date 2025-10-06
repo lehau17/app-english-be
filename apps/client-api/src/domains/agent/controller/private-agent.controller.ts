@@ -37,7 +37,7 @@ export class PrivateAgentController {
     @Body() chatDto: AgentChatDto,
     @PayloadToken() payload: JwtPayload,
   ): Promise<AgentChatResponseDto> {
-    return this.agentService.chatWithAI(chatDto, payload.sub);
+    return this.agentService.chatWithAI(chatDto, payload.sub, payload.role);
   }
 
   @Get('chat/stream')
@@ -74,6 +74,7 @@ export class PrivateAgentController {
       for await (const chunk of this.agentService.streamChatWithAI(
         chatDto,
         payload.sub,
+        payload.role,
       )) {
         chunkCount++;
         const data = JSON.stringify(chunk);
