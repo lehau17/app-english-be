@@ -1,4 +1,3 @@
-// Mock all dependencies BEFORE importing anything else
 jest.mock('../src/domains/agent/service/langchain-agent.service', () => ({
   LangChainAgentService: jest.fn(),
 }));
@@ -18,7 +17,20 @@ jest.mock('../src/domains/agent/tools/rag.tool', () => ({
   RagTool: jest.fn(),
 }));
 
-// NOW we can import the service
+// Set required environment variables before imports
+process.env.KAFKA_BROKERS = 'localhost:9092';
+
+// Mock the Kafka module to prevent initialization issues
+jest.mock('@app/shared/kafka/kafka.module', () => ({
+  KafkaModule: {
+    register: jest.fn(() => ({
+      module: class MockKafkaModule {},
+      providers: [],
+      exports: [],
+    })),
+  },
+}));
+
 import { AgentService } from '../src/domains/agent/service/agent.service';
 
 describe('AgentService', () => {
