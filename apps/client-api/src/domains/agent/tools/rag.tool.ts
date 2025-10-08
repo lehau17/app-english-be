@@ -6,8 +6,26 @@ import { RagService } from '../service/rag.service';
 @Injectable()
 export class RagTool extends StructuredTool {
   name = 'knowledge_search';
-  description =
-    'Tìm trong knowledge base (quy định/hướng dẫn/khóa học/bài học/từ vựng/hoạt động). Dùng khi cần tra cứu thông tin về courses, lessons, vocabulary, activities, policy/process.';
+  description = `📚 KNOWLEDGE BASE SEARCH TOOL - Semantic + keyword search in documents (NOT for structure/counts).
+
+⚠️ USE THIS TOOL (not graph_query) when user asks about:
+1. CONTENT: "là gì", "what is", "giải thích", "explain"
+2. RULES/POLICIES: "quy định", "quy chế", "điều kiện", "yêu cầu"
+3. DEFINITIONS: "nghĩa của từ", "definition", "meaning"
+4. PROCEDURES: "cách làm", "how to", "hướng dẫn"
+5. EXAMPLES: "ví dụ về", "examples of"
+
+✅ Good examples (USE knowledge_search):
+- "Quy chế tốt nghiệp là gì?" → CONTENT
+- "Giải thích ngữ pháp present simple" → DEFINITION
+- "Cách đăng ký khóa học" → PROCEDURE
+- "Ví dụ về conditional sentences" → EXAMPLES
+
+❌ Bad examples (use graph_query instead):
+- "Khóa học có bao nhiêu bài?" → STRUCTURAL (use graph_query)
+- "Tìm khóa liên quan" → RELATIONSHIP (use graph_query)
+- "Lộ trình học" → PATH (use graph_query)`;
+
 
   schema = z.object({
     query: z.string().describe('Câu hỏi cần tìm trong knowledge base'),

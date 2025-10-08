@@ -1,8 +1,7 @@
 import { PrismaRepository } from '@app/database';
 import { KafkaService } from '@app/shared';
-import { Cron } from '@nestjs/schedule';
 import { Injectable, Logger } from '@nestjs/common';
-import { lastValueFrom } from 'rxjs';
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class ClassroomSessionCron {
@@ -132,14 +131,12 @@ export class ClassroomSessionCron {
 
       for (const userId of recipients) {
         try {
-          await lastValueFrom(
-            this.kafkaService.send('notifications', {
+            this.kafkaService.sendAsync('notifications', {
               userId,
               channel: 'email',
               title,
               body,
-            }),
-          );
+            })
         } catch (error) {
           this.logger.error(
             `Failed to dispatch reminder for session ${session.id} to user ${userId}`,

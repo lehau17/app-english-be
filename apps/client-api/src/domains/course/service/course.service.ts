@@ -1,5 +1,11 @@
 import { PrismaRepository } from '@app/database';
-import { KafkaService, TTSTaskMessage } from '@app/shared';
+import {
+  KafkaService,
+  Neo4jEntityType,
+  Neo4jSyncMessage,
+  Neo4jSyncOperation,
+  TTSTaskMessage,
+} from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
   BadRequestException,
@@ -299,6 +305,13 @@ export class CourseService {
       pendingAudioTasks.length = 0;
     }
 
+    // Emit Neo4j sync event
+    this.emitNeo4jSyncEvent(
+      Neo4jSyncOperation.CREATE,
+      Neo4jEntityType.COURSE,
+      result.id,
+    );
+
     return result;
   }
 
@@ -472,12 +485,28 @@ export class CourseService {
       await this.sessionScheduleService.createSessionSchedules(id, dto.sessionSchedules);
     }
 
+    // Emit Neo4j sync event
+    this.emitNeo4jSyncEvent(
+      Neo4jSyncOperation.UPDATE,
+      Neo4jEntityType.COURSE,
+      id,
+    );
+
     return course;
   }
 
   async delete(id: string): Promise<Course> {
     await this.ensureExists(id);
-    return this.courseRepository.delete(id);
+    const course = await this.courseRepository.delete(id);
+
+    // Emit Neo4j sync event
+    this.emitNeo4jSyncEvent(
+      Neo4jSyncOperation.DELETE,
+      Neo4jEntityType.COURSE,
+      id,
+    );
+
+    return course;
   }
 
   list(params: FilterCourseRequestDto): Promise<PageResponseDto<Course>> {
@@ -497,5 +526,38 @@ export class CourseService {
   private async ensureExists(id: string): Promise<void> {
     const exists = await this.courseRepository.findById(id);
     if (!exists) throw new NotFoundException(`Course with id ${id} not found`);
+  }
+
+  /**
+   * Emit Neo4j sync event to Kafka
+   */
+  private emitNeo4jSyncEvent(
+    operation: Neo4jSyncOperation,
+    entityType: Neo4jEntityType,
+    entityId: string,
+    metadata?: Record<string, any>,
+  ): void {
+    try {
+      const message: Neo4jSyncMessage = {
+        operation,
+        entityType,
+        entityId,
+        taskId: `${entityType}-${operation}-${entityId}-${Date.now()}`,
+        timestamp: Date.now(),
+        metadata,
+      };
+
+      this.kafkaService.send('neo4j-sync', message);
+
+      this.logger.log(
+        `Emitted Neo4j sync event: ${operation} ${entityType} ${entityId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to emit Neo4j sync event: ${error.message}`,
+        error.stack,
+      );
+      // Don't throw error - sync failure shouldn't block the main operation
+    }
   }
 }

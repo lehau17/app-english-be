@@ -1,9 +1,16 @@
 // src/modules/courses/courses-import.service.ts
 import { PrismaRepository } from '@app/database';
 import {
+  KafkaService,
+  Neo4jEntityType,
+  Neo4jSyncMessage,
+  Neo4jSyncOperation,
+} from '@app/shared';
+import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
 } from '@nestjs/common';
 import {
   ActivityType,
@@ -82,9 +89,12 @@ type CourseContentRow = {
 
 @Injectable()
 export class CoursesImportService {
+  private readonly logger = new Logger(CoursesImportService.name);
+
   constructor(
     private readonly prisma: PrismaRepository,
     private readonly googleTranslateFreeService: GoogleTranslateFreeService,
+    private readonly kafkaService: KafkaService,
   ) {}
 
   async importFromExcel(dto: ImportCoursesDto, currentUserId: string) {
@@ -419,13 +429,59 @@ export class CoursesImportService {
           });
 
           if (course) {
-            // Update the course with session schedules
-            await this.prisma.course.update({
-              where: { id: course.id },
-              data: {
-                sessionSchedules: sessionSchedules as any
-              }
+            // Delete existing session schedules first
+            await this.prisma.sessionSchedule.deleteMany({
+              where: { courseId: course.id }
             });
+
+            // Create new session schedules with nested activities
+            for (const schedule of sessionSchedules) {
+              await this.prisma.sessionSchedule.create({
+                data: {
+                  courseId: course.id,
+                  sessionNumber: schedule.sessionNumber,
+                  title: schedule.title,
+                  description: schedule.description,
+                  activities: {
+                    create: schedule.activities.map((activity: any) => ({
+                      activityId: activity.activityId,
+                      orderNo: activity.orderNo
+                    }))
+                  }
+                }
+              });
+            }
+          }
+        }
+      }
+
+      // Emit Neo4j sync events for all imported/updated courses
+      if (!dto.dryRun) {
+        for (const result of results) {
+          if (result.created === 'yes' || result.updated === 'yes') {
+            // Find the course by code or title to get its ID
+            const course = await this.prisma.course.findFirst({
+              where: {
+                OR: [
+                  { title: result.title },
+                  ...(result.code ? [{ title: { contains: result.code } }] : []),
+                ],
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            });
+
+            if (course) {
+              const operation = result.created === 'yes'
+                ? Neo4jSyncOperation.CREATE
+                : Neo4jSyncOperation.UPDATE;
+
+              this.emitNeo4jSyncEvent(
+                operation,
+                Neo4jEntityType.COURSE,
+                course.id,
+              );
+            }
           }
         }
       }
@@ -1618,5 +1674,38 @@ export class CoursesImportService {
       contentType:
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     };
+  }
+
+  /**
+   * Emit Neo4j sync event to Kafka
+   */
+  private emitNeo4jSyncEvent(
+    operation: Neo4jSyncOperation,
+    entityType: Neo4jEntityType,
+    entityId: string,
+    metadata?: Record<string, any>,
+  ): void {
+    try {
+      const message: Neo4jSyncMessage = {
+        operation,
+        entityType,
+        entityId,
+        taskId: `${entityType}-${operation}-${entityId}-${Date.now()}`,
+        timestamp: Date.now(),
+        metadata,
+      };
+
+      this.kafkaService.send('neo4j-sync', message);
+
+      this.logger.log(
+        `Emitted Neo4j sync event: ${operation} ${entityType} ${entityId}`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to emit Neo4j sync event: ${error.message}`,
+        error.stack,
+      );
+      // Don't throw error - sync failure shouldn't block the main operation
+    }
   }
 }

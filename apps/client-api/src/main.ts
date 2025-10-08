@@ -7,7 +7,6 @@ import {
 import { SocketIoAdapter } from '@app/shared/adapters/socket-io.adapter';
 import { GlobalInterceptor } from '@app/shared/interceptor/global-interceptor.interceptor';
 import { NestFactory, Reflector } from '@nestjs/core';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import 'reflect-metadata';
 import { ClientApiModule } from './client-api.module';
@@ -62,20 +61,6 @@ async function bootstrap() {
 
   const swaggerSvc = app.get(SwaggerService);
   swaggerSvc.setSpec(document);
-  // ----------------------------
-  // Kafka consumer for notifications → Socket.IO relay
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.KAFKA,
-    options: {
-      client: {
-        brokers: (process.env.KAFKA_BROKERS || 'localhost:19092').split(','),
-      },
-      consumer: {
-        groupId: 'client-api-events',
-      },
-    },
-  });
-  await app.startAllMicroservices();
 
   await app.listen(process.env.CLIENT_API_PORT ?? 3334); // Changed from 3000 to 3334 to avoid conflicts
 }

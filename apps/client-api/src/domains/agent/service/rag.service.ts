@@ -4,8 +4,10 @@
 // - Phase sau có thể chuyển sang pgvector + truy vấn ANN bằng raw SQL
 
 import { PrismaRepository } from '@app/database';
-import { Injectable, Logger } from '@nestjs/common';
 import { GeminiService } from '@app/shared';
+import { Injectable, Logger } from '@nestjs/common';
+import { RagCacheService } from './rag-cache.service';
+import { TextChunkerService } from './text-chunker.service';
 
 // DTO bạn đã có trong dto/query.dto (AddDocumentDto)
 type AddDocumentDto = {
@@ -22,6 +24,8 @@ export class RagService {
   constructor(
     private prisma: PrismaRepository,
     private geminiService: GeminiService,
+    private cacheService: RagCacheService,
+    private chunkerService: TextChunkerService,
   ) {
     // Tự seed tài liệu mẫu - don't block constructor
     // Use setTimeout to avoid blocking and handle errors gracefully
@@ -69,30 +73,234 @@ export class RagService {
       );
     }
     this.logger.log(`✅ Đã lưu tài liệu ID: ${doc.id}`);
+
+    // 🔄 Invalidate search cache when new document is added
+    this.cacheService.invalidateSearchCache();
+    this.logger.log('🗑️ Cache invalidated due to new document');
+
     return doc;
   }
 
-  async searchKnowledge(query: string): Promise<{
+  /**
+   * Add document with automatic chunking for long content
+   * Returns parent document + all chunks
+   */
+  async addDocumentWithChunking(
+    addDocumentDto: AddDocumentDto,
+    options?: {
+      maxTokens?: number;
+      overlapTokens?: number;
+      forceChunking?: boolean; // Force chunking even for short docs
+    },
+  ): Promise<{
+    parent: any;
+    chunks: any[];
+    totalChunks: number;
+  }> {
+    this.logger.log(
+      `📄 Adding document with chunking: ${addDocumentDto.title}`,
+    );
+
+    // Get recommended chunking options
+    const recommended = this.chunkerService.getRecommendedOptions(
+      addDocumentDto.content,
+    );
+
+    const shouldChunk = options?.forceChunking || recommended.shouldChunk;
+    const maxTokens = options?.maxTokens || recommended.maxTokens;
+    const overlapTokens = options?.overlapTokens || recommended.overlapTokens;
+
+    // If document is small, just add normally (no chunking)
+    if (!shouldChunk) {
+      this.logger.log(
+        `📄 Document is small enough, adding without chunking`,
+      );
+      const doc = await this.addDocument(addDocumentDto);
+      return { parent: doc, chunks: [], totalChunks: 0 };
+    }
+
+    // Split content into chunks
+    const contentChunks = this.chunkerService.splitIntoChunks(
+      addDocumentDto.content,
+      { maxTokens, overlapTokens, splitOnSentences: true },
+    );
+
+    this.logger.log(
+      `📄 Split into ${contentChunks.length} chunks (max: ${maxTokens} tokens, overlap: ${overlapTokens})`,
+    );
+
+    // Create parent document (store full content)
+    const parentEmbedding = await this.geminiService.generateEmbedding(
+      addDocumentDto.content,
+    );
+
+    const parent = await this.prisma.knowledgeDocument.create({
+      data: {
+        ...addDocumentDto,
+        embedding: JSON.stringify(parentEmbedding),
+        isChunk: false,
+        totalChunks: contentChunks.length,
+      },
+    });
+
+    // Save parent embedding to pgvector
+    try {
+      const vectorText = `[${parentEmbedding.join(',')}]`;
+      await this.prisma.$executeRawUnsafe(
+        `UPDATE knowledge_documents SET embedding_vector = $1::vector WHERE id = $2`,
+        vectorText,
+        parent.id,
+      );
+    } catch (e) {
+      this.logger.warn(
+        `Failed to save parent embedding_vector: ${(e as any)?.message}`,
+      );
+    }
+
+    this.logger.log(`✅ Created parent document: ${parent.id}`);
+
+    // Create chunk documents
+    const chunks = [];
+    for (let i = 0; i < contentChunks.length; i++) {
+      const chunkContent = contentChunks[i];
+      const chunkEmbedding =
+        await this.geminiService.generateEmbedding(chunkContent);
+
+      const chunk = await this.prisma.knowledgeDocument.create({
+        data: {
+          title: `${addDocumentDto.title} (Chunk ${i + 1}/${contentChunks.length})`,
+          content: chunkContent,
+          embedding: JSON.stringify(chunkEmbedding),
+          documentType: addDocumentDto.documentType,
+          source: addDocumentDto.source,
+          parentId: parent.id,
+          chunkIndex: i,
+          isChunk: true,
+        },
+      });
+
+      // Save chunk embedding to pgvector
+      try {
+        const vectorText = `[${chunkEmbedding.join(',')}]`;
+        await this.prisma.$executeRawUnsafe(
+          `UPDATE knowledge_documents SET embedding_vector = $1::vector WHERE id = $2`,
+          vectorText,
+          chunk.id,
+        );
+      } catch (e) {
+        this.logger.warn(
+          `Failed to save chunk embedding_vector: ${(e as any)?.message}`,
+        );
+      }
+
+      chunks.push(chunk);
+      this.logger.log(`✅ Created chunk ${i + 1}/${contentChunks.length}`);
+    }
+
+    // Invalidate search cache
+    this.cacheService.invalidateSearchCache();
+    this.logger.log('🗑️ Cache invalidated due to new chunked document');
+
+    this.logger.log(
+      `🎉 Successfully added document with ${chunks.length} chunks`,
+    );
+
+    return { parent, chunks, totalChunks: chunks.length };
+  }
+
+  async searchKnowledge(
+    query: string,
+    options?: {
+      useExpansion?: boolean; // Default: false (to avoid extra API calls)
+      maxExpansions?: number;
+      semanticWeight?: number;
+      keywordWeight?: number;
+      useCache?: boolean; // Default: true
+    },
+  ): Promise<{
     answer: string;
     sources: any[];
     confidence: number;
+    expandedQueries?: string[]; // Only if useExpansion is true
+    fromCache?: boolean; // NEW: Indicate if result from cache
   }> {
     this.logger.log(`🔍 Tìm kiếm knowledge cho: ${query}`);
-    const qEmbed = await this.geminiService.generateEmbedding(query);
 
-    // Search across both knowledge documents and indexed model data
-    const relevantDocs = await this.findSimilarDocuments(qEmbed, 5);
+    const useCache = options?.useCache ?? true;
+
+    // 💾 Check cache first
+    if (useCache) {
+      const cached = await this.cacheService.getCachedSearchResults(
+        query,
+        options,
+      );
+      if (cached) {
+        this.logger.log(`✅ Cache HIT for search: "${query}"`);
+        return { ...cached, fromCache: true };
+      }
+    }
+
+    let relevantDocs: any[];
+    let expandedQueries: string[] | undefined;
+
+    // 🌟 Decide whether to use query expansion
+    const shouldExpand = options?.useExpansion ?? false;
+
+    if (shouldExpand) {
+      // Use query expansion for better recall
+      this.logger.log('🌟 Using query expansion...');
+      relevantDocs = await this.searchWithExpansion(query, {
+        maxExpansions: options?.maxExpansions ?? 3,
+        semanticWeight: options?.semanticWeight ?? 0.7,
+        keywordWeight: options?.keywordWeight ?? 0.3,
+        topKPerQuery: 10,
+        finalK: 5,
+      });
+
+      // Extract expanded queries for debugging
+      const uniqueQueries = new Set<string>();
+      relevantDocs.forEach((doc) => {
+        if (doc.sourceQueries) {
+          doc.sourceQueries.forEach((q: string) => uniqueQueries.add(q));
+        }
+      });
+      expandedQueries = Array.from(uniqueQueries);
+    } else {
+      // Use hybrid search only (faster, no extra API calls)
+      const qEmbed = await this.geminiService.generateEmbedding(query);
+      relevantDocs = await this.hybridSearch(query, qEmbed, {
+        semanticWeight: options?.semanticWeight ?? 0.7,
+        keywordWeight: options?.keywordWeight ?? 0.3,
+        topK: 20,
+        finalK: 5,
+      });
+    }
+
+    // 📦 Aggregate chunk scores to parent documents
+    this.logger.log('📦 Aggregating chunk scores...');
+    relevantDocs = await this.aggregateChunkScores(relevantDocs);
+    this.logger.log(
+      `✅ After aggregation: ${relevantDocs.length} unique documents`,
+    );
+
     if (relevantDocs.length === 0) {
       return {
         answer:
-          'Tôi không tìm thấy thông tin liên quan trong tài liệu knowledge base.',
+          'Tôi không tìm thấy thông tin liên quan trong tài liệu knowledge base. Vui lòng thử:\n' +
+          '- Diễn đạt câu hỏi khác đi\n' +
+          '- Cung cấp thêm chi tiết cụ thể\n' +
+          '- Hỏi về các chủ đề đã có trong hệ thống (khóa học, quy định, bài học...)',
         sources: [],
         confidence: 0,
+        expandedQueries,
       };
     }
 
     const context = relevantDocs
-      .map((d) => `📋 ${d.title} (${d.documentType}):\n${d.content}`)
+      .map(
+        (d) =>
+          `📋 ${d.title} (${d.documentType}) [Score: ${d.finalScore.toFixed(3)}]:\n${d.content}`,
+      )
       .join('\n\n');
 
     const prompt = `
@@ -108,20 +316,34 @@ YÊU CẦU:
 - Trích dẫn cụ thể các điều khoản, số liệu khi có thể
 - Nếu thông tin không đầy đủ, hãy nói rõ điều đó
 - Trả lời bằng tiếng Việt, dễ hiểu
+- Ưu tiên sử dụng thông tin từ documents có score cao hơn
 `;
 
     const answer = await this.geminiService.generateResponse(prompt);
 
-    return {
+    const result = {
       answer,
       sources: relevantDocs.map((d) => ({
         id: d.id,
         title: d.title,
         type: d.documentType,
         source: d.source,
+        finalScore: d.finalScore,
+        semanticScore: d.semanticScore,
+        keywordScore: d.keywordScore,
+        hitCount: d.hitCount, // How many expanded queries found this doc
       })),
       confidence: this.calculateConfidence(relevantDocs),
+      expandedQueries, // Include expanded queries if used
+      fromCache: false,
     };
+
+    // 💾 Cache the result
+    if (useCache) {
+      await this.cacheService.setCachedSearchResults(query, options, result);
+    }
+
+    return result;
   }
 
   private async findSimilarDocuments(queryEmbedding: number[], topK = 3) {
@@ -207,6 +429,497 @@ YÊU CẦU:
   private calculateConfidence(docs: any[]) {
     const base = Math.min(docs.length * 0.25, 1);
     return Math.round(base * 100) / 100;
+  }
+
+  /**
+   * 🌟 QUERY EXPANSION - Automatically expand user query with variations
+   *
+   * Generates alternative queries to improve recall by capturing:
+   * - Synonyms: "khóa học lập trình" → "khóa học coding"
+   * - Related terms: "lập trình" → "web", "mobile", "backend"
+   * - Different phrasings: "học tiếng Anh" → "English course"
+   *
+   * @param originalQuery - The original user query
+   * @param maxExpansions - Maximum number of expansions (default: 3)
+   * @returns Array of expanded queries including the original
+   */
+  async expandQuery(
+    originalQuery: string,
+    maxExpansions = 3,
+  ): Promise<string[]> {
+    try {
+      this.logger.log(`🌟 Expanding query: "${originalQuery}"`);
+
+      // 💾 Check cache first
+      const cached = await this.cacheService.getCachedExpansion(originalQuery);
+      if (cached) {
+        this.logger.log(`✅ Cache HIT for expansion: "${originalQuery}"`);
+        return cached;
+      }
+
+      const prompt = `Bạn là chuyên gia tìm kiếm thông tin. Nhiệm vụ của bạn là mở rộng câu hỏi tìm kiếm để tăng khả năng tìm được tài liệu liên quan.
+
+CÂU HỎI GỐC: "${originalQuery}"
+
+YÊU CẦU:
+1. Tạo ${maxExpansions} câu hỏi tương tự nhưng diễn đạt khác
+2. Sử dụng từ đồng nghĩa, từ liên quan
+3. Bao gồm cả tiếng Việt và tiếng Anh nếu phù hợp
+4. Giữ nguyên ý nghĩa chính của câu hỏi gốc
+5. Trả về ĐÚNG định dạng JSON array
+
+VÍ DỤ:
+Input: "khóa học lập trình web"
+Output: ["khóa học web development", "học làm website", "course web programming"]
+
+Input: "IELTS 7.5"
+Output: ["IELTS band 7.5", "luyện thi IELTS đạt 7.5", "IELTS preparation 7.5"]
+
+Bây giờ hãy tạo ${maxExpansions} câu hỏi mở rộng cho câu hỏi gốc.
+Chỉ trả về JSON array, không có text giải thích:`;
+
+      const response = await this.geminiService.generateResponse(prompt);
+
+      // Parse JSON response
+      const cleanResponse = response
+        .trim()
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+
+      const expandedQueries = JSON.parse(cleanResponse) as string[];
+
+      // Validate and filter
+      const validExpanded = expandedQueries
+        .filter((q) => typeof q === 'string' && q.trim().length > 0)
+        .slice(0, maxExpansions);
+
+      const finalQueries = [originalQuery, ...validExpanded];
+
+      // 💾 Cache the result
+      await this.cacheService.setCachedExpansion(originalQuery, finalQueries);
+
+      this.logger.log(
+        `✅ Query expanded to ${finalQueries.length} variations: ${finalQueries.join(' | ')}`,
+      );
+
+      return finalQueries;
+    } catch (e) {
+      this.logger.warn(
+        `⚠️ Query expansion failed: ${(e as any)?.message}. Using original query only.`,
+      );
+      return [originalQuery];
+    }
+  }
+
+  /**
+   * 🔍 SEARCH WITH EXPANSION - Search using expanded queries
+   *
+   * Process:
+   * 1. Expand query into multiple variations
+   * 2. Generate embeddings for each variation
+   * 3. Search with each expanded query
+   * 4. Deduplicate and rerank results
+   *
+   * @param originalQuery - The original user query
+   * @param options - Search options
+   * @returns Deduplicated and reranked results
+   */
+  async searchWithExpansion(
+    originalQuery: string,
+    options?: {
+      maxExpansions?: number; // Default: 3
+      semanticWeight?: number;
+      keywordWeight?: number;
+      topKPerQuery?: number; // Default: 10 per query
+      finalK?: number; // Default: 5 final results
+    },
+  ) {
+    const maxExpansions = options?.maxExpansions ?? 3;
+    const topKPerQuery = options?.topKPerQuery ?? 10;
+    const finalK = options?.finalK ?? 5;
+
+    this.logger.log(`🔍 Search with expansion: "${originalQuery}"`);
+
+    // 1️⃣ Expand query
+    const expandedQueries = await this.expandQuery(
+      originalQuery,
+      maxExpansions,
+    );
+
+    // 2️⃣ Search with each expanded query
+    const allResults: any[] = [];
+
+    for (const query of expandedQueries) {
+      try {
+        // Generate embedding for this query
+        const queryEmbedding =
+          await this.geminiService.generateEmbedding(query);
+
+        // Hybrid search
+        const results = await this.hybridSearch(query, queryEmbedding, {
+          semanticWeight: options?.semanticWeight,
+          keywordWeight: options?.keywordWeight,
+          topK: topKPerQuery,
+          finalK: topKPerQuery,
+        });
+
+        // Tag results with source query for debugging
+        results.forEach((r) => {
+          r.sourceQuery = query;
+        });
+
+        allResults.push(...results);
+      } catch (e) {
+        this.logger.warn(
+          `⚠️ Search failed for query "${query}": ${(e as any)?.message}`,
+        );
+      }
+    }
+
+    // 3️⃣ Deduplicate by document ID and aggregate scores
+    const deduped = this.deduplicateAndAggregateScores(allResults);
+
+    // 4️⃣ Return top-K results
+    const finalResults = deduped.slice(0, finalK);
+
+    this.logger.log(
+      `✅ Search with expansion: Found ${finalResults.length} unique results from ${allResults.length} total hits`,
+    );
+
+    return finalResults;
+  }
+
+  /**
+   * Deduplicate results and aggregate scores from multiple queries
+   */
+  private deduplicateAndAggregateScores(results: any[]) {
+    const docMap = new Map<string, any>();
+
+    for (const result of results) {
+      const existing = docMap.get(result.id);
+
+      if (existing) {
+        // Document found multiple times - boost score!
+        existing.finalScore += result.finalScore * 0.5; // Boost by 50% of new score
+        existing.hitCount = (existing.hitCount || 1) + 1;
+        existing.sourceQueries = existing.sourceQueries || [
+          existing.sourceQuery,
+        ];
+        existing.sourceQueries.push(result.sourceQuery);
+      } else {
+        // New document
+        docMap.set(result.id, {
+          ...result,
+          hitCount: 1,
+          sourceQueries: [result.sourceQuery],
+        });
+      }
+    }
+
+    // Sort by final score (documents found multiple times get higher scores)
+    const deduplicated = Array.from(docMap.values()).sort(
+      (a, b) => b.finalScore - a.finalScore,
+    );
+
+    return deduplicated;
+  }
+
+  /**
+   * 🔥 HYBRID SEARCH - Combines semantic (vector) + keyword (full-text) search
+   *
+   * @param query - User query string
+   * @param queryEmbedding - Pre-computed embedding vector
+   * @param options - Search options
+   * @returns Combined and reranked results
+   */
+  async hybridSearch(
+    query: string,
+    queryEmbedding: number[],
+    options?: {
+      semanticWeight?: number; // Default: 0.7 (70% semantic)
+      keywordWeight?: number; // Default: 0.3 (30% keyword)
+      topK?: number; // Default: 20 (before reranking)
+      finalK?: number; // Default: 5 (after reranking)
+    },
+  ) {
+    const semanticWeight = options?.semanticWeight ?? 0.7;
+    const keywordWeight = options?.keywordWeight ?? 0.3;
+    const topK = options?.topK ?? 20;
+    const finalK = options?.finalK ?? 5;
+
+    this.logger.log(
+      `🔥 Hybrid Search: "${query}" (semantic: ${semanticWeight * 100}%, keyword: ${keywordWeight * 100}%)`,
+    );
+
+    // 1️⃣ Semantic Search using pgvector
+    const semanticResults = await this.semanticSearch(queryEmbedding, topK);
+
+    // 2️⃣ Keyword Search using PostgreSQL Full-Text Search
+    const keywordResults = await this.keywordSearch(query, topK);
+
+    // 3️⃣ Merge and rerank results
+    const mergedResults = this.mergeAndRerank(
+      semanticResults,
+      keywordResults,
+      semanticWeight,
+      keywordWeight,
+    );
+
+    // 4️⃣ Return top-K results
+    const finalResults = mergedResults.slice(0, finalK);
+
+    this.logger.log(
+      `✅ Hybrid Search: Found ${finalResults.length} results (${semanticResults.length} semantic + ${keywordResults.length} keyword)`,
+    );
+
+    return finalResults;
+  }
+
+  /**
+   * Semantic search using pgvector (vector similarity)
+   */
+  private async semanticSearch(queryEmbedding: number[], topK: number) {
+    try {
+      const vectorText = `[${queryEmbedding.join(',')}]`;
+
+      const rows = await this.prisma.$queryRawUnsafe<any[]>(
+        `SELECT
+          id,
+          title,
+          content,
+          "documentType",
+          source,
+          embedding,
+          1 - (embedding_vector <-> $1::vector) as similarity
+         FROM knowledge_documents
+         WHERE embedding_vector IS NOT NULL
+         ORDER BY embedding_vector <-> $1::vector
+         LIMIT $2`,
+        vectorText,
+        topK,
+      );
+
+      return (rows || []).map((r: any) => ({
+        id: r.id,
+        title: r.title,
+        documentType: r.documentType,
+        content: r.content,
+        source: r.source,
+        embedding: r.embedding,
+        semanticScore: Number(r.similarity) || 0,
+        keywordScore: 0, // Will be merged later
+      }));
+    } catch (e) {
+      this.logger.warn('Semantic search failed: ' + (e as any)?.message);
+      return [];
+    }
+  }
+
+  /**
+   * Keyword search using PostgreSQL Full-Text Search
+   */
+  private async keywordSearch(query: string, topK: number) {
+    try {
+      // Sanitize query for full-text search (remove special chars)
+      const sanitizedQuery = query.replace(/[^\w\s]/g, ' ').trim();
+      if (!sanitizedQuery) {
+        this.logger.warn('Empty query after sanitization');
+        return [];
+      }
+
+      const rows = await this.prisma.$queryRawUnsafe<any[]>(
+        `SELECT
+          id,
+          title,
+          content,
+          "documentType",
+          source,
+          embedding,
+          ts_rank(content_search, plainto_tsquery('english', $1)) as rank
+         FROM knowledge_documents
+         WHERE content_search @@ plainto_tsquery('english', $1)
+         ORDER BY rank DESC
+         LIMIT $2`,
+        sanitizedQuery,
+        topK,
+      );
+
+      return (rows || []).map((r: any) => ({
+        id: r.id,
+        title: r.title,
+        documentType: r.documentType,
+        content: r.content,
+        source: r.source,
+        embedding: r.embedding,
+        semanticScore: 0, // Will be merged later
+        keywordScore: Number(r.rank) || 0,
+      }));
+    } catch (e) {
+      this.logger.warn('Keyword search failed: ' + (e as any)?.message);
+      return [];
+    }
+  }
+
+  /**
+   * Merge results from semantic and keyword search, then rerank
+   */
+  private mergeAndRerank(
+    semanticResults: any[],
+    keywordResults: any[],
+    semanticWeight: number,
+    keywordWeight: number,
+  ) {
+    const resultsMap = new Map<string, any>();
+
+    // Add semantic results
+    for (const doc of semanticResults) {
+      resultsMap.set(doc.id, {
+        ...doc,
+        semanticScore: doc.semanticScore * semanticWeight,
+        keywordScore: 0,
+      });
+    }
+
+    // Merge keyword results
+    for (const doc of keywordResults) {
+      const existing = resultsMap.get(doc.id);
+      if (existing) {
+        // Document found in both searches - boost it!
+        existing.keywordScore = doc.keywordScore * keywordWeight;
+      } else {
+        // New document from keyword search
+        resultsMap.set(doc.id, {
+          ...doc,
+          semanticScore: 0,
+          keywordScore: doc.keywordScore * keywordWeight,
+        });
+      }
+    }
+
+    // Calculate final scores and sort
+    const mergedResults = Array.from(resultsMap.values()).map((doc) => ({
+      ...doc,
+      finalScore: doc.semanticScore + doc.keywordScore,
+    }));
+
+    // Sort by final score (descending)
+    return mergedResults.sort((a, b) => b.finalScore - a.finalScore);
+  }
+
+  /**
+   * Aggregate chunk scores to parent documents
+   * - If multiple chunks from same parent are found, combine their scores
+   * - Use MAX score strategy (best chunk represents the document)
+   * - Alternative: Could use AVERAGE or WEIGHTED_SUM
+   */
+  async aggregateChunkScores(results: any[]): Promise<any[]> {
+    if (results.length === 0) return [];
+
+    // Collect all parentIds from chunks
+    const chunkIds = results
+      .filter((r) => r.isChunk || r.parentId)
+      .map((r) => r.id);
+
+    if (chunkIds.length === 0) {
+      // No chunks found, return as-is
+      return results;
+    }
+
+    // Fetch chunk metadata (parentId info)
+    const chunks = await this.prisma.knowledgeDocument.findMany({
+      where: { id: { in: chunkIds } },
+      select: {
+        id: true,
+        parentId: true,
+        chunkIndex: true,
+        isChunk: true,
+        parent: {
+          select: {
+            id: true,
+            title: true,
+            documentType: true,
+            source: true,
+            totalChunks: true,
+          },
+        },
+      },
+    });
+
+    const chunkMap = new Map(chunks.map((c) => [c.id, c]));
+
+    // Group results by parent
+    const parentGroups = new Map<string, any[]>();
+
+    for (const result of results) {
+      const chunkMeta = chunkMap.get(result.id);
+
+      if (chunkMeta && chunkMeta.parentId) {
+        // This is a chunk, group by parent
+        const parentId = chunkMeta.parentId;
+        if (!parentGroups.has(parentId)) {
+          parentGroups.set(parentId, []);
+        }
+        parentGroups.get(parentId)!.push({
+          ...result,
+          chunkIndex: chunkMeta.chunkIndex,
+          parentMeta: chunkMeta.parent,
+        });
+      } else {
+        // Root document (not a chunk), group by itself
+        if (!parentGroups.has(result.id)) {
+          parentGroups.set(result.id, []);
+        }
+        parentGroups.get(result.id)!.push(result);
+      }
+    }
+
+    // Aggregate scores for each parent
+    const aggregated: any[] = [];
+
+    for (const [parentId, group] of parentGroups.entries()) {
+      if (group.length === 1 && !group[0].chunkIndex) {
+        // Single root document, no aggregation needed
+        aggregated.push(group[0]);
+        continue;
+      }
+
+      // Multiple chunks from same parent - aggregate
+      const maxScore = Math.max(...group.map((g) => g.finalScore));
+      const avgScore =
+        group.reduce((sum, g) => sum + g.finalScore, 0) / group.length;
+      const maxSemanticScore = Math.max(
+        ...group.map((g) => g.semanticScore || 0),
+      );
+      const maxKeywordScore = Math.max(
+        ...group.map((g) => g.keywordScore || 0),
+      );
+
+      // Use MAX strategy (best chunk score)
+      const bestChunk = group.reduce((best, current) =>
+        current.finalScore > best.finalScore ? current : best,
+      );
+
+      const parent = group[0].parentMeta;
+
+      aggregated.push({
+        id: parentId,
+        title: parent?.title || bestChunk.title,
+        documentType: parent?.documentType || bestChunk.documentType,
+        source: parent?.source || bestChunk.source,
+        content: bestChunk.content, // Content from best chunk
+        semanticScore: maxSemanticScore,
+        keywordScore: maxKeywordScore,
+        finalScore: maxScore, // Use MAX strategy
+        // avgScore, // Alternative: could use average
+        chunkCount: group.length,
+        bestChunkIndex: bestChunk.chunkIndex,
+        totalChunks: parent?.totalChunks || group.length,
+      });
+    }
+
+    // Sort by final score
+    return aggregated.sort((a, b) => b.finalScore - a.finalScore);
   }
 
   // Seed 3 tài liệu mẫu nếu DB đang trống
@@ -636,6 +1349,10 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
     this.logger.log(
       `✅ Hoàn thành reindex: ${totalIndexed} documents indexed, ${totalErrors} errors`,
     );
+
+    // 🔄 Invalidate search cache after reindexing
+    this.cacheService.invalidateSearchCache();
+    this.logger.log('🗑️ Cache invalidated due to reindexing');
 
     return results;
   }

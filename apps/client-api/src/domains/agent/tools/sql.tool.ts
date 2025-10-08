@@ -22,18 +22,22 @@ export class SqlTool extends StructuredTool {
   async _call({ naturalQuery }: z.infer<typeof this.schema>): Promise<string> {
     try {
       this.logger.log(`🗄️ SQL Tool xử lý: ${naturalQuery}`);
-      const result = await this.sqlService.generateAndExecuteSQL(naturalQuery);
+      // Use retry-enabled method
+      const result = await this.sqlService.generateAndExecuteSQLWithRetry(naturalQuery);
       return JSON.stringify({
         success: true,
         answer: result.answer,
         sql: result.sql,
         rowCount: result.rowCount,
         data: result.rawData.slice(0, 5),
+        retries: result.retries || 0,
       });
     } catch (e: any) {
+      this.logger.error(`❌ SQL Tool error after retries: ${e.message}`);
       return JSON.stringify({
         success: false,
-        error: `Lỗi SQL: ${e.message}`,
+        error: `Không thể truy vấn dữ liệu. Vui lòng thử diễn đạt câu hỏi khác hoặc liên hệ admin.`,
+        details: e.message,
       });
     }
   }

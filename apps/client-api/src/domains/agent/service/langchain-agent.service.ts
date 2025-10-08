@@ -4,8 +4,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AgentExecutor, createToolCallingAgent } from 'langchain/agents';
 import { ChartGeneratorTool } from '../tools/chart-generator.tool';
 import { ExcelExportTool } from '../tools/excel-export.tool';
+import { GraphQueryTool } from '../tools/graph-query.tool';
 import { RagTool } from '../tools/rag.tool';
 import { SqlTool } from '../tools/sql.tool';
+import { StudentAgentTools } from '../tools/student-agent.tools';
 import { RagService } from './rag.service';
 import { SqlService } from './sql.service';
 
@@ -19,6 +21,8 @@ export class LangChainAgentService {
     private sqlService: SqlService,
     private chartGenerator: ChartGeneratorTool,
     private excelExport: ExcelExportTool,
+    private graphQuery: GraphQueryTool,
+    private studentTools: StudentAgentTools,
   ) {
     // không await trong ctor: gọi initialize() ở nơi thích hợp nếu cần
     void this.initializeAgent();
@@ -35,9 +39,12 @@ export class LangChainAgentService {
         streaming: true, // Enable streaming
       });
 
+      // Tools will be determined based on user role at runtime
+      // For now, initialize with default tools
       const tools = [
         new RagTool(this.ragService),
         new SqlTool(this.sqlService),
+        this.graphQuery,
         this.chartGenerator,
         this.excelExport,
       ];
@@ -99,7 +106,13 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
 📊 **Khi người dùng hỏi về dữ liệu/thống kê:**
    → Dùng database_query để lấy dữ liệu từ DB
    → Ví dụ: "10 học viên điểm cao nhất", "Số lượng học viên mới", "Thống kê điểm danh"
-   → Schema quan trọng: Student, Parent, Course, Lesson, Assignment, Classroom, User
+   → **HỖ TRỢ ĐẦY ĐỦ:**
+     • Truy vấn theo thời gian: NOW(), INTERVAL '2 months', DATE_TRUNC('week', ...)
+     • Group by time: GROUP BY DATE_TRUNC('day/week/month/year', "createdAt")
+     • Aggregate: COUNT, SUM, AVG, MIN, MAX
+     • Window functions, CTEs (WITH), subqueries đều OK
+     • Lọc theo khoảng thời gian bất kỳ: ngày, tuần, tháng, năm
+   → **VÍ DỤ:** "4 tuần gần nhất" = WHERE "createdAt" >= NOW() - INTERVAL '4 weeks'
 
 📈 **Khi người dùng yêu cầu biểu đồ:**
    1. Lấy dữ liệu bằng database_query

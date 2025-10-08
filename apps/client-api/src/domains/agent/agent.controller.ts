@@ -1,3 +1,4 @@
+import { PrismaRepository } from '@app/database';
 import {
   Body,
   Controller,
@@ -5,6 +6,7 @@ import {
   Logger,
   Param,
   Post,
+  Query,
   Res,
   StreamableFile,
   UsePipes,
@@ -14,6 +16,9 @@ import { Response } from 'express';
 import { createReadStream } from 'fs';
 import { join } from 'path';
 import { AddDocumentDto, QueryDto } from './dto/query.dto';
+import { GraphEntityService } from './service/graph-entity.service';
+import { GraphRelationshipService } from './service/graph-relationship.service';
+import { GraphTraversalService } from './service/graph-traversal.service';
 import { LangChainAgentService } from './service/langchain-agent.service';
 import { RagService } from './service/rag.service';
 
@@ -35,6 +40,10 @@ export class IntelligentController {
   constructor(
     private langchainAgent: LangChainAgentService,
     private ragService: RagService,
+    private graphEntityService: GraphEntityService,
+    private graphRelationshipService: GraphRelationshipService,
+    private graphTraversalService: GraphTraversalService,
+    private prisma: PrismaRepository,
   ) {}
 
   @Post('query')
@@ -88,6 +97,34 @@ export class IntelligentController {
     this.logger.log(`📄 Thêm tài liệu: ${addDocumentDto.title}`);
     const document = await this.ragService.addDocument(addDocumentDto);
     return document;
+  }
+
+  @Post('add-document-with-chunking')
+  @UsePipes(new ValidationPipe())
+  @ApiOperation({
+    summary: 'Thêm tài liệu với chunking tự động',
+    description:
+      'Tự động chia tài liệu dài thành chunks nhỏ hơn để cải thiện độ chính xác tìm kiếm.',
+  })
+  @ApiBody({
+    type: AddDocumentDto,
+    examples: {
+      default: {
+        value: {
+          title: 'Hướng dẫn học tiếng Anh toàn diện',
+          content:
+            'Nội dung dài về cách học tiếng Anh... (sẽ tự động chia thành chunks)',
+          documentType: 'GUIDE',
+          source: 'English Learning Center',
+        },
+      },
+    },
+  })
+  async addDocumentWithChunking(@Body() addDocumentDto: AddDocumentDto) {
+    this.logger.log(`📄 Thêm tài liệu với chunking: ${addDocumentDto.title}`);
+    const result =
+      await this.ragService.addDocumentWithChunking(addDocumentDto);
+    return result;
   }
 
   @Get('health')
@@ -147,5 +184,168 @@ export class IntelligentController {
 
     const file = createReadStream(filePath);
     return new StreamableFile(file);
+  }
+
+  // ==================== Graph RAG Endpoints ====================
+
+  @Post('graph/init-schema')
+  @ApiOperation({
+    summary: 'Initialize Neo4j schema',
+    description: 'Create indexes and constraints in Neo4j',
+  })
+  async initGraphSchema() {
+    this.logger.log('🔧 Initializing Neo4j schema...');
+    await this.graphEntityService.initializeSchema();
+    return { message: 'Schema initialized successfully' };
+  }
+
+  @Post('graph/sync-entities')
+  @ApiOperation({
+    summary: 'Sync entities from database to Neo4j',
+    description: 'Sync courses, lessons, activities from PostgreSQL to Neo4j',
+  })
+  async syncEntities() {
+    this.logger.log('📚 Syncing entities...');
+    const count = await this.graphEntityService.syncCoursesFromDatabase(this.prisma);
+    return { message: 'Entities synced successfully', count };
+  }
+
+  @Post('graph/build-relationships')
+  @ApiOperation({
+    summary: 'Build structured relationships',
+    description: 'Create CONTAINS, FOLLOWS relationships from database structure',
+  })
+  async buildRelationships() {
+    this.logger.log('🔗 Building relationships...');
+    const count = await this.graphRelationshipService.buildStructuredRelationships(this.prisma);
+    return { message: 'Relationships built successfully', count };
+  }
+
+  @Post('graph/discover-relationships')
+  @ApiOperation({
+    summary: 'Discover semantic relationships',
+    description: 'Use vector similarity to find RELATED_TO relationships',
+  })
+  async discoverRelationships(
+    @Body() body: { minSimilarity?: number; limit?: number },
+  ) {
+    this.logger.log('🔍 Discovering semantic relationships...');
+    const count = await this.graphRelationshipService.discoverSemanticRelationships(
+      body.minSimilarity || 0.7,
+      body.limit || 1000,
+    );
+    return { message: 'Semantic relationships discovered', count };
+  }
+
+  @Get('graph/stats')
+  @ApiOperation({
+    summary: 'Get graph statistics',
+    description: 'Get entity and relationship counts',
+  })
+  async getGraphStats() {
+    const entities = await this.graphEntityService.getStatistics();
+    const relationships = await this.graphRelationshipService.getStatistics();
+    return { entities, relationships };
+  }
+
+  @Get('graph/entities/search')
+  @ApiOperation({
+    summary: 'Search entities by name',
+    description: 'Full-text search on entity names and descriptions',
+  })
+  async searchEntities(
+    @Query('query') query: string,
+    @Query('limit') limit?: number,
+  ) {
+    const entities = await this.graphEntityService.searchByName(
+      query,
+      limit ? parseInt(limit.toString()) : 20,
+    );
+    return entities;
+  }
+
+  @Get('graph/entities/:id')
+  @ApiOperation({
+    summary: 'Get entity by ID',
+    description: 'Retrieve entity details',
+  })
+  async getEntity(@Param('id') id: string) {
+    const entity = await this.graphEntityService.findById(id);
+    if (!entity) {
+      return { error: 'Entity not found' };
+    }
+    return entity;
+  }
+
+  @Get('graph/entities/:id/neighbors')
+  @ApiOperation({
+    summary: 'Get neighbors of entity',
+    description: 'Get directly connected entities',
+  })
+  async getNeighbors(
+    @Param('id') id: string,
+    @Query('direction') direction?: string,
+    @Query('relationshipTypes') relationshipTypes?: string,
+  ) {
+    const types = relationshipTypes ? relationshipTypes.split(',') : undefined;
+    const neighbors = await this.graphTraversalService.getNeighbors(
+      id,
+      (direction as any) || 'both',
+      types,
+    );
+    return neighbors;
+  }
+
+  @Post('graph/traverse')
+  @ApiOperation({
+    summary: 'Traverse graph from entities',
+    description: 'BFS traversal with depth limit',
+  })
+  async traverseGraph(
+    @Body()
+    body: {
+      startEntityIds: string[];
+      maxDepth?: number;
+      relationshipTypes?: string[];
+      direction?: 'outgoing' | 'incoming' | 'both';
+    },
+  ) {
+    const result = await this.graphTraversalService.traverse(body.startEntityIds, {
+      maxDepth: body.maxDepth,
+      relationshipTypes: body.relationshipTypes,
+      direction: body.direction,
+    });
+    return result;
+  }
+
+  @Post('graph/extract-concepts')
+  @ApiOperation({
+    summary: 'Extract concepts from text',
+    description: 'Use Gemini to extract concepts from document',
+  })
+  async extractConcepts(@Body() body: { text: string; sourceDocumentId?: string }) {
+    const entities = await this.graphEntityService.extractConceptsFromText(
+      body.text,
+      body.sourceDocumentId,
+    );
+    return { message: 'Concepts extracted', count: entities.length, entities };
+  }
+
+  @Post('graph/learning-path')
+  @ApiOperation({
+    summary: 'Find learning path',
+    description: 'Find prerequisite chain between concepts',
+  })
+  async findLearningPath(
+    @Body() body: { fromConceptId: string; toConceptId: string },
+  ) {
+    const path = await this.graphTraversalService.findLearningPath(
+      body.fromConceptId,
+      body.toConceptId,
+    );
+    if (!path) {
+      return { message: 'No learning path found' };
+    }
+    return path;
   }
 }
