@@ -1,12 +1,15 @@
+import { DatabaseModule } from '@app/database';
+import { SharedModule } from '@app/shared';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
 import { Module } from '@nestjs/common';
+import { NotificationListener } from './notification.listener';
 import { NotificationService } from './notification.service';
-import { NotificationConsumer } from './notification.consumer';
-import { DatabaseModule } from '@app/database';
+
 @Module({
   imports: [
     DatabaseModule,
+    SharedModule,
     MailerModule.forRootAsync({
       useFactory: () => ({
         transport: {
@@ -31,6 +34,6 @@ import { DatabaseModule } from '@app/database';
     }),
   ],
   controllers: [],
-  providers: [NotificationService, NotificationConsumer],
+  providers: [NotificationService, NotificationListener],
 })
 export class NotificationModule {}

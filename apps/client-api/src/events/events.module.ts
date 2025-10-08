@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
 import { EventsGateway } from './events.gateway';
-import { NotificationEventsConsumer } from './notification.consumer';
+import { NotificationListener } from './notification.listener';
 
 @Module({
-  providers: [EventsGateway, NotificationEventsConsumer],
-  controllers: [NotificationEventsConsumer],
+  providers: [EventsGateway, NotificationListener],
   exports: [EventsGateway],
 })
 export class EventsModule {}
