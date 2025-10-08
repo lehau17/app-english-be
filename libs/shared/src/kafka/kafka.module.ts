@@ -1,33 +1,13 @@
-import { DynamicModule, Module } from '@nestjs/common';
-import { ClientsModule, Transport } from '@nestjs/microservices';
+import { Global, Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { KafkaConfigService } from './kafka-config.service';
+import { KafkaProducerService } from './kafka-producer.service';
 import { KafkaService } from './kafka.service';
 
-@Module({})
-export class KafkaModule {
-  static register(): DynamicModule {
-    return {
-      module: KafkaModule,
-      imports: [
-        ClientsModule.register([
-          {
-            name: 'KAFKA_SERVICE',
-            transport: Transport.KAFKA,
-            options: {
-              client: {
-                brokers: process.env.KAFKA_BROKERS.split(','),
-              },
-              consumer: {
-                groupId: 'client-api-consumer',
-              },
-              producer: {
-                allowAutoTopicCreation: true,
-              },
-            },
-          },
-        ]),
-      ],
-      providers: [KafkaService],
-      exports: [KafkaService],
-    };
-  }
-}
+@Global()
+@Module({
+  imports: [ConfigModule],
+  providers: [KafkaConfigService, KafkaProducerService, KafkaService],
+  exports: [KafkaConfigService, KafkaProducerService, KafkaService],
+})
+export class KafkaModule {}
