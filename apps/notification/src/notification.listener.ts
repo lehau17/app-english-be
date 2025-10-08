@@ -44,10 +44,10 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
       this.logger.log('✅ Notification listener connected to Kafka');
 
       await this.consumer.subscribe({
-        topics: [KafkaTopic.NOTIFICATION_SEND_OTP_CREATED],
+        topics: [KafkaTopic.NOTIFICATION_SEND_OTP_CREATED, 'notifications'],
         fromBeginning: false,
       });
-      this.logger.log(`✅ Subscribed to topic: ${KafkaTopic.NOTIFICATION_SEND_OTP_CREATED}`);
+      this.logger.log(`✅ Subscribed to topics: ${KafkaTopic.NOTIFICATION_SEND_OTP_CREATED}, notifications`);
 
       // Event listeners
       this.consumer.on(this.consumer.events.GROUP_JOIN, (e) =>
@@ -100,6 +100,8 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
       // Handle different notification types
       if (notification.type === 'send-otp') {
         await this.handleSendOtp(notification);
+      } else if (notification.type === 'system' && notification.data?.action === 'password_reset') {
+        await this.handlePasswordReset(notification);
       } else {
         this.logger.log(`Notification type "${notification.type}" - no email action needed`);
       }
@@ -137,6 +139,39 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
       this.logger.log(`✅ Sent OTP email to ${user.email}`);
     } catch (error) {
       this.logger.error(`Failed to send OTP email: ${error.message}`, error.stack);
+    }
+  }
+
+  private async handlePasswordReset(notification: NotificationMessage) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: notification.userId },
+        select: { email: true, displayName: true, firstName: true, lastName: true },
+      });
+
+      if (!user?.email) {
+        this.logger.warn(`User ${notification.userId} has no email, skipping password reset email`);
+        return;
+      }
+
+      const { token, resetLink, expiresAt } = notification.data;
+      const userName = user.displayName || user.firstName || 'User';
+
+      await this.notificationService.sendEmail({
+        to: [user.email],
+        subject: 'Đặt lại mật khẩu - English Learning',
+        template: './password-reset',
+        context: {
+          name: userName,
+          token: token,
+          resetLink: resetLink,
+          expiresAt: new Date(expiresAt).toLocaleString('vi-VN'),
+        },
+      });
+
+      this.logger.log(`✅ Sent password reset email to ${user.email}`);
+    } catch (error) {
+      this.logger.error(`Failed to send password reset email: ${error.message}`, error.stack);
     }
   }
 }
