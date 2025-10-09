@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { KafkaConfig } from 'kafkajs';
 
 @Injectable()
 export class KafkaConfigService {
@@ -31,7 +32,17 @@ export class KafkaConfigService {
   }
 
   getConsumerConfig(groupId?: string) {
-    return {
+    const enableSasl = this.configService.get<string>('KAFKA_ENABLE_SASL', 'false') === 'true';
+    const username = this.configService.get<string>('KAFKA_USERNAME', 'user');
+    const password = this.configService.get<string>('KAFKA_PASSWORD', '');
+    const mechanism = this.configService.get<string>(
+      'KAFKA_SASL_MECHANISM',
+      'scram-sha-256',
+    );
+    const connectionTimeout = this.configService.get<number>('KAFKA_CONNECTION_TIMEOUT', 30000);
+    const requestTimeout = this.configService.get<number>('KAFKA_REQUEST_TIMEOUT', 30000);
+
+    const config: any = {
       clientId: this.clientId,
       brokers: [this.brokerAddress],
       groupId: groupId || this.groupId,
@@ -42,9 +53,20 @@ export class KafkaConfigService {
         factor: 0.2,
         multiplier: 2,
       },
-      connectionTimeout: 10000,
-      requestTimeout: 30000,
+      connectionTimeout,
+      requestTimeout,
     };
+
+    // Only add SASL if explicitly enabled AND password is provided
+    if (enableSasl && password) {
+      config.sasl = {
+        mechanism: mechanism as any,
+        username: username,
+        password: password,
+      };
+    }
+
+    return config;
   }
 
   /**
@@ -59,18 +81,39 @@ export class KafkaConfigService {
     };
   }
 
-  getProducerConfig() {
-    return {
+  getProducerConfig(): KafkaConfig {
+    const enableSasl = this.configService.get<string>('KAFKA_ENABLE_SASL', 'false') === 'true';
+    const username = this.configService.get<string>('KAFKA_USERNAME', 'user');
+    const password = this.configService.get<string>('KAFKA_PASSWORD', '');
+    const mechanism = this.configService.get<string>(
+      'KAFKA_SASL_MECHANISM',
+      'scram-sha-256',
+    );
+    const connectionTimeout = this.configService.get<number>('KAFKA_CONNECTION_TIMEOUT', 30000);
+    const requestTimeout = this.configService.get<number>('KAFKA_REQUEST_TIMEOUT', 30000);
+
+    const config: any = {
       clientId: this.clientId,
       brokers: [this.brokerAddress],
       retry: {
         initialRetryTime: 300,
-        retries: 5, // Tăng từ 3 lên 5
+        retries: 5,
         maxRetryTime: 30000,
         factor: 2,
       },
-      connectionTimeout: 10000, // Tăng từ 3000 lên 10000ms
-      requestTimeout: 30000, // Thêm request timeout
+      connectionTimeout,
+      requestTimeout,
     };
+
+    // Only add SASL if explicitly enabled AND password is provided
+    if (enableSasl && password) {
+      config.sasl = {
+        mechanism: mechanism as any,
+        username: username,
+        password: password,
+      };
+    }
+
+    return config;
   }
 }
