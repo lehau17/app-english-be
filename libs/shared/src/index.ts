@@ -1,10 +1,11 @@
 export * from './ai';
 export * from './payload';
 export * from './pipe';
+export * from "./redis";
 export * from './services/tts.service';
 export * from './shared.module';
-export * from './types/tts-task.interface';
 export * from './types/neo4j-sync.interface';
+export * from './types/tts-task.interface';
 
 export * from './decorator';
 export * from './filters';

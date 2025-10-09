@@ -16,6 +16,7 @@ import { ConversationModule } from './domains/conversation';
 import { CourseModule } from './domains/course/course.module';
 import { DashboardModule } from './domains/dashboard/dashboard.module';
 import { DeviceTokenModule } from './domains/device-token';
+import { DictionaryModule } from './domains/dictionary/dictionary.module';
 import { EvaluationModule } from './domains/evaluation';
 import { GoogleTranslateModule } from './domains/google-translate/google-translate.module';
 import { LeaderboardModule } from './domains/leaderboard';
@@ -70,6 +71,7 @@ import { EventsModule } from './events/events.module';
     LeaderboardModule,
     AiSpeakingModule,
     PaymentModule,
+    DictionaryModule,
   ],
   controllers: [ClientApiController],
   providers: [ClientApiService, UploadService],
