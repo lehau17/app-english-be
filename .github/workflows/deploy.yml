@@ -46,7 +46,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./english-learning
-          file: ${{ matrix.app == 'client-api' && './english-learning/Dockerfile' || format('./english-learning/Dockerfile.{0}', matrix.app) }}
+          file: ${{ matrix.app == 'client-api' && 'english-learning/Dockerfile' || format('english-learning/Dockerfile.{0}', matrix.app) }}
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/english-learning-${{ matrix.app }}:${{ github.sha }}
