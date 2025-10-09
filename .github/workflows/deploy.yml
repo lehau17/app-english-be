@@ -45,8 +45,8 @@ jobs:
       - name: 🐳 Build and push ${{ matrix.app }}
         uses: docker/build-push-action@v5
         with:
-          context: ./english-learning
-          file: ${{ matrix.app == 'client-api' && 'english-learning/Dockerfile' || format('english-learning/Dockerfile.{0}', matrix.app) }}
+          context: .
+          file: ${{ matrix.app == 'client-api' && './Dockerfile' || format('./Dockerfile.{0}', matrix.app) }}
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/english-learning-${{ matrix.app }}:${{ github.sha }}
@@ -83,9 +83,9 @@ jobs:
       - name: 📦 Prepare deployment files
         run: |
           mkdir -p deploy
-          cp english-learning/docker-compose.prod.yml deploy/
-          cp english-learning/deploy.sh deploy/
-          cp english-learning/.env.example deploy/.env.example
+          cp docker-compose.prod.yml deploy/
+          cp deploy.sh deploy/
+          cp .env.example deploy/.env.example
 
       - name: 🚀 Deploy to VPS via SSH
         env:
