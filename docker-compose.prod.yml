@@ -1,39 +1,51 @@
 services:
   client-api:
     image: ${DOCKER_USERNAME}/english-learning-client-api:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - APP_NAME=client-api
+        - DOCKER_USERNAME=hitekhub
     container_name: english-learning-api
     restart: unless-stopped
     ports:
-      - "${CLIENT_API_PORT:-3334}:3334"
-    environment:
-      - APP_NAME=client-api
-      - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - ACCESS_TOKEN_EXPIRES_IN=${ACCESS_TOKEN_EXPIRES_IN:-15m}
-      - REFRESH_TOKEN_EXPIRES_IN=${REFRESH_TOKEN_EXPIRES_IN:-7d}
-      - KAFKA_BROKERS=${KAFKA_BROKERS}
-      - S3_REGION=${S3_REGION:-us-east-1}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
-      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
-      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
-      - CLIENT_API_PORT=${CLIENT_API_PORT:-3334}
-      - API_BASE_URL=${API_BASE_URL}
-      - GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID}
-      - GOOGLE_CLOUD_KEY_FILE=${GOOGLE_CLOUD_KEY_FILE}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - AI_SPEAKING_TTS_USE_HTTP=${AI_SPEAKING_TTS_USE_HTTP:-true}
-      - AI_SPEAKING_TTS_HTTP_URL=${AI_SPEAKING_TTS_HTTP_URL}
-      - AI_SPEAKING_TTS_VOICE=${AI_SPEAKING_TTS_VOICE:-en_US-lessac-medium}
-      - AI_SPEAKING_ASR_WS_URL=${AI_SPEAKING_ASR_WS_URL}
-      - AI_SPEAKING_ASR_AUDIO_FORMAT=${AI_SPEAKING_ASR_AUDIO_FORMAT:-pcm16}
-      - AI_SPEAKING_ASR_SAMPLE_RATE=${AI_SPEAKING_ASR_SAMPLE_RATE:-16000}
-      - AI_SPEAKING_HEALTH_SKIP=${AI_SPEAKING_HEALTH_SKIP:-false}
-      - AI_SPEAKING_HEALTH_TIMEOUT_MS=${AI_SPEAKING_HEALTH_TIMEOUT_MS:-3000}
-      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
-      - NEO4J_USER=${NEO4J_USER:-neo4j}
-      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-password}
+      - "${CLIENT_API_PORT:-3000}:3000"
+    # environment:
+    #   - APP_NAME=client-api
+    #   - NODE_ENV=production
+    #   - DATABASE_URL=${DATABASE_URL}
+    #   - JWT_SECRET=${JWT_SECRET}
+    #   - ACCESS_TOKEN_EXPIRES_IN=${ACCESS_TOKEN_EXPIRES_IN:-15m}
+    #   - REFRESH_TOKEN_EXPIRES_IN=${REFRESH_TOKEN_EXPIRES_IN:-7d}
+    #   - KAFKA_BROKERS=${KAFKA_BROKERS}
+    #   - S3_REGION=${S3_REGION:-us-east-1}
+    #   - S3_ENDPOINT=${S3_ENDPOINT}
+    #   - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+    #   - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+    #   - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+    #   - CLIENT_API_PORT=${CLIENT_API_PORT:-3334}
+    #   - API_BASE_URL=${API_BASE_URL}
+    #   - GOOGLE_CLOUD_PROJECT_ID=${GOOGLE_CLOUD_PROJECT_ID}
+    #   - GOOGLE_CLOUD_KEY_FILE=${GOOGLE_CLOUD_KEY_FILE}
+    #   - GEMINI_API_KEY=${GEMINI_API_KEY}
+    #   - AI_SPEAKING_TTS_USE_HTTP=${AI_SPEAKING_TTS_USE_HTTP:-true}
+    #   - AI_SPEAKING_TTS_HTTP_URL=${AI_SPEAKING_TTS_HTTP_URL}
+    #   - AI_SPEAKING_TTS_VOICE=${AI_SPEAKING_TTS_VOICE:-en_US-lessac-medium}
+    #   - AI_SPEAKING_ASR_WS_URL=${AI_SPEAKING_ASR_WS_URL}
+    #   - AI_SPEAKING_ASR_AUDIO_FORMAT=${AI_SPEAKING_ASR_AUDIO_FORMAT:-pcm16}
+    #   - AI_SPEAKING_ASR_SAMPLE_RATE=${AI_SPEAKING_ASR_SAMPLE_RATE:-16000}
+    #   - AI_SPEAKING_HEALTH_SKIP=${AI_SPEAKING_HEALTH_SKIP:-false}
+    #   - AI_SPEAKING_HEALTH_TIMEOUT_MS=${AI_SPEAKING_HEALTH_TIMEOUT_MS:-3000}
+    #   - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+    #   - NEO4J_USER=${NEO4J_USER:-neo4j}
+    #   - NEO4J_PASSWORD=${NEO4J_PASSWORD:-password}
+    #   - REDIS_HOST=redis
+    #   - REDIS_PORT=6379
+    #   - REDIS_PASSWORD=${REDIS_PASSWORD}
+    #   - REDIS_DB=${REDIS_DB:-0}
+    env_file:
+      - .env
     depends_on:
       - postgres
       - redis
@@ -68,6 +80,10 @@ services:
       - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
       - NEO4J_USER=${NEO4J_USER:-neo4j}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-password}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB:-0}
     depends_on:
       - postgres
       - redis
@@ -148,14 +164,33 @@ services:
     image: redis:7-alpine
     container_name: redis
     restart: unless-stopped
+    command: >
+      sh -c '
+      if [ -n "$$REDIS_PASSWORD" ]; then
+        redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes;
+      else
+        redis-server --appendonly yes;
+      fi
+      '
+    environment:
+      - REDIS_PASSWORD=3881016Hau@
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+        - CMD
+        - sh
+        - -c
+        - |
+          if [ -n "$$REDIS_PASSWORD" ]; then
+            redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG
+          else
+            redis-cli ping | grep PONG
+          fi
       interval: 10s
       timeout: 3s
       retries: 5

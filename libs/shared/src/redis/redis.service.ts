@@ -9,11 +9,18 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private isConnected = false;
 
   constructor(private readonly configService: ConfigService) {
-    const redisUrl = this.configService.get<string>('REDIS_URL') || 'redis://localhost:6379';
+    // Get Redis configuration
+    const redisHost = this.configService.get<string>('REDIS_HOST') || 'localhost';
+    const redisPort = this.configService.get<number>('REDIS_PORT') || 6379;
+    const redisPassword = this.configService.get<string>('REDIS_PASSWORD');
+    const redisDb = this.configService.get<number>('REDIS_DB') || 0;
+    const redisUrl = this.configService.get<string>('REDIS_URL');
 
-    this.client = createClient({
-      url: redisUrl,
+    // Build Redis configuration
+    const redisConfig: any = {
       socket: {
+        host: redisHost,
+        port: redisPort,
         reconnectStrategy: (retries) => {
           if (retries > 10) {
             this.logger.error('Redis reconnection failed after 10 attempts');
@@ -22,7 +29,23 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
           return Math.min(retries * 100, 3000);
         },
       },
-    });
+      database: redisDb,
+    };
+
+    // Add password if provided
+    if (redisPassword) {
+      redisConfig.password = redisPassword;
+    }
+
+    // Use URL if provided (overrides individual configs)
+    if (redisUrl) {
+      redisConfig.url = redisUrl;
+      delete redisConfig.socket;
+      delete redisConfig.password;
+      delete redisConfig.database;
+    }
+
+    this.client = createClient(redisConfig);
 
     this.client.on('error', (err) => {
       this.logger.error(`Redis Client Error: ${err.message}`);
@@ -37,6 +60,15 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     this.client.on('disconnect', () => {
       this.logger.warn('⚠️  Redis disconnected');
       this.isConnected = false;
+    });
+
+    this.client.on('reconnecting', () => {
+      this.logger.log('🔄 Redis reconnecting...');
+    });
+
+    this.client.on('ready', () => {
+      this.logger.log('✅ Redis ready');
+      this.isConnected = true;
     });
   }
 

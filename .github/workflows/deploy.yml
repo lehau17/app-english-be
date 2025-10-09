@@ -44,6 +44,7 @@ jobs:
 
       - name: 🐳 Build and push ${{ matrix.app }}
         uses: docker/build-push-action@v5
+        timeout-minutes: 30
         with:
           context: .
           file: ${{ matrix.app == 'client-api' && './Dockerfile' || format('./Dockerfile.{0}', matrix.app) }}
@@ -56,6 +57,8 @@ jobs:
           cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/english-learning-${{ matrix.app }}:buildcache
           cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/english-learning-${{ matrix.app }}:buildcache,mode=max
           platforms: linux/amd64
+          provenance: false
+          sbom: false
 
       - name: ✅ Image built successfully
         run: |
