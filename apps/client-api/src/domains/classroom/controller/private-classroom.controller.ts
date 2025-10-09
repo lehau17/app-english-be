@@ -1,47 +1,47 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-  BadRequestException,
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Post,
-  Put,
-  Query,
-  Res,
-  UploadedFile,
-  UseInterceptors,
+    BadRequestException,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    ParseUUIDPipe,
+    Post,
+    Put,
+    Query,
+    Res,
+    UploadedFile,
+    UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
-  ApiOperation,
-  ApiTags,
+    ApiBearerAuth,
+    ApiBody,
+    ApiConsumes,
+    ApiOperation,
+    ApiTags,
 } from '@nestjs/swagger';
 import { Classroom } from '@prisma/client';
 import { Response } from 'express';
 import {
-  CreateAssignmentDto,
-  QueryAssignmentsDto,
-  UpdateAssignmentDto,
+    CreateAssignmentDto,
+    QueryAssignmentsDto,
+    UpdateAssignmentDto,
 } from '../../assignment/dto';
 import { AssignmentService } from '../../assignment/service/assignment.service';
 import {
-  AddStudentToClassroomDto,
-  AssignTeacherToClassroomDto,
-  ClassroomAnnouncementQueryDto,
-  CreateClassroomAnnouncementDto,
-  CreateClassroomDto,
-  FilterClassroomRequestDto,
-  ImportStudentsResultDto,
-  StudentDailyScheduleQueryDto,
-  StudentWeeklyScheduleQueryDto,
-  UpdateClassroomDto,
+    AddStudentToClassroomDto,
+    AssignTeacherToClassroomDto,
+    ClassroomAnnouncementQueryDto,
+    CreateClassroomAnnouncementDto,
+    CreateClassroomDto,
+    FilterClassroomRequestDto,
+    ImportStudentsResultDto,
+    StudentDailyScheduleQueryDto,
+    StudentWeeklyScheduleQueryDto,
+    UpdateClassroomDto,
 } from '../dto/classroom.dto';
 import { ClassroomService } from '../service/classroom.service';
 
@@ -154,6 +154,21 @@ export class PrivateClassroomController {
       weekEnd,
       timezone as any,
       days,
+    );
+  }
+
+  @Get('teacher/:teacherId/availability')
+  @ApiOperation({ summary: 'Get teacher weekly availability for classroom creation (Mon-Sun only busy slots)' })
+  @ResponseMessage('Teacher availability fetched successfully')
+  getTeacherAvailability(
+    @Param('teacherId', new ParseUUIDPipe()) teacherId: string,
+    @Query('weekStart') weekStart?: string,
+    @Query('timezone') timezone: string = 'Asia_Ho_Chi_Minh',
+  ) {
+    return this.classroomService.getTeacherWeeklyAvailability(
+      teacherId,
+      weekStart,
+      timezone as any,
     );
   }
 

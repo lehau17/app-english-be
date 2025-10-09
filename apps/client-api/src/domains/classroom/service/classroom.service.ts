@@ -481,6 +481,98 @@ export class ClassroomService {
     return this.buildTeacherWeeklySchedule(teacherId, query);
   }
 
+  /**
+   * Get teacher recurring weekly availability (Mon-Sun with recurring time slots)
+   * Used for classroom creation to show teacher's recurring schedule pattern
+   * Returns slots from ALL active classrooms where teacher is assigned
+   */
+  async getTeacherWeeklyAvailability(
+    teacherId: string,
+    weekStart?: string,
+    timezone: TimezoneCode = TimezoneCode.Asia_Ho_Chi_Minh,
+  ) {
+    const now = new Date();
+
+    // Get all ACTIVE classrooms where this teacher is assigned
+    const classrooms = await this.prisma.classroom.findMany({
+      where: {
+        teacherId,
+        isActive: true,
+        // Only classrooms that haven't ended yet
+        periodStart: {
+          gte: now,
+        },
+      },
+      include: {
+        slots: true,
+        course: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+
+
+
+    // Group slots by day of week (mon, tue, wed, thu, fri, sat, sun)
+    const weekSchedule: {
+      [key: string]: Array<{
+        classroomId: string;
+        classroomName: string;
+        courseTitle: string;
+        startMinuteOfDay: number;
+        endMinuteOfDay: number;
+      }>;
+    } = {
+      mon: [],
+      tue: [],
+      wed: [],
+      thu: [],
+      fri: [],
+      sat: [],
+      sun: [],
+    };
+
+    const dayOfWeekMap = {
+      MONDAY: 'mon',
+      TUESDAY: 'tue',
+      WEDNESDAY: 'wed',
+      THURSDAY: 'thu',
+      FRIDAY: 'fri',
+      SATURDAY: 'sat',
+      SUNDAY: 'sun',
+    };
+
+    // Collect all recurring slots from all active classrooms
+    classrooms.forEach((classroom) => {
+      classroom.slots.forEach((slot) => {
+        console.log("slot", slot)
+          weekSchedule[slot.dayOfWeek].push({
+            classroomId: classroom.id,
+            classroomName: classroom.name,
+            courseTitle: classroom.course?.title || 'Unknown Course',
+            startMinuteOfDay: slot.startMinuteOfDay,
+            endMinuteOfDay: slot.endMinuteOfDay,
+          });
+      });
+    });
+
+    // Sort slots by start time for each day
+    Object.keys(weekSchedule).forEach((dayKey) => {
+      weekSchedule[dayKey].sort((a, b) => a.startMinuteOfDay - b.startMinuteOfDay);
+    });
+
+    return {
+      teacherId,
+      timezone,
+      totalActiveClassrooms: classrooms.length,
+      schedule: weekSchedule,
+    };
+  }
+
   private async buildTeacherWeeklySchedule(
     teacherId: string,
     query: StudentWeeklyScheduleQueryDto,
@@ -1353,8 +1445,12 @@ export class ClassroomService {
   }
 
   private formatDateInTimezone(date: Date, timezone: TimezoneCode): string {
+    // Convert timezone from enum format (Asia_Ho_Chi_Minh) to IANA format (Asia/Ho_Chi_Minh)
+    // Only replace the FIRST underscore: Asia_Ho_Chi_Minh → Asia/Ho_Chi_Minh
+    const ianaTimezone = timezone.replace('_', '/');
+
     const options: Intl.DateTimeFormatOptions = {
-      timeZone: timezone.replace('_', '/'),
+      timeZone: ianaTimezone,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

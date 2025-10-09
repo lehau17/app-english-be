@@ -709,25 +709,23 @@ export class ClassroomRepository {
     // Settings
     const settings = classroom.settings || {};
 
-    // Schedule
-    const schedule =
-      classroom.slots && classroom.slots.length > 0
-        ? {
-            days: classroom.slots.map((s) => s.dayOfWeek),
-            time:
-              classroom.slots[0].startMinuteOfDay !== undefined
-                ? `${Math.floor(classroom.slots[0].startMinuteOfDay / 60)}:${String(classroom.slots[0].startMinuteOfDay % 60).padStart(2, '0')}`
-                : undefined,
-            duration:
-              classroom.slots[0].startMinuteOfDay !== undefined &&
-              classroom.slots[0].endMinuteOfDay !== undefined
-                ? Math.round(
-                    classroom.slots[0].endMinuteOfDay -
-                      classroom.slots[0].startMinuteOfDay,
-                  )
-                : undefined,
-          }
-        : undefined;
+    // Schedule - return full slot details for each day
+    const slots = classroom.slots?.map((slot) => ({
+      id: slot.id,
+      dayOfWeek: slot.dayOfWeek,
+      startMinuteOfDay: slot.startMinuteOfDay,
+      endMinuteOfDay: slot.endMinuteOfDay,
+      startTime: slot.startMinuteOfDay !== undefined
+        ? `${Math.floor(slot.startMinuteOfDay / 60)}:${String(slot.startMinuteOfDay % 60).padStart(2, '0')}`
+        : undefined,
+      endTime: slot.endMinuteOfDay !== undefined
+        ? `${Math.floor(slot.endMinuteOfDay / 60)}:${String(slot.endMinuteOfDay % 60).padStart(2, '0')}`
+        : undefined,
+      duration: slot.startMinuteOfDay !== undefined && slot.endMinuteOfDay !== undefined
+        ? Math.round(slot.endMinuteOfDay - slot.startMinuteOfDay)
+        : undefined,
+      isActive: slot.isActive,
+    })) ?? [];
 
     return {
       id: classroom.id,
@@ -741,7 +739,7 @@ export class ClassroomRepository {
       updatedAt: classroom.updatedAt,
       expiresAt: classroom.expiresAt,
       settings,
-      schedule,
+      slots,
       _count,
       students,
       assignments,
@@ -951,7 +949,25 @@ export class ClassroomRepository {
     }));
 
     const settings = (classroom.settings as any) || {};
-    const schedule = (classroom.slots as any[]) || [];
+
+    // Format slots with full details
+    const slots = classroom.slots?.map((slot) => ({
+      id: slot.id,
+      dayOfWeek: slot.dayOfWeek,
+      startMinuteOfDay: slot.startMinuteOfDay,
+      endMinuteOfDay: slot.endMinuteOfDay,
+      startTime: slot.startMinuteOfDay !== undefined
+        ? `${Math.floor(slot.startMinuteOfDay / 60)}:${String(slot.startMinuteOfDay % 60).padStart(2, '0')}`
+        : undefined,
+      endTime: slot.endMinuteOfDay !== undefined
+        ? `${Math.floor(slot.endMinuteOfDay / 60)}:${String(slot.endMinuteOfDay % 60).padStart(2, '0')}`
+        : undefined,
+      duration: slot.startMinuteOfDay !== undefined && slot.endMinuteOfDay !== undefined
+        ? Math.round(slot.endMinuteOfDay - slot.startMinuteOfDay)
+        : undefined,
+      isActive: slot.isActive,
+    })) ?? [];
+
     const _count = {
       students: students.length,
       assignments: assignments.length,
@@ -971,7 +987,7 @@ export class ClassroomRepository {
       expiresAt: classroom.expiresAt,
       course: classroom.course,
       settings,
-      schedule,
+      slots,
       _count,
       students,
       assignments,
