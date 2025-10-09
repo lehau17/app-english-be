@@ -1,24 +1,24 @@
 import { GeminiService } from '@app/shared';
 import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
 } from '@nestjs/common';
 import { AssignmentStatus } from '@prisma/client';
 import {
-  CreateAssignmentDto,
-  GradeAssignmentDto,
-  QueryAssignmentsDto,
-  SubmitAssignmentDto,
-  UpdateAssignmentDto,
+    CreateAssignmentDto,
+    GradeAssignmentDto,
+    QueryAssignmentsDto,
+    SubmitAssignmentDto,
+    UpdateAssignmentDto,
 } from '../dto';
 import { AssignmentActivityDto } from '../dto/create-assignment.dto';
 import {
-  AssignmentActivityModel,
-  AssignmentRepository,
-  AssignmentSubmissionWithStudent,
-  AssignmentWithDetails,
+    AssignmentActivityModel,
+    AssignmentRepository,
+    AssignmentSubmissionWithStudent,
+    AssignmentWithDetails,
 } from '../repository';
 
 @Injectable()
@@ -453,8 +453,34 @@ export class AssignmentService {
             break;
 
           case 'reading':
-            // Reading comprehension: single question with options
-            if (content?.options && typeof content.correctIndex === 'number') {
+            // Handle both old and new reading formats
+            if (content?.questions && Array.isArray(content.questions)) {
+              // New format: multiple questions
+              let correctCount = 0;
+              content.questions.forEach((q: any, qIndex: number) => {
+                const userAnswer = activityAnswers[qIndex];
+                if (
+                  typeof userAnswer === 'number' &&
+                  userAnswer === q.correctIndex
+                ) {
+                  correctCount++;
+                  console.log(
+                    `Reading Q${qIndex} correct: user=${userAnswer}, correct=${q.correctIndex}`,
+                  );
+                } else {
+                  console.log(
+                    `Reading Q${qIndex} incorrect: user=${userAnswer}, correct=${q.correctIndex}`,
+                  );
+                }
+              });
+              activityScore = Math.round(
+                (correctCount / content.questions.length) * activityPoints,
+              );
+            } else if (
+              content?.options &&
+              typeof content.correctIndex === 'number'
+            ) {
+              // Old format: single question
               if (activityAnswers === content.correctIndex) {
                 activityScore = activityPoints;
                 console.log(

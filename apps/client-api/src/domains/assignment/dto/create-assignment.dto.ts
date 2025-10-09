@@ -2,21 +2,21 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DifficultyLevel } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
-  IsArray,
-  IsBoolean,
-  IsDateString,
-  IsEnum,
-  IsInt,
-  IsNotEmpty,
-  IsObject,
-  IsOptional,
-  IsString,
-  Min,
-  Validate,
-  ValidateNested,
-  ValidationArguments,
-  ValidatorConstraint,
-  ValidatorConstraintInterface,
+    IsArray,
+    IsBoolean,
+    IsDateString,
+    IsEnum,
+    IsInt,
+    IsNotEmpty,
+    IsObject,
+    IsOptional,
+    IsString,
+    Min,
+    Validate,
+    ValidateNested,
+    ValidationArguments,
+    ValidatorConstraint,
+    ValidatorConstraintInterface,
 } from 'class-validator';
 import * as uuid from 'uuid';
 import { ACTIVITY_TYPES, ActivityTypeValue } from '../../course/dto';
@@ -35,8 +35,8 @@ export class ActivityContentValidator implements ValidatorConstraintInterface {
     // Basic validation based on activity type
     switch (activityType) {
       case 'quiz':
-      case 'reading':
       case 'grammar':
+        // Single question format
         return (
           typeof content.question === 'string' &&
           Array.isArray(content.options) &&
@@ -45,11 +45,11 @@ export class ActivityContentValidator implements ValidatorConstraintInterface {
           content.correctIndex >= 0 &&
           content.correctIndex < content.options.length
         );
-      case 'listening':
-        // New format: audioUrl + multiple questions
+      case 'reading':
+        // Reading with multiple questions format: { passage?, questions: [...] }
         return (
-          typeof content.audioUrl === 'string' &&
           Array.isArray(content.questions) &&
+          content.questions.length > 0 &&
           content.questions.every(
             (q: any) =>
               typeof q.question === 'string' &&
@@ -60,10 +60,35 @@ export class ActivityContentValidator implements ValidatorConstraintInterface {
               q.correctIndex < q.options.length,
           )
         );
+      case 'listening':
+        // Listening format: { audioUrl, questions: [...] }
+        return (
+          typeof content.audioUrl === 'string' &&
+          Array.isArray(content.questions) &&
+          content.questions.length > 0 &&
+          content.questions.every(
+            (q: any) =>
+              typeof q.question === 'string' &&
+              Array.isArray(q.options) &&
+              q.options.length > 0 &&
+              typeof q.correctIndex === 'number' &&
+              q.correctIndex >= 0 &&
+              q.correctIndex < q.options.length,
+          )
+        );
+      case 'pronunciation':
+        // Pronunciation format: { phrases: [{ text, sampleUrl? }] }
+        return (
+          Array.isArray(content.phrases) &&
+          content.phrases.length > 0 &&
+          content.phrases.every(
+            (p: any) => typeof p.text === 'string' && p.text.length > 0,
+          )
+        );
       case 'vocab':
-        return Array.isArray(content.items);
+        return Array.isArray(content.items) && content.items.length > 0;
       case 'flashcard':
-        return Array.isArray(content.cards);
+        return Array.isArray(content.cards) && content.cards.length > 0;
       default:
         return true; // For other types, just allow any object
     }

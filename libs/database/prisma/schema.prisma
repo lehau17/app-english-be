@@ -1099,6 +1099,7 @@ model Attempt {
   averageTime Int?
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1459,6 +1460,10 @@ model AssignmentSubmission {
   isLate Boolean @default(false)
 
   status String @default("submitted")
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
@@ -2585,6 +2590,7 @@ model PodcastAttempt {
   status AttemptStatus @default(in_progress)
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
 

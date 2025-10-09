@@ -30,7 +30,7 @@ docker compose -f docker-compose.prod.yml rm -f client-api background-worker not
 
 echo "🔧 Running database migrations..."
 # Run migrations using the new client-api image
-docker compose -f docker-compose.prod.yml run --rm client-api npm run prisma:migrate deploy
+docker compose -f docker-compose.prod.yml run --rm client-api sh -c "npm run prisma:migrate deploy && npm run prisma:generate"
 
 echo "🚀 Starting services..."
 docker compose -f docker-compose.prod.yml up -d

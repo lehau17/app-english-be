@@ -9,10 +9,10 @@ DECLARE
 BEGIN
   IF (TG_OP = 'DELETE') THEN
     entity_id := OLD.id;
-    occurred_at := COALESCE(OLD.updatedAt, OLD.createdAt, now());
+    occurred_at := now();
   ELSE
     entity_id := NEW.id;
-    occurred_at := COALESCE(NEW.updatedAt, NEW.createdAt, now());
+    occurred_at := now();
   END IF;
 
   PERFORM pg_notify(

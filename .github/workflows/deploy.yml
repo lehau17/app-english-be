@@ -24,11 +24,11 @@ jobs:
   build:
     name: Build Docker Images
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         app: [client-api, background-worker, notification]
-    
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -45,7 +45,8 @@ jobs:
       - name: 🐳 Build and push ${{ matrix.app }}
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: ./english-learning
+          file: ${{ matrix.app == 'client-api' && './english-learning/Dockerfile' || format('./english-learning/Dockerfile.{0}', matrix.app) }}
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/english-learning-${{ matrix.app }}:${{ github.sha }}
@@ -65,59 +66,64 @@ jobs:
     name: Deploy to VPS
     needs: build
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🔐 Install sshpass
-        run: sudo apt-get update && sudo apt-get install -y sshpass
+      - name: 🔐 Setup SSH Key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -p ${{ secrets.VPS_PORT || '22' }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
 
       - name: 📦 Prepare deployment files
         run: |
           mkdir -p deploy
-          cp docker-compose.prod.yml deploy/
-          cp deploy.sh deploy/
-          cp .env.example deploy/.env.example
+          cp english-learning/docker-compose.prod.yml deploy/
+          cp english-learning/deploy.sh deploy/
+          cp english-learning/.env.example deploy/.env.example
 
       - name: 🚀 Deploy to VPS via SSH
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
           VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           # Create deployment directory on VPS
-          sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no -p $VPS_PORT $VPS_USER@$VPS_HOST << 'ENDSSH'
+          ssh -o StrictHostKeyChecking=no -p $VPS_PORT $VPS_USER@$VPS_HOST << 'ENDSSH'
             mkdir -p ~/english-learning-backend
             cd ~/english-learning-backend
           ENDSSH
 
           # Copy deployment files to VPS
-          sshpass -p "$VPS_PASSWORD" scp -o StrictHostKeyChecking=no -P $VPS_PORT -r deploy/* $VPS_USER@$VPS_HOST:~/english-learning-backend/
+          scp -o StrictHostKeyChecking=no -P $VPS_PORT -r deploy/* $VPS_USER@$VPS_HOST:~/english-learning-backend/
 
           # Execute deployment on VPS
-          sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no -p $VPS_PORT $VPS_USER@$VPS_HOST << ENDSSH
+          ssh -o StrictHostKeyChecking=no -p $VPS_PORT $VPS_USER@$VPS_HOST << ENDSSH
             cd ~/english-learning-backend
-            
-            # Export environment variables
+
+            # Check .env file exists
+            if [ ! -f .env ]; then
+              echo "❌ ERROR: .env file not found on VPS"
+              echo "📝 Please create .env file at ~/english-learning-backend/.env"
+              echo "💡 Use .env.example as template"
+              exit 1
+            fi
+
+            # Export Docker deployment variables
             export DOCKER_USERNAME=$DOCKER_USERNAME
             export IMAGE_TAG=$IMAGE_TAG
-            
-            # Load .env if exists
-            if [ -f .env ]; then
-              export \$(cat .env | grep -v '^#' | xargs)
-            else
-              echo "⚠️  Warning: .env file not found on VPS"
-              echo "📝 Please create .env file based on .env.example"
-            fi
-            
+
             # Make deploy script executable
             chmod +x deploy.sh
-            
-            # Run deployment
+
+            # Run deployment (deploy.sh will load .env automatically via docker-compose)
             ./deploy.sh
           ENDSSH
 
@@ -131,11 +137,10 @@ jobs:
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PASSWORD: ${{ secrets.VPS_PASSWORD }}
           VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
         run: |
           sleep 15
-          sshpass -p "$VPS_PASSWORD" ssh -o StrictHostKeyChecking=no -p $VPS_PORT $VPS_USER@$VPS_HOST << 'ENDSSH'
+          ssh -o StrictHostKeyChecking=no -p $VPS_PORT $VPS_USER@$VPS_HOST << 'ENDSSH'
             cd ~/english-learning-backend
             echo "🔍 Checking service status..."
             docker compose -f docker-compose.prod.yml ps
@@ -146,7 +151,7 @@ jobs:
     needs: [build, deploy]
     runs-on: ubuntu-latest
     if: always()
-    
+
     steps:
       - name: 📢 Deployment Status
         run: |
