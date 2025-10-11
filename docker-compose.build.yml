@@ -1,0 +1,34 @@
+version: '3.8'
+
+# Docker Compose file for building images
+# Usage: docker compose -f docker-compose.build.yml build <service>
+
+services:
+  client-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        APP_NAME: client-api
+      cache_from:
+        - ${DOCKER_USERNAME:-lehau17}/english-learning-client-api:latest
+    image: ${DOCKER_USERNAME:-lehau17}/english-learning-client-api:${IMAGE_TAG:-latest}
+
+  background-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.background-worker
+      target: production
+      cache_from:
+        - ${DOCKER_USERNAME:-lehau17}/english-learning-background-worker:latest
+    image: ${DOCKER_USERNAME:-lehau17}/english-learning-background-worker:${IMAGE_TAG:-latest}
+
+  notification:
+    build:
+      context: .
+      dockerfile: Dockerfile.notification
+      target: production
+      cache_from:
+        - ${DOCKER_USERNAME:-lehau17}/english-learning-notification:latest
+    image: ${DOCKER_USERNAME:-lehau17}/english-learning-notification:${IMAGE_TAG:-latest}

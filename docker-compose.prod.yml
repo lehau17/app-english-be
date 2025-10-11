@@ -1,6 +1,6 @@
 services:
   client-api:
-    image: ${DOCKER_USERNAME}/english-learning-client-api:${IMAGE_TAG:-latest}
+    image: ${DOCKER_USERNAME:-lehau17}/english-learning-client-api:${IMAGE_TAG:-latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -46,12 +46,12 @@ services:
     #   - REDIS_DB=${REDIS_DB:-0}
     env_file:
       - .env
-    depends_on:
-      - postgres
-      - redis
-      - redpanda
-      - minio
-      - neo4j
+    # depends_on:
+    #   - postgres
+    #   - redis
+    #   - redpanda
+    #   - minio
+    #   - neo4j
     networks:
       - app-network
     healthcheck:
@@ -62,234 +62,248 @@ services:
       start_period: 40s
 
   background-worker:
-    image: ${DOCKER_USERNAME}/english-learning-background-worker:${IMAGE_TAG:-latest}
+    image: ${DOCKER_USERNAME:-lehau17}/english-learning-background-worker:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.background-worker
+      args:
+        - DOCKER_USERNAME=hitekhub
     container_name: english-learning-worker
     restart: unless-stopped
-    environment:
-      - APP_NAME=background-worker
-      - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - KAFKA_BROKERS=${KAFKA_BROKERS}
-      - S3_REGION=${S3_REGION:-us-east-1}
-      - S3_ENDPOINT=${S3_ENDPOINT}
-      - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
-      - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
-      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
-      - NEO4J_USER=${NEO4J_USER:-neo4j}
-      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-password}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_DB=${REDIS_DB:-0}
-    depends_on:
-      - postgres
-      - redis
-      - redpanda
-      - neo4j
+    # environment:
+    #   - APP_NAME=background-worker
+    #   - NODE_ENV=production
+    #   - DATABASE_URL=${DATABASE_URL}
+    #   - JWT_SECRET=${JWT_SECRET}
+    #   - KAFKA_BROKERS=${KAFKA_BROKERS}
+    #   - S3_REGION=${S3_REGION:-us-east-1}
+    #   - S3_ENDPOINT=${S3_ENDPOINT}
+    #   - S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+    #   - S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+    #   - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+    #   - GEMINI_API_KEY=${GEMINI_API_KEY}
+    #   - NEO4J_URI=${NEO4J_URI:-bolt://neo4j:7687}
+    #   - NEO4J_USER=${NEO4J_USER:-neo4j}
+    #   - NEO4J_PASSWORD=${NEO4J_PASSWORD:-password}
+    #   - REDIS_HOST=redis
+    #   - REDIS_PORT=6379
+    #   - REDIS_PASSWORD=${REDIS_PASSWORD}
+    #   - REDIS_DB=${REDIS_DB:-0}
+    env_file:
+      - .env
+    # depends_on:
+    #   - postgres
+    #   - redis
+    #   - redpanda
+    #   - neo4j
     networks:
       - app-network
 
   notification:
-    image: ${DOCKER_USERNAME}/english-learning-notification:${IMAGE_TAG:-latest}
+    image: ${DOCKER_USERNAME:-lehau17}/english-learning-notification:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.notification
+      args:
+        - DOCKER_USERNAME=hitekhub
     container_name: english-learning-notification
     restart: unless-stopped
-    environment:
-      - APP_NAME=notification
-      - NODE_ENV=production
-      - DATABASE_URL=${DATABASE_URL}
-      - KAFKA_BROKERS=${KAFKA_BROKERS}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - FROM=${FROM}
-    depends_on:
-      - postgres
-      - redpanda
+    env_file:
+      - .env
+    # environment:
+    #   - APP_NAME=notification
+    #   - NODE_ENV=production
+    #   - DATABASE_URL=${DATABASE_URL}
+    #   - KAFKA_BROKERS=${KAFKA_BROKERS}
+    #   - SMTP_HOST=${SMTP_HOST}
+    #   - SMTP_PORT=${SMTP_PORT}
+    #   - FROM=${FROM}
+    # depends_on:
+    #   - postgres
+    #   - redpanda
     networks:
       - app-network
 
-  postgres:
-    image: pgvector/pgvector:0.8.0-pg17-trixie
-    container_name: english_learning_db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-english_learning}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  # postgres:
+  #   image: pgvector/pgvector:0.8.0-pg17-trixie
+  #   container_name: english_learning_db
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+  #     POSTGRES_DB: ${POSTGRES_DB:-english_learning}
+  #   ports:
+  #     - "${POSTGRES_PORT:-5432}:5432"
+  #   volumes:
+  #     - pg_data:/var/lib/postgresql/data
+  #   networks:
+  #     - app-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
 
-  redpanda:
-    image: docker.redpanda.com/redpandadata/redpanda:v24.3.6
-    container_name: redpanda
-    restart: unless-stopped
-    command:
-      - redpanda
-      - start
-      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
-      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
-      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
-      - --advertise-pandaproxy-addr internal://redpanda:8082,external://localhost:18082
-      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
-      - --rpc-addr redpanda:33145
-      - --advertise-rpc-addr redpanda:33145
-      - --mode dev-container
-      - --smp 1
-      - --default-log-level=info
-    ports:
-      - 19092:19092
-      - 18081:18081
-      - 18082:18082
-      - 19644:9644
-    networks:
-      - app-network
-    healthcheck:
-      test: ['CMD', 'rpk', 'cluster', 'info']
-      interval: 10s
-      timeout: 5s
-      retries: 10
+  # redpanda:
+  #   image: docker.redpanda.com/redpandadata/redpanda:v24.3.6
+  #   container_name: redpanda
+  #   restart: unless-stopped
+  #   command:
+  #     - redpanda
+  #     - start
+  #     - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+  #     - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+  #     - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+  #     - --advertise-pandaproxy-addr internal://redpanda:8082,external://localhost:18082
+  #     - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
+  #     - --rpc-addr redpanda:33145
+  #     - --advertise-rpc-addr redpanda:33145
+  #     - --mode dev-container
+  #     - --smp 1
+  #     - --default-log-level=info
+  #   ports:
+  #     - 19092:19092
+  #     - 18081:18081
+  #     - 18082:18082
+  #     - 19644:9644
+  #   networks:
+  #     - app-network
+  #   healthcheck:
+  #     test: ['CMD', 'rpk', 'cluster', 'info']
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 10
 
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    restart: unless-stopped
-    command: >
-      sh -c '
-      if [ -n "$$REDIS_PASSWORD" ]; then
-        redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes;
-      else
-        redis-server --appendonly yes;
-      fi
-      '
-    environment:
-      - REDIS_PASSWORD=3881016Hau@
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - app-network
-    healthcheck:
-      test:
-        - CMD
-        - sh
-        - -c
-        - |
-          if [ -n "$$REDIS_PASSWORD" ]; then
-            redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG
-          else
-            redis-cli ping | grep PONG
-          fi
-      interval: 10s
-      timeout: 3s
-      retries: 5
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: redis
+  #   restart: unless-stopped
+  #   command: >
+  #     sh -c '
+  #     if [ -n "$$REDIS_PASSWORD" ]; then
+  #       redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes;
+  #     else
+  #       redis-server --appendonly yes;
+  #     fi
+  #     '
+  #   environment:
+  #     - REDIS_PASSWORD=3881016Hau@
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - app-network
+  #   healthcheck:
+  #     test:
+  #       - CMD
+  #       - sh
+  #       - -c
+  #       - |
+  #         if [ -n "$$REDIS_PASSWORD" ]; then
+  #           redis-cli -a "$$REDIS_PASSWORD" ping | grep PONG
+  #         else
+  #           redis-cli ping | grep PONG
+  #         fi
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
 
-  minio:
-    image: minio/minio:latest
-    container_name: minio
-    restart: unless-stopped
-    command: server --console-address ":9001" /data
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
-    ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
-    volumes:
-      - minio_data:/data
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 30s
-      timeout: 20s
-      retries: 3
+  # minio:
+  #   image: minio/minio:latest
+  #   container_name: minio
+  #   restart: unless-stopped
+  #   command: server --console-address ":9001" /data
+  #   environment:
+  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minio123}
+  #   ports:
+  #     - "${MINIO_PORT:-9000}:9000"
+  #     - "${MINIO_CONSOLE_PORT:-9001}:9001"
+  #   volumes:
+  #     - minio_data:/data
+  #   networks:
+  #     - app-network
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+  #     interval: 30s
+  #     timeout: 20s
+  #     retries: 3
 
-  minio-init:
-    image: minio/mc:latest
-    container_name: minio-init
-    depends_on:
-      - minio
-    environment:
-      MC_HOST_local: http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-minio123}@minio:9000
-    entrypoint: >
-      /bin/sh -c '
-      echo ">> Waiting for MinIO...";
-      until mc ls local >/dev/null 2>&1; do sleep 2; done;
-      echo ">> Creating bucket (idempotent)...";
-      mc mb -p local/${S3_BUCKET_NAME:-english-learning-bucket} || true;
-      echo ">> Set anonymous READ (public-download) on bucket...";
-      mc anonymous set download local/${S3_BUCKET_NAME:-english-learning-bucket} || true;
-      mc policy set public local/${S3_BUCKET_NAME:-english-learning-bucket} || true;
-      echo ">> Done.";
-      '
-    restart: "no"
-    networks:
-      - app-network
+  # minio-init:
+  #   image: minio/mc:latest
+  #   container_name: minio-init
+  #   depends_on:
+  #     - minio
+  #   environment:
+  #     MC_HOST_local: http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-minio123}@minio:9000
+  #   entrypoint: >
+  #     /bin/sh -c '
+  #     echo ">> Waiting for MinIO...";
+  #     until mc ls local >/dev/null 2>&1; do sleep 2; done;
+  #     echo ">> Creating bucket (idempotent)...";
+  #     mc mb -p local/${S3_BUCKET_NAME:-english-learning-bucket} || true;
+  #     echo ">> Set anonymous READ (public-download) on bucket...";
+  #     mc anonymous set download local/${S3_BUCKET_NAME:-english-learning-bucket} || true;
+  #     mc policy set public local/${S3_BUCKET_NAME:-english-learning-bucket} || true;
+  #     echo ">> Done.";
+  #     '
+  #   restart: "no"
+  #   networks:
+  #     - app-network
 
-  piper-tts:
-    image: rhasspy/wyoming-piper:latest
-    container_name: piper-tts
-    restart: unless-stopped
-    command: --voice en_US-lessac-medium
-    ports:
-      - "${PIPER_PORT:-10200}:10200"
-    volumes:
-      - piper_data:/data
-    networks:
-      - app-network
+  # piper-tts:
+  #   image: rhasspy/wyoming-piper:latest
+  #   container_name: piper-tts
+  #   restart: unless-stopped
+  #   command: --voice en_US-lessac-medium
+  #   ports:
+  #     - "${PIPER_PORT:-10200}:10200"
+  #   volumes:
+  #     - piper_data:/data
+  #   networks:
+  #     - app-network
 
-  vosk-asr:
-    image: alphacep/kaldi-en:latest
-    container_name: vosk-asr
-    restart: unless-stopped
-    ports:
-      - "${VOSK_PORT:-2700}:2700"
-    environment:
-      - MODEL_VERSION=vosk-model-small-en-us-0.15
-    networks:
-      - app-network
+  # vosk-asr:
+  #   image: alphacep/kaldi-en:latest
+  #   container_name: vosk-asr
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${VOSK_PORT:-2700}:2700"
+  #   environment:
+  #     - MODEL_VERSION=vosk-model-small-en-us-0.15
+  #   networks:
+  #     - app-network
 
-  neo4j:
-    image: neo4j:5.13.0
-    container_name: neo4j
-    restart: unless-stopped
-    environment:
-      - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-password}
-      - NEO4J_PLUGINS=["apoc", "graph-data-science"]
-      - NEO4J_dbms_security_procedures_unrestricted=apoc.*,gds.*
-      - NEO4J_dbms_memory_heap_initial__size=512M
-      - NEO4J_dbms_memory_heap_max__size=2G
-    ports:
-      - "${NEO4J_HTTP_PORT:-7474}:7474"
-      - "${NEO4J_BOLT_PORT:-7687}:7687"
-    volumes:
-      - neo4j_data:/data
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "cypher-shell", "-u", "${NEO4J_USER:-neo4j}", "-p", "${NEO4J_PASSWORD:-password}", "RETURN 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  # neo4j:
+  #   image: neo4j:5.13.0
+  #   container_name: neo4j
+  #   restart: unless-stopped
+  #   environment:
+  #     - NEO4J_AUTH=${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-password}
+  #     - NEO4J_PLUGINS=["apoc", "graph-data-science"]
+  #     - NEO4J_dbms_security_procedures_unrestricted=apoc.*,gds.*
+  #     - NEO4J_dbms_memory_heap_initial__size=512M
+  #     - NEO4J_dbms_memory_heap_max__size=2G
+  #   ports:
+  #     - "${NEO4J_HTTP_PORT:-7474}:7474"
+  #     - "${NEO4J_BOLT_PORT:-7687}:7687"
+  #   volumes:
+  #     - neo4j_data:/data
+  #   networks:
+  #     - app-network
+  #   healthcheck:
+  #     test: ["CMD", "cypher-shell", "-u", "${NEO4J_USER:-neo4j}", "-p", "${NEO4J_PASSWORD:-password}", "RETURN 1"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
 
-volumes:
-  pg_data:
-  redis_data:
-  minio_data:
-  piper_data:
-  neo4j_data:
+# volumes:
+#   pg_data:
+#   redis_data:
+#   minio_data:
+#   piper_data:
+#   neo4j_data:
 
 networks:
   app-network:

@@ -139,7 +139,7 @@ export class CreatePodcastDto {
 
   @ApiPropertyOptional({ description: 'Thời lượng audio (giây)' })
   @IsOptional()
-  @IsInt()
+  @IsNumber()
   duration?: number;
 
   @ApiPropertyOptional({
