@@ -151,11 +151,8 @@ describe('CourseRepository', () => {
       const result = await repository.list({});
 
       expect(result).toBeInstanceOf(PageResponseDto);
-      expect(result.data).toEqual(mockCourses);
-      expect(result.meta.page).toBe(1);
-      expect(result.meta.limit).toBe(10);
-      expect(result.meta.totalItems).toBe(2);
-      expect(result.meta.totalPages).toBe(1);
+      const expectedResult = PageResponseDto.of(mockCourses, 1, 10, 2);
+      expect(result).toEqual(expectedResult);
 
       expect(prisma.course.count).toHaveBeenCalled();
       expect(prisma.course.findMany).toHaveBeenCalledWith({
@@ -383,11 +380,8 @@ describe('CourseRepository', () => {
       const repository = new CourseRepository(prisma);
       const result = await repository.list({ page: 2, limit: 2 });
 
-      expect(result.data).toEqual(mockCourses);
-      expect(result.meta.page).toBe(2);
-      expect(result.meta.limit).toBe(2);
-      expect(result.meta.totalItems).toBe(10);
-      expect(result.meta.totalPages).toBe(5);
+      const expectedResult = PageResponseDto.of(mockCourses, 2, 2, 10);
+      expect(result).toEqual(expectedResult);
 
       expect(prisma.course.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
