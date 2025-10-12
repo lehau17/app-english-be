@@ -1,6 +1,6 @@
 # 🧪 AUTH MODULE TEST COVERAGE ANALYSIS
 
-**Ngày:** 11/10/2025  
+**Ngày:** 11/10/2025
 **Module:** Auth (Service, Repository, Controllers)
 
 ---
@@ -480,7 +480,7 @@ describe('PublicAuthController', () => {
 
 ---
 
-**Kết luận:** 
+**Kết luận:**
 - ✅ Service tests: Excellent (100%)
 - ⚠️ Repository tests: Incomplete (~50%)
 - ❌ Controller tests: Missing (0%)
@@ -489,5 +489,5 @@ describe('PublicAuthController', () => {
 
 ---
 
-*Document created: 11/10/2025*  
+*Document created: 11/10/2025*
 *Next review: After Phase 1 completion*
