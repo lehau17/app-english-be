@@ -1,7 +1,7 @@
 import { PrismaRepository } from '@app/database';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { LeaderboardService } from '../../../client-api/src/domains/leaderboard/service/leaderboard.service';
+import { BackgroundLeaderboardService } from './background-leaderboard.service';
 import { ScoreChangeListenerService } from './score-change-listener.service';
 
 type ScoreChangeEvent = {
@@ -29,7 +29,7 @@ export class LeaderboardScoreProcessorService {
   constructor(
     private readonly listener: ScoreChangeListenerService,
     private readonly prisma: PrismaRepository,
-    private readonly leaderboardService: LeaderboardService,
+    private readonly leaderboardService: BackgroundLeaderboardService,
   ) {}
 
   @Cron(CronExpression.EVERY_5_MINUTES)
@@ -327,13 +327,11 @@ export class LeaderboardScoreProcessorService {
   ) {
     for (const context of classroomPeriods) {
       try {
-        await this.leaderboardService.getClassroomLeaderboard(
-          context.classroomId,
-          {
-            year: context.year,
-            month: context.month,
-          },
-        );
+        await this.leaderboardService.rebuildClassroomLeaderboard({
+          classroomId: context.classroomId,
+          year: context.year,
+          month: context.month,
+        });
       } catch (error) {
         this.logger.error(
           `Failed to rebuild classroom leaderboard for classroom=${context.classroomId} period=${context.year}-${context.month}`,
@@ -346,7 +344,7 @@ export class LeaderboardScoreProcessorService {
   private async rebuildMonthlyLeaderboards(periods: PeriodKey[]) {
     for (const period of periods) {
       try {
-        await this.leaderboardService.getMonthlyLeaderboard({
+        await this.leaderboardService.rebuildMonthlyLeaderboard({
           year: period.year,
           month: period.month,
         });
@@ -362,7 +360,7 @@ export class LeaderboardScoreProcessorService {
   private async rebuildYearlyLeaderboards(years: number[]) {
     for (const year of years) {
       try {
-        await this.leaderboardService.getYearlyLeaderboard({ year });
+        await this.leaderboardService.rebuildYearlyLeaderboard({ year });
       } catch (error) {
         this.logger.error(
           `Failed to rebuild yearly leaderboard for ${year}`,

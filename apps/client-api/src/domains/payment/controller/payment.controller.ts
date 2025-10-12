@@ -110,13 +110,9 @@ export class PaymentWebhookController {
 
     // Return redirect response
     return {
-      statusCode: 302,
-      message: 'Redirect',
-      data: {
         redirectUrl: redirectUrl.toString(),
         success: result.success,
         message: result.message,
-      },
     };
   }
 

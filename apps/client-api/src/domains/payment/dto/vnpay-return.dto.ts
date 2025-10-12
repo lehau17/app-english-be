@@ -81,4 +81,20 @@ export class VNPayReturnDto {
   @IsString()
   @IsOptional()
   vnp_TransactionStatus?: string;
+
+  @ApiProperty({
+    description: 'Số giao dịch ngân hàng',
+    example: 'VNP15199800',
+  })
+  @IsString()
+  @IsOptional()
+  vnp_BankTranNo?: string;
+
+  @ApiProperty({
+    description: 'Loại thẻ thanh toán',
+    example: 'ATM',
+  })
+  @IsString()
+  @IsOptional()
+  vnp_CardType?: string;
 }
