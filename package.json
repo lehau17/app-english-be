@@ -30,6 +30,7 @@
     "test:translate": "node test-google-translate.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
+    "prisma:reset": "prisma migrate reset",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node --transpile-only prisma/seed.ts",
     "reindex:embeddings": "ts-node scripts/reindex-embeddings.ts",

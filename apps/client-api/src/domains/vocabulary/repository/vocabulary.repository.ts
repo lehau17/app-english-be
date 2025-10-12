@@ -1,10 +1,10 @@
-import { PrismaService } from '@app/database/prisma/prisma.service';
+import { PrismaRepository } from '@app/database';
 import { Injectable } from '@nestjs/common';
 import { SavedWord } from '@prisma/client';
 
 @Injectable()
 export class VocabularyRepository {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaRepository) {}
 
   async create(userId: string, word: string): Promise<SavedWord> {
     return this.prisma.savedWord.create({

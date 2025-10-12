@@ -1,7 +1,7 @@
-import { DictionaryService } from '@app/client-api/src/domains/dictionary/service/dictionary.service';
-import { VocabularyService } from '@app/client-api/src/domains/vocabulary/service/vocabulary.service';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { FlashcardDto, QuizDto, QuizQuestionDto } from '../dto/quiz.dto';
+import { DictionaryService } from '../../dictionary/service/dictionary.service';
+import { VocabularyService } from '../../vocabulary';
 
 @Injectable()
 export class QuizService {
