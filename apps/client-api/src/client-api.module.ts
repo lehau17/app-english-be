@@ -34,6 +34,8 @@ import { StudentModule } from './domains/student/student.module';
 import { SwaggerLoaderModule } from './domains/swagger/swagger.module';
 import { TeacherModule } from './domains/teacher';
 import { UploadModule } from './domains/upload';
+import { VocabularyModule } from './domains/vocabulary';
+import { QuizModule } from './domains/quiz';
 import { UploadService } from './domains/upload/upload.service';
 import { EventsModule } from './events/events.module';
 
@@ -72,6 +74,8 @@ import { EventsModule } from './events/events.module';
     AiSpeakingModule,
     PaymentModule,
     DictionaryModule,
+    VocabularyModule,
+    QuizModule,
   ],
   controllers: [ClientApiController],
   providers: [ClientApiService, UploadService],

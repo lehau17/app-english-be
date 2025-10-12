@@ -48,6 +48,22 @@ export class WordsApiService {
   }
 
   /**
+   * Perform an advanced search on WordsAPI
+   */
+  async advancedSearch(params: { [key: string]: any }): Promise<any> {
+    try {
+      const response = await this.axiosInstance.get('/', { params });
+      return response.data;
+    } catch (error: any) {
+      this.logger.error(
+        `WordsAPI advanced search error: ${error.message}`,
+        error.stack,
+      );
+      return { results: { data: [] } }; // Return an empty structure on error
+    }
+  }
+
+  /**
    * Lookup word details from WordsAPI
    */
   async lookupWord(word: string): Promise<WordsApiResponse | null> {
@@ -127,6 +143,45 @@ export class WordsApiService {
       this.logger.error(`Rhymes error: ${error.message}`);
       return [];
     }
+  }
+
+  /**
+   * Generic method to fetch word relations like 'examples', 'typeOf', etc.
+   */
+  private async getWordRelation(
+    word: string,
+    relation: 'examples' | 'typeOf' | 'hasTypes' | 'partOf',
+  ): Promise<any> {
+    try {
+      const response = await this.axiosInstance.get(
+        `/${encodeURIComponent(word.toLowerCase())}/${relation}`,
+      );
+      // The response contains the word and the relation array, e.g., { word: 'car', examples: [...] }
+      return response.data?.[relation] || [];
+    } catch (error: any) {
+      if (error.response?.status !== 404) {
+        this.logger.error(
+          `WordsAPI error for "${word}/${relation}": ${error.message}`,
+        );
+      }
+      return [];
+    }
+  }
+
+  async getExamples(word: string): Promise<string[]> {
+    return this.getWordRelation(word, 'examples');
+  }
+
+  async getTypeOf(word: string): Promise<string[]> {
+    return this.getWordRelation(word, 'typeOf');
+  }
+
+  async getHasTypes(word: string): Promise<string[]> {
+    return this.getWordRelation(word, 'hasTypes');
+  }
+
+  async getPartOf(word: string): Promise<string[]> {
+    return this.getWordRelation(word, 'partOf');
   }
 
   /**
