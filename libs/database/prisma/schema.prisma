@@ -597,6 +597,8 @@ model User {
   // Agent conversations
   agentConversations AgentConversation[] @relation("AgentConversations")
 
+  savedWords SavedWord[]
+
   @@index([status])
   @@index([provider, providerId])
   @@index([lastActiveAt])
@@ -2908,4 +2910,19 @@ model AgentMessage {
 
   @@index([conversationId])
   @@index([createdAt])
+}
+
+// ===================== VOCABULARY BOOK =====================
+
+model SavedWord {
+  id        String   @id @default(cuid())
+  word      String
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, word])
+  @@index([userId])
+  @@map("saved_words")
 }

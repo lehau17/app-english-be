@@ -81,3 +81,37 @@ export class WordSuggestionDto {
   @ApiPropertyOptional({ example: 2.5 })
   score?: number;
 }
+
+export class AdvancedSearchDto {
+  @ApiPropertyOptional({
+    description: 'A regular expression to match words.',
+    example: '^[a-z]{5}$',
+  })
+  @IsOptional()
+  @IsString()
+  letterPattern?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by part of speech.',
+    example: 'noun',
+  })
+  @IsOptional()
+  @IsString()
+  partOfSpeech?: string;
+
+  @ApiPropertyOptional({
+    description: 'The number of results to return.',
+    example: 10,
+    default: 10,
+  })
+  @IsOptional()
+  limit?: number;
+
+  @ApiPropertyOptional({
+    description: 'The page of results to return.',
+    example: 1,
+    default: 1,
+  })
+  @IsOptional()
+  page?: number;
+}

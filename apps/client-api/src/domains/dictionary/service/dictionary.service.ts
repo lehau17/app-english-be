@@ -133,6 +133,81 @@ export class DictionaryService {
     await this.redisService.expire(key, 30 * 24 * 60 * 60); // 30 days
   }
 
+  // ========== Word Relations ==========
+
+  private async getAndCacheRelation(
+    word: string,
+    relation: 'examples' | 'typeOf' | 'hasTypes' | 'partOf',
+  ): Promise<string[]> {
+    const normalizedWord = word.toLowerCase().trim();
+    const cacheKey = `dict:${relation}:${normalizedWord}`;
+
+    // Try cache first
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
+    let result: string[];
+    switch (relation) {
+      case 'examples':
+        result = await this.wordsApiService.getExamples(normalizedWord);
+        break;
+      case 'typeOf':
+        result = await this.wordsApiService.getTypeOf(normalizedWord);
+        break;
+      case 'hasTypes':
+        result = await this.wordsApiService.getHasTypes(normalizedWord);
+        break;
+      case 'partOf':
+        result = await this.wordsApiService.getPartOf(normalizedWord);
+        break;
+      default:
+        result = [];
+    }
+
+    // Cache the result for 7 days
+    await this.redisService.set(cacheKey, JSON.stringify(result), this.CACHE_TTL);
+
+    return result;
+  }
+
+  async getExamples(word: string): Promise<string[]> {
+    return this.getAndCacheRelation(word, 'examples');
+  }
+
+  async getTypeOf(word: string): Promise<string[]> {
+    return this.getAndCacheRelation(word, 'typeOf');
+  }
+
+  async getHasTypes(word: string): Promise<string[]> {
+    return this.getAndCacheRelation(word, 'hasTypes');
+  }
+
+  async getPartOf(word: string): Promise<string[]> {
+    return this.getAndCacheRelation(word, 'partOf');
+  }
+
+  async advancedSearch(params: any): Promise<any> {
+    // Filter out undefined or null params
+    const activeParams = Object.fromEntries(
+      Object.entries(params).filter(([, v]) => v != null),
+    );
+
+    const cacheKey = `dict:search:${JSON.stringify(activeParams)}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
+    const results = await this.wordsApiService.advancedSearch(activeParams);
+
+    // Cache for 1 hour
+    await this.redisService.set(cacheKey, JSON.stringify(results), 3600);
+
+    return results;
+  }
+
   // ========== Private Methods ==========
 
   private async getCachedWord(key: string): Promise<WordResultDto | null> {

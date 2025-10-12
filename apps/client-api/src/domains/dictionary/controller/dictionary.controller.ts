@@ -1,25 +1,45 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
-import {
-  Controller,
-  Get,
-  Param,
-  Query
-} from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiQuery,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { WordResultDto } from '../dto/dictionary.dto';
+import { AdvancedSearchDto, WordResultDto } from '../dto/dictionary.dto';
+import {
+  WordExamplesDto,
+  WordRelationsDto,
+} from '../dto/word-relation.dto';
 import { DictionaryService } from '../service/dictionary.service';
+import { WordOfTheDayService } from '../service/word-of-the-day.service';
 
 @ApiTags('Dictionary')
 @ApiBearerAuth('Authorization')
 @Controller('/private/v1/dictionary')
 export class DictionaryController {
-  constructor(private readonly dictionaryService: DictionaryService) {}
+  constructor(
+    private readonly dictionaryService: DictionaryService,
+    private readonly wordOfTheDayService: WordOfTheDayService,
+  ) {}
+
+  @Get('/word-of-the-day')
+  @ApiOperation({
+    summary: 'Get the Word of the Day',
+    description:
+      'Returns the automatically selected Word of the Day. The word is updated daily.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Word of the Day fetched successfully.',
+    type: WordResultDto,
+  })
+  @ResponseMessage('Word of the Day fetched successfully')
+  async getWordOfTheDay(): Promise<WordResultDto> {
+    return this.wordOfTheDayService.getWordOfTheDay();
+  }
 
   @Get('/lookup/:word')
   @ApiOperation({
@@ -67,6 +87,56 @@ export class DictionaryController {
   async getRhymes(@Param('word') word: string): Promise<{ rhymes: string[] }> {
     const rhymes = await this.dictionaryService.getRhymes(word);
     return { rhymes };
+  }
+
+  @Get('/lookup/:word/examples')
+  @ApiOperation({ summary: 'Get example sentences for a word' })
+  @ApiParam({ name: 'word', example: 'line' })
+  @ApiResponse({ status: 200, type: WordExamplesDto })
+  @ResponseMessage('Examples fetched successfully')
+  async getExamples(@Param('word') word: string): Promise<WordExamplesDto> {
+    const examples = await this.dictionaryService.getExamples(word);
+    return { examples };
+  }
+
+  @Get('/lookup/:word/type-of')
+  @ApiOperation({ summary: 'Get "type of" relations for a word' })
+  @ApiParam({ name: 'word', example: 'car' })
+  @ApiResponse({ status: 200, type: WordRelationsDto })
+  @ResponseMessage('Relations fetched successfully')
+  async getTypeOf(@Param('word') word: string): Promise<WordRelationsDto> {
+    const relations = await this.dictionaryService.getTypeOf(word);
+    return { relations };
+  }
+
+  @Get('/lookup/:word/has-types')
+  @ApiOperation({ summary: 'Get "has types" relations for a word' })
+  @ApiParam({ name: 'word', example: 'vehicle' })
+  @ApiResponse({ status: 200, type: WordRelationsDto })
+  @ResponseMessage('Relations fetched successfully')
+  async getHasTypes(@Param('word') word: string): Promise<WordRelationsDto> {
+    const relations = await this.dictionaryService.getHasTypes(word);
+    return { relations };
+  }
+
+  @Get('/lookup/:word/part-of')
+  @ApiOperation({ summary: 'Get "part of" relations for a word' })
+  @ApiParam({ name: 'word', example: 'wheel' })
+  @ApiResponse({ status: 200, type: WordRelationsDto })
+  @ResponseMessage('Relations fetched successfully')
+  async getPartOf(@Param('word') word: string): Promise<WordRelationsDto> {
+    const relations = await this.dictionaryService.getPartOf(word);
+    return { relations };
+  }
+
+  @Get('/search')
+  @ApiOperation({
+    summary: 'Advanced search for words',
+    description: 'Search for words using various criteria like patterns and part of speech.',
+  })
+  @ResponseMessage('Search results fetched successfully')
+  async advancedSearch(@Query() query: AdvancedSearchDto): Promise<any> {
+    return this.dictionaryService.advancedSearch(query);
   }
 
   @Get('/recent')
