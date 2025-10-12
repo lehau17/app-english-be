@@ -1,6 +1,6 @@
 import { PayloadToken } from '@app/shared';
 import { JwtPayload } from '@app/shared/payload';
-import { Body, Controller, Get, Logger, Post, Query, Res, StreamableFile } from '@nestjs/common';
+import { Body, Controller, Get, Logger, Param, Post, Query, Res, StreamableFile } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { createReadStream } from 'fs';
@@ -138,7 +138,7 @@ export class PrivateAgentController {
   })
   async getConversation(
     @PayloadToken() payload: JwtPayload,
-    @Query('id') conversationId: string,
+    @Param('id') conversationId: string,
   ) {
     return this.agentService.getConversation(conversationId, payload.sub);
   }
@@ -151,7 +151,7 @@ export class PrivateAgentController {
   })
   async deleteConversation(
     @PayloadToken() payload: JwtPayload,
-    @Query('id') conversationId: string,
+    @Param('id') conversationId: string,
   ) {
     await this.agentService.deleteConversation(conversationId, payload.sub);
     return { success: true, message: 'Conversation deleted successfully' };

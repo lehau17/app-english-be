@@ -53,13 +53,19 @@ export class AgentChatRepository {
   async findUserConversations(
     userId: string,
     options: { limit?: number; offset?: number } = {},
-  ): Promise<AgentConversation[]> {
+  ): Promise<AgentConversationWithMessages[]> {
     const { limit = 20, offset = 0 } = options;
     return this.prisma.agentConversation.findMany({
       where: { userId },
       orderBy: { updatedAt: 'desc' },
       take: limit,
       skip: offset,
+      include: {
+        messages: {
+          take: 1, // Only first message for preview
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
   }
 
