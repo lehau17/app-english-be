@@ -112,14 +112,26 @@ export class TtsListener implements OnModuleInit, OnModuleDestroy {
 
       const content: any = activity.content ?? {};
 
-      if (content.kind !== 'vocab') {
+      // Support both direct format { items: [...] } and wrapped format { kind: 'vocab', data: { items: [...] } }
+      let items: any[] = [];
+
+      if (Array.isArray(content.items)) {
+        // Direct format: { items: [...] }
+        items = content.items;
+      } else if (content.kind === 'vocab' && content.data?.items) {
+        // Wrapped format: { kind: 'vocab', data: { items: [...] } }
+        items = content.data.items;
+      } else if (content.data?.items) {
+        // Alternative wrapped format without kind
+        items = content.data.items;
+      }
+
+      if (items.length === 0) {
         this.logger.warn(
-          `Activity ${payload.activityId} is not vocab type, skipping TTS processing`,
+          `Activity ${payload.activityId} has no vocab items, skipping TTS processing`,
         );
         return;
       }
-
-      const items: any[] = (content.data && content.data.items) || [];
 
       // Process each item index that needs audio
       for (const idx of payload.itemsIndex) {

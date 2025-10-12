@@ -330,7 +330,7 @@ export class ClassroomService {
     return this.classroomRepository.createAnnouncement(classroomId, payload);
   }
 
-  async getClassroomDetail(
+  async  getClassroomDetail(
     classroomId: string,
     userId?: string,
     userRole?: string,
