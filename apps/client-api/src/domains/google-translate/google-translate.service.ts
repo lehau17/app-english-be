@@ -455,4 +455,94 @@ export class GoogleTranslateFreeService {
 
     return supportedLanguages.includes(language);
   }
+
+  /**
+   * Translate text with dictionary definitions using Free Dictionary API
+   */
+  async translateWithDictionary(text: string, targetLanguage: string = 'vi') {
+    try {
+      // Clean the text (take first word if multiple words)
+      const word = text.trim().split(/\s+/)[0].toLowerCase();
+
+      // Fetch dictionary data from Free Dictionary API
+      const dictionaryUrl = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`;
+      const dictionaryResponse = await fetch(dictionaryUrl);
+
+      let pronunciation = '';
+      let definitions: Array<{
+        partOfSpeech: string;
+        definitions: Array<{
+          definition: string;
+          example: string;
+          synonyms: string[];
+        }>;
+      }> = [];
+
+      if (dictionaryResponse.ok) {
+        const dictionaryData = await dictionaryResponse.json();
+
+        if (Array.isArray(dictionaryData) && dictionaryData.length > 0) {
+          const entry = dictionaryData[0];
+
+          // Get pronunciation (IPA or text)
+          if (entry.phonetics && entry.phonetics.length > 0) {
+            pronunciation =
+              entry.phonetics.find((p: any) => p.text)?.text ||
+              entry.phonetic ||
+              '';
+          }
+
+          // Extract meanings
+          if (entry.meanings && Array.isArray(entry.meanings)) {
+            definitions = entry.meanings.map((meaning: any) => ({
+              partOfSpeech: meaning.partOfSpeech || '',
+              definitions: (meaning.definitions || [])
+                .slice(0, 3) // Limit to 3 definitions per part of speech
+                .map((def: any) => ({
+                  definition: def.definition || '',
+                  example: def.example || '',
+                  synonyms: (def.synonyms || []).slice(0, 5), // Limit to 5 synonyms
+                })),
+            }));
+          }
+        }
+      }
+
+      // Translate to target language using Google Translate
+      let translatedText = text;
+      try {
+        const translateUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${targetLanguage}&dt=t&q=${encodeURIComponent(text)}`;
+        const translateResponse = await fetch(translateUrl);
+
+        if (translateResponse.ok) {
+          const translateData = await translateResponse.json();
+          if (
+            Array.isArray(translateData) &&
+            translateData[0] &&
+            Array.isArray(translateData[0])
+          ) {
+            translatedText = translateData[0]
+              .map((item: any) => item[0])
+              .filter(Boolean)
+              .join('');
+          }
+        }
+      } catch (translateError) {
+        this.logger.warn(
+          `Failed to translate "${text}" to ${targetLanguage}:`,
+          translateError,
+        );
+        // Keep original text if translation fails
+      }
+
+      return {
+        text: translatedText,
+        pronunciation,
+        definitions,
+      };
+    } catch (error) {
+      this.logger.error('Translate with dictionary error:', error);
+      throw new Error('Failed to translate with dictionary');
+    }
+  }
 }

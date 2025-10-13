@@ -323,6 +323,77 @@ export class GoogleTranslateController {
     );
   }
 
+  @Post('free/translate')
+  @ApiOperation({
+    summary: 'Dịch từ với dictionary definitions (Free)',
+    description:
+      'Dịch từ tiếng Anh sang ngôn ngữ khác kèm phiên âm và định nghĩa',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        text: {
+          type: 'string',
+          description: 'Từ cần dịch',
+          example: 'hello',
+        },
+        targetLanguage: {
+          type: 'string',
+          description: 'Ngôn ngữ đích',
+          example: 'vi',
+        },
+      },
+      required: ['text', 'targetLanguage'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Dịch thành công với dictionary',
+    schema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Từ đã dịch' },
+        pronunciation: { type: 'string', description: 'Phiên âm (IPA)' },
+        definitions: {
+          type: 'array',
+          description: 'Định nghĩa theo từ loại',
+          items: {
+            type: 'object',
+            properties: {
+              partOfSpeech: { type: 'string', description: 'Từ loại' },
+              definitions: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    definition: { type: 'string' },
+                    example: { type: 'string' },
+                    synonyms: { type: 'array', items: { type: 'string' } },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
+  async translateWithDictionary(
+    @Body() body: { text: string; targetLanguage: string },
+  ) {
+    const { text, targetLanguage } = body;
+
+    if (!text || !targetLanguage) {
+      throw new BadRequestException('Text and targetLanguage are required');
+    }
+
+    return this.googleTranslateFreeService.translateWithDictionary(
+      text,
+      targetLanguage,
+    );
+  }
+
   @Get('free/supported-languages')
   @ApiOperation({ summary: 'Danh sách ngôn ngữ hỗ trợ (Free TTS)' })
   async getFreeSupportedLanguages() {
