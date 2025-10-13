@@ -9,6 +9,7 @@ import { BackgroundWorkerService } from './background-worker.service';
 import { ClassroomSessionCron } from './classroom/classroom-session.cron';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { LeaderboardWorkerModule } from './leaderboard/leaderboard.module';
+import { SuggestionEngineModule } from './suggestion-engine/suggestion-engine.module';
 import { Neo4jSyncListener } from './neo4j/neo4j-sync.listener';
 import { PodcastGenerationService } from './podcast/podcast-generation.service';
 import { PodcastCron } from './podcast/podcast.cron';
@@ -24,6 +25,7 @@ import { TtsListener } from './tts/tts.listener';
     DashboardModule,
     ScheduleModule.forRoot(),
     LeaderboardWorkerModule,
+    SuggestionEngineModule,
   ],
   controllers: [BackgroundWorkerController],
   providers: [
