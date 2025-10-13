@@ -1,21 +1,21 @@
 import {
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  Post,
-  Query,
+    BadRequestException,
+    Body,
+    Controller,
+    Get,
+    Post,
+    Query,
 } from '@nestjs/common';
 import {
-  ApiTags,
-  ApiOperation,
-  ApiBody,
-  ApiResponse,
-  ApiQuery,
+    ApiBody,
+    ApiOperation,
+    ApiQuery,
+    ApiResponse,
+    ApiTags,
 } from '@nestjs/swagger';
 import {
-  GoogleTranslateFreeService,
-  GoogleTranslateService,
+    GoogleTranslateFreeService,
+    GoogleTranslateService,
 } from './google-translate.service';
 
 @ApiTags('Google Translate')
