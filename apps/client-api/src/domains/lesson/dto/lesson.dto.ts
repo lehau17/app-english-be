@@ -183,6 +183,7 @@ export class LessonProgressSummaryDto {
   @ApiProperty() totalActivities!: number;
   @ApiProperty() done!: number;
   @ApiProperty() mastered!: number;
+  @ApiProperty() reviewNeeded!: number;
   @ApiProperty() inProgress!: number;
   @ApiProperty() completion!: number; // %
 }

@@ -190,22 +190,25 @@ export class LessonRepository {
     let done = 0;
     let mastered = 0;
     let inProgress = 0;
+    let reviewNeeded = 0;
 
     for (const a of acts) {
       const p = (a as any).progress?.[0]; // Type assertion
       if (!p) continue;
       if (p.state === 'mastered') mastered++;
       if (p.state === 'done') done++;
+      if (p.state === 'review_needed') reviewNeeded++;
       if (p.state === 'in_progress') inProgress++;
     }
 
-    const passedCount = done + mastered;
+    const passedCount = done + mastered + reviewNeeded;
     const completion = total > 0 ? Math.round((passedCount * 100) / total) : 0;
 
     return {
       totalActivities: total,
       done,
       mastered,
+      reviewNeeded,
       inProgress,
       completion, // %
     };
@@ -351,32 +354,36 @@ export class LessonRepository {
   /**
    * Đánh dấu "hoàn thành" activity dựa trên điểm (để dùng sau khi chấm).
    * Không tạo Attempt ở đây (nên để service khác tạo Attempt), chỉ cập nhật Progress.
+   * Logic mới:
+   * - score >= 85: mastered
+   * - 70 <= score < 85: review_needed
+   * - score < 70: không đổi state, chỉ tăng attemptsCount và cập nhật score.
    */
   async completeActivity(userId: string, activityId: string, score?: number) {
-    // lấy passingScore để quyết định state
-    const act = await this.prisma.activity.findUnique({
-      where: { id: activityId },
-      select: { passingScore: true },
-    });
-    if (!act) throw new Error('activity_not_found');
+    const MASTERY_SCORE = 85;
+    const PASSING_SCORE = 70;
 
-    const pass =
-      typeof act.passingScore === 'number'
-        ? (score ?? 0) >= act.passingScore
-        : true;
+    let newState: ProgressState | undefined;
+    if (score != null) {
+      if (score >= MASTERY_SCORE) {
+        newState = 'mastered';
+      } else if (score >= PASSING_SCORE) {
+        newState = 'review_needed';
+      }
+    }
 
     return this.prisma.progress.upsert({
       where: { userId_activityId: { userId, activityId } },
       create: {
         userId,
         activityId,
-        state: pass ? 'done' : 'review_needed',
+        state: newState ?? 'in_progress', // Nếu lần đầu làm mà fail thì state là in_progress
         score: score ?? null,
         bestScore: score ?? null,
         attemptsCount: 1,
       },
       update: {
-        state: pass ? 'done' : 'review_needed',
+        state: newState, // Nếu newState là undefined (do score < 70), state sẽ không được cập nhật.
         score: score ?? undefined,
         bestScore: {
           set:
@@ -418,13 +425,24 @@ export class LessonRepository {
     },
   ): boolean {
     if (!progress) return false;
-    if (progress.state === 'mastered') return true;
-    if (progress.state !== 'done') return false;
+    // An activity is considered "passed" if its state is mastered, done, or review_needed.
+    const passedStates: ProgressState[] = ['mastered', 'done', 'review_needed'];
+    if (!passedStates.includes(progress.state)) {
+      return false;
+    }
 
-    if (typeof activity.passingScore === 'number') {
+    // If a passing score is defined for the activity, the user's best score must meet it.
+    // This check is maintained for 'done' and 'review_needed' states if they have associated scores.
+    // For 'mastered', we can assume the score condition is already met.
+    if (
+      typeof activity.passingScore === 'number' &&
+      activity.passingScore > 0
+    ) {
       const best = progress.bestScore ?? progress.score ?? 0;
       return best >= activity.passingScore;
     }
+
+    // If no passing score is defined, simply being in a "passed" state is sufficient.
     return true;
   }
 
