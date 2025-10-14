@@ -365,4 +365,14 @@ export class PrivateClassroomController {
       query,
     );
   }
+
+  @Get(':id/suggestions')
+  @ApiOperation({ summary: 'Get classroom suggestions' })
+  @ResponseMessage('Classroom suggestions fetched successfully')
+  getSuggestions(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @PayloadToken() payload: JwtPayload,
+  ) {
+    return this.classroomService.getSuggestions(id, payload);
+  }
 }

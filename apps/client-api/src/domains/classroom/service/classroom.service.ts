@@ -1517,4 +1517,28 @@ export class ClassroomService {
       // Don't throw error to avoid breaking classroom creation
     }
   }
+
+  async getSuggestions(classroomId: string, user: JwtPayload) {
+    if (user.role !== UserRole.teacher) {
+      throw new ForbiddenException('Only teachers can view suggestions.');
+    }
+
+    const isTeacher = await this.classroomRepository.isTeacherOfClassroom(
+      classroomId,
+      user.sub,
+    );
+
+    if (!isTeacher) {
+      throw new ForbiddenException('You do not have permission to view suggestions for this classroom.');
+    }
+
+    return this.prisma.classroomSuggestion.findMany({
+      where: {
+        classroomId,
+      },
+      orderBy: {
+        generatedAt: 'desc',
+      },
+    });
+  }
 }
