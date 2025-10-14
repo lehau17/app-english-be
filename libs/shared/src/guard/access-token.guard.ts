@@ -59,17 +59,12 @@ export class AccessTokenGuard implements CanActivate {
       return true;
     }
 
-    // /api/admin -> bắt buộc token + role admin
-    if (path.startsWith('/api/admin')) {
-      if (!token) throw new UnauthorizedException('Missing access token');
-      const payload = attachUserFromToken(token);
-      if (!payload.role.includes('admin')) {
-        throw new ForbiddenException('Admin role required');
-      }
-      return true;
+    // Mọi API khác (bao gồm /api/admin, /api/v1/...) đều yêu cầu token hợp lệ
+    // Việc kiểm tra vai trò sẽ được thực hiện bởi một Guard khác (RolesGuard)
+    if (!token) {
+      throw new UnauthorizedException('Missing access token');
     }
-
-    // default: chặn
-    return false;
+    attachUserFromToken(token);
+    return true;
   }
 }
