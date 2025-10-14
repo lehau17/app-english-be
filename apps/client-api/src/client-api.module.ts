@@ -36,11 +36,13 @@ import { TeacherModule } from './domains/teacher';
 import { UploadModule } from './domains/upload';
 import { UploadService } from './domains/upload/upload.service';
 import { EventsModule } from './events/events.module';
+import { AdminTransactionModule } from './domains/admin-transaction/admin-transaction.module';
 import { QuizModule } from './domains/quiz/quiz.module';
 import { VocabularyModule } from './domains/vocabulary/vocabulary.module';
 
 @Module({
   imports: [
+    AdminTransactionModule,
     DatabaseModule,
     ScheduleModule.forRoot(),
     AuthModule,
