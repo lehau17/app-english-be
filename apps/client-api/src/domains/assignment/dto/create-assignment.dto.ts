@@ -1,22 +1,24 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { DifficultyLevel } from '@prisma/client';
+import { AssignmentType, DifficultyLevel } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
-    IsArray,
-    IsBoolean,
-    IsDateString,
-    IsEnum,
-    IsInt,
-    IsNotEmpty,
-    IsObject,
-    IsOptional,
-    IsString,
-    Min,
-    Validate,
-    ValidateNested,
-    ValidationArguments,
-    ValidatorConstraint,
-    ValidatorConstraintInterface,
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  Validate,
+  ValidateNested,
+  ValidationArguments,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
 } from 'class-validator';
 import * as uuid from 'uuid';
 import { ACTIVITY_TYPES, ActivityTypeValue } from '../../course/dto';
@@ -185,6 +187,27 @@ export class CreateAssignmentDto {
   @IsString()
   @IsNotEmpty()
   title: string;
+
+  @ApiPropertyOptional({
+    enum: AssignmentType,
+    description: 'Type of the assignment',
+    default: AssignmentType.HOMEWORK,
+  })
+  @IsEnum(AssignmentType)
+  @IsOptional()
+  type?: AssignmentType = AssignmentType.HOMEWORK;
+
+  @ApiPropertyOptional({
+    description: 'Weight of the assignment in the final grade (e.g., 0.4 for 40%)',
+    minimum: 0,
+    maximum: 1,
+    default: 0,
+  })
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  @IsOptional()
+  weight?: number = 0;
 
   @ApiPropertyOptional({ description: 'Assignment description' })
   @IsString()

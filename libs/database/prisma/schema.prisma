@@ -223,6 +223,13 @@ enum NotificationType {
   parent_child
 }
 
+enum AssignmentType {
+  HOMEWORK // Bài tập về nhà thông thường
+  QUIZ // Bài kiểm tra ngắn
+  MIDTERM_EXAM // Bài thi giữa kỳ
+  FINAL_EXAM // Bài thi cuối kỳ
+}
+
 enum AssignmentStatus {
   draft
 
@@ -1375,6 +1382,9 @@ model Assignment {
   // Targeting
 
   assignedTo String[]
+
+  type   AssignmentType @default(HOMEWORK)
+  weight Float?         @default(0) // Trọng số điểm, ví dụ 0.1 cho 10%
 
   // Content
 
