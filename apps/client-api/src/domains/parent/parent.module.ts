@@ -3,19 +3,32 @@ import { Module } from '@nestjs/common';
 import { ParentChildModule } from '../parent-child';
 import { ParentChildRepository } from '../parent-child/repository';
 import { ParentChildService } from '../parent-child/service/parent-child.service';
-import { AdminParentController, PrivateParentController } from './controller';
-import { AdminParentService, ParentService } from './service';
+import {
+  AdminParentController,
+  PrivateParentController,
+  PrivateParentTransactionController,
+} from './controller';
+import {
+  AdminParentService,
+  ParentService,
+  ParentTransactionService,
+} from './service';
 import { ParentNotificationService } from './service/parent-notification.service';
 
 @Module({
   imports: [DatabaseModule, ParentChildModule],
-  controllers: [PrivateParentController, AdminParentController],
+  controllers: [
+    PrivateParentController,
+    AdminParentController,
+    PrivateParentTransactionController,
+  ],
   providers: [
     ParentService,
     AdminParentService,
     ParentChildService,
     ParentChildRepository,
     ParentNotificationService,
+    ParentTransactionService,
   ],
   exports: [
     ParentService,
@@ -23,6 +36,7 @@ import { ParentNotificationService } from './service/parent-notification.service
     ParentChildService,
     ParentChildRepository,
     ParentNotificationService,
+    ParentTransactionService,
   ],
 })
 export class ParentModule {}
