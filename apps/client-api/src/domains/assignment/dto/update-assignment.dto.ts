@@ -1,13 +1,17 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { AssignmentType } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsInt,
+  IsNumber,
   IsObject,
   IsOptional,
   IsString,
+  Max,
   Min,
   ValidateNested,
 } from 'class-validator';
@@ -18,6 +22,25 @@ export class UpdateAssignmentDto {
   @IsString()
   @IsOptional()
   title?: string;
+
+  @ApiPropertyOptional({
+    enum: AssignmentType,
+    description: 'Type of the assignment',
+  })
+  @IsEnum(AssignmentType)
+  @IsOptional()
+  type?: AssignmentType;
+
+  @ApiPropertyOptional({
+    description: 'Weight of the assignment in the final grade (e.g., 0.4 for 40%)',
+    minimum: 0,
+    maximum: 1,
+  })
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  @IsOptional()
+  weight?: number;
 
   @ApiPropertyOptional({ description: 'Assignment description' })
   @IsString()
