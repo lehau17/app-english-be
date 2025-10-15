@@ -66,16 +66,37 @@ async function seedUsers() {
         },
     });
 
-    return { admin, student, parent };
+    // Create teacher2@gmail.com
+    const teacher2 = await prisma.user.upsert({
+        where: { email: 'teacher2@gmail.com' },
+        update: {},
+        create: {
+            email: 'teacher2@gmail.com',
+            passwordHash: password,
+            role: UserRole.teacher,
+            status: Status.active,
+            firstName: 'Teacher',
+            lastName: 'Two',
+            displayName: 'Teacher Two',
+            gender: Gender.female,
+            language: LanguageCode.en,
+            timezone: TimezoneCode.Asia_Ho_Chi_Minh,
+            emailVerified: true,
+            provider: AuthProvider.local,
+        },
+    });
+
+    return { admin, student, parent, teacher2 };
 }
 
 async function main() {
     console.log('🌱 Seeding database...');
-    const { admin, student, parent } = await seedUsers();
+    const { admin, student, parent, teacher2 } = await seedUsers();
     console.log('✅ Created users:');
     console.log('   - admin@gmail.com (Admin)');
     console.log('   - student@gmail.com (Student)');
     console.log('   - parent@gmail.com (Parent)');
+    console.log('   - teacher2@gmail.com (Teacher)');
     console.log('   - Password for all: 123456aA@');
     console.log('✅ Seed completed successfully!');
 }

@@ -141,17 +141,6 @@ export class AssignmentActivityDto {
     @Min(0)
     points?: number;
 
-    @ApiPropertyOptional({ description: 'Time limit (minutes)' })
-    @IsOptional()
-    @IsInt()
-    @Min(1)
-    timeLimit?: number;
-
-    @ApiPropertyOptional({ description: 'Maximum attempts allowed' })
-    @IsOptional()
-    @IsInt()
-    @Min(1)
-    maxAttempts?: number;
 
     @ApiPropertyOptional({ description: 'Passing score (0-100)' })
     @IsOptional()
@@ -239,27 +228,6 @@ export class CreateAssignmentDto {
     )
     totalPoints?: number = 100;
 
-    @ApiPropertyOptional({ description: 'Time limit in minutes' })
-    @IsInt()
-    @Min(1)
-    @IsOptional()
-    @Transform(({ value }) =>
-        typeof value === 'number' ? value : parseInt(value),
-    )
-    timeLimit?: number;
-
-    @ApiPropertyOptional({
-        description: 'Maximum attempts allowed',
-        minimum: 1,
-        default: 1,
-    })
-    @IsInt()
-    @Min(1)
-    @IsOptional()
-    @Transform(({ value }) =>
-        typeof value === 'number' ? value : parseInt(value),
-    )
-    maxAttempts?: number = 1;
 
     @ApiPropertyOptional({
         description: 'Publish assignment immediately',

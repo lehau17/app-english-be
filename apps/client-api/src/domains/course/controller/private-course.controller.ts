@@ -1,36 +1,36 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-  BadRequestException,
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Header,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Put,
-  Query,
-  Res,
-  UploadedFiles,
-  UseInterceptors,
+    BadRequestException,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Header,
+    Param,
+    ParseUUIDPipe,
+    Patch,
+    Post,
+    Put,
+    Query,
+    Res,
+    UploadedFiles,
+    UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import {
-  ApiBearerAuth,
-  ApiConsumes,
-  ApiOperation,
-  ApiTags,
+    ApiBearerAuth,
+    ApiConsumes,
+    ApiOperation,
+    ApiTags,
 } from '@nestjs/swagger';
 import { Course } from '@prisma/client';
 import { Response } from 'express';
 import {
-  CreateCourseDto,
-  FilterCourseRequestDto,
-  ImportCoursesDto,
-  UpdateCourseDto,
+    CreateCourseDto,
+    FilterCourseRequestDto,
+    ImportCoursesDto,
+    UpdateCourseDto,
 } from '../dto/course.dto';
 import { CourseService } from '../service/course.service';
 import { CoursesImportService } from '../service/couse-import.service';
@@ -39,112 +39,111 @@ import { CoursesImportService } from '../service/couse-import.service';
 @ApiBearerAuth('Authorization')
 @Controller('/private/v1/courses')
 export class CourseController {
-  constructor(
-    private readonly courseService: CourseService,
-    private readonly svc: CoursesImportService,
-  ) {}
+    constructor(
+        private readonly courseService: CourseService,
+        private readonly svc: CoursesImportService,
+    ) { }
 
-  @Post()
-  @ApiOperation({ summary: 'Create a course' })
-  @ResponseMessage('Course created successfully')
-  create(@Body() dto: CreateCourseDto) {
-    return this.courseService.create(dto);
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get course by id' })
-  @ResponseMessage('Course fetched successfully')
-  findById(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.courseService.findById(id);
-  }
-
-  @Put(':id')
-  @ApiOperation({ summary: 'Update course by id' })
-  @ResponseMessage('Course updated successfully')
-  update(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() dto: UpdateCourseDto,
-  ) {
-    return this.courseService.update(id, dto);
-  }
-
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete course by id' })
-  @ResponseMessage('Course deleted successfully')
-  delete(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.courseService.delete(id);
-  }
-
-  @Get()
-  @ApiOperation({ summary: 'List courses (paginated + filters)' })
-  @ResponseMessage('Courses listed successfully')
-  list(
-    @Query() query: FilterCourseRequestDto,
-  ): Promise<PageResponseDto<Course>> {
-    return this.courseService.list(query);
-  }
-
-  @Patch(':id/publish')
-  @ApiOperation({ summary: 'Publish a course' })
-  @ResponseMessage('Course published successfully')
-  publish(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.courseService.publish(id);
-  }
-
-  @Patch(':id/unpublish')
-  @ApiOperation({ summary: 'Unpublish a course' })
-  @ResponseMessage('Course unpublished successfully')
-  unpublish(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.courseService.unpublish(id);
-  }
-
-  @Post('import-excel')
-  importExcel(
-    @Body() dto: ImportCoursesDto,
-    @PayloadToken() payload: JwtPayload,
-  ) {
-    return this.svc.importFromExcel(dto, payload.sub);
-  }
-
-  @Post('import-multiple-excels')
-  @ApiOperation({ summary: 'Import nhiều file Excel cùng lúc' })
-  @ApiConsumes('multipart/form-data')
-  @UseInterceptors(FilesInterceptor('files'))
-  importMultipleExcels(
-    @UploadedFiles() files: Express.Multer.File[],
-    @Body() dto: Omit<ImportCoursesDto, 'url'>,
-    @PayloadToken() payload: JwtPayload,
-  ) {
-    if (!files || files.length === 0) {
-      throw new BadRequestException('Không có file nào được upload');
+    @Post()
+    @ApiOperation({ summary: 'Create a course' })
+    @ResponseMessage('Course created successfully')
+    create(@Body() dto: CreateCourseDto, @PayloadToken() payload: JwtPayload) {
+        return this.courseService.create(dto, payload.sub);
     }
 
-    if (files.length > 10) {
-      throw new BadRequestException('Tối đa 10 file cùng lúc');
+    @Get(':id')
+    @ApiOperation({ summary: 'Get course by id' })
+    @ResponseMessage('Course fetched successfully')
+    findById(@Param('id', new ParseUUIDPipe()) id: string) {
+        return this.courseService.findById(id);
     }
 
-    // Lấy instructorId từ JWT token nếu không có trong DTO
-    const defaultInstructorId = dto.defaultInstructorId || payload.sub;
-    const finalDto = { ...dto, defaultInstructorId };
+    @Put(':id')
+    @ApiOperation({ summary: 'Update course by id' })
+    @ResponseMessage('Course updated successfully')
+    update(
+        @Param('id', new ParseUUIDPipe()) id: string,
+        @Body() dto: UpdateCourseDto,
+    ) {
+        return this.courseService.update(id, dto);
+    }
 
-    return this.svc.importMultipleExcels(files, finalDto, payload.sub);
-  }
+    @Delete(':id')
+    @ApiOperation({ summary: 'Delete course by id' })
+    @ResponseMessage('Course deleted successfully')
+    delete(@Param('id', new ParseUUIDPipe()) id: string) {
+        return this.courseService.delete(id);
+    }
 
-  @Get('templates/download')
-  @ApiOperation({ summary: 'Download template Excel for course import' })
-  @Header(
-    'Content-Type',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  )
-  async downloadTemplate(@Res() res: Response) {
-    const template = await this.svc.downloadTemplate();
+    @Get()
+    @ApiOperation({ summary: 'List courses (paginated + filters)' })
+    @ResponseMessage('Courses listed successfully')
+    list(
+        @Query() query: FilterCourseRequestDto,
+    ): Promise<PageResponseDto<Course>> {
+        return this.courseService.list(query);
+    }
 
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${template.filename}"`,
-    );
-    res.setHeader('Content-Type', template.contentType);
+    @Patch(':id/publish')
+    @ApiOperation({ summary: 'Publish a course' })
+    @ResponseMessage('Course published successfully')
+    publish(@Param('id', new ParseUUIDPipe()) id: string) {
+        return this.courseService.publish(id);
+    }
 
-    return res.send(template.buffer);
-  }
+    @Patch(':id/unpublish')
+    @ApiOperation({ summary: 'Unpublish a course' })
+    @ResponseMessage('Course unpublished successfully')
+    unpublish(@Param('id', new ParseUUIDPipe()) id: string) {
+        return this.courseService.unpublish(id);
+    }
+
+    @Post('import-excel')
+    importExcel(
+        @Body() dto: ImportCoursesDto,
+        @PayloadToken() payload: JwtPayload,
+    ) {
+        return this.svc.importFromExcel(dto, payload.sub);
+    }
+
+    @Post('import-multiple-excels')
+    @ApiOperation({ summary: 'Import nhiều file Excel cùng lúc' })
+    @ApiConsumes('multipart/form-data')
+    @UseInterceptors(FilesInterceptor('files'))
+    importMultipleExcels(
+        @UploadedFiles() files: Express.Multer.File[],
+        @Body() dto: Omit<ImportCoursesDto, 'url'>,
+        @PayloadToken() payload: JwtPayload,
+    ) {
+        if (!files || files.length === 0) {
+            throw new BadRequestException('Không có file nào được upload');
+        }
+
+        if (files.length > 10) {
+            throw new BadRequestException('Tối đa 10 file cùng lúc');
+        }
+
+        // Lấy instructorId từ DTO hoặc JWT token
+        const finalDto = { ...dto, defaultInstructorId: dto.defaultInstructorId || payload.sub };
+
+        return this.svc.importMultipleExcels(files, finalDto, payload.sub);
+    }
+
+    @Get('templates/download')
+    @ApiOperation({ summary: 'Download template Excel for course import' })
+    @Header(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    async downloadTemplate(@Res() res: Response) {
+        const template = await this.svc.downloadTemplate();
+
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="${template.filename}"`,
+        );
+        res.setHeader('Content-Type', template.contentType);
+
+        return res.send(template.buffer);
+    }
 }

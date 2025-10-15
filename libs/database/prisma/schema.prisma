@@ -1,1199 +1,1193 @@
 // ===================== PRISMA SCHEMA — ENHANCED VERSION =====================
 
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 
-  output = "../../../node_modules/.prisma/client"
+    output = "../../../node_modules/.prisma/client"
 }
 
 datasource db {
-  provider = "postgresql"
+    provider = "postgresql"
 
-  url = env("DATABASE_URL")
+    url = env("DATABASE_URL")
 }
 
 // ===================== ENUMS =====================
 
 enum UserRole {
-  student @map("STUDENT")
+    student @map("STUDENT")
 
-  parent @map("PARENT")
+    parent @map("PARENT")
 
-  teacher @map("TEACHER")
+    teacher @map("TEACHER")
 
-  admin @map("ADMIN")
+    admin @map("ADMIN")
 
-  content_creator @map("CONTENT_CREATOR")
+    content_creator @map("CONTENT_CREATOR")
 
-  @@map("UserRole")
+    @@map("UserRole")
 }
 
 enum Status {
-  active
+    active
 
-  inactive
+    inactive
 
-  banned
+    banned
 
-  pending
+    pending
 
-  suspended
+    suspended
 }
 
 enum AttemptStatus {
-  in_progress // User đang làm
+    in_progress // User đang làm
 
-  submitted // User đã nộp (chấm điểm xong)
+    submitted // User đã nộp (chấm điểm xong)
 
-  completed // Đã xem lại/kết thúc
+    completed // Đã xem lại/kết thúc
 }
 
 enum SessionStatus {
-  scheduled
+    scheduled
 
-  ongoing
+    ongoing
 
-  completed
+    completed
 
-  cancelled
+    cancelled
 
-  postponed
+    postponed
 }
 
 enum SessionType {
-  online
+    online
 
-  offline
+    offline
 
-  hybrid
+    hybrid
 }
 
 enum Weekday {
-  mon
+    mon
 
-  tue
+    tue
 
-  wed
+    wed
 
-  thu
+    thu
 
-  fri
+    fri
 
-  sat
+    sat
 
-  sun
+    sun
 }
 
 enum AuthProvider {
-  local
+    local
 
-  google
+    google
 
-  facebook
+    facebook
 
-  apple
+    apple
 }
 
 enum Gender {
-  male
+    male
 
-  female
+    female
 
-  other
+    other
 
-  prefer_not_to_say
+    prefer_not_to_say
 }
 
 enum ClassroomStatus {
-  upcoming    // Sắp diễn ra
-  ongoing     // Đang diễn ra
-  completed   // Đã hoàn thành
-  cancelled   // Đã hủy
+    upcoming // Sắp diễn ra
+    ongoing // Đang diễn ra
+    completed // Đã hoàn thành
+    cancelled // Đã hủy
 }
 
 enum LanguageCode {
-  en
+    en
 
-  vi
+    vi
 
-  ko
+    ko
 
-  jp
+    jp
 
-  zh
+    zh
 
-  fr
+    fr
 
-  es
+    es
 
-  de
+    de
 }
 
 enum TimezoneCode {
-  Asia_Ho_Chi_Minh
+    Asia_Ho_Chi_Minh
 
-  Asia_Tokyo
+    Asia_Tokyo
 
-  Asia_Seoul
+    Asia_Seoul
 
-  America_New_York
+    America_New_York
 
-  Europe_London
+    Europe_London
 
-  America_Los_Angeles
+    America_Los_Angeles
 
-  Australia_Sydney
+    Australia_Sydney
 }
 
 enum ActivityType {
-  vocab
+    vocab
 
-  pronunciation
+    pronunciation
 
-  listening
+    listening
 
-  speaking
+    speaking
 
-  mini_game
+    mini_game
 
-  fill_blank
+    fill_blank
 
-  dictation
+    dictation
 
-  matching
+    matching
 
-  reading
+    reading
 
-  writing
+    writing
 
-  grammar
+    grammar
 
-  quiz
+    quiz
 
-  flashcard
+    flashcard
 
-  conversation
+    conversation
 }
 
 enum ProgressState {
-  not_started
+    not_started
 
-  in_progress
+    in_progress
 
-  done
+    done
 
-  review_needed
+    review_needed
 
-  mastered
+    mastered
 }
 
 enum DevicePlatform {
-  ios
+    ios
 
-  android
+    android
 
-  web
+    web
 
-  desktop
+    desktop
 }
 
 enum NotificationChannel {
-  socket
+    socket
 
-  fcm
+    fcm
 
-  email
+    email
 
-  sms
+    sms
 
-  in_app
+    in_app
 }
 
 enum NotificationType {
-  achievement
+    achievement
 
-  reminder
+    reminder
 
-  system
+    system
 
-  social
+    social
 
-  assignment
+    assignment
 
-  parent_child
+    parent_child
 }
 
 enum AssignmentType {
-  HOMEWORK // Bài tập về nhà thông thường
-  QUIZ // Bài kiểm tra ngắn
-  MIDTERM_EXAM // Bài thi giữa kỳ
-  FINAL_EXAM // Bài thi cuối kỳ
+    HOMEWORK // Bài tập về nhà thông thường
+    QUIZ // Bài kiểm tra ngắn
+    MIDTERM_EXAM // Bài thi giữa kỳ
+    FINAL_EXAM // Bài thi cuối kỳ
 }
 
 enum AssignmentStatus {
-  draft
+    draft
 
-  published
+    published
 
-  completed
+    completed
 
-  overdue
+    overdue
 
-  submitted
+    submitted
 
-  graded
+    graded
 }
 
 enum QuestionType {
-  multiple_choice
+    multiple_choice
 
-  fill_blank
+    fill_blank
 
-  true_false
+    true_false
 
-  matching
+    matching
 
-  ordering
+    ordering
 
-  essay
+    essay
 
-  audio_response
+    audio_response
 }
 
 enum ContentStatus {
-  draft
+    draft
 
-  review
+    review
 
-  approved
+    approved
 
-  published
+    published
 
-  archived
+    archived
 }
 
 enum RewardType {
-  digital
+    digital
 
-  physical
+    physical
 
-  screen_time
+    screen_time
 
-  activity
+    activity
 }
 
 enum PaymentStatus {
-  pending
+    pending
 
-  success
+    success
 
-  failed
+    failed
 
-  cancelled
+    cancelled
 
-  refunded
+    refunded
 
-  expired
+    expired
 }
 
 enum PaymentProvider {
-  vnpay
+    vnpay
 
-  momo
+    momo
 
-  zalopay
+    zalopay
 
-  stripe
+    stripe
 
-  paypal
+    paypal
 }
 
 enum TransactionType {
-  course_purchase
+    course_purchase
 
-  lesson_unlock
+    lesson_unlock
 
-  refund
+    refund
 
-  bonus
+    bonus
 }
 
 enum LeaderboardScope {
-  classroom
+    classroom
 
-  monthly
+    monthly
 
-  yearly
+    yearly
 }
 
 enum DifficultyLevel {
-  beginner
+    beginner
 
-  elementary
+    elementary
 
-  intermediate
+    intermediate
 
-  upper_intermediate
+    upper_intermediate
 
-  advanced
+    advanced
 
-  expert
+    expert
 }
 
 enum ClassStatus {
-  scheduled // Đã lên lịch
+    scheduled // Đã lên lịch
 
-  ongoing // Đang diễn ra
+    ongoing // Đang diễn ra
 
-  completed // Đã hoàn thành
+    completed // Đã hoàn thành
 
-  cancelled // Đã hủy
+    cancelled // Đã hủy
 
-  postponed // Hoãn lại
+    postponed // Hoãn lại
 }
 
 enum ClassType {
-  online // Trực tuyến
+    online // Trực tuyến
 
-  offline // Tại trung tâm
+    offline // Tại trung tâm
 
-  hybrid // Kết hợp
+    hybrid // Kết hợp
 }
 
 enum AiSpeakingSessionState {
-  pending
+    pending
 
-  ai_speaking
+    ai_speaking
 
-  user_speaking
+    user_speaking
 
-  evaluating
+    evaluating
 
-  finished
+    finished
 
-  aborted
+    aborted
 }
 
 enum AiSpeakingTurnStatus {
-  pending
+    pending
 
-  streaming
+    streaming
 
-  waiting_user
+    waiting_user
 
-  evaluating
+    evaluating
 
-  completed
+    completed
 
-  cancelled
+    cancelled
 }
 
 enum AiSpeakingTurnRole {
-  system
+    system
 
-  ai
+    ai
 
-  user
+    user
 }
 
 // ===================== MODELS =====================
 
 model KnowledgeDocument {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  title String
+    title String
 
-  content String
+    content String
 
-  embedding String
+    embedding String
 
-  /// pgvector column to store embedding vector for ANN queries
-  embeddingVector Unsupported("vector")? @map("embedding_vector")
+    /// pgvector column to store embedding vector for ANN queries
+    embeddingVector Unsupported("vector")? @map("embedding_vector")
 
-  /// Full-text search column (tsvector) - auto-generated by trigger
-  contentSearch Unsupported("tsvector")? @map("content_search")
+    /// Full-text search column (tsvector) - auto-generated by trigger
+    contentSearch Unsupported("tsvector")? @map("content_search")
 
-  documentType String
+    documentType String
 
-  source String
+    source String
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  // ============ Document Chunking Support ============
-  /// Parent document ID for chunks (null for root documents)
-  parentId String? @map("parent_id")
+    // ============ Document Chunking Support ============
+    /// Parent document ID for chunks (null for root documents)
+    parentId String? @map("parent_id")
 
-  /// Position of this chunk within parent (0, 1, 2, ...) - null for root documents
-  chunkIndex Int? @map("chunk_index")
+    /// Position of this chunk within parent (0, 1, 2, ...) - null for root documents
+    chunkIndex Int? @map("chunk_index")
 
-  /// Total number of chunks in parent document (only set on root documents)
-  totalChunks Int? @default(0) @map("total_chunks")
+    /// Total number of chunks in parent document (only set on root documents)
+    totalChunks Int? @default(0) @map("total_chunks")
 
-  /// Is this a chunk or a root document?
-  isChunk Boolean @default(false) @map("is_chunk")
+    /// Is this a chunk or a root document?
+    isChunk Boolean @default(false) @map("is_chunk")
 
-  // Self-referential relationship for parent-child chunks
-  parent KnowledgeDocument? @relation("DocumentChunks", fields: [parentId], references: [id], onDelete: Cascade)
-  chunks KnowledgeDocument[] @relation("DocumentChunks")
+    // Self-referential relationship for parent-child chunks
+    parent KnowledgeDocument?  @relation("DocumentChunks", fields: [parentId], references: [id], onDelete: Cascade)
+    chunks KnowledgeDocument[] @relation("DocumentChunks")
 
-  @@index([parentId])
-  @@index([isChunk])
-  @@index([parentId, chunkIndex])
-  @@map("knowledge_documents")
+    @@index([parentId])
+    @@index([isChunk])
+    @@index([parentId, chunkIndex])
+    @@map("knowledge_documents")
 }
 
 model User {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  email String? @unique
+    email String? @unique
 
-  phone String? @unique
+    phone String? @unique
 
-  passwordHash String?
+    passwordHash String?
 
-  role UserRole @default(student)
+    role UserRole @default(student)
 
-  status Status @default(active)
+    status Status @default(active)
 
-  provider AuthProvider @default(local)
+    provider AuthProvider @default(local)
 
-  providerId String?
+    providerId String?
 
-  // Thông tin cá nhân chi tiết
+    // Thông tin cá nhân chi tiết
 
-  firstName String?
+    firstName String?
 
-  lastName String?
+    lastName String?
 
-  displayName String?
+    displayName String?
 
-  gender Gender?
+    gender Gender?
 
-  dob DateTime?
+    dob DateTime?
 
-  nationality String?
+    nationality String?
 
-  nativeLanguage LanguageCode?
+    nativeLanguage LanguageCode?
 
-  avatarUrl String?
+    avatarUrl String?
 
-  bio String?
+    bio String?
 
-  // Cài đặt hệ thống
+    // Cài đặt hệ thống
 
-  language LanguageCode? @default(en)
+    language LanguageCode? @default(en)
 
-  timezone TimezoneCode? @default(Asia_Ho_Chi_Minh)
+    timezone TimezoneCode? @default(Asia_Ho_Chi_Minh)
 
-  // Thông tin xác thực
+    // Thông tin xác thực
 
-  lastLoginAt DateTime?
+    lastLoginAt DateTime?
 
-  lastActiveAt DateTime?
+    lastActiveAt DateTime?
 
-  emailVerified Boolean @default(false)
+    emailVerified Boolean @default(false)
 
-  phoneVerified Boolean @default(false)
+    phoneVerified Boolean @default(false)
 
-  twoFactorEnabled Boolean @default(false)
+    twoFactorEnabled Boolean @default(false)
 
-  // Cài đặt và tùy chọn
+    // Cài đặt và tùy chọn
 
-  preferences Json?
+    preferences Json?
 
-  privacySettings Json?
+    privacySettings Json?
 
-  notificationSettings Json?
+    notificationSettings Json?
 
-  parentalConsent Boolean?
+    parentalConsent Boolean?
 
-  // Metadata
+    // Metadata
 
-  profileCompleteness Int @default(0)
+    profileCompleteness Int @default(0)
 
-  isOnline Boolean @default(false)
+    isOnline Boolean @default(false)
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  // Relations
+    // Relations
 
-  Profile Profile?
+    Profile Profile?
 
-  Progress Progress[]
+    Progress Progress[]
 
-  Attempts Attempt[]
+    Attempts Attempt[]
 
-  RefreshToken RefreshToken[]
-  PasswordResetTokens PasswordResetToken[]
+    RefreshToken        RefreshToken[]
+    PasswordResetTokens PasswordResetToken[]
 
-  DeviceTokens DeviceToken[]
+    DeviceTokens DeviceToken[]
 
-  Notifications Notification[]
+    Notifications Notification[]
 
-  // Parent-Child relations
+    // Parent-Child relations
 
-  parentRelations ParentChild[] @relation("ParentChildParent")
+    parentRelations ParentChild[] @relation("ParentChildParent")
 
-  childRelations ParentChild[] @relation("ParentChildChild")
+    childRelations ParentChild[] @relation("ParentChildChild")
 
-  // Course and Class relations
+    // Course and Class relations
 
-  coursesCreated Course[] @relation("CourseInstructor")
+    coursesCreated Course[] @relation("CourseInstructor")
 
-  // Teacher-Student relations
+    // Teacher-Student relations
 
-  classroomsTeaching Classroom[] @relation("TeacherClassrooms")
+    classroomsTeaching Classroom[] @relation("TeacherClassrooms")
 
-  classroomsSessions ClassroomSession[]
+    classroomsSessions ClassroomSession[]
 
-  sessionAttendance SessionAttendance[]
+    sessionAttendance SessionAttendance[]
 
-  classroomsStudying ClassroomStudent[]
+    classroomsStudying ClassroomStudent[]
 
-  assignmentsCreated Assignment[] @relation("TeacherAssignments")
+    assignmentsCreated Assignment[] @relation("TeacherAssignments")
 
-  assignmentSubmissions AssignmentSubmission[]
+    assignmentSubmissions AssignmentSubmission[]
 
-  // Communication
+    // Communication
 
-  conversationsCreated Conversation[] @relation("ConversationCreator")
+    conversationsCreated Conversation[] @relation("ConversationCreator")
 
-  conversationLastMessage Conversation[] @relation("ConversationLastMessageSender")
+    conversationLastMessage Conversation[] @relation("ConversationLastMessageSender")
 
-  conversationParticipants ConversationParticipant[]
+    conversationParticipants ConversationParticipant[]
 
-  messagesSent Message[] @relation("MessageSender")
+    messagesSent Message[] @relation("MessageSender")
 
-  // Custom content
+    // Custom content
 
-  createdContent Content[] @relation("ContentCreator")
+    createdContent Content[] @relation("ContentCreator")
 
-  // Rewards and achievements
+    // Rewards and achievements
 
-  customRewards CustomReward[] @relation("ParentRewards")
+    customRewards CustomReward[] @relation("ParentRewards")
 
-  rewardClaims RewardClaim[]
+    rewardClaims RewardClaim[]
 
-  // Security
+    // Security
 
-  securityLogs SecurityLog[]
+    securityLogs SecurityLog[]
 
-  loginSessions LoginSession[]
+    loginSessions LoginSession[]
 
-  // Podcast & Listening Practice
+    // Podcast & Listening Practice
 
-  podcastsCreated Podcast[] @relation("PodcastAuthor")
+    podcastsCreated Podcast[] @relation("PodcastAuthor")
 
-  podcastAttempts PodcastAttempt[] @relation("UserPodcastAttempts")
+    podcastAttempts PodcastAttempt[] @relation("UserPodcastAttempts")
 
-  podcastRatings PodcastRating[] @relation("UserPodcastRatings")
+    podcastRatings PodcastRating[] @relation("UserPodcastRatings")
 
-  podcastComments PodcastComment[] @relation("UserPodcastComments")
+    podcastComments PodcastComment[] @relation("UserPodcastComments")
 
-  playlists Playlist[] @relation("UserPlaylists")
+    playlists Playlist[] @relation("UserPlaylists")
 
-  aiSpeakingSessions AiSpeakingSession[]
+    aiSpeakingSessions AiSpeakingSession[]
 
-  leaderboardSnapshots LeaderboardSnapshot[]
+    leaderboardSnapshots LeaderboardSnapshot[]
 
-  // Payment transactions
-  transactions Transaction[] @relation("StudentTransactions")
+    // Payment transactions
+    transactions Transaction[] @relation("StudentTransactions")
 
-  // Agent conversations
-  agentConversations AgentConversation[] @relation("AgentConversations")
+    // Agent conversations
+    agentConversations AgentConversation[] @relation("AgentConversations")
 
-  savedWords SavedWord[]
+    savedWords SavedWord[]
 
-  @@index([status])
-  @@index([provider, providerId])
-  @@index([lastActiveAt])
-  @@index([role])
-  @@index([email])
-  @@index([phone])
+    @@index([status])
+    @@index([provider, providerId])
+    @@index([lastActiveAt])
+    @@index([role])
+    @@index([email])
+    @@index([phone])
 }
 
 model Course {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  title String
+    title String
 
-  description String?
+    description String?
 
-  orderNo Int?
+    orderNo Int?
 
-  difficulty DifficultyLevel @default(beginner)
+    difficulty DifficultyLevel @default(beginner)
 
-  estimatedHours Float? // Tổng giờ ước tính để hoàn tất course (tính bằng giờ)
+    estimatedHours Float? // Tổng giờ ước tính để hoàn tất course (tính bằng giờ)
 
-  imageUrl String?
+    imageUrl String?
 
-  tags String[]
+    tags String[]
 
-  isPublished Boolean @default(false)
+    isPublished Boolean @default(false)
 
-  prerequisites String[]
+    prerequisites String[]
 
-  // Details
+    // Details
 
-  instructorId String
+    instructorId String
 
-  price Float? @default(0)
+    price Float? @default(0)
 
-  currency String? @default("VND")
+    currency String? @default("VND")
 
-  maxStudents Int? @default(20)
+    maxStudents Int? @default(20)
 
-  language LanguageCode @default(vi)
+    language LanguageCode @default(vi)
 
-  // Số buổi học (thêm mới)
-  plannedSessions Int? @default(8) // Số buổi học dự kiến
+    // Số buổi học (thêm mới)
+    plannedSessions Int? @default(8) // Số buổi học dự kiến
 
-  // Content metrics (tùy chọn)
+    // Content metrics (tùy chọn)
 
-  totalLessons Int? @default(0)
+    totalLessons Int? @default(0)
 
-  totalDuration Int? @default(0) // phút
+    totalDuration Int? @default(0) // phút
 
-  // Meta
+    // Meta
 
-  rating Float?
+    rating Float?
 
-  totalRatings Int @default(0)
+    totalRatings Int @default(0)
 
-  enrollmentCount Int @default(0)
+    enrollmentCount Int @default(0)
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  // Relations
+    // Relations
 
-  instructor User @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
+    instructor User @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
 
-  lessons Lesson[]
+    lessons Lesson[]
 
-  courseRatings CourseRating[]
+    courseRatings CourseRating[]
 
-  classrooms Classroom[] // 1 course → nhiều classroom
+    classrooms Classroom[] // 1 course → nhiều classroom
 
-  // Lộ trình buổi học
-  sessionSchedules SessionSchedule[]
+    // Lộ trình buổi học
+    sessionSchedules SessionSchedule[]
 
-  // Payment transactions
-  transactions Transaction[] @relation("CourseTransactions")
+    // Payment transactions
+    transactions Transaction[] @relation("CourseTransactions")
 
-  @@index([instructorId])
-  @@index([orderNo])
-  @@index([difficulty])
-  @@index([isPublished])
-  @@index([price])
+    @@index([instructorId])
+    @@index([orderNo])
+    @@index([difficulty])
+    @@index([isPublished])
+    @@index([price])
 }
 
 model Room {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  name String
+    name String
 
-  code String @unique // VD: A101, B205
+    code String @unique // VD: A101, B205
 
-  location String?
+    location String?
 
-  capacity Int @default(30)
+    capacity Int @default(30)
 
-  description String?
+    description String?
 
-  equipment Json?
+    equipment Json?
 
-  facilities Json?
+    facilities Json?
 
-  isActive Boolean @default(true)
+    isActive Boolean @default(true)
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-
-  @@index([code])
-  @@index([isActive])
+    @@index([code])
+    @@index([isActive])
 }
 
 // ===================== ORIGINAL MODELS (MODIFIED) =====================
 
 model CourseRating {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  courseId String
+    courseId String
 
-  userId String
+    userId String
 
-  rating Int // 1-5 sao
+    rating Int // 1-5 sao
 
-  comment String?
+    comment String?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+    course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  @@unique([courseId, userId])
-  @@index([courseId])
+    @@unique([courseId, userId])
+    @@index([courseId])
 }
 
 model Lesson {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  courseId String
+    courseId String
 
-  title String
+    title String
 
-  description String?
+    description String?
 
-  orderNo Int
+    orderNo Int
 
-  difficulty DifficultyLevel @default(beginner)
+    difficulty DifficultyLevel @default(beginner)
 
-  estimatedTime Int?
+    estimatedTime Int?
 
-  isLocked Boolean @default(true)
+    isLocked Boolean @default(true)
 
-  objectives String[]
+    objectives String[]
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+    course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  activities Activity[]
+    activities Activity[]
 
-  lessonDetails LessonDetail[]
+    lessonDetails LessonDetail[]
 
-  @@unique([courseId, orderNo])
-  @@index([courseId, orderNo])
-  @@index([isLocked])
+    @@unique([courseId, orderNo])
+    @@index([courseId, orderNo])
+    @@index([isLocked])
 }
 
 model LessonDetail {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  lessonId String
+    lessonId String
 
-  type String
+    type String
 
-  content Json
+    content Json
 
-  orderNo Int
+    orderNo Int
 
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+    lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
-  @@index([lessonId])
-  @@index([lessonId, orderNo])
+    @@index([lessonId])
+    @@index([lessonId, orderNo])
 }
 
 model Activity {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  lessonId String
+    lessonId String
 
-  type ActivityType
+    type ActivityType
 
-  orderNo Int
+    orderNo Int
 
-  title String
+    title String
 
-  // === Nguồn sự thật cho mọi loại activity ===
+    // === Nguồn sự thật cho mọi loại activity ===
 
-  // Lưu JSONB (Postgres): payload phụ thuộc 'type'
+    // Lưu JSONB (Postgres): payload phụ thuộc 'type'
 
-  content Json
+    content Json
 
-  // Cấu hình chung
+    // Cấu hình chung
 
-  timeLimit Int?
+    passingScore Int?
 
-  maxAttempts Int?
+    difficulty DifficultyLevel @default(beginner)
 
-  passingScore Int?
+    points Int @default(10)
 
-  difficulty DifficultyLevel @default(beginner)
+    // Metadata nhẹ (tùy chọn)
 
-  points Int @default(10)
+    instructions String?
 
-  // Metadata nhẹ (tùy chọn)
+    hints String[] @default([]) // gọn hơn Json? khi chỉ là list text
 
-  instructions String?
+    mediaUrls String[] @default([]) // dùng text[] nếu chỉ URL
 
-  hints String[] @default([]) // gọn hơn Json? khi chỉ là list text
+    createdAt DateTime @default(now())
 
-  mediaUrls String[] @default([]) // dùng text[] nếu chỉ URL
+    updatedAt DateTime @updatedAt
 
-  createdAt DateTime @default(now())
+    // Relations
 
-  updatedAt DateTime @updatedAt
+    lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 
-  // Relations
+    progress Progress[]
 
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+    attempts Attempt[]
 
-  progress Progress[]
+    // Quan hệ với lộ trình buổi học
+    sessionActivities SessionActivity[]
 
-  attempts Attempt[]
-
-  // Quan hệ với lộ trình buổi học
-  sessionActivities SessionActivity[]
-
-  @@unique([lessonId, orderNo])
-  @@index([lessonId, orderNo])
-  @@index([type])
-  @@index([difficulty])
+    @@unique([lessonId, orderNo])
+    @@index([lessonId, orderNo])
+    @@index([type])
+    @@index([difficulty])
 }
 
 model Question {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  activityId String
+    activityId String
 
-  type QuestionType
+    type QuestionType
 
-  question String
+    question String
 
-  options Json?
+    options Json?
 
-  correctAnswer String
+    correctAnswer String
 
-  explanation String?
+    explanation String?
 
-  points Int @default(1)
+    points Int @default(1)
 
-  orderNo Int
+    orderNo Int
 
-  mediaUrl String?
+    mediaUrl String?
 
-  @@index([activityId])
-  @@index([activityId, orderNo])
+    @@index([activityId])
+    @@index([activityId, orderNo])
 }
 
 // ===================== COURSE SESSION SCHEDULE =====================
 
 model SessionSchedule {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  courseId String
+    courseId String
 
-  sessionNumber Int // Số thứ tự buổi học (1, 2, 3, ...)
+    sessionNumber Int // Số thứ tự buổi học (1, 2, 3, ...)
 
-  title String? // Tiêu đề buổi học (có thể để trống)
+    title String? // Tiêu đề buổi học (có thể để trống)
 
-  description String? // Mô tả ngắn
+    description String? // Mô tả ngắn
 
-  // Tham chiếu tới Course
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+    // Tham chiếu tới Course
+    course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  // Mối quan hệ với Activity
-  activities SessionActivity[]
+    // Mối quan hệ với Activity
+    activities SessionActivity[]
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  @@unique([courseId, sessionNumber]) // Mỗi buổi học phải có số thứ tự duy nhất trong khóa học
-  @@index([courseId])
+    @@unique([courseId, sessionNumber]) // Mỗi buổi học phải có số thứ tự duy nhất trong khóa học
+    @@index([courseId])
 }
 
 model SessionActivity {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  sessionScheduleId String
+    sessionScheduleId String
 
-  activityId String
+    activityId String
 
-  orderNo Int // Thứ tự trong buổi học
+    orderNo Int // Thứ tự trong buổi học
 
-  // Tham chiếu
-  sessionSchedule SessionSchedule @relation(fields: [sessionScheduleId], references: [id], onDelete: Cascade)
-  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+    // Tham chiếu
+    sessionSchedule SessionSchedule @relation(fields: [sessionScheduleId], references: [id], onDelete: Cascade)
+    activity        Activity        @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
-  @@unique([sessionScheduleId, orderNo]) // Đảm bảo thứ tự các hoạt động trong buổi học là duy nhất
-  @@index([sessionScheduleId])
-  @@index([activityId])
+    @@unique([sessionScheduleId, orderNo]) // Đảm bảo thứ tự các hoạt động trong buổi học là duy nhất
+    @@index([sessionScheduleId])
+    @@index([activityId])
 }
 
 // ===================== ORIGINAL MODELS (UNCHANGED) =====================
 
 model RefreshToken {
-  id String @id
+    id String @id
 
-  userId String
+    userId String
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  deviceId String?
+    deviceId String?
 
-  expiresAt DateTime
+    expiresAt DateTime
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  revokedAt DateTime?
+    revokedAt DateTime?
 
-  lastUsedAt DateTime?
+    lastUsedAt DateTime?
 
-  @@index([userId])
-  @@index([deviceId])
+    @@index([userId])
+    @@index([deviceId])
 }
 
 model LoginSession {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  deviceInfo Json?
+    deviceInfo Json?
 
-  ipAddress String?
+    ipAddress String?
 
-  location String?
+    location String?
 
-  userAgent String?
+    userAgent String?
 
-  isActive Boolean @default(true)
+    isActive Boolean @default(true)
 
-  expiresAt DateTime
+    expiresAt DateTime
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  lastActiveAt DateTime @default(now())
+    lastActiveAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([isActive])
+    @@index([userId])
+    @@index([isActive])
 }
 
 model SecurityLog {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  action String
+    action String
 
-  ipAddress String?
+    ipAddress String?
 
-  userAgent String?
+    userAgent String?
 
-  location String?
+    location String?
 
-  metadata Json?
+    metadata Json?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([action])
-  @@index([createdAt])
+    @@index([userId])
+    @@index([action])
+    @@index([createdAt])
 }
 
 model Profile {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String @unique
+    userId String @unique
 
-  displayName String?
+    displayName String?
 
-  avatarUrl String?
+    avatarUrl String?
 
-  dob DateTime?
+    dob DateTime?
 
-  guardianId String?
+    guardianId String?
 
-  // Thông tin học tập
+    // Thông tin học tập
 
-  currentLevel String?
+    currentLevel String?
 
-  learningGoals Json?
+    learningGoals Json?
 
-  studyStreak Int @default(0)
+    studyStreak Int @default(0)
 
-  totalStudyTime Int @default(0)
+    totalStudyTime Int @default(0)
 
-  // Cài đặt học tập cá nhân
+    // Cài đặt học tập cá nhân
 
-  dailyGoalMinutes Int?
+    dailyGoalMinutes Int?
 
-  reminderTimes Json?
+    reminderTimes Json?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model PasswordResetToken {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  tokenHash String
+    tokenHash String
 
-  expiresAt DateTime
+    expiresAt DateTime
 
-  usedAt DateTime?
+    usedAt DateTime?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
-  @@index([expiresAt])
+    @@index([userId])
+    @@index([expiresAt])
 }
 
 model Progress {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  activityId String
+    activityId String
 
-  state ProgressState @default(not_started)
+    state ProgressState @default(not_started)
 
-  score Int?
+    score Int?
 
-  bestScore Int?
+    bestScore Int?
 
-  timeSpentSec Int @default(0)
+    timeSpentSec Int @default(0)
 
-  attemptsCount Int @default(0)
+    attemptsCount Int @default(0)
 
-  // Chi tiết tiến trình
+    // Chi tiết tiến trình
 
-  lastQuestionIndex Int?
+    lastQuestionIndex Int?
 
-  strengths Json?
+    strengths Json?
 
-  weaknesses Json?
+    weaknesses Json?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @default(now())
+    updatedAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+    activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, activityId])
-  @@index([userId, updatedAt])
-  @@index([state])
+    @@unique([userId, activityId])
+    @@index([userId, updatedAt])
+    @@index([state])
 }
 
 model Attempt {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  activityId String
+    activityId String
 
-  score Int?
+    score Int?
 
-  maxScore Int?
+    maxScore Int?
 
-  timeSpent Int?
+    timeSpent Int?
 
-  detail Json?
+    detail Json?
 
-  feedback String?
+    feedback String?
 
-  // Phân tích chi tiết
+    // Phân tích chi tiết
 
-  correctAnswers Int?
+    correctAnswers Int?
 
-  totalQuestions Int?
+    totalQuestions Int?
 
-  averageTime Int?
+    averageTime Int?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
 
-  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-  @@index([activityId])
+    @@index([userId, createdAt])
+    @@index([activityId])
 }
 
 // ===================== CLASSROOM (COHORT) =====================
 
 model Classroom {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  courseId String
+    courseId String
 
-  teacherId String
+    teacherId String
 
-  name String
+    name String
 
-  description String?
+    description String?
 
-  classCode String @unique
+    classCode String @unique
 
-  isActive Boolean @default(true)
+    isActive Boolean @default(true)
 
-  maxStudents Int?
+    maxStudents Int?
 
-  // Trạng thái lớp học
-  status ClassroomStatus @default(upcoming)
+    // Trạng thái lớp học
+    status ClassroomStatus @default(upcoming)
 
-  // Thông tin thời gian của CẢ LỚP (khung chạy của cohort)
+    // Thông tin thời gian của CẢ LỚP (khung chạy của cohort)
 
-  periodStart DateTime // Ngày bắt đầu lớp (theo lịch)
+    periodStart DateTime // Ngày bắt đầu lớp (theo lịch)
 
-  periodEnd DateTime // Ngày kết thúc lớp (theo lịch)
+    periodEnd DateTime // Ngày kết thúc lớp (theo lịch)
 
-  timezone TimezoneCode @default(Asia_Ho_Chi_Minh)
+    timezone TimezoneCode @default(Asia_Ho_Chi_Minh)
 
-  // Quy mô giờ học của lớp (tự động tính từ slots và period)
+    // Quy mô giờ học của lớp (tự động tính từ slots và period)
 
-  plannedHours Float? // Tổng SỐ GIỜ học - tự động tính từ slots và khoảng thời gian
+    plannedHours Float? // Tổng SỐ GIỜ học - tự động tính từ slots và khoảng thời gian
 
-  plannedSessions Int? // Số buổi dự kiến - tự động tính từ slots và period
+    plannedSessions Int? // Số buổi dự kiến - tự động tính từ slots và period
 
-  // Cài đặt khác
+    // Cài đặt khác
 
-  settings Json?
+    settings Json?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  expiresAt DateTime?
+    expiresAt DateTime?
 
-  // Relations
+    // Relations
 
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+    course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  teacher User @relation("TeacherClassrooms", fields: [teacherId], references: [id], onDelete: Cascade)
+    teacher User @relation("TeacherClassrooms", fields: [teacherId], references: [id], onDelete: Cascade)
 
-  students ClassroomStudent[]
+    students ClassroomStudent[]
 
-  assignments Assignment[]
+    assignments Assignment[]
 
-  announcements Announcement[]
+    announcements Announcement[]
 
-  slots ClassroomSlot[] // Weekly schedule pattern
+    slots ClassroomSlot[] // Weekly schedule pattern
 
-  sessions      ClassroomSession[] // Generated sessions from pattern or manual creation
-  conversations Conversation[]
+    sessions      ClassroomSession[] // Generated sessions from pattern or manual creation
+    conversations Conversation[]
 
-  leaderboardSnapshots LeaderboardSnapshot[]
+    leaderboardSnapshots LeaderboardSnapshot[]
 
-  // Payment transactions
-  transactions Transaction[] @relation("ClassroomTransactions")
+    // Payment transactions
+    transactions Transaction[] @relation("ClassroomTransactions")
 
-  @@index([courseId])
-  @@index([teacherId])
-  @@index([classCode])
-  @@index([isActive])
-  @@index([status])
-  @@index([periodStart])
-  @@index([periodEnd])
+    @@index([courseId])
+    @@index([teacherId])
+    @@index([classCode])
+    @@index([isActive])
+    @@index([status])
+    @@index([periodStart])
+    @@index([periodEnd])
 }
 
 // ===================== WEEKLY SLOTS (KHUNG GIỜ) =====================
@@ -1203,1418 +1197,1414 @@ model Classroom {
 // Lưu giờ theo phút từ 00:00 để không cần kiểu TIME
 
 model ClassroomSlot {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  classroomId String
+    classroomId String
 
-  dayOfWeek Weekday
+    dayOfWeek Weekday
 
-  startMinuteOfDay Int // ví dụ 18:30 -> 18*60+30 = 1110
+    startMinuteOfDay Int // ví dụ 18:30 -> 18*60+30 = 1110
 
-  endMinuteOfDay Int // ví dụ 20:00 -> 1200
+    endMinuteOfDay Int // ví dụ 20:00 -> 1200
 
-  isActive Boolean @default(true)
+    isActive Boolean @default(true)
 
-  // Duration tính từ startMinuteOfDay và endMinuteOfDay
+    // Duration tính từ startMinuteOfDay và endMinuteOfDay
 
-  // sessionDurationHours Float? // REMOVED - tính trực tiếp từ start/end minutes
+    // sessionDurationHours Float? // REMOVED - tính trực tiếp từ start/end minutes
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+    classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
-  @@index([classroomId])
-  @@index([dayOfWeek])
+    @@index([classroomId])
+    @@index([dayOfWeek])
 }
 
 // ===================== CLASSROOM SESSIONS (BUỔI HỌC) =====================
 
 model ClassroomSession {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  classroomId String
+    classroomId String
 
-  instructorId String
+    instructorId String
 
-  title String
+    title String
 
-  description String?
+    description String?
 
-  // Thời điểm thực tế của buổi (UTC)
+    // Thời điểm thực tế của buổi (UTC)
 
-  startTime DateTime
+    startTime DateTime
 
-  endTime DateTime
+    endTime DateTime
 
-  timezone TimezoneCode @default(Asia_Ho_Chi_Minh)
+    timezone TimezoneCode @default(Asia_Ho_Chi_Minh)
 
-  // Thời lượng buổi (giờ) – thực tế, có thể khác pattern nếu dời lịch
+    // Thời lượng buổi (giờ) – thực tế, có thể khác pattern nếu dời lịch
 
-  durationHours Float
+    durationHours Float
 
-  // Hình thức
+    // Hình thức
 
-  type SessionType @default(offline)
+    type SessionType @default(offline)
 
-  status SessionStatus @default(scheduled)
+    status SessionStatus @default(scheduled)
 
-  meetingUrl String?
+    meetingUrl String?
 
-  // Nội dung
+    // Nội dung
 
-  agenda Json?
-  materials Json?
+    agenda    Json?
+    materials Json?
 
-  // Meta
+    // Meta
 
-  notes String?
+    notes String?
 
-  recordingUrl String?
+    recordingUrl String?
 
-  // Store course session schedule info and activities for this session
-  metadata Json?
+    // Store course session schedule info and activities for this session
+    metadata Json?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  // Relations
+    // Relations
 
-  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+    classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
-  instructor User @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+    instructor User @relation(fields: [instructorId], references: [id], onDelete: Cascade)
 
-  attendance SessionAttendance[]
+    attendance SessionAttendance[]
 
-  @@index([classroomId])
-  @@index([instructorId])
-  @@index([startTime])
-  @@index([endTime])
+    @@index([classroomId])
+    @@index([instructorId])
+    @@index([startTime])
+    @@index([endTime])
 }
 
 model SessionAttendance {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  sessionId String
+    sessionId String
 
-  studentId String
+    studentId String
 
-  status String @default("present") // present, absent, late, excused
+    status String @default("present") // present, absent, late, excused
 
-  checkInTime DateTime?
+    checkInTime DateTime?
 
-  checkOutTime DateTime?
+    checkOutTime DateTime?
 
-  notes String?
+    notes String?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  session ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    session ClassroomSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
-  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+    student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@unique([sessionId, studentId])
-  @@index([sessionId])
-  @@index([studentId])
-  @@index([status])
+    @@unique([sessionId, studentId])
+    @@index([sessionId])
+    @@index([studentId])
+    @@index([status])
 }
 
 model ClassroomStudent {
-  classroomId String
+    classroomId String
 
-  studentId String
+    studentId String
 
-  joinedAt DateTime @default(now())
+    joinedAt DateTime @default(now())
 
-  isActive Boolean @default(true)
+    isActive Boolean @default(true)
 
-  // Payment status
-  isPurchased Boolean @default(false)
+    // Payment status
+    isPurchased Boolean @default(false)
 
-  // Metadata
+    // Metadata
 
-  notes String?
+    notes String?
 
-  groupName String?
+    groupName String?
 
-  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+    classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
-  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+    student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@id([classroomId, studentId])
-  @@index([studentId])
-  @@index([isPurchased])
+    @@id([classroomId, studentId])
+    @@index([studentId])
+    @@index([isPurchased])
 }
 
 model Assignment {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  teacherId String
+    teacherId String
 
-  classroomId String
+    classroomId String
 
-  title String
+    title String
 
-  description String?
+    description String?
 
-  instructions String?
+    instructions String?
 
-  // Cấu hình bài tập
+    // Cấu hình bài tập
 
-  dueDate DateTime?
+    dueDate DateTime?
 
-  totalPoints Int @default(100)
+    totalPoints Int @default(100)
 
-  timeLimit Int?
+    timeLimit Int?
 
-  maxAttempts Int @default(1)
+    maxAttempts Int @default(1)
 
-  // Trạng thái
+    // Trạng thái
 
-  status AssignmentStatus @default(draft)
+    status AssignmentStatus @default(draft)
 
-  isPublished Boolean @default(false)
+    isPublished Boolean @default(false)
 
-  // Targeting
+    // Targeting
 
-  assignedTo String[]
+    assignedTo String[]
 
-  type   AssignmentType @default(HOMEWORK)
-  weight Float?         @default(0) // Trọng số điểm, ví dụ 0.1 cho 10%
+    type   AssignmentType @default(HOMEWORK)
+    weight Float?         @default(0) // Trọng số điểm, ví dụ 0.1 cho 10%
 
-  // Content
+    // Content
 
-  customContent Json?
+    customContent Json?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  teacher User @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
+    teacher User @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
 
-  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+    classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
-  submissions AssignmentSubmission[]
+    submissions AssignmentSubmission[]
 
-  assignmentActivities AssignmentActivity[]
+    assignmentActivities AssignmentActivity[]
 
-  @@index([teacherId])
-  @@index([classroomId])
-  @@index([status])
-  @@index([dueDate])
+    @@index([teacherId])
+    @@index([classroomId])
+    @@index([status])
+    @@index([dueDate])
 }
 
 model AssignmentActivity {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  assignmentId String
+    assignmentId String
 
-  type ActivityType
+    type ActivityType
 
-  title String
+    title String
 
-  instructions String?
+    instructions String?
 
-  content Json
+    content Json
 
-  points Int @default(10)
+    points Int @default(10)
 
-  timeLimit Int?
+    passingScore Int?
 
-  maxAttempts Int?
+    difficulty DifficultyLevel?
 
-  passingScore Int?
+    hints String[]
 
-  difficulty DifficultyLevel?
+    createdAt DateTime @default(now())
 
-  hints String[]
+    updatedAt DateTime @updatedAt
 
-  createdAt DateTime @default(now())
+    assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
-  updatedAt DateTime @updatedAt
-
-  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-
-  @@index([assignmentId])
-  @@index([type])
+    @@index([assignmentId])
+    @@index([type])
 }
 
 model AssignmentSubmission {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  assignmentId String
+    assignmentId String
 
-  studentId String
+    studentId String
 
-  // Submission details
+    // Submission details
 
-  submittedAt DateTime @default(now())
+    submittedAt DateTime @default(now())
 
-  score Int?
+    score Int?
 
-  feedback String?
+    feedback String?
 
-  gradedAt DateTime?
+    gradedAt DateTime?
 
-  // Content
+    // Content
 
-  answers Json
+    answers Json
 
-  timeSpent Int?
+    timeSpent Int?
 
-  attemptCount Int @default(1)
+    attemptCount Int @default(1)
 
-  // Status
+    // Status
 
-  isLate Boolean @default(false)
+    isLate Boolean @default(false)
 
-  status String @default("submitted")
+    status String @default("submitted")
 
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    // Timestamps
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+    assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
 
-  student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
+    student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@unique([assignmentId, studentId, attemptCount])
-  @@index([assignmentId])
-  @@index([studentId])
+    @@unique([assignmentId, studentId, attemptCount])
+    @@index([assignmentId])
+    @@index([studentId])
 }
 
 model Announcement {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  classroomId String
+    classroomId String
 
-  title String
+    title String
 
-  content String
+    content String
 
-  priority String @default("normal")
+    priority String @default("normal")
 
-  targetAll Boolean @default(true)
+    targetAll Boolean @default(true)
 
-  targetIds String[]
+    targetIds String[]
 
-  // Media attachments
+    // Media attachments
 
-  attachments Json?
+    attachments Json?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+    classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
-  @@index([classroomId])
-  @@index([priority])
-  @@index([createdAt])
+    @@index([classroomId])
+    @@index([priority])
+    @@index([createdAt])
 }
 
 // ===================== PARENT-CHILD FEATURES =====================
 
 model ParentChild {
-  parentId String
+    parentId String
 
-  childId String
+    childId String
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  // Cài đặt giám sát
+    // Cài đặt giám sát
 
-  canViewProgress Boolean @default(true)
+    canViewProgress Boolean @default(true)
 
-  canSetGoals Boolean @default(true)
+    canSetGoals Boolean @default(true)
 
-  canControlTime Boolean @default(true)
+    canControlTime Boolean @default(true)
 
-  dailyTimeLimit Int?
+    dailyTimeLimit Int?
 
-  bedtimeStart String?
+    bedtimeStart String?
 
-  bedtimeEnd String?
+    bedtimeEnd String?
 
-  // Cài đặt nội dung
+    // Cài đặt nội dung
 
-  allowedActivities String[]
+    allowedActivities String[]
 
-  blockedContent String[]
+    blockedContent String[]
 
-  maxDifficulty DifficultyLevel?
+    maxDifficulty DifficultyLevel?
 
-  // Cài đặt thông báo cho parent
+    // Cài đặt thông báo cho parent
 
-  notificationsEnabled Boolean @default(true)
+    notificationsEnabled Boolean @default(true)
 
-  notificationTypes String[] @default(["achievement", "progress", "activity_completed", "streak_lost", "daily_goal_reached"]) // Các loại thông báo parent muốn nhận
+    notificationTypes String[] @default(["achievement", "progress", "activity_completed", "streak_lost", "daily_goal_reached"]) // Các loại thông báo parent muốn nhận
 
-  notificationSchedule String @default("realtime") // "realtime", "daily_summary", "weekly_summary", "disabled"
+    notificationSchedule String @default("realtime") // "realtime", "daily_summary", "weekly_summary", "disabled"
 
-  quietHoursStart String? // Ví dụ: "22:00" - không gửi thông báo từ giờ này
+    quietHoursStart String? // Ví dụ: "22:00" - không gửi thông báo từ giờ này
 
-  quietHoursEnd String? // Ví dụ: "07:00" - đến giờ này
+    quietHoursEnd String? // Ví dụ: "07:00" - đến giờ này
 
-  timezone String @default("Asia/Ho_Chi_Minh")
+    timezone String @default("Asia/Ho_Chi_Minh")
 
-  // Ngưỡng thông báo
+    // Ngưỡng thông báo
 
-  minProgressThreshold Int @default(10) // Chỉ thông báo khi progress >= X%
+    minProgressThreshold Int @default(10) // Chỉ thông báo khi progress >= X%
 
-  streakNotificationDays Int @default(3) // Thông báo khi streak >= X ngày
+    streakNotificationDays Int @default(3) // Thông báo khi streak >= X ngày
 
-  activityCompletionNotify Boolean @default(true) // Thông báo khi con hoàn thành activity
+    activityCompletionNotify Boolean @default(true) // Thông báo khi con hoàn thành activity
 
-  goalReachedNotify Boolean @default(true) // Thông báo khi đạt mục tiêu hàng ngày
+    goalReachedNotify Boolean @default(true) // Thông báo khi đạt mục tiêu hàng ngày
 
-  parent User @relation("ParentChildParent", fields: [parentId], references: [id], onDelete: Cascade)
+    parent User @relation("ParentChildParent", fields: [parentId], references: [id], onDelete: Cascade)
 
-  child User @relation("ParentChildChild", fields: [childId], references: [id], onDelete: Cascade)
+    child User @relation("ParentChildChild", fields: [childId], references: [id], onDelete: Cascade)
 
-  @@id([parentId, childId])
-  @@index([childId])
+    @@id([parentId, childId])
+    @@index([childId])
 }
 
 model CustomReward {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  parentId String
+    parentId String
 
-  childId String
+    childId String
 
-  title String
+    title String
 
-  description String?
+    description String?
 
-  type RewardType
+    type RewardType
 
-  cost Int
+    cost Int
 
-  imageUrl String?
+    imageUrl String?
 
-  isActive Boolean @default(true)
+    isActive Boolean @default(true)
 
-  // Cấu hình phần thưởng
+    // Cấu hình phần thưởng
 
-  metadata Json?
+    metadata Json?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  parent User @relation("ParentRewards", fields: [parentId], references: [id], onDelete: Cascade)
+    parent User @relation("ParentRewards", fields: [parentId], references: [id], onDelete: Cascade)
 
-  claims RewardClaim[]
+    claims RewardClaim[]
 
-  @@index([parentId])
-  @@index([childId])
+    @@index([parentId])
+    @@index([childId])
 }
 
 model RewardClaim {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  rewardId String
+    rewardId String
 
-  childId String
+    childId String
 
-  status String @default("pending")
+    status String @default("pending")
 
-  claimedAt DateTime @default(now())
+    claimedAt DateTime @default(now())
 
-  reward CustomReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
+    reward CustomReward @relation(fields: [rewardId], references: [id], onDelete: Cascade)
 
-  child User @relation(fields: [childId], references: [id], onDelete: Cascade)
+    child User @relation(fields: [childId], references: [id], onDelete: Cascade)
 
-  @@index([rewardId])
-  @@index([childId])
-  @@index([status])
+    @@index([rewardId])
+    @@index([childId])
+    @@index([status])
 }
 
 // ===================== DEVICE AND NOTIFICATIONS =====================
 
 model DeviceToken {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  token String @unique
+    token String @unique
 
-  platform DevicePlatform
+    platform DevicePlatform
 
-  deviceId String?
+    deviceId String?
 
-  deviceName String?
+    deviceName String?
 
-  appVersion String?
+    appVersion String?
 
-  osVersion String?
+    osVersion String?
 
-  lastSeenAt DateTime?
+    lastSeenAt DateTime?
 
-  isActive Boolean @default(true)
+    isActive Boolean @default(true)
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, platform])
-  @@index([token])
+    @@index([userId, platform])
+    @@index([token])
 }
 
 model Notification {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  type NotificationType
+    type NotificationType
 
-  title String
+    title String
 
-  body String?
+    body String?
 
-  data Json?
+    data Json?
 
-  channel NotificationChannel
+    channel NotificationChannel
 
-  // Targeting và scheduling
+    // Targeting và scheduling
 
-  targetRole UserRole?
+    targetRole UserRole?
 
-  scheduledFor DateTime?
+    scheduledFor DateTime?
 
-  // Status
+    // Status
 
-  readAt DateTime?
+    readAt DateTime?
 
-  clickedAt DateTime?
+    clickedAt DateTime?
 
-  delivered Boolean @default(false)
+    delivered Boolean @default(false)
 
-  // Metadata
+    // Metadata
 
-  priority String @default("normal")
+    priority String @default("normal")
 
-  actionUrl String?
+    actionUrl String?
 
-  imageUrl String?
+    imageUrl String?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  expiresAt DateTime?
+    expiresAt DateTime?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, createdAt])
-  @@index([type])
-  @@index([delivered])
-  @@index([scheduledFor])
+    @@index([userId, createdAt])
+    @@index([type])
+    @@index([delivered])
+    @@index([scheduledFor])
 }
 
 enum ConversationType {
-  class
-  personal
+    class
+    personal
 }
 
 enum MessageType {
-  text
-  image
-  file
-  system
+    text
+    image
+    file
+    system
 }
 
 // ===================== COMMUNICATION =====================
 
 model Message {
-  id             String      @id @default(uuid())
-  conversationId String
-  senderId       String
-  content        String
-  type           MessageType @default(text)
+    id             String      @id @default(uuid())
+    conversationId String
+    senderId       String
+    content        String
+    type           MessageType @default(text)
 
-  metadata    Json?
-  attachments Json?
-  isEdited    Boolean   @default(false)
-  editedAt    DateTime?
+    metadata    Json?
+    attachments Json?
+    isEdited    Boolean   @default(false)
+    editedAt    DateTime?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender       User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+    conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+    sender       User         @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
 
-  @@index([conversationId, createdAt])
-  @@index([senderId])
+    @@index([conversationId, createdAt])
+    @@index([senderId])
 }
 
 model Conversation {
-  id          String           @id @default(uuid())
-  classroomId String
-  createdById String
-  scopeKey    String
-  type        ConversationType @default(class)
-  name        String?
+    id          String           @id @default(uuid())
+    classroomId String
+    createdById String
+    scopeKey    String
+    type        ConversationType @default(class)
+    name        String?
 
-  lastMessageAt       DateTime?
-  lastMessagePreview  String?
-  lastMessageSenderId String?
+    lastMessageAt       DateTime?
+    lastMessagePreview  String?
+    lastMessageSenderId String?
 
-  metadata Json?
+    metadata Json?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  classroom         Classroom                 @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  createdBy         User                      @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: Cascade)
-  lastMessageSender User?                     @relation("ConversationLastMessageSender", fields: [lastMessageSenderId], references: [id], onDelete: SetNull)
-  participants      ConversationParticipant[]
-  messages          Message[]
+    classroom         Classroom                 @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+    createdBy         User                      @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: Cascade)
+    lastMessageSender User?                     @relation("ConversationLastMessageSender", fields: [lastMessageSenderId], references: [id], onDelete: SetNull)
+    participants      ConversationParticipant[]
+    messages          Message[]
 
-  @@unique([scopeKey])
-  @@index([classroomId])
-  @@index([classroomId, type])
-  @@index([type])
+    @@unique([scopeKey])
+    @@index([classroomId])
+    @@index([classroomId, type])
+    @@index([type])
 }
 
 model ConversationParticipant {
-  id             String    @id @default(uuid())
-  conversationId String
-  userId         String
-  isPinned       Boolean   @default(false)
-  isMuted        Boolean   @default(false)
-  lastReadAt     DateTime?
-  joinedAt       DateTime  @default(now())
+    id             String    @id @default(uuid())
+    conversationId String
+    userId         String
+    isPinned       Boolean   @default(false)
+    isMuted        Boolean   @default(false)
+    lastReadAt     DateTime?
+    joinedAt       DateTime  @default(now())
 
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+    user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([conversationId, userId])
-  @@index([conversationId])
-  @@index([userId])
+    @@unique([conversationId, userId])
+    @@index([conversationId])
+    @@index([userId])
 }
 
 // ===================== CONTENT MANAGEMENT =====================
 
 model Content {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  type String
+    type String
 
-  title String
+    title String
 
-  description String?
+    description String?
 
-  // Content data
+    // Content data
 
-  data Json
+    data Json
 
-  mediaFiles Json?
+    mediaFiles Json?
 
-  metadata Json?
+    metadata Json?
 
-  // Publishing
+    // Publishing
 
-  status ContentStatus @default(draft)
+    status ContentStatus @default(draft)
 
-  creatorId String
+    creatorId String
 
-  reviewerId String?
+    reviewerId String?
 
-  // Organization
+    // Organization
 
-  tags String[]
+    tags String[]
 
-  categories String[]
+    categories String[]
 
-  difficulty DifficultyLevel @default(beginner)
+    difficulty DifficultyLevel @default(beginner)
 
-  language LanguageCode @default(en)
+    language LanguageCode @default(en)
 
-  // Usage tracking
+    // Usage tracking
 
-  usageCount Int @default(0)
+    usageCount Int @default(0)
 
-  rating Float?
+    rating Float?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  publishedAt DateTime?
+    publishedAt DateTime?
 
-  creator User @relation("ContentCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+    creator User @relation("ContentCreator", fields: [creatorId], references: [id], onDelete: Cascade)
 
-  @@index([status])
-  @@index([creatorId])
-  @@index([type])
-  @@index([difficulty])
-  @@index([tags])
+    @@index([status])
+    @@index([creatorId])
+    @@index([type])
+    @@index([difficulty])
+    @@index([tags])
 }
 
 model MediaFile {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  filename String
+    filename String
 
-  originalName String
+    originalName String
 
-  mimeType String
+    mimeType String
 
-  size Int
+    size Int
 
-  url String
+    url String
 
-  thumbnail String?
+    thumbnail String?
 
-  // Processing status for audio/video
+    // Processing status for audio/video
 
-  isProcessed Boolean @default(false)
+    isProcessed Boolean @default(false)
 
-  duration Int?
+    duration Int?
 
-  // Usage tracking
+    // Usage tracking
 
-  usageCount Int @default(0)
+    usageCount Int @default(0)
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  @@index([mimeType])
-  @@index([isProcessed])
+    @@index([mimeType])
+    @@index([isProcessed])
 }
 
 model Vocabulary {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  word String @unique
+    word String @unique
 
-  definition String
+    definition String
 
-  pronunciation String?
+    pronunciation String?
 
-  audioUrl String?
+    audioUrl String?
 
-  imageUrl String?
+    imageUrl String?
 
-  // Learning data
+    // Learning data
 
-  difficulty DifficultyLevel @default(beginner)
+    difficulty DifficultyLevel @default(beginner)
 
-  frequency Int @default(0)
+    frequency Int @default(0)
 
-  category String?
+    category String?
 
-  tags String[]
+    tags String[]
 
-  // Example usage
+    // Example usage
 
-  examples Json?
+    examples Json?
 
-  // Metadata
+    // Metadata
 
-  language LanguageCode @default(en)
+    language LanguageCode @default(en)
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  userVocabulary UserVocabulary[]
+    userVocabulary UserVocabulary[]
 
-  @@index([difficulty])
-  @@index([category])
-  @@index([frequency])
+    @@index([difficulty])
+    @@index([category])
+    @@index([frequency])
 }
 
 model UserVocabulary {
-  userId String
+    userId String
 
-  vocabularyId String
+    vocabularyId String
 
-  // Learning progress
+    // Learning progress
 
-  status String @default("learning")
+    status String @default("learning")
 
-  correctCount Int @default(0)
+    correctCount Int @default(0)
 
-  wrongCount Int @default(0)
+    wrongCount Int @default(0)
 
-  lastSeen DateTime @default(now())
+    lastSeen DateTime @default(now())
 
-  nextReview DateTime
+    nextReview DateTime
 
-  // Spaced repetition data
+    // Spaced repetition data
 
-  easeFactor Float @default(2.5)
+    easeFactor Float @default(2.5)
 
-  interval Int @default(1)
+    interval Int @default(1)
 
-  repetitions Int @default(0)
+    repetitions Int @default(0)
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  vocabulary Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
+    vocabulary Vocabulary @relation(fields: [vocabularyId], references: [id], onDelete: Cascade)
 
-  @@id([userId, vocabularyId])
-  @@index([userId, nextReview])
-  @@index([status])
+    @@id([userId, vocabularyId])
+    @@index([userId, nextReview])
+    @@index([status])
 }
 
 // ===================== SYSTEM FEATURES =====================
 
 model FeatureFlag {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  name String @unique
+    name String @unique
 
-  description String?
+    description String?
 
-  isEnabled Boolean @default(false)
+    isEnabled Boolean @default(false)
 
-  // Targeting
+    // Targeting
 
-  userRoles UserRole[]
+    userRoles UserRole[]
 
-  userIds String[]
+    userIds String[]
 
-  percentage Int @default(0)
+    percentage Int @default(0)
 
-  // A/B Testing
+    // A/B Testing
 
-  variants Json?
+    variants Json?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  @@index([isEnabled])
+    @@index([isEnabled])
 }
 
 model SystemSetting {
-  key String @id
+    key String @id
 
-  value Json
+    value Json
 
-  type String
+    type String
 
-  description String?
+    description String?
 
-  isPublic Boolean @default(false)
+    isPublic Boolean @default(false)
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  updatedBy String?
+    updatedBy String?
 }
 
 model ErrorLog {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String?
+    userId String?
 
-  error String
+    error String
 
-  stackTrace String?
+    stackTrace String?
 
-  context Json?
+    context Json?
 
-  userAgent String?
+    userAgent String?
 
-  url String?
+    url String?
 
-  severity String @default("error")
+    severity String @default("error")
 
-  resolved Boolean @default(false)
+    resolved Boolean @default(false)
 
-  resolvedAt DateTime?
+    resolvedAt DateTime?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  @@index([severity])
-  @@index([resolved])
-  @@index([createdAt])
+    @@index([severity])
+    @@index([resolved])
+    @@index([createdAt])
 }
 
 model Analytics {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String?
+    userId String?
 
-  event String
+    event String
 
-  properties Json?
+    properties Json?
 
-  sessionId String?
+    sessionId String?
 
-  // Device/platform info
+    // Device/platform info
 
-  platform String?
+    platform String?
 
-  appVersion String?
+    appVersion String?
 
-  osVersion String?
+    osVersion String?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  @@index([event])
-  @@index([userId])
-  @@index([createdAt])
-  @@index([platform])
+    @@index([event])
+    @@index([userId])
+    @@index([createdAt])
+    @@index([platform])
 }
 
 model Feedback {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String?
+    userId String?
 
-  type String
+    type String
 
-  subject String
+    subject String
 
-  description String
+    description String
 
-  rating Int?
+    rating Int?
 
-  // Metadata
+    // Metadata
 
-  appVersion String?
+    appVersion String?
 
-  platform String?
+    platform String?
 
-  deviceInfo Json?
+    deviceInfo Json?
 
-  // Status
+    // Status
 
-  status String @default("open")
+    status String @default("open")
 
-  response String?
+    response String?
 
-  respondedAt DateTime?
+    respondedAt DateTime?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  @@index([type])
-  @@index([status])
-  @@index([rating])
+    @@index([type])
+    @@index([status])
+    @@index([rating])
 }
 
 // ===================== DASHBOARD =====================
 
 model Dashboard {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  totalStudents Int
+    totalStudents Int
 
-  totalCourses Int
+    totalCourses Int
 
-  totalLessons Int
+    totalLessons Int
 
-  totalActivities Int
+    totalActivities Int
 
-  recentStudents Json
+    recentStudents Json
 
-  registrationTrend Json
+    registrationTrend Json
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  @@map("dashboards")
+    @@map("dashboards")
 }
 
 model LeaderboardSnapshot {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  scope LeaderboardScope
+    scope LeaderboardScope
 
-  classroomId String?
+    classroomId String?
 
-  year Int
+    year Int
 
-  month Int?
+    month Int?
 
-  userId String
+    userId String
 
-  totalScore Int @default(0)
+    totalScore Int @default(0)
 
-  rank Int?
+    rank Int?
 
-  payload Json?
+    payload Json?
 
-  calculatedAt DateTime @default(now())
+    calculatedAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  classroom Classroom? @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+    classroom Classroom? @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
-  @@unique([scope, classroomId, year, month, userId], map: "leaderboard_snapshot_unique")
-  @@index([scope, classroomId, year, month], map: "leaderboard_snapshot_scope_idx")
-  @@index([scope, year, month, totalScore], map: "leaderboard_snapshot_score_idx")
-  @@map("leaderboard_snapshots")
+    @@unique([scope, classroomId, year, month, userId], map: "leaderboard_snapshot_unique")
+    @@index([scope, classroomId, year, month], map: "leaderboard_snapshot_scope_idx")
+    @@index([scope, year, month, totalScore], map: "leaderboard_snapshot_score_idx")
+    @@map("leaderboard_snapshots")
 }
 
 // ===================== ADVANCED FEATURES =====================
 
 model AIAnalysis {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  type String
+    type String
 
-  inputData Json
+    inputData Json
 
-  analysis Json
+    analysis Json
 
-  score Float?
+    score Float?
 
-  // Detailed feedback
+    // Detailed feedback
 
-  strengths String[]
+    strengths String[]
 
-  weaknesses String[]
+    weaknesses String[]
 
-  suggestions String[]
+    suggestions String[]
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  @@index([userId])
-  @@index([type])
-  @@index([createdAt])
+    @@index([userId])
+    @@index([type])
+    @@index([createdAt])
 }
 
 model LearningPath {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  name String
+    name String
 
-  // Path configuration
+    // Path configuration
 
-  targetLevel DifficultyLevel
+    targetLevel DifficultyLevel
 
-  focusAreas String[]
+    focusAreas String[]
 
-  timeframe Int?
+    timeframe Int?
 
-  // Content
+    // Content
 
-  courseIds String[]
+    courseIds String[]
 
-  customContent Json?
+    customContent Json?
 
-  // Progress
+    // Progress
 
-  currentStep Int @default(0)
+    currentStep Int @default(0)
 
-  isCompleted Boolean @default(false)
+    isCompleted Boolean @default(false)
 
-  completedAt DateTime?
+    completedAt DateTime?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  @@index([userId])
-  @@index([isCompleted])
+    @@index([userId])
+    @@index([isCompleted])
 }
 
 model StudySession {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  // Session data
+    // Session data
 
-  startTime DateTime @default(now())
+    startTime DateTime @default(now())
 
-  endTime DateTime?
+    endTime DateTime?
 
-  durationMinutes Int?
+    durationMinutes Int?
 
-  // Activities in this session
+    // Activities in this session
 
-  activitiesCompleted Int @default(0)
+    activitiesCompleted Int @default(0)
 
-  xpEarned Int @default(0)
+    xpEarned Int @default(0)
 
-  // Performance
+    // Performance
 
-  averageScore Float?
+    averageScore Float?
 
-  streakMaintained Boolean @default(false)
+    streakMaintained Boolean @default(false)
 
-  // Context
+    // Context
 
-  devicePlatform DevicePlatform?
+    devicePlatform DevicePlatform?
 
-  location String?
+    location String?
 
-  @@index([userId])
-  @@index([startTime])
-  @@index([durationMinutes])
+    @@index([userId])
+    @@index([startTime])
+    @@index([durationMinutes])
 }
 
 model Recommendation {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  type String
+    type String
 
-  title String
+    title String
 
-  description String?
+    description String?
 
-  // Recommendation data
+    // Recommendation data
 
-  confidence Float
+    confidence Float
 
-  reasoning String?
+    reasoning String?
 
-  targetData Json
+    targetData Json
 
-  // User interaction
+    // User interaction
 
-  viewed Boolean @default(false)
+    viewed Boolean @default(false)
 
-  clicked Boolean @default(false)
+    clicked Boolean @default(false)
 
-  dismissed Boolean @default(false)
+    dismissed Boolean @default(false)
 
-  expiresAt DateTime
+    expiresAt DateTime
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  @@index([userId])
-  @@index([type])
-  @@index([expiresAt])
-  @@index([viewed, clicked, dismissed])
+    @@index([userId])
+    @@index([type])
+    @@index([expiresAt])
+    @@index([viewed, clicked, dismissed])
 }
 
 // ===================== AI SPEAKING PRACTICE =====================
 
 model AiSpeakingSession {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  conversationId String @default(uuid())
+    conversationId String @default(uuid())
 
-  topic String?
+    topic String?
 
-  goal String?
+    goal String?
 
-  state AiSpeakingSessionState @default(pending)
+    state AiSpeakingSessionState @default(pending)
 
-  maxTurns Int @default(8)
+    maxTurns Int @default(8)
 
-  turnCount Int @default(0)
+    turnCount Int @default(0)
 
-  targetDifficulty DifficultyLevel @default(beginner)
+    targetDifficulty DifficultyLevel @default(beginner)
 
-  currentDifficulty DifficultyLevel?
+    currentDifficulty DifficultyLevel?
 
-  silenceWarnings Int @default(0)
+    silenceWarnings Int @default(0)
 
-  offTopicWarnings Int @default(0)
+    offTopicWarnings Int @default(0)
 
-  config Json?
+    config Json?
 
-  metadata Json?
+    metadata Json?
 
-  analytics Json?
+    analytics Json?
 
-  summary String?
+    summary String?
 
-  summaryPayload Json?
+    summaryPayload Json?
 
-  startedAt DateTime @default(now())
+    startedAt DateTime @default(now())
 
-  lastActivityAt DateTime @default(now())
+    lastActivityAt DateTime @default(now())
 
-  endedAt DateTime?
+    endedAt DateTime?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  turns AiSpeakingTurn[]
+    turns AiSpeakingTurn[]
 
-  @@index([userId, createdAt])
-  @@index([userId, conversationId])
-  @@index([state, lastActivityAt])
-  @@map("ai_speaking_sessions")
+    @@index([userId, createdAt])
+    @@index([userId, conversationId])
+    @@index([state, lastActivityAt])
+    @@map("ai_speaking_sessions")
 }
 
 model AiSpeakingTurn {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  sessionId String
+    sessionId String
 
-  turnIndex Int
+    turnIndex Int
 
-  state AiSpeakingTurnStatus @default(pending)
+    state AiSpeakingTurnStatus @default(pending)
 
-  aiPrompt String?
+    aiPrompt String?
 
-  aiAudioUrl String?
+    aiAudioUrl String?
 
-  userTranscript String?
+    userTranscript String?
 
-  userAudioUrl String?
+    userAudioUrl String?
 
-  userDurationSec Int?
+    userDurationSec Int?
 
-  metrics Json?
+    metrics Json?
 
-  evaluation Json?
+    evaluation Json?
 
-  suggestions String[] @default([])
+    suggestions String[] @default([])
 
-  score Int?
+    score Int?
 
-  relevanceScore Float?
+    relevanceScore Float?
 
-  silenceDetected Boolean @default(false)
+    silenceDetected Boolean @default(false)
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  session AiSpeakingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    session AiSpeakingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
-  segments AiSpeakingTurnSegment[]
+    segments AiSpeakingTurnSegment[]
 
-  @@unique([sessionId, turnIndex])
-  @@index([sessionId])
-  @@index([state, createdAt])
-  @@map("ai_speaking_turns")
+    @@unique([sessionId, turnIndex])
+    @@index([sessionId])
+    @@index([state, createdAt])
+    @@map("ai_speaking_turns")
 }
 
 model AiSpeakingTurnSegment {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  turnId String
+    turnId String
 
-  role AiSpeakingTurnRole
+    role AiSpeakingTurnRole
 
-  orderNo Int @default(0)
+    orderNo Int @default(0)
 
-  transcript String?
+    transcript String?
 
-  audioUrl String?
+    audioUrl String?
 
-  durationSec Int?
+    durationSec Int?
 
-  payload Json?
+    payload Json?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  turn AiSpeakingTurn @relation(fields: [turnId], references: [id], onDelete: Cascade)
+    turn AiSpeakingTurn @relation(fields: [turnId], references: [id], onDelete: Cascade)
 
-  @@unique([turnId, role, orderNo])
-  @@index([turnId, orderNo])
-  @@map("ai_speaking_turn_segments")
+    @@unique([turnId, role, orderNo])
+    @@index([turnId, orderNo])
+    @@map("ai_speaking_turn_segments")
 }
 
 // ===================== PODCAST & LISTENING PRACTICE SYSTEM =====================
 
 enum PodcastStatus {
-  draft
+    draft
 
-  published
+    published
 
-  archived
+    archived
 
-  scheduled
+    scheduled
 }
 
 enum PodcastCategory {
-  study_abroad @map("Du học")
+    study_abroad @map("Du học")
 
-  business @map("Kinh doanh")
+    business @map("Kinh doanh")
 
-  technology @map("Công nghệ")
+    technology @map("Công nghệ")
 
-  lifestyle @map("Lối sống")
+    lifestyle @map("Lối sống")
 
-  entertainment @map("Giải trí")
+    entertainment @map("Giải trí")
 
-  education @map("Giáo dục")
+    education @map("Giáo dục")
 
-  news @map("Tin tức")
+    news @map("Tin tức")
 
-  culture @map("Văn hóa")
+    culture @map("Văn hóa")
 
-  science @map("Khoa học")
+    science @map("Khoa học")
 
-  travel @map("Du lịch")
+    travel @map("Du lịch")
 }
 
 enum PodcastSource {
-  wele_partners @map("WELE Partners")
+    wele_partners @map("WELE Partners")
 
-  ted_talks @map("TED Talks")
+    ted_talks @map("TED Talks")
 
-  bbc @map("BBC")
+    bbc @map("BBC")
 
-  cnn @map("CNN")
+    cnn @map("CNN")
 
-  voice_of_america @map("Voice of America")
+    voice_of_america @map("Voice of America")
 
-  british_council @map("British Council")
+    british_council @map("British Council")
 
-  internal @map("Nội bộ")
+    internal @map("Nội bộ")
 }
 
 enum PodcastDifficulty {
-  beginner @map("Người mới bắt đầu")
+    beginner @map("Người mới bắt đầu")
 
-  elementary @map("Sơ cấp")
+    elementary @map("Sơ cấp")
 
-  intermediate @map("Trung cấp")
+    intermediate @map("Trung cấp")
 
-  upper_intermediate @map("Trung cấp cao")
+    upper_intermediate @map("Trung cấp cao")
 
-  advanced @map("Nâng cao")
+    advanced @map("Nâng cao")
 }
 
 enum ListeningActivityType {
-  fill_blank @map("Điền vào chỗ trống")
+    fill_blank @map("Điền vào chỗ trống")
 }
 
 // ===================== CORE PODCAST MODELS =====================
 
 model Podcast {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  code String @unique
+    code String @unique
 
-  title String
+    title String
 
-  description String
+    description String
 
-  // Media files
+    // Media files
 
-  audioUrl String
+    audioUrl String
 
-  thumbnailUrl String?
+    thumbnailUrl String?
 
-  // Transcript & Test
+    // Transcript & Test
 
-  transcript String // Toàn bộ transcript gốc
+    transcript String // Toàn bộ transcript gốc
 
-  gaps PodcastGap[] // Danh sách chỗ đục lỗ (bài kiểm)
+    gaps PodcastGap[] // Danh sách chỗ đục lỗ (bài kiểm)
 
-  averageRating Float? @default(0)
+    averageRating Float? @default(0)
 
-  difficultyRating Float? @default(0)
+    difficultyRating Float? @default(0)
 
-  qualityRating Float? @default(0)
+    qualityRating Float? @default(0)
 
-  totalRatings Int @default(0)
+    totalRatings Int @default(0)
 
-  // Metadata
+    // Metadata
 
-  category PodcastCategory
+    category PodcastCategory
 
-  difficulty PodcastDifficulty @default(intermediate)
+    difficulty PodcastDifficulty @default(intermediate)
 
-  duration Int // seconds
+    duration Int // seconds
 
-  viewCount Int @default(0)
+    viewCount Int @default(0)
 
-  authorId String
+    authorId String
 
-  author User? @relation("PodcastAuthor", fields: [authorId], references: [id])
+    author User? @relation("PodcastAuthor", fields: [authorId], references: [id])
 
-  playlistPodcasts PlaylistPodcast[]
+    playlistPodcasts PlaylistPodcast[]
 
-  // Ratings & Comments
+    // Ratings & Comments
 
-  ratings PodcastRating[]
+    ratings PodcastRating[]
 
-  comments PodcastComment[]
+    comments PodcastComment[]
 
-  // Attempts (bài làm)
+    // Attempts (bài làm)
 
-  attempts PodcastAttempt[]
+    attempts PodcastAttempt[]
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  @@map("podcasts")
+    @@map("podcasts")
 }
 
 // ===================== GAP (Blank trong transcript) =====================
 
 model PodcastGap {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  podcastId String
+    podcastId String
 
-  startIndex Int // Vị trí ký tự bắt đầu trong transcript
+    startIndex Int // Vị trí ký tự bắt đầu trong transcript
 
-  endIndex Int // Vị trí ký tự kết thúc trong transcript
+    endIndex Int // Vị trí ký tự kết thúc trong transcript
 
-  answer String // Đáp án đúng (từ/cụm từ bị che)
+    answer String // Đáp án đúng (từ/cụm từ bị che)
 
-  orderNo Int @default(1)
+    orderNo Int @default(1)
 
-  podcast Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+    podcast Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
 
-  @@index([podcastId])
-  @@map("podcast_gaps")
+    @@index([podcastId])
+    @@map("podcast_gaps")
 }
 
 // ===================== SIMPLIFIED ATTEMPT MODEL =====================
 
 model PodcastAttempt {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  podcastId String
+    podcastId String
 
-  attemptNo Int @default(1) // Có thể làm nhiều lần
+    attemptNo Int @default(1) // Có thể làm nhiều lần
 
-  // Simplified scoring: count correct answers and calculate percentage
+    // Simplified scoring: count correct answers and calculate percentage
 
-  correctCount Int @default(0)
+    correctCount Int @default(0)
 
-  totalQuestions Int @default(0)
+    totalQuestions Int @default(0)
 
-  scorePercent Float @default(0) // 0-100 percentage
+    scorePercent Float @default(0) // 0-100 percentage
 
-  // Performance tracking
+    // Performance tracking
 
-  timeSpent Int? // seconds
+    timeSpent Int? // seconds
 
-  answers Json // User's answers: { "q1": "answer1", "q2": "answer2", ... }
+    answers Json // User's answers: { "q1": "answer1", "q2": "answer2", ... }
 
-  status AttemptStatus @default(in_progress)
+    status AttemptStatus @default(in_progress)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  // Relations
+    // Relations
 
-  user User @relation("UserPodcastAttempts", fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation("UserPodcastAttempts", fields: [userId], references: [id], onDelete: Cascade)
 
-  podcast Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+    podcast Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, podcastId, attemptNo])
-  @@index([userId, createdAt])
-  @@index([podcastId])
-  @@map("podcast_attempts")
+    @@unique([userId, podcastId, attemptNo])
+    @@index([userId, createdAt])
+    @@index([podcastId])
+    @@map("podcast_attempts")
 }
 
 // ===================== USER PODCAST PROGRESS =====================
@@ -2622,318 +2612,318 @@ model PodcastAttempt {
 // ===================== RATING & FEEDBACK =====================
 
 model PodcastRating {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  podcastId String
+    podcastId String
 
-  // Ratings (1-5 scale)
+    // Ratings (1-5 scale)
 
-  overallRating Int // Tổng thể
+    overallRating Int // Tổng thể
 
-  difficultyRating Int // Độ khó (1=easy, 5=very hard)
+    difficultyRating Int // Độ khó (1=easy, 5=very hard)
 
-  qualityRating Int // Chất lượng (1=poor, 5=excellent)
+    qualityRating Int // Chất lượng (1=poor, 5=excellent)
 
-  contentRating Int? // Nội dung
+    contentRating Int? // Nội dung
 
-  audioRating Int? // Chất lượng âm thanh
+    audioRating Int? // Chất lượng âm thanh
 
-  // Review
+    // Review
 
-  title String?
+    title String?
 
-  comment String?
+    comment String?
 
-  pros String[] @default([])
+    pros String[] @default([])
 
-  cons String[] @default([])
+    cons String[] @default([])
 
-  // Verification
+    // Verification
 
-  isVerified Boolean @default(false)
+    isVerified Boolean @default(false)
 
-  isModerated Boolean @default(false)
+    isModerated Boolean @default(false)
 
-  // Helpful votes
+    // Helpful votes
 
-  helpfulCount Int @default(0)
+    helpfulCount Int @default(0)
 
-  unhelpfulCount Int @default(0)
+    unhelpfulCount Int @default(0)
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  // Relations
+    // Relations
 
-  user User @relation("UserPodcastRatings", fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation("UserPodcastRatings", fields: [userId], references: [id], onDelete: Cascade)
 
-  podcast Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+    podcast Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, podcastId])
-  @@index([podcastId, overallRating])
-  @@index([createdAt])
-  @@map("podcast_ratings")
+    @@unique([userId, podcastId])
+    @@index([podcastId, overallRating])
+    @@index([createdAt])
+    @@map("podcast_ratings")
 }
 
 model PodcastComment {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  podcastId String
+    podcastId String
 
-  parentId String? // For replies
+    parentId String? // For replies
 
-  content String
+    content String
 
-  isEdited Boolean @default(false)
+    isEdited Boolean @default(false)
 
-  isReported Boolean @default(false)
+    isReported Boolean @default(false)
 
-  isModerated Boolean @default(false)
+    isModerated Boolean @default(false)
 
-  // Engagement
+    // Engagement
 
-  likeCount Int @default(0)
+    likeCount Int @default(0)
 
-  replyCount Int @default(0)
+    replyCount Int @default(0)
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  // Relations
+    // Relations
 
-  user User @relation("UserPodcastComments", fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation("UserPodcastComments", fields: [userId], references: [id], onDelete: Cascade)
 
-  podcast Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+    podcast Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
 
-  parent PodcastComment? @relation("CommentReplies", fields: [parentId], references: [id])
+    parent PodcastComment? @relation("CommentReplies", fields: [parentId], references: [id])
 
-  replies PodcastComment[] @relation("CommentReplies")
+    replies PodcastComment[] @relation("CommentReplies")
 
-  @@index([podcastId, createdAt])
-  @@index([userId])
-  @@index([parentId])
-  @@map("podcast_comments")
+    @@index([podcastId, createdAt])
+    @@index([userId])
+    @@index([parentId])
+    @@map("podcast_comments")
 }
 
 // ===================== PLAYLIST SYSTEM =====================
 
 model Playlist {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  userId String
+    userId String
 
-  name String
+    name String
 
-  description String?
+    description String?
 
-  isPublic Boolean @default(false)
+    isPublic Boolean @default(false)
 
-  isSystem Boolean @default(false) // For auto-generated playlists
+    isSystem Boolean @default(false) // For auto-generated playlists
 
-  // Metadata
+    // Metadata
 
-  thumbnailUrl String?
+    thumbnailUrl String?
 
-  tags String[] @default([])
+    tags String[] @default([])
 
-  category String?
+    category String?
 
-  // Stats
+    // Stats
 
-  podcastCount Int @default(0)
+    podcastCount Int @default(0)
 
-  totalDuration Int @default(0) // seconds
+    totalDuration Int @default(0) // seconds
 
-  playCount Int @default(0)
+    playCount Int @default(0)
 
-  likeCount Int @default(0)
+    likeCount Int @default(0)
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+    updatedAt DateTime @updatedAt
 
-  // Relations
+    // Relations
 
-  user User @relation("UserPlaylists", fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation("UserPlaylists", fields: [userId], references: [id], onDelete: Cascade)
 
-  playlistPodcasts PlaylistPodcast[]
+    playlistPodcasts PlaylistPodcast[]
 
-  @@index([userId])
-  @@index([isPublic])
-  @@map("playlists")
+    @@index([userId])
+    @@index([isPublic])
+    @@map("playlists")
 }
 
 model PlaylistPodcast {
-  playlistId String
+    playlistId String
 
-  podcastId String
+    podcastId String
 
-  orderNo Int @default(1)
+    orderNo Int @default(1)
 
-  addedAt DateTime @default(now())
+    addedAt DateTime @default(now())
 
-  // Relations
+    // Relations
 
-  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+    playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
 
-  podcast Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
+    podcast Podcast @relation(fields: [podcastId], references: [id], onDelete: Cascade)
 
-  @@id([playlistId, podcastId])
-  @@index([playlistId, orderNo])
-  @@map("playlist_podcasts")
+    @@id([playlistId, podcastId])
+    @@index([playlistId, orderNo])
+    @@map("playlist_podcasts")
 }
 
 // ===================== ANALYTICS & TRACKING =====================
 
 model PodcastAnalytics {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  podcastId String
+    podcastId String
 
-  date DateTime @default(now())
+    date DateTime @default(now())
 
-  // Metrics
+    // Metrics
 
-  views Int @default(0)
+    views Int @default(0)
 
-  uniqueViews Int @default(0)
+    uniqueViews Int @default(0)
 
-  completions Int @default(0)
+    completions Int @default(0)
 
-  likes Int @default(0)
+    likes Int @default(0)
 
-  saves Int @default(0)
+    saves Int @default(0)
 
-  shares Int @default(0)
+    shares Int @default(0)
 
-  comments Int @default(0)
+    comments Int @default(0)
 
-  // Engagement
+    // Engagement
 
-  avgWatchTime Float? // seconds
+    avgWatchTime Float? // seconds
 
-  bounceRate Float? // percentage
+    bounceRate Float? // percentage
 
-  retentionRate Float? // percentage
+    retentionRate Float? // percentage
 
-  // Traffic sources
+    // Traffic sources
 
-  sourceData Json?
+    sourceData Json?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  @@unique([podcastId, date])
-  @@index([podcastId])
-  @@index([date])
-  @@map("podcast_analytics")
+    @@unique([podcastId, date])
+    @@index([podcastId])
+    @@index([date])
+    @@map("podcast_analytics")
 }
 
 // ===================== PAYMENT SYSTEM =====================
 
 model Transaction {
-  id String @id @default(uuid())
+    id String @id @default(uuid())
 
-  // Basic info
-  amount Float
-  currency String @default("VND")
-  type TransactionType @default(course_purchase)
+    // Basic info
+    amount   Float
+    currency String          @default("VND")
+    type     TransactionType @default(course_purchase)
 
-  // Payment info
-  provider PaymentProvider @default(vnpay)
-  status PaymentStatus @default(pending)
+    // Payment info
+    provider PaymentProvider @default(vnpay)
+    status   PaymentStatus   @default(pending)
 
-  // VNPay specific
-  vnpayTransactionNo String? // vnp_TransactionNo
-  vnpayTxnRef String? // vnp_TxnRef (order ID)
-  vnpayResponseCode String? // vnp_ResponseCode
-  vnpaySecureHash String? // vnp_SecureHash
+    // VNPay specific
+    vnpayTransactionNo String? // vnp_TransactionNo
+    vnpayTxnRef        String? // vnp_TxnRef (order ID)
+    vnpayResponseCode  String? // vnp_ResponseCode
+    vnpaySecureHash    String? // vnp_SecureHash
 
-  // Relations
-  studentId String
-  courseId String?
-  classroomId String?
+    // Relations
+    studentId   String
+    courseId    String?
+    classroomId String?
 
-  // Metadata
-  description String?
-  returnUrl String?
-  ipAddress String?
+    // Metadata
+    description String?
+    returnUrl   String?
+    ipAddress   String?
 
-  // Response data from VNPay
-  responseData Json? // Full response từ VNPay
+    // Response data from VNPay
+    responseData Json? // Full response từ VNPay
 
-  // Timestamps
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  completedAt DateTime? // Khi thanh toán thành công
+    // Timestamps
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+    completedAt DateTime? // Khi thanh toán thành công
 
-  // Relations
-  student User @relation("StudentTransactions", fields: [studentId], references: [id], onDelete: Cascade)
-  course Course? @relation("CourseTransactions", fields: [courseId], references: [id], onDelete: SetNull)
-  classroom Classroom? @relation("ClassroomTransactions", fields: [classroomId], references: [id], onDelete: SetNull)
+    // Relations
+    student   User       @relation("StudentTransactions", fields: [studentId], references: [id], onDelete: Cascade)
+    course    Course?    @relation("CourseTransactions", fields: [courseId], references: [id], onDelete: SetNull)
+    classroom Classroom? @relation("ClassroomTransactions", fields: [classroomId], references: [id], onDelete: SetNull)
 
-  @@index([studentId])
-  @@index([courseId])
-  @@index([classroomId])
-  @@index([status])
-  @@index([vnpayTxnRef])
-  @@index([createdAt])
+    @@index([studentId])
+    @@index([courseId])
+    @@index([classroomId])
+    @@index([status])
+    @@index([vnpayTxnRef])
+    @@index([createdAt])
 }
 
 // ===================== AGENT CHAT =====================
 
 model AgentConversation {
-  id     String @id @default(uuid())
-  userId String
-  role   String @default("student") // 'student' | 'parent' | 'teacher' | 'admin'
+    id     String @id @default(uuid())
+    userId String
+    role   String @default("student") // 'student' | 'parent' | 'teacher' | 'admin'
 
-  title    String?
-  metadata Json?
+    title    String?
+    metadata Json?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-  user     User           @relation("AgentConversations", fields: [userId], references: [id], onDelete: Cascade)
-  messages AgentMessage[]
+    user     User           @relation("AgentConversations", fields: [userId], references: [id], onDelete: Cascade)
+    messages AgentMessage[]
 
-  @@index([userId])
-  @@index([createdAt])
-  @@index([role])
-  @@index([userId, role])
+    @@index([userId])
+    @@index([createdAt])
+    @@index([role])
+    @@index([userId, role])
 }
 
 model AgentMessage {
-  id             String @id @default(uuid())
-  conversationId String
-  role           String // 'user' or 'assistant'
-  content        String @db.Text
+    id             String @id @default(uuid())
+    conversationId String
+    role           String // 'user' or 'assistant'
+    content        String @db.Text
 
-  metadata Json?
+    metadata Json?
 
-  createdAt DateTime @default(now())
+    createdAt DateTime @default(now())
 
-  conversation AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+    conversation AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  @@index([conversationId])
-  @@index([createdAt])
+    @@index([conversationId])
+    @@index([createdAt])
 }
 
 // ===================== VOCABULARY BOOK =====================
 
 model SavedWord {
-  id        String   @id @default(cuid())
-  word      String
-  userId    String
-  createdAt DateTime @default(now())
+    id        String   @id @default(cuid())
+    word      String
+    userId    String
+    createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, word])
-  @@index([userId])
-  @@map("saved_words")
+    @@unique([userId, word])
+    @@index([userId])
+    @@map("saved_words")
 }
