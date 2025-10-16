@@ -37,7 +37,7 @@ export class AssignmentImportService {
             ['maxAttempts', '3', 'Maximum attempts allowed', 'No'],
             ['isPublished', 'false', 'Publish immediately (true/false)', 'No'],
             ['type', 'HOMEWORK', 'Assignment type (HOMEWORK, QUIZ, MIDTERM_EXAM, FINAL_EXAM)', 'No'],
-            ['weight', '0', 'Weight for final grade calculation (0-100)', 'No'],
+            ['weight', '0.5', 'Weight for final grade calculation (0-1, e.g., 0.5 for 50%)', 'No'],
             [
                 'assignedTo',
                 '',
