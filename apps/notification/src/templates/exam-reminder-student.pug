@@ -1,0 +1,167 @@
+doctype html
+html(lang='vi')
+  head
+    meta(charset='UTF-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    title Thông báo bài kiểm tra
+    style.
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        background-color: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e0e0e0;
+      }
+      .logo {
+        font-size: 24px;
+        font-weight: bold;
+        color: #4f46e5;
+        margin-bottom: 10px;
+      }
+      .title {
+        color: #dc2626;
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 20px;
+      }
+      .exam-info {
+        background-color: #fef2f2;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 4px solid #dc2626;
+      }
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding: 5px 0;
+      }
+      .info-label {
+        font-weight: bold;
+        color: #374151;
+      }
+      .info-value {
+        color: #6b7280;
+      }
+      .exam-warning {
+        background-color: #fef3c7;
+        border: 1px solid #f59e0b;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 20px 0;
+        text-align: center;
+      }
+      .warning-text {
+        color: #92400e;
+        font-weight: bold;
+        font-size: 16px;
+      }
+      .preparation-tips {
+        background-color: #f0f9ff;
+        border: 1px solid #0ea5e9;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .tips-title {
+        color: #0c4a6e;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      .tips-list {
+        color: #075985;
+        margin: 0;
+        padding-left: 20px;
+      }
+      .instructions {
+        background-color: #f0f9ff;
+        border: 1px solid #0ea5e9;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .instructions-title {
+        color: #0c4a6e;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      .instructions-content {
+        color: #075985;
+        white-space: pre-line;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e0e0e0;
+        color: #6b7280;
+        font-size: 14px;
+      }
+  body
+    .container
+      .header
+        .logo English Learning Platform
+        .title 📝 Thông báo bài kiểm tra ngày mai
+
+      p Xin chào #{studentName},
+
+      p Chúng tôi muốn thông báo cho bạn về #{assignmentType} sẽ diễn ra vào ngày mai:
+
+      .exam-info
+        .info-row
+          .info-label Tên bài kiểm tra:
+          .info-value #{assignmentTitle}
+        .info-row
+          .info-label Lớp học:
+          .info-value #{classroomName}
+        .info-row
+          .info-label Loại bài kiểm tra:
+          .info-value #{assignmentType}
+        .info-row
+          .info-label Thời gian:
+          .info-value #{timeInfo}
+        .info-row
+          .info-label Tổng điểm:
+          .info-value #{totalPoints} điểm
+        .info-row
+          .info-label Thời gian làm bài:
+          .info-value #{timeLimit}
+
+      .exam-warning
+        .warning-text ⚠️ Bài kiểm tra quan trọng sẽ diễn ra vào ngày mai! Hãy chuẩn bị kỹ lưỡng.
+
+      .preparation-tips
+        .tips-title 💡 Gợi ý chuẩn bị:
+        .tips-list
+          li Ôn tập lại kiến thức đã học trong khóa học
+          li Chuẩn bị thiết bị và kết nối internet ổn định
+          li Đảm bảo có đủ thời gian để hoàn thành bài kiểm tra
+          li Đọc kỹ hướng dẫn trước khi bắt đầu
+          li Chuẩn bị tinh thần thoải mái và tự tin
+
+      if instructions && instructions !== 'Không có hướng dẫn đặc biệt'
+        .instructions
+          .instructions-title 📝 Hướng dẫn làm bài:
+          .instructions-content #{instructions}
+
+      .footer
+        p Đây là email tự động từ hệ thống English Learning Platform.
+        p Nếu bạn có thắc mắc, vui lòng liên hệ với giáo viên của lớp học.
+        p
+          | Chúc bạn làm bài tốt!<br>
+          | Đội ngũ English Learning Platform

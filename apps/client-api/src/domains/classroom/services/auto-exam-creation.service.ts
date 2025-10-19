@@ -9,6 +9,11 @@ export interface AutoExamCreationOptions {
     totalSessions: number;
     periodStart: Date;
     periodEnd: Date;
+    slots: Array<{
+        dayOfWeek: string;
+        startMinuteOfDay: number;
+        endMinuteOfDay: number;
+    }>;
 }
 
 @Injectable()
@@ -19,9 +24,11 @@ export class AutoExamCreationService {
      * Tự động tạo bài thi giữa kỳ và cuối kỳ cho classroom
      * - Bài thi giữa kỳ: 40% thời gian (session thứ 3-4 trong 8 buổi)
      * - Bài thi cuối kỳ: 80% thời gian (session thứ 6-7 trong 8 buổi)
+     * - Thời gian bắt đầu = giờ bắt đầu buổi học
+     * - Thời gian tối đa = thời gian buổi học (mặc định 1h nếu không truyền)
      */
     async createAutoExams(options: AutoExamCreationOptions): Promise<void> {
-        const { classroomId, courseId, teacherId, totalSessions, periodStart, periodEnd } = options;
+        const { classroomId, courseId, teacherId, totalSessions, periodStart, periodEnd, slots } = options;
 
         console.log(`🎯 Creating auto exams for classroom ${classroomId} with ${totalSessions} sessions`);
 
@@ -30,13 +37,19 @@ export class AutoExamCreationService {
         const midtermDate = new Date(periodStart.getTime() + (periodDuration * 0.4));
         const finalDate = new Date(periodStart.getTime() + (periodDuration * 0.8));
 
+        // Tính thời gian buổi học (mặc định 1h nếu không có slots)
+        const sessionDurationMinutes = this.calculateSessionDuration(slots);
+        const sessionStartTime = this.getSessionStartTime(slots);
+
         // Tạo bài thi giữa kỳ
         await this.createMidtermExam({
             classroomId,
             courseId,
             teacherId,
-            dueDate: midtermDate,
-            sessionNumber: Math.ceil(totalSessions * 0.4)
+            startTime: this.setTimeToDate(midtermDate, sessionStartTime),
+            dueDate: this.setTimeToDate(midtermDate, sessionStartTime + sessionDurationMinutes),
+            sessionNumber: Math.ceil(totalSessions * 0.4),
+            timeLimit: sessionDurationMinutes
         });
 
         // Tạo bài thi cuối kỳ
@@ -44,21 +57,64 @@ export class AutoExamCreationService {
             classroomId,
             courseId,
             teacherId,
-            dueDate: finalDate,
-            sessionNumber: Math.ceil(totalSessions * 0.8)
+            startTime: this.setTimeToDate(finalDate, sessionStartTime),
+            dueDate: this.setTimeToDate(finalDate, sessionStartTime + sessionDurationMinutes),
+            sessionNumber: Math.ceil(totalSessions * 0.8),
+            timeLimit: sessionDurationMinutes
         });
 
         console.log(`✅ Auto exams created successfully for classroom ${classroomId}`);
+    }
+
+    /**
+     * Tính thời gian buổi học từ slots (mặc định 60 phút)
+     */
+    private calculateSessionDuration(slots: Array<{ startMinuteOfDay: number; endMinuteOfDay: number }>): number {
+        if (!slots || slots.length === 0) {
+            return 60; // Mặc định 1 giờ
+        }
+
+        // Lấy slot đầu tiên để tính thời gian
+        const firstSlot = slots[0];
+        const duration = firstSlot.endMinuteOfDay - firstSlot.startMinuteOfDay;
+        
+        // Đảm bảo thời gian hợp lý (tối thiểu 30 phút, tối đa 180 phút)
+        return Math.max(30, Math.min(180, duration));
+    }
+
+    /**
+     * Lấy thời gian bắt đầu buổi học từ slots (mặc định 7:30 AM = 450 phút)
+     */
+    private getSessionStartTime(slots: Array<{ startMinuteOfDay: number }>): number {
+        if (!slots || slots.length === 0) {
+            return 450; // Mặc định 7:30 AM
+        }
+
+        return slots[0].startMinuteOfDay;
+    }
+
+    /**
+     * Set thời gian cụ thể cho một ngày
+     */
+    private setTimeToDate(date: Date, minuteOfDay: number): Date {
+        const newDate = new Date(date);
+        const hours = Math.floor(minuteOfDay / 60);
+        const minutes = minuteOfDay % 60;
+        
+        newDate.setHours(hours, minutes, 0, 0);
+        return newDate;
     }
 
     private async createMidtermExam(params: {
         classroomId: string;
         courseId: string;
         teacherId: string;
+        startTime: Date;
         dueDate: Date;
         sessionNumber: number;
+        timeLimit: number;
     }): Promise<void> {
-        const { classroomId, courseId, teacherId, dueDate, sessionNumber } = params;
+        const { classroomId, courseId, teacherId, startTime, dueDate, sessionNumber, timeLimit } = params;
 
         const midtermExam = await this.prisma.assignment.create({
             data: {
@@ -67,7 +123,7 @@ export class AutoExamCreationService {
                 instructions: `
 # Hướng dẫn làm bài thi giữa kỳ
 
-## Thời gian làm bài: 60 phút
+## Thời gian làm bài: ${timeLimit} phút
 ## Tổng điểm: 100 điểm
 
 ### Cấu trúc bài thi:
@@ -83,8 +139,9 @@ export class AutoExamCreationService {
         `,
                 type: AssignmentType.MIDTERM_EXAM,
                 totalPoints: 100,
-                timeLimit: 60, // 60 phút
+                timeLimit: timeLimit, // Thời gian buổi học
                 maxAttempts: 1, // Chỉ được làm 1 lần
+                startTime: startTime, // Thời gian bắt đầu làm bài
                 dueDate: dueDate,
                 isPublished: true,
                 classroom: {
@@ -229,10 +286,12 @@ The future of our planet depends on the choices we make today. If we act now, we
         classroomId: string;
         courseId: string;
         teacherId: string;
+        startTime: Date;
         dueDate: Date;
         sessionNumber: number;
+        timeLimit: number;
     }): Promise<void> {
-        const { classroomId, courseId, teacherId, dueDate, sessionNumber } = params;
+        const { classroomId, courseId, teacherId, startTime, dueDate, sessionNumber, timeLimit } = params;
 
         const finalExam = await this.prisma.assignment.create({
             data: {
@@ -241,7 +300,7 @@ The future of our planet depends on the choices we make today. If we act now, we
                 instructions: `
 # Hướng dẫn làm bài thi cuối kỳ
 
-## Thời gian làm bài: 90 phút
+## Thời gian làm bài: ${timeLimit} phút
 ## Tổng điểm: 100 điểm
 
 ### Cấu trúc bài thi:
@@ -259,8 +318,9 @@ The future of our planet depends on the choices we make today. If we act now, we
         `,
                 type: AssignmentType.FINAL_EXAM,
                 totalPoints: 100,
-                timeLimit: 90, // 90 phút
+                timeLimit: timeLimit, // Thời gian buổi học
                 maxAttempts: 1, // Chỉ được làm 1 lần
+                startTime: startTime, // Thời gian bắt đầu làm bài
                 dueDate: dueDate,
                 isPublished: true,
                 classroom: {

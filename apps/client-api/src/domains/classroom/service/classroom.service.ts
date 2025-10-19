@@ -187,7 +187,8 @@ export class ClassroomService {
                 teacherId: dto.teacherId,
                 totalSessions: totalSessions,
                 periodStart: periodStart,
-                periodEnd: periodEnd
+                periodEnd: periodEnd,
+                slots: dto.slots // Truyền thông tin slots để tính thời gian
             });
 
             console.log(`🎯 Auto exams created for classroom ${classroom.id}`);

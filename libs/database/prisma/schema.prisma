@@ -1363,6 +1363,8 @@ model Assignment {
 
     // Cấu hình bài tập
 
+    startTime DateTime? // Thời gian bắt đầu làm bài (mặc định là today)
+
     dueDate DateTime?
 
     totalPoints Int @default(100)

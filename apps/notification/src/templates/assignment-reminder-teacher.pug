@@ -1,0 +1,152 @@
+doctype html
+html(lang='vi')
+  head
+    meta(charset='UTF-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    title Nhắc nhở bài tập cho giáo viên
+    style.
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        background-color: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e0e0e0;
+      }
+      .logo {
+        font-size: 24px;
+        font-weight: bold;
+        color: #4f46e5;
+        margin-bottom: 10px;
+      }
+      .title {
+        color: #f59e0b;
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 20px;
+      }
+      .assignment-info {
+        background-color: #f8fafc;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border-left: 4px solid #4f46e5;
+      }
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding: 5px 0;
+      }
+      .info-label {
+        font-weight: bold;
+        color: #374151;
+      }
+      .info-value {
+        color: #6b7280;
+      }
+      .student-info {
+        background-color: #f0f9ff;
+        border: 1px solid #0ea5e9;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .student-title {
+        color: #0c4a6e;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      .student-count {
+        color: #075985;
+        font-size: 18px;
+        font-weight: bold;
+      }
+      .teacher-actions {
+        background-color: #f0fdf4;
+        border: 1px solid #22c55e;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .actions-title {
+        color: #166534;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      .actions-list {
+        color: #15803d;
+        margin: 0;
+        padding-left: 20px;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #e0e0e0;
+        color: #6b7280;
+        font-size: 14px;
+      }
+  body
+    .container
+      .header
+        .logo English Learning Platform
+        .title 📋 Nhắc nhở bài tập cho giáo viên
+
+      p Xin chào thầy/cô #{teacherName},
+
+      p Hệ thống muốn thông báo cho thầy/cô về #{assignmentType} sắp tới hạn:
+
+      .assignment-info
+        .info-row
+          .info-label Tên bài tập:
+          .info-value #{assignmentTitle}
+        .info-row
+          .info-label Lớp học:
+          .info-value #{classroomName}
+        .info-row
+          .info-label Loại bài tập:
+          .info-value #{assignmentType}
+        .info-row
+          .info-label Thời gian:
+          .info-value #{timeInfo}
+        .info-row
+          .info-label Tổng điểm:
+          .info-value #{totalPoints} điểm
+        .info-row
+          .info-label Thời gian làm bài:
+          .info-value #{timeLimit}
+
+      .student-info
+        .student-title 👥 Thông tin học sinh:
+        .student-count Số học sinh trong lớp: #{studentCount} học sinh
+        p Thầy/cô có thể theo dõi tiến độ làm bài của học sinh qua hệ thống quản lý.
+
+      .teacher-actions
+        .actions-title 💡 Gợi ý cho giáo viên:
+        .actions-list
+          li Kiểm tra danh sách học sinh đã nộp bài
+          li Nhắc nhở học sinh chưa nộp bài (nếu cần)
+          li Chuẩn bị chấm điểm và phản hồi cho học sinh
+          li Theo dõi chất lượng bài làm của học sinh
+          li Cập nhật điểm số và nhận xét kịp thời
+
+      .footer
+        p Đây là email tự động từ hệ thống English Learning Platform.
+        p Thầy/cô có thể quản lý bài tập và theo dõi tiến độ học sinh qua hệ thống.
+        p
+          | Trân trọng,<br>
+          | Đội ngũ English Learning Platform
