@@ -503,6 +503,159 @@ export class ClassroomService {
     }
 
     /**
+     * Get system-wide schedule with optional filters
+     * Used by CMS admins to view all schedules across the system
+     */
+    async getSystemSchedule(query: any) {
+        const timezone = query.timezone ?? TimezoneCode.Asia_Ho_Chi_Minh;
+        const referenceDate = query.weekStart
+            ? new Date(query.weekStart)
+            : new Date();
+        const days = query.days ?? 7;
+
+        const { startUtc, endUtc, weekStartLabel, weekEndLabel, dayLabels } =
+            this.resolveWeekRange(referenceDate, timezone, days);
+
+        // Build where clause with filters
+        const whereClause: any = {
+            startTime: {
+                gte: startUtc,
+                lt: endUtc,
+            },
+        };
+
+        if (query.teacherId) {
+            whereClause.instructorId = query.teacherId;
+        }
+
+        if (query.classroomId) {
+            whereClause.classroomId = query.classroomId;
+        }
+
+        if (query.status) {
+            whereClause.status = query.status;
+        }
+
+        // Get all sessions matching filters
+        const sessions = await this.prisma.classroomSession.findMany({
+            where: whereClause,
+            include: {
+                classroom: {
+                    select: {
+                        id: true,
+                        name: true,
+                        classCode: true,
+                        course: {
+                            select: {
+                                id: true,
+                                title: true,
+                                description: true,
+                                imageUrl: true,
+                            },
+                        },
+                    },
+                },
+                instructor: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        displayName: true,
+                        avatarUrl: true,
+                        email: true,
+                    },
+                },
+            },
+            orderBy: {
+                startTime: 'asc',
+            },
+        });
+
+        const now = new Date();
+
+        const formattedSessions = sessions.map((session) => {
+            const state = this.computeSessionState(
+                session.startTime,
+                session.endTime,
+                now,
+                session.status,
+            );
+
+            return {
+                sessionId: session.id,
+                classroomId: session.classroom.id,
+                classroomName: session.classroom.name,
+                classCode: session.classroom.classCode,
+                title: session.title || session.classroom.name,
+                description: session.description,
+                status: session.status,
+                type: session.type,
+                startTime: session.startTime,
+                endTime: session.endTime,
+                timezone: session.timezone,
+                durationHours: session.durationHours,
+                meetingUrl: session.meetingUrl,
+                notes: session.notes,
+                course: session.classroom.course,
+                instructor: session.instructor,
+                state: state.state,
+                stateLabel: state.label,
+                startsInMinutes: state.startsInMinutes,
+                endsInMinutes: state.endsInMinutes,
+            };
+        });
+
+        // Group sessions by day (same as student schedule)
+        const dayMap = new Map<string, any[]>();
+        dayLabels.forEach((day) => {
+            dayMap.set(day.key, []);
+        });
+
+        formattedSessions.forEach((session) => {
+            const key = this.getDayKey(session.startTime, timezone);
+            if (!dayMap.has(key)) {
+                dayMap.set(key, []);
+            }
+            dayMap.get(key)?.push(session);
+        });
+
+        const daysArray = dayLabels.map((day) => {
+            const sessionsForDay = (dayMap.get(day.key) ?? []).sort(
+                (a, b) =>
+                    new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+            );
+            return {
+                date: day.date,
+                dayOfWeek: day.dayOfWeek,
+                label: day.label,
+                sessions: sessionsForDay,
+            };
+        });
+
+        // Calculate summary by state
+        const summaryByState: Record<string, number> = {};
+        formattedSessions.forEach((session) => {
+            summaryByState[session.state] = (summaryByState[session.state] ?? 0) + 1;
+        });
+
+        return {
+            timezone,
+            weekStart: weekStartLabel,
+            weekEnd: weekEndLabel,
+            days: daysArray,
+            summary: {
+                totalSessions: formattedSessions.length,
+                byState: summaryByState,
+            },
+            filters: {
+                teacherId: query.teacherId,
+                classroomId: query.classroomId,
+                status: query.status,
+            },
+        };
+    }
+
+    /**
      * Get teacher recurring weekly availability (Mon-Sun with recurring time slots)
      * Used for classroom creation to show teacher's recurring schedule pattern
      * Returns slots from ALL active classrooms where teacher is assigned
@@ -1268,6 +1421,19 @@ export class ClassroomService {
     private getDayOfWeek(date: Date): string {
         const days = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
         return days[date.getDay()];
+    }
+
+    private formatDayOfWeekLabel(dayOfWeek: string): string {
+        const labels: Record<string, string> = {
+            mon: 'Thứ Hai',
+            tue: 'Thứ Ba',
+            wed: 'Thứ Tư',
+            thu: 'Thứ Năm',
+            fri: 'Thứ Sáu',
+            sat: 'Thứ Bảy',
+            sun: 'Chủ Nhật',
+        };
+        return labels[dayOfWeek] || dayOfWeek;
     }
 
     private getDayKey(date: Date, timezone: TimezoneCode): string {

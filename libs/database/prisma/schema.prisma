@@ -479,9 +479,13 @@ model User {
 
     bio String?
 
+    // Thông tin giáo viên
+    experience Int? // Số năm kinh nghiệm (dành cho giáo viên)
+    highlights String[] // Các điểm nổi bật (dành cho giáo viên)
+
     // Cài đặt hệ thống
 
-    language LanguageCode? @default(en)
+    language LanguageCode @default(en)
 
     timezone TimezoneCode? @default(Asia_Ho_Chi_Minh)
 

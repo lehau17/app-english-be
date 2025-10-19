@@ -19,6 +19,7 @@ import { DeviceTokenModule } from './domains/device-token';
 import { DictionaryModule } from './domains/dictionary/dictionary.module';
 import { EvaluationModule } from './domains/evaluation';
 import { GoogleTranslateModule } from './domains/google-translate/google-translate.module';
+import { LandingPageModule } from './domains/landing-page/landing-page.module';
 import { LeaderboardModule } from './domains/leaderboard';
 import { LessonModule } from './domains/lesson';
 import { NotificationModule } from './domains/notification';
@@ -29,59 +30,60 @@ import { PodcastCommentModule } from './domains/podcast-comment/podcast-comment.
 import { PodcastRatingModule } from './domains/podcast-rating/podcast-rating.module';
 import { PodcastModule } from './domains/podcast/podcast.module';
 import { ProgressModule } from './domains/progress';
+import { QuizModule } from './domains/quiz/quiz.module';
 import { RoomModule } from './domains/room';
 import { StudentModule } from './domains/student/student.module';
 import { SwaggerLoaderModule } from './domains/swagger/swagger.module';
 import { TeacherModule } from './domains/teacher';
 import { UploadModule } from './domains/upload';
 import { UploadService } from './domains/upload/upload.service';
-import { EventsModule } from './events/events.module';
-import { QuizModule } from './domains/quiz/quiz.module';
 import { VocabularyModule } from './domains/vocabulary/vocabulary.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
-  imports: [
-    DatabaseModule,
-    ScheduleModule.forRoot(),
-    AuthModule,
-    SharedModule,
-    StudentModule,
-    CourseModule,
-    EventsModule,
-    DashboardModule,
-    LessonModule,
-    ActivityModule,
-    ProgressModule,
-    AttemptModule,
-    ParentChildModule,
-    ParentModule,
-    DeviceTokenModule,
-    NotificationModule,
-    TeacherModule,
-    UploadModule,
-    ClassroomModule,
-    ConversationModule,
-    AssignmentModule,
-    GoogleTranslateModule,
-    AgentModule,
-    SwaggerLoaderModule,
-    RoomModule,
-    PodcastModule,
-    PodcastCommentModule,
-    PodcastRatingModule,
-    EvaluationModule,
-    LeaderboardModule,
-    AiSpeakingModule,
-    PaymentModule,
-    DictionaryModule,
-    VocabularyModule,
-    QuizModule,
-  ],
-  controllers: [ClientApiController],
-  providers: [ClientApiService, UploadService],
+    imports: [
+        DatabaseModule,
+        ScheduleModule.forRoot(),
+        AuthModule,
+        SharedModule,
+        StudentModule,
+        CourseModule,
+        EventsModule,
+        DashboardModule,
+        LessonModule,
+        ActivityModule,
+        ProgressModule,
+        AttemptModule,
+        ParentChildModule,
+        ParentModule,
+        DeviceTokenModule,
+        NotificationModule,
+        TeacherModule,
+        UploadModule,
+        ClassroomModule,
+        ConversationModule,
+        AssignmentModule,
+        GoogleTranslateModule,
+        AgentModule,
+        SwaggerLoaderModule,
+        RoomModule,
+        PodcastModule,
+        PodcastCommentModule,
+        PodcastRatingModule,
+        EvaluationModule,
+        LeaderboardModule,
+        AiSpeakingModule,
+        PaymentModule,
+        DictionaryModule,
+        VocabularyModule,
+        QuizModule,
+        LandingPageModule,
+    ],
+    controllers: [ClientApiController],
+    providers: [ClientApiService, UploadService],
 })
 export class ClientApiModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestContextMiddleware).forRoutes('*');
-  }
+    configure(consumer: MiddlewareConsumer) {
+        consumer.apply(RequestContextMiddleware).forRoutes('*');
+    }
 }
