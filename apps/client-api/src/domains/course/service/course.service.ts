@@ -15,6 +15,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { Course, LanguageCode, Prisma, UserRole } from '@prisma/client';
+import { CertificateTemplateService } from '../../certificate/services';
 import { GoogleTranslateFreeService } from '../../google-translate/google-translate.service';
 import {
     CreateCourseDto,
@@ -39,6 +40,7 @@ export class CourseService {
         private readonly googleTranslateFreeService: GoogleTranslateFreeService,
         private readonly kafkaService: KafkaService,
         private readonly sessionScheduleService: SessionScheduleService,
+        private readonly certificateTemplateService: CertificateTemplateService,
     ) { }
 
     // service.ts (đoạn create)
@@ -311,6 +313,17 @@ export class CourseService {
             Neo4jEntityType.COURSE,
             result.id,
         );
+
+        // Create default certificate template for the course
+        try {
+            await this.certificateTemplateService.createDefaultTemplate(result.id);
+            this.logger.log(`✅ Created default certificate template for course ${result.id}`);
+        } catch (error) {
+            // Log error but don't fail the course creation
+            this.logger.warn(
+                `Failed to create certificate template for course ${result.id}: ${error.message}`,
+            );
+        }
 
         return result;
     }

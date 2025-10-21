@@ -11,6 +11,7 @@ import { AiSpeakingModule } from './domains/ai-speaking';
 import { AssignmentModule } from './domains/assignment';
 import { AttemptModule } from './domains/attempt';
 import { AuthModule } from './domains/auth/auth.module';
+import { CertificateModule } from './domains/certificate/certificate.module';
 import { ClassroomModule } from './domains/classroom';
 import { ConversationModule } from './domains/conversation';
 import { CourseModule } from './domains/course/course.module';
@@ -78,6 +79,7 @@ import { EventsModule } from './events/events.module';
         VocabularyModule,
         QuizModule,
         LandingPageModule,
+        CertificateModule,
     ],
     controllers: [ClientApiController],
     providers: [ClientApiService, UploadService],

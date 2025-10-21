@@ -20,6 +20,7 @@ import {
 } from '@prisma/client';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import { CertificateTemplateService } from '../../certificate/services';
 import { GoogleTranslateFreeService } from '../../google-translate/google-translate.service';
 import { ImportCoursesDto } from '../dto';
 
@@ -94,6 +95,7 @@ export class CoursesImportService {
         private readonly prisma: PrismaRepository,
         private readonly googleTranslateFreeService: GoogleTranslateFreeService,
         private readonly kafkaService: KafkaService,
+        private readonly certificateTemplateService: CertificateTemplateService,
     ) { }
 
     async importFromExcel(dto: ImportCoursesDto, currentUserId: string) {
@@ -327,6 +329,17 @@ export class CoursesImportService {
                                 isPublished: dto.publish ?? m.isPublished ?? false,
                             },
                         });
+
+                        // Create default certificate template for the course
+                        try {
+                            await this.certificateTemplateService.createDefaultTemplate(created.id);
+                            this.logger.log(`✅ Created certificate template for imported course ${created.id}`);
+                        } catch (error) {
+                            // Log error but don't fail the import
+                            this.logger.warn(
+                                `Failed to create certificate template for course ${created.id}: ${error.message}`,
+                            );
+                        }
 
                         // create lessons & activities
                         for (const l of lessons) {

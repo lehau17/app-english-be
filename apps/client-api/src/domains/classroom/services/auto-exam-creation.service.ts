@@ -77,7 +77,7 @@ export class AutoExamCreationService {
         // Lấy slot đầu tiên để tính thời gian
         const firstSlot = slots[0];
         const duration = firstSlot.endMinuteOfDay - firstSlot.startMinuteOfDay;
-        
+
         // Đảm bảo thời gian hợp lý (tối thiểu 30 phút, tối đa 180 phút)
         return Math.max(30, Math.min(180, duration));
     }
@@ -100,7 +100,7 @@ export class AutoExamCreationService {
         const newDate = new Date(date);
         const hours = Math.floor(minuteOfDay / 60);
         const minutes = minuteOfDay % 60;
-        
+
         newDate.setHours(hours, minutes, 0, 0);
         return newDate;
     }

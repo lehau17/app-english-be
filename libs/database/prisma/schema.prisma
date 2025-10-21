@@ -594,6 +594,9 @@ model User {
 
     podcastRatings PodcastRating[] @relation("UserPodcastRatings")
 
+    // Certificates
+    certificates IssuedCertificate[] @relation("UserCertificates")
+
     podcastComments PodcastComment[] @relation("UserPodcastComments")
 
     playlists Playlist[] @relation("UserPlaylists")
@@ -687,6 +690,10 @@ model Course {
 
     // Payment transactions
     transactions Transaction[] @relation("CourseTransactions")
+
+    // Certificate
+    certificateTemplate CertificateTemplate?
+    issuedCertificates  IssuedCertificate[]
 
     @@index([instructorId])
     @@index([orderNo])
@@ -1184,6 +1191,9 @@ model Classroom {
 
     // Payment transactions
     transactions Transaction[] @relation("ClassroomTransactions")
+
+    // Certificates
+    certificates IssuedCertificate[]
 
     @@index([courseId])
     @@index([teacherId])
@@ -2932,4 +2942,107 @@ model SavedWord {
     @@unique([userId, word])
     @@index([userId])
     @@map("saved_words")
+}
+
+// ===================== CERTIFICATE SYSTEM =====================
+
+enum CertificateRequirementType {
+    course_completion // Hoàn thành course
+    score_based // Dựa trên điểm số
+    combined // Kết hợp cả 2
+
+    @@map("CertificateRequirementType")
+}
+
+// Template chứng chỉ cho mỗi course
+model CertificateTemplate {
+    id       String @id @default(uuid())
+    courseId String @unique // 1-1 relationship with Course
+
+    // Template Design
+    title       String  @default("Certificate of Completion")
+    description String? @db.Text
+
+    // Design Layout (JSON)
+    layout Json? @db.JsonB
+
+    // Template Fields
+    issuerName      String  @default("English Learning Platform")
+    issuerTitle     String? @default("Director of Education")
+    issuerSignature String?
+    logoUrl         String?
+
+    // Requirements
+    requirementType CertificateRequirementType @default(course_completion)
+    minScore        Float?
+    minProgress     Float                      @default(100)
+
+    // Metadata
+    isActive  Boolean  @default(true)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    course       Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+    certificates IssuedCertificate[]
+
+    @@index([courseId])
+    @@map("certificate_templates")
+}
+
+// Certificate đã cấp
+model IssuedCertificate {
+    id                String @id @default(uuid())
+    certificateNumber String @unique
+
+    // Relations
+    templateId  String
+    studentId   String
+    courseId    String
+    classroomId String?
+
+    // Student Info (snapshot)
+    studentName  String
+    studentEmail String
+
+    // Course Info (snapshot)
+    courseName        String
+    courseDescription String?
+
+    // Achievement Data
+    completionDate DateTime @default(now())
+    finalScore     Float?
+    progress       Float    @default(100)
+    totalHours     Float?
+
+    // Certificate Data
+    issueDate  DateTime  @default(now())
+    expiryDate DateTime?
+
+    // Verification
+    verificationCode String    @unique
+    verifiedAt       DateTime?
+
+    // Status
+    isRevoked     Boolean   @default(false)
+    revokedAt     DateTime?
+    revokedReason String?
+
+    // Metadata
+    metadata  Json?    @db.JsonB
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    // Relations
+    template  CertificateTemplate @relation(fields: [templateId], references: [id])
+    student   User                @relation("UserCertificates", fields: [studentId], references: [id])
+    course    Course              @relation(fields: [courseId], references: [id])
+    classroom Classroom?          @relation(fields: [classroomId], references: [id])
+
+    @@index([studentId])
+    @@index([courseId])
+    @@index([certificateNumber])
+    @@index([verificationCode])
+    @@index([completionDate])
+    @@map("issued_certificates")
 }
