@@ -542,6 +542,10 @@ model User {
 
     childRelations ParentChild[] @relation("ParentChildChild")
 
+    parentLinkRequests   ParentChildLinkRequest[] @relation("ParentLinkRequests")
+    studentLinkRequests  ParentChildLinkRequest[] @relation("StudentLinkRequests")
+    resolvedLinkRequests ParentChildLinkRequest[] @relation("ResolvedLinkRequests")
+
     // Course and Class relations
 
     coursesCreated Course[] @relation("CourseInstructor")
@@ -559,6 +563,8 @@ model User {
     assignmentsCreated Assignment[] @relation("TeacherAssignments")
 
     assignmentSubmissions AssignmentSubmission[]
+
+    gradedSubmissions AssignmentSubmission[] @relation("GradedSubmissions")
 
     // Communication
 
@@ -1466,6 +1472,8 @@ model AssignmentSubmission {
 
     gradedAt DateTime?
 
+    gradedById String?
+
     // Content
 
     answers Json
@@ -1488,9 +1496,12 @@ model AssignmentSubmission {
 
     student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
+    gradedBy User? @relation("GradedSubmissions", fields: [gradedById], references: [id], onDelete: SetNull)
+
     @@unique([assignmentId, studentId, attemptCount])
     @@index([assignmentId])
     @@index([studentId])
+    @@index([gradedById])
 }
 
 model Announcement {
@@ -1584,6 +1595,27 @@ model ParentChild {
 
     @@id([parentId, childId])
     @@index([childId])
+}
+
+model ParentChildLinkRequest {
+    id           String            @id @default(cuid())
+    parentId     String
+    studentId    String
+    status       LinkRequestStatus @default(PENDING)
+    requestedAt  DateTime          @default(now())
+    resolvedAt   DateTime?
+    resolvedById String?
+
+    // Relations
+    parent     User  @relation("ParentLinkRequests", fields: [parentId], references: [id], onDelete: Cascade)
+    student    User  @relation("StudentLinkRequests", fields: [studentId], references: [id], onDelete: Cascade)
+    resolvedBy User? @relation("ResolvedLinkRequests", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+    @@unique([parentId, studentId])
+    @@index([parentId])
+    @@index([studentId])
+    @@index([status])
+    @@map("parent_child_link_requests")
 }
 
 model CustomReward {
@@ -2952,6 +2984,14 @@ enum CertificateRequirementType {
     combined // Kết hợp cả 2
 
     @@map("CertificateRequirementType")
+}
+
+enum LinkRequestStatus {
+    PENDING
+    APPROVED
+    REJECTED
+
+    @@map("LinkRequestStatus")
 }
 
 // Template chứng chỉ cho mỗi course

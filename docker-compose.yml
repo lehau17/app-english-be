@@ -11,6 +11,20 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: english_learning_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
   # redpanda:
   #   image: docker.redpanda.com/redpandadata/redpanda:v24.3.6
   #   container_name: redpanda
@@ -81,8 +95,6 @@ services:
     volumes:
       - minio_data:/data
 
-
-
   minio-init:
     image: minio/mc:latest
     container_name: minio-init
@@ -149,7 +161,8 @@ services:
       - neo4j_import:/var/lib/neo4j/import
       - neo4j_plugins:/plugins
     healthcheck:
-      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "neo4j123456", "RETURN 1"]
+      test:
+        ["CMD", "cypher-shell", "-u", "neo4j", "-p", "neo4j123456", "RETURN 1"]
       interval: 10s
       timeout: 10s
       retries: 5
@@ -157,7 +170,7 @@ services:
 
 volumes:
   pg_data:
-  # redis_data:
+  redis_data:
   minio_data:
   # piper_data:
   neo4j_data:

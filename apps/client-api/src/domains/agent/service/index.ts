@@ -1,1 +1,13 @@
 export * from './agent.service';
+export * from './auto-reindex.service';
+export * from './graph-entity.service';
+export * from './graph-relationship.service';
+export * from './graph-traversal.service';
+export * from './langchain-agent.service';
+export * from './rag-cache.service';
+export * from './rag.service';
+export * from './reranker.service';
+export * from './sql.service';
+export * from './student-agent.service';
+export * from './text-chunker.service';
+

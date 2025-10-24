@@ -344,6 +344,20 @@ export class LessonRepository {
    * Khởi động/đánh dấu user "bắt đầu" activity (tạo Progress nếu chưa có).
    */
   async startActivity(userId: string, activityId: string) {
+    // Check if progress already exists and is completed
+    const existing = await this.prisma.progress.findUnique({
+      where: { userId_activityId: { userId, activityId } },
+      select: { state: true },
+    });
+
+    // If already mastered, review_needed, or done - don't reset to in_progress
+    if (existing && ['mastered', 'review_needed', 'done'].includes(existing.state)) {
+      return this.prisma.progress.findUnique({
+        where: { userId_activityId: { userId, activityId } },
+      });
+    }
+
+    // Otherwise, create or update to in_progress
     return this.prisma.progress.upsert({
       where: { userId_activityId: { userId, activityId } },
       create: { userId, activityId, state: 'in_progress' },

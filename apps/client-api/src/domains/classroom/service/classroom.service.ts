@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import {
     Classroom,
+    ClassroomStatus,
     Prisma,
     SessionStatus,
     TimezoneCode,
@@ -1704,5 +1705,249 @@ export class ClassroomService {
             console.error('Error details:', error.stack);
             // Don't throw error to avoid breaking classroom creation
         }
+    }
+
+    /**
+     * Update classroom status manually by Admin/Teacher
+     * Validates status transition rules
+     */
+    async updateClassroomStatus(
+        classroomId: string,
+        newStatus: ClassroomStatus,
+        adminUserId: string,
+    ): Promise<Classroom> {
+        // Find classroom
+        const classroom = await this.classroomRepository.findById(classroomId);
+        if (!classroom) {
+            throw new NotFoundException(`Classroom with id ${classroomId} not found`);
+        }
+
+        // Validate status transition
+        const currentStatus = classroom.status;
+
+        // Business rules for status transitions
+        if (currentStatus === ClassroomStatus.cancelled) {
+            throw new ForbiddenException('Cannot change status of a cancelled classroom');
+        }
+
+        if (currentStatus === ClassroomStatus.completed && newStatus !== ClassroomStatus.cancelled) {
+            throw new ForbiddenException('Can only cancel a completed classroom, cannot reactivate');
+        }
+
+        // Update status
+        const updatedClassroom = await this.prisma.classroom.update({
+            where: { id: classroomId },
+            data: {
+                status: newStatus,
+                updatedAt: new Date(),
+            },
+            include: {
+                course: true,
+                teacher: {
+                    select: {
+                        id: true,
+                        email: true,
+                        displayName: true,
+                        firstName: true,
+                        lastName: true,
+                    },
+                },
+                students: {
+                    include: {
+                        student: {
+                            select: {
+                                id: true,
+                                email: true,
+                                displayName: true,
+                                firstName: true,
+                                lastName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        console.log(`✅ Classroom ${classroomId} status updated: ${currentStatus} → ${newStatus} by ${adminUserId}`);
+
+        // TODO: Optional - Send notification to students/teacher about status change
+        // await this.notificationService.notifyClassroomStatusChange(classroomId, currentStatus, newStatus);
+
+        return updatedClassroom;
+    }
+
+    /**
+     * Auto-update classroom statuses based on dates
+     * Should be called by cron job
+     */
+    async autoUpdateClassroomStatuses(): Promise<{
+        activatedCount: number;
+        completedCount: number;
+    }> {
+        const now = new Date();
+
+        // Update UPCOMING → ONGOING for classrooms that started
+        const activatedResult = await this.prisma.classroom.updateMany({
+            where: {
+                status: ClassroomStatus.upcoming,
+                periodStart: { lte: now },
+                periodEnd: { gt: now },
+            },
+            data: {
+                status: ClassroomStatus.ongoing,
+                updatedAt: now,
+            },
+        });
+
+        // Update ONGOING → COMPLETED for classrooms that ended
+        const completedResult = await this.prisma.classroom.updateMany({
+            where: {
+                status: ClassroomStatus.ongoing,
+                periodEnd: { lte: now },
+            },
+            data: {
+                status: ClassroomStatus.completed,
+                updatedAt: now,
+            },
+        });
+
+        console.log(`🔄 Auto-updated classroom statuses: ${activatedResult.count} activated, ${completedResult.count} completed`);
+
+        return {
+            activatedCount: activatedResult.count,
+            completedCount: completedResult.count,
+        };
+    }
+
+    /**
+     * Transfer student from one classroom to another
+     * @param studentId ID của học sinh
+     * @param currentClassroomId ID của lớp hiện tại
+     * @param newClassroomId ID của lớp mới
+     * @param adminUserId ID của admin/teacher thực hiện chuyển lớp
+     */
+    async transferStudent(
+        studentId: string,
+        currentClassroomId: string,
+        newClassroomId: string,
+        adminUserId: string,
+    ): Promise<{
+        success: boolean;
+        message: string;
+    }> {
+        // 1. Validate input
+        if (currentClassroomId === newClassroomId) {
+            throw new ForbiddenException('Cannot transfer student to the same classroom');
+        }
+
+        // 2. Check student exists
+        const student = await this.prisma.user.findUnique({
+            where: { id: studentId },
+            select: { id: true, email: true, displayName: true, role: true },
+        });
+
+        if (!student) {
+            throw new NotFoundException(`Student with id ${studentId} not found`);
+        }
+
+        if (student.role !== UserRole.student) {
+            throw new ForbiddenException('User is not a student');
+        }
+
+        return await this.prisma.$transaction(async (tx) => {
+            // 3. Check current classroom và student có trong lớp không
+            const currentClassroom = await tx.classroom.findUnique({
+                where: { id: currentClassroomId },
+                include: {
+                    students: {
+                        where: { studentId },
+                    },
+                },
+            });
+
+            if (!currentClassroom) {
+                throw new NotFoundException(
+                    `Current classroom with id ${currentClassroomId} not found`,
+                );
+            }
+
+            const studentInCurrentClass = currentClassroom.students.length > 0;
+            if (!studentInCurrentClass) {
+                throw new ForbiddenException(
+                    `Student ${studentId} is not in classroom ${currentClassroomId}`,
+                );
+            }
+
+            // 4. Check new classroom
+            const newClassroom = await tx.classroom.findUnique({
+                where: { id: newClassroomId },
+                include: {
+                    students: {
+                        where: { isActive: true },
+                    },
+                },
+            });
+
+            if (!newClassroom) {
+                throw new NotFoundException(
+                    `New classroom with id ${newClassroomId} not found`,
+                );
+            }
+
+            // 5. Check student đã có trong new classroom chưa
+            const studentAlreadyInNewClass = await tx.classroomStudent.findFirst({
+                where: {
+                    classroomId: newClassroomId,
+                    studentId,
+                },
+            });
+
+            if (studentAlreadyInNewClass) {
+                throw new ForbiddenException(
+                    `Student is already in classroom ${newClassroomId}`,
+                );
+            }
+
+            // 6. Check new classroom còn chỗ không
+            if (newClassroom.maxStudents) {
+                const activeStudentsCount = newClassroom.students.length;
+                if (activeStudentsCount >= newClassroom.maxStudents) {
+                    throw new ForbiddenException(
+                        `New classroom is full (${activeStudentsCount}/${newClassroom.maxStudents})`,
+                    );
+                }
+            }
+
+            // 7. Remove student from current classroom
+            await tx.classroomStudent.delete({
+                where: {
+                    classroomId_studentId: {
+                        classroomId: currentClassroomId,
+                        studentId,
+                    },
+                },
+            });
+
+            // 8. Add student to new classroom
+            await tx.classroomStudent.create({
+                data: {
+                    classroomId: newClassroomId,
+                    studentId,
+                    isActive: true,
+                },
+            });
+
+            console.log(
+                `✅ Student ${studentId} transferred from classroom ${currentClassroomId} to ${newClassroomId} by ${adminUserId}`,
+            );
+
+            // TODO: Optional - Gửi notification cho học sinh về việc chuyển lớp
+            // TODO: Optional - Log action vào audit log
+
+            return {
+                success: true,
+                message: `Student successfully transferred from ${currentClassroom.name} to ${newClassroom.name}`,
+            };
+        });
     }
 }

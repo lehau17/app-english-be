@@ -13,6 +13,7 @@ import { GraphTraversalService } from './service/graph-traversal.service';
 import { LangChainAgentService } from './service/langchain-agent.service';
 import { RagCacheService } from './service/rag-cache.service';
 import { RagService } from './service/rag.service';
+import { RerankerService } from './service/reranker.service';
 import { SqlService } from './service/sql.service';
 import { TextChunkerService } from './service/text-chunker.service';
 import { ChartGeneratorTool } from './tools/chart-generator.tool';
@@ -21,34 +22,35 @@ import { GraphQueryTool } from './tools/graph-query.tool';
 import { StudentAgentTools } from './tools/student-agent.tools';
 
 @Module({
-  imports: [AiModule, Neo4jModule],
-  controllers: [IntelligentController, PrivateAgentController],
-  providers: [
-    AgentService,
-    AgentServiceTWi,
-    AgentChatRepository,
-    AutoReindexService,
-    LangChainAgentService,
-    RagCacheService,
-    TextChunkerService,
-    RagService,
-    SqlService,
-    GraphEntityService,
-    GraphRelationshipService,
-    GraphTraversalService,
-    ChartGeneratorTool,
-    ExcelExportTool,
-    GraphQueryTool,
-    StudentAgentTools,
-  ],
-  exports: [
-    AgentService,
-    AgentServiceTWi,
-    AgentChatRepository,
-    AiModule,
-    AutoReindexService,
-    RagService,
-    LangChainAgentService,
-  ],
+    imports: [AiModule, Neo4jModule],
+    controllers: [IntelligentController, PrivateAgentController],
+    providers: [
+        AgentService,
+        AgentServiceTWi,
+        AgentChatRepository,
+        AutoReindexService,
+        LangChainAgentService,
+        RagCacheService,
+        TextChunkerService,
+        RagService,
+        RerankerService,
+        SqlService,
+        GraphEntityService,
+        GraphRelationshipService,
+        GraphTraversalService,
+        ChartGeneratorTool,
+        ExcelExportTool,
+        GraphQueryTool,
+        StudentAgentTools,
+    ],
+    exports: [
+        AgentService,
+        AgentServiceTWi,
+        AgentChatRepository,
+        AiModule,
+        AutoReindexService,
+        RagService,
+        LangChainAgentService,
+    ],
 })
-export class AgentModule {}
+export class AgentModule { }

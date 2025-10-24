@@ -401,3 +401,44 @@ export class ImportStudentsResultDto {
         lastName: string;
     }>;
 }
+
+// ==================== STATUS UPDATE DTOs ====================
+
+export class UpdateClassroomStatusDto {
+    @ApiProperty({
+        enum: ClassroomStatus,
+        example: ClassroomStatus.ongoing,
+        description: 'New status for the classroom',
+    })
+    @IsEnum(ClassroomStatus)
+    @IsNotEmpty()
+    status: ClassroomStatus;
+}
+
+// ==================== TRANSFER STUDENT DTOs ====================
+
+export class TransferStudentDto {
+    @ApiProperty({
+        description: 'ID của học sinh cần chuyển lớp',
+        example: 'f8a8b8e0-5b7a-4b0e-8b0a-0b8b8b8b8b8b',
+    })
+    @IsUUID()
+    @IsNotEmpty()
+    studentId: string;
+
+    @ApiProperty({
+        description: 'ID của lớp học hiện tại',
+        example: 'f8a8b8e0-5b7a-4b0e-8b0a-0b8b8b8b8b8b',
+    })
+    @IsUUID()
+    @IsNotEmpty()
+    currentClassroomId: string;
+
+    @ApiProperty({
+        description: 'ID của lớp học mới',
+        example: 'a1b2c3d4-5e6f-7890-abcd-ef1234567890',
+    })
+    @IsUUID()
+    @IsNotEmpty()
+    newClassroomId: string;
+}

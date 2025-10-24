@@ -1,7 +1,7 @@
 import { DatabaseModule } from '@app/database';
 import { Module } from '@nestjs/common';
 import { ParentChildModule } from '../parent-child';
-import { ParentChildRepository } from '../parent-child/repository';
+import { ParentChildLinkRequestRepository, ParentChildRepository } from '../parent-child/repository';
 import { ParentChildService } from '../parent-child/service/parent-child.service';
 import {
   AdminParentController,
@@ -29,6 +29,7 @@ import { ParentNotificationService } from './service/parent-notification.service
     ParentChildRepository,
     ParentNotificationService,
     ParentTransactionService,
+    ParentChildLinkRequestRepository
   ],
   exports: [
     ParentService,

@@ -70,6 +70,7 @@
     "class-validator": "^0.14.2",
     "csv-writer": "^1.6.0",
     "exceljs": "^4.4.0",
+    "ioredis": "^5.8.2",
     "jsonrepair": "^3.13.1",
     "jsonwebtoken": "^9.0.2",
     "kafkajs": "^2.2.4",

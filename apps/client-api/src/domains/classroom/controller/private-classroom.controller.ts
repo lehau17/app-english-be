@@ -8,6 +8,7 @@ import {
     Get,
     Param,
     ParseUUIDPipe,
+    Patch,
     Post,
     Put,
     Query,
@@ -42,7 +43,9 @@ import {
     StudentDailyScheduleQueryDto,
     StudentWeeklyScheduleQueryDto,
     SystemScheduleQueryDto,
+    TransferStudentDto,
     UpdateClassroomDto,
+    UpdateClassroomStatusDto,
 } from '../dto/classroom.dto';
 import { ClassroomService } from '../service/classroom.service';
 
@@ -371,6 +374,49 @@ export class PrivateClassroomController {
             payload,
             studentId,
             query,
+        );
+    }
+
+    // ==================== STATUS MANAGEMENT ====================
+
+    @Patch(':id/status')
+    @ApiOperation({
+        summary: 'Update classroom status (Admin/Teacher only)',
+        description: 'Manually update classroom status with validation rules',
+    })
+    @ResponseMessage('Classroom status updated successfully')
+    updateClassroomStatus(
+        @Param('id', new ParseUUIDPipe()) classroomId: string,
+        @Body() dto: UpdateClassroomStatusDto,
+        @PayloadToken('sub') adminUserId: string,
+    ) {
+        return this.classroomService.updateClassroomStatus(
+            classroomId,
+            dto.status,
+            adminUserId,
+        );
+    }
+
+    // ==================== TRANSFER STUDENT ====================
+
+    @Post('transfer-student')
+    @ApiOperation({
+        summary: 'Transfer student from one classroom to another (Admin/Teacher)',
+        description:
+            'Chuyển học sinh từ lớp hiện tại sang lớp mới. ' +
+            'Kiểm tra: student có trong lớp cũ, chưa có trong lớp mới, lớp mới còn chỗ. ' +
+            'Sử dụng transaction để đảm bảo tính toàn vẹn dữ liệu.',
+    })
+    @ResponseMessage('Student transferred successfully')
+    transferStudent(
+        @Body() dto: TransferStudentDto,
+        @PayloadToken('sub') adminUserId: string,
+    ) {
+        return this.classroomService.transferStudent(
+            dto.studentId,
+            dto.currentClassroomId,
+            dto.newClassroomId,
+            adminUserId,
         );
     }
 }
