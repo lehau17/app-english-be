@@ -877,6 +877,7 @@ export class ClassroomRepository {
                 title: a.title,
                 description: a.description,
                 instructions: a.instructions,
+                startTime: a.startTime,
                 dueDate: a.dueDate,
                 status: a.status,
                 isPublished: a.isPublished,

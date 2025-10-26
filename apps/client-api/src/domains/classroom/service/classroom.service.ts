@@ -923,13 +923,22 @@ export class ClassroomService {
         payload: JwtPayload,
         query: StudentDailyScheduleQueryDto,
     ) {
-        if (payload.role !== UserRole.student) {
+        // Support both students and teachers
+        if (payload.role === UserRole.student) {
+            return this.buildStudentDailySchedule(payload.sub, query);
+        } else if (payload.role === UserRole.teacher) {
+            // For teachers, use weekly schedule with 1 day
+            const weeklyQuery: StudentWeeklyScheduleQueryDto = {
+                weekStart: query.date,
+                timezone: query.timezone,
+                days: 1,
+            };
+            return this.buildTeacherWeeklySchedule(payload.sub, weeklyQuery);
+        } else {
             throw new ForbiddenException(
-                'Chỉ học sinh mới xem được thời khóa biểu cá nhân',
+                'Chỉ học sinh và giáo viên mới xem được thời khóa biểu cá nhân',
             );
         }
-
-        return this.buildStudentDailySchedule(payload.sub, query);
     }
 
     async getStudentDailyScheduleForRequester(
@@ -1092,13 +1101,16 @@ export class ClassroomService {
         payload: JwtPayload,
         query: StudentWeeklyScheduleQueryDto,
     ) {
-        if (payload.role !== UserRole.student) {
+        // Support both students and teachers
+        if (payload.role === UserRole.student) {
+            return this.buildStudentWeeklySchedule(payload.sub, query);
+        } else if (payload.role === UserRole.teacher) {
+            return this.buildTeacherWeeklySchedule(payload.sub, query);
+        } else {
             throw new ForbiddenException(
-                'Chỉ học sinh mới xem được thời khóa biểu tuần của mình',
+                'Chỉ học sinh và giáo viên mới xem được thời khóa biểu tuần của mình',
             );
         }
-
-        return this.buildStudentWeeklySchedule(payload.sub, query);
     }
 
     async getStudentWeeklyScheduleForRequester(
