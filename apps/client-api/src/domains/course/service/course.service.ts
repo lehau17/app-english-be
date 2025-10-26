@@ -4,7 +4,7 @@ import {
     Neo4jEntityType,
     Neo4jSyncMessage,
     Neo4jSyncOperation,
-    TTSTaskMessage,
+    TtsService
 } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
@@ -41,6 +41,7 @@ export class CourseService {
         private readonly kafkaService: KafkaService,
         private readonly sessionScheduleService: SessionScheduleService,
         private readonly certificateTemplateService: CertificateTemplateService,
+        private readonly ttsService: TtsService,
     ) { }
 
     // service.ts (đoạn create)
@@ -281,30 +282,19 @@ export class CourseService {
             return course;
         });
 
-        // After transaction commit, emit TTS tasks to background worker via Kafka
+        // After transaction commit, process TTS tasks asynchronously in-place
         if (pendingAudioTasks.length > 0) {
             this.logger.log(
-                `Emitting ${pendingAudioTasks.length} TTS tasks to background worker`,
+                `Processing ${pendingAudioTasks.length} TTS tasks asynchronously`,
             );
 
-            for (const task of pendingAudioTasks) {
-                const message: TTSTaskMessage = {
-                    activityId: task.activityId,
-                    itemsIndex: task.itemsIndex,
-                    language: task.language ?? 'en',
-                    taskId: `${task.activityId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                    timestamp: Date.now(),
-                };
-
-                try {
-                    this.kafkaService.send('tts-audio-generation', message);
-                } catch (error) {
-                    this.logger.error(`Failed to emit TTS task: ${error.message}`, error);
-                }
-            }
-
-            // Clear the array immediately since we've queued the tasks
-            pendingAudioTasks.length = 0;
+            // Process all tasks in parallel without blocking the response
+            this.processAudioGenerationTasks(pendingAudioTasks).catch((error) => {
+                this.logger.error(
+                    `Error in background audio generation: ${error.message}`,
+                    error,
+                );
+            });
         }
 
         // Emit Neo4j sync event
@@ -326,6 +316,119 @@ export class CourseService {
         }
 
         return result;
+    }
+
+    /**
+     * Process audio generation tasks asynchronously without blocking
+     * This replaces the Kafka-based approach with direct TTS service calls
+     */
+    private async processAudioGenerationTasks(
+        tasks: Array<{
+            activityId: string;
+            itemsIndex: number[];
+            language?: string;
+        }>,
+    ): Promise<void> {
+        const startTime = Date.now();
+        this.logger.log(`Starting audio generation for ${tasks.length} activities`);
+
+        // Process all activities in parallel
+        const results = await Promise.allSettled(
+            tasks.map((task) => this.generateAudioForActivity(task)),
+        );
+
+        // Log results
+        const successful = results.filter((r) => r.status === 'fulfilled').length;
+        const failed = results.filter((r) => r.status === 'rejected').length;
+        const duration = Date.now() - startTime;
+
+        this.logger.log(
+            `Audio generation completed: ${successful} succeeded, ${failed} failed in ${duration}ms`,
+        );
+
+        // Log errors
+        results.forEach((result, index) => {
+            if (result.status === 'rejected') {
+                this.logger.error(
+                    `Failed to generate audio for activity ${tasks[index].activityId}: ${result.reason}`,
+                );
+            }
+        });
+    }
+
+    /**
+     * Generate audio for a single activity's vocab items
+     */
+    private async generateAudioForActivity(task: {
+        activityId: string;
+        itemsIndex: number[];
+        language?: string;
+    }): Promise<void> {
+        const { activityId, itemsIndex, language = 'en' } = task;
+
+        // Fetch activity from database
+        const activity = await this.prisma.activity.findUnique({
+            where: { id: activityId },
+        });
+
+        if (!activity) {
+            throw new Error(`Activity ${activityId} not found`);
+        }
+
+        const content = activity.content as any;
+        if (!content?.items || !Array.isArray(content.items)) {
+            throw new Error(`Activity ${activityId} does not have vocab items`);
+        }
+
+        // Generate audio for specified items in parallel
+        const audioPromises = itemsIndex.map(async (index) => {
+            const item = content.items[index];
+            if (!item?.word) {
+                this.logger.warn(
+                    `Skipping item at index ${index} in activity ${activityId}: no word`,
+                );
+                return null;
+            }
+
+            try {
+                this.logger.debug(
+                    `Generating audio for "${item.word}" (${language}) in activity ${activityId}`,
+                );
+
+                // Use TtsService to generate audio
+                const audioResult = await this.ttsService.createAudioWithUrl(
+                    item.word,
+                    language,
+                );
+
+                // Update the item with audio URL
+                item.audioUrl = audioResult.url;
+
+                this.logger.debug(
+                    `✅ Generated audio for "${item.word}": ${audioResult.url}`,
+                );
+
+                return { index, audioUrl: audioResult.url };
+            } catch (error) {
+                this.logger.error(
+                    `Failed to generate audio for "${item.word}" in activity ${activityId}: ${error.message}`,
+                );
+                return null;
+            }
+        });
+
+        const audioResults = await Promise.all(audioPromises);
+        const successCount = audioResults.filter((r) => r !== null).length;
+
+        // Update activity in database with new audio URLs
+        await this.prisma.activity.update({
+            where: { id: activityId },
+            data: { content },
+        });
+
+        this.logger.log(
+            `✅ Updated activity ${activityId} with ${successCount}/${itemsIndex.length} audio URLs`,
+        );
     }
 
     /**

@@ -1,4 +1,4 @@
-import { SharedModule } from '@app/shared';
+import { SharedModule, TtsService } from '@app/shared';
 import { Module, forwardRef } from '@nestjs/common';
 import { CertificateModule } from '../certificate/certificate.module';
 import { GoogleTranslateModule } from '../google-translate/google-translate.module';
@@ -22,6 +22,13 @@ import { SessionScheduleService } from './service/session-schedule.service';
         UploadService,
         SessionScheduleService,
         SessionScheduleRepository,
+        {
+            provide: TtsService,
+            useFactory: (uploadService: UploadService) => {
+                return new TtsService(uploadService);
+            },
+            inject: [UploadService],
+        },
     ],
 })
 export class CourseModule { }
