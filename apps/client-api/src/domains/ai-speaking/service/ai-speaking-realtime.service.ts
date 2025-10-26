@@ -1,3 +1,7 @@
+import {
+    ProfanityBanService,
+    ProfanityDetectionService,
+} from '@app/shared';
 import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -59,6 +63,8 @@ export class AiSpeakingRealtimeService {
         private readonly uploadService: UploadService,
         private readonly configService: ConfigService,
         private readonly turnManager: AiSpeakingTurnManager,
+        private readonly profanityDetection: ProfanityDetectionService,
+        private readonly profanityBan: ProfanityBanService,
     ) {
         this.defaultUserAudioMime = this.configService.get<string>(
             'AI_SPEAKING_USER_AUDIO_MIME',
@@ -421,6 +427,9 @@ export class AiSpeakingRealtimeService {
                         confidence: payload.confidence ?? null,
                         words: payload.words ?? null,
                     });
+
+                    // ✅ Profanity check
+                    await this.checkAndHandleProfanity(sessionId, turnId, payload.text);
                 },
                 onError: (error) => {
                     this.gateway.emitToSession(sessionId, 'ai-speaking:asr-error', {
@@ -586,6 +595,74 @@ export class AiSpeakingRealtimeService {
             }
         } else {
             this.refreshSilenceTimer(sessionId, turnId, holder);
+        }
+    }
+
+    /**
+     * Check transcript for profanity and handle violations
+     */
+    private async checkAndHandleProfanity(
+        sessionId: string,
+        turnId: string,
+        transcript: string,
+    ): Promise<void> {
+        try {
+            // Get session to find userId
+            const session = await this.repository.findSessionById(sessionId);
+            if (!session) {
+                this.logger.warn(`Session ${sessionId} not found for profanity check`);
+                return;
+            }
+
+            const userId = session.userId;
+
+            // Check for profanity
+            const result = await this.profanityDetection.checkText(transcript);
+
+            if (result.hasProfanity && this.profanityDetection.shouldCountViolation(result.severity)) {
+                this.logger.warn(
+                    `Profanity detected in session=${sessionId} turn=${turnId} user=${userId} severity=${result.severity}`,
+                );
+
+                // Record violation
+                const { violationCount, shouldBan } = await this.profanityBan.recordViolation(
+                    userId,
+                    transcript,
+                    result.severity,
+                );
+
+                // Emit warning to client
+                this.gateway.emitToSession(sessionId, 'ai-speaking:profanity-warning', {
+                    turnId,
+                    severity: result.severity,
+                    violationCount,
+                    maxViolations: 3,
+                    message: shouldBan
+                        ? 'Bạn đã vi phạm quy định về ngôn từ quá nhiều lần. Tài khoản bị khóa trong 24 giờ.'
+                        : `Vui lòng sử dụng ngôn từ phù hợp. Cảnh báo ${violationCount}/3.`,
+                });
+
+                // If banned, end session immediately
+                if (shouldBan) {
+                    await this.repository.updateSession(sessionId, {
+                        state: AiSpeakingSessionState.finished,
+                        endedAt: new Date(),
+                        summary: 'Session terminated due to profanity violations.' as any,
+                    });
+
+                    this.gateway.emitToSession(sessionId, 'ai-speaking:session-ended', {
+                        sessionId,
+                        reason: 'profanity-ban',
+                        message: 'Phiên đã bị kết thúc do vi phạm quy định.',
+                    });
+                }
+            }
+        } catch (error) {
+            this.logger.error(
+                `Profanity check failed for session=${sessionId}: ${error.message}`,
+                error.stack,
+            );
+            // Don't fail the turn on profanity check error
         }
     }
 }

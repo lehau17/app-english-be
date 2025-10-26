@@ -1,5 +1,5 @@
 import { DatabaseModule } from '@app/database';
-import { SharedModule } from '@app/shared';
+import { ProfanityModule, SharedModule } from '@app/shared';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { UploadService } from '../upload/upload.service';
@@ -17,21 +17,21 @@ import { RealtimeAsrService } from './service/realtime-asr.service';
 import { RealtimeTtsService } from './service/realtime-tts.service';
 
 @Module({
-  imports: [DatabaseModule, SharedModule, ConfigModule],
-  controllers: [AiSpeakingController, AiSpeakingHealthController],
-  providers: [
-    AiSpeakingService,
-    AiSpeakingCoordinator,
-    ConversationDesignerService,
-    AiSpeakingRealtimeService,
-    AiSpeakingTurnManager,
-    AiSpeakingHealthService,
-    RealtimeTtsService,
-    RealtimeAsrService,
-    AiSpeakingRepository,
-    AiSpeakingGateway,
-    UploadService,
-  ],
-  exports: [AiSpeakingService],
+    imports: [DatabaseModule, SharedModule, ProfanityModule, ConfigModule],
+    controllers: [AiSpeakingController, AiSpeakingHealthController],
+    providers: [
+        AiSpeakingService,
+        AiSpeakingCoordinator,
+        ConversationDesignerService,
+        AiSpeakingRealtimeService,
+        AiSpeakingTurnManager,
+        AiSpeakingHealthService,
+        RealtimeTtsService,
+        RealtimeAsrService,
+        AiSpeakingRepository,
+        AiSpeakingGateway,
+        UploadService,
+    ],
+    exports: [AiSpeakingService],
 })
-export class AiSpeakingModule {}
+export class AiSpeakingModule { }
