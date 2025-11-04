@@ -88,9 +88,12 @@ describe('ParentService', () => {
           findMany: jest.fn().mockResolvedValue([]),
         },
       };
-      (prisma as any).parentChild.findMany = mockDashboardData.parentChild.findMany;
-      (prisma as any).customReward.findMany = mockDashboardData.customReward.findMany;
-      (prisma as any).notification.findMany = mockDashboardData.notification.findMany;
+      (prisma as any).parentChild.findMany =
+        mockDashboardData.parentChild.findMany;
+      (prisma as any).customReward.findMany =
+        mockDashboardData.customReward.findMany;
+      (prisma as any).notification.findMany =
+        mockDashboardData.notification.findMany;
 
       const result = await service.getParentDashboard(mockUser.sub);
 
@@ -115,14 +118,24 @@ describe('ParentService', () => {
     };
 
     it('should create a reward successfully', async () => {
-      (prisma.parentChild.findUnique as jest.Mock).mockResolvedValue(mockParentChildRelation);
-      (prisma.customReward.create as jest.Mock).mockResolvedValue({ id: 'reward-id-1', ...rewardDto });
+      (prisma.parentChild.findUnique as jest.Mock).mockResolvedValue(
+        mockParentChildRelation,
+      );
+      (prisma.customReward.create as jest.Mock).mockResolvedValue({
+        id: 'reward-id-1',
+        ...rewardDto,
+      });
 
       const result = await service.createReward(mockUser.sub, rewardDto);
 
       expect(result).toEqual({ id: 'reward-id-1' });
       expect(prisma.parentChild.findUnique).toHaveBeenCalledWith({
-        where: { parentId_childId: { parentId: mockUser.sub, childId: rewardDto.targetChildId } },
+        where: {
+          parentId_childId: {
+            parentId: mockUser.sub,
+            childId: rewardDto.targetChildId,
+          },
+        },
       });
       expect(prisma.customReward.create).toHaveBeenCalled();
     });
@@ -130,7 +143,9 @@ describe('ParentService', () => {
     it('should throw NotFoundException if parent-child relationship does not exist', async () => {
       (prisma.parentChild.findUnique as jest.Mock).mockResolvedValue(null);
 
-      await expect(service.createReward(mockUser.sub, rewardDto)).rejects.toThrow(NotFoundException);
+      await expect(
+        service.createReward(mockUser.sub, rewardDto),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

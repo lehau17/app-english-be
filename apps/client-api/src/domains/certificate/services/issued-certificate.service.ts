@@ -1,10 +1,10 @@
 import { PrismaRepository } from '@app/database';
 import {
-    BadRequestException,
-    ConflictException,
-    Injectable,
-    Logger,
-    NotFoundException,
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { IssuedCertificate } from '@prisma/client';
 import * as puppeteer from 'puppeteer';
@@ -15,356 +15,381 @@ import { CertificateTemplateService } from './certificate-template.service';
 
 @Injectable()
 export class IssuedCertificateService {
-    private readonly logger = new Logger(IssuedCertificateService.name);
+  private readonly logger = new Logger(IssuedCertificateService.name);
 
-    constructor(
-        private readonly certificateRepo: IssuedCertificateRepository,
-        private readonly templateService: CertificateTemplateService,
-        private readonly prisma: PrismaRepository,
-    ) { }
+  constructor(
+    private readonly certificateRepo: IssuedCertificateRepository,
+    private readonly templateService: CertificateTemplateService,
+    private readonly prisma: PrismaRepository,
+  ) {}
 
-    /**
-     * Issue certificate for a student
-     */
-    async issueCertificate(dto: IssueCertificateDto): Promise<IssuedCertificate> {
-        this.logger.log(`Issuing certificate for student ${dto.studentId}, course ${dto.courseId}`);
+  /**
+   * Issue certificate for a student
+   */
+  async issueCertificate(dto: IssueCertificateDto): Promise<IssuedCertificate> {
+    this.logger.log(
+      `Issuing certificate for student ${dto.studentId}, course ${dto.courseId}`,
+    );
 
-        // Check if certificate already exists
-        const existing = await this.certificateRepo.findByStudentAndCourse(
-            dto.studentId,
-            dto.courseId,
+    // Check if certificate already exists
+    const existing = await this.certificateRepo.findByStudentAndCourse(
+      dto.studentId,
+      dto.courseId,
+    );
+    if (existing && !existing.isRevoked) {
+      throw new ConflictException(
+        'Certificate already issued for this student and course',
+      );
+    }
+
+    // Get certificate template
+    const template = await this.templateService.getTemplateByCourseId(
+      dto.courseId,
+    );
+    if (!template.isActive) {
+      throw new BadRequestException('Certificate template is not active');
+    }
+
+    // Check requirements
+    const progress = dto.progress || 100;
+    if (progress < template.minProgress) {
+      throw new BadRequestException(
+        `Student progress (${progress}%) does not meet minimum requirement (${template.minProgress}%)`,
+      );
+    }
+
+    // Check score requirement if applicable
+    if (
+      template.requirementType === 'score_based' ||
+      template.requirementType === 'combined'
+    ) {
+      if (!dto.finalScore) {
+        throw new BadRequestException(
+          'Final score is required for this certificate type',
         );
-        if (existing && !existing.isRevoked) {
-            throw new ConflictException('Certificate already issued for this student and course');
-        }
-
-        // Get certificate template
-        const template = await this.templateService.getTemplateByCourseId(dto.courseId);
-        if (!template.isActive) {
-            throw new BadRequestException('Certificate template is not active');
-        }
-
-        // Check requirements
-        const progress = dto.progress || 100;
-        if (progress < template.minProgress) {
-            throw new BadRequestException(
-                `Student progress (${progress}%) does not meet minimum requirement (${template.minProgress}%)`,
-            );
-        }
-
-        // Check score requirement if applicable
-        if (
-            template.requirementType === 'score_based' ||
-            template.requirementType === 'combined'
-        ) {
-            if (!dto.finalScore) {
-                throw new BadRequestException('Final score is required for this certificate type');
-            }
-            if (template.minScore && dto.finalScore < template.minScore) {
-                throw new BadRequestException(
-                    `Student score (${dto.finalScore}%) does not meet minimum requirement (${template.minScore}%)`,
-                );
-            }
-        }
-
-        // Get student and course info
-        const student = await this.prisma.user.findUnique({
-            where: { id: dto.studentId },
-            select: {
-                id: true,
-                email: true,
-                firstName: true,
-                lastName: true,
-                displayName: true,
-            },
-        });
-
-        if (!student) {
-            throw new NotFoundException(`Student not found with id ${dto.studentId}`);
-        }
-
-        const course = await this.prisma.course.findUnique({
-            where: { id: dto.courseId },
-            select: {
-                id: true,
-                title: true,
-                description: true,
-                estimatedHours: true,
-            },
-        });
-
-        if (!course) {
-            throw new NotFoundException(`Course not found with id ${dto.courseId}`);
-        }
-
-        // Generate certificate number and verification code
-        const certificateNumber = this.generateCertificateNumber(dto.courseId);
-        const verificationCode = uuidv4();
-
-        // Get student full name
-        const studentName =
-            student.displayName ||
-            [student.firstName, student.lastName].filter(Boolean).join(' ') ||
-            student.email ||
-            'Student';
-
-        // Create certificate
-        const certificate = await this.certificateRepo.create({
-            template: {
-                connect: { id: template.id },
-            },
-            student: {
-                connect: { id: dto.studentId },
-            },
-            course: {
-                connect: { id: dto.courseId },
-            },
-            ...(dto.classroomId && {
-                classroom: {
-                    connect: { id: dto.classroomId },
-                },
-            }),
-            certificateNumber,
-            verificationCode,
-            studentName,
-            studentEmail: student.email || '',
-            courseName: course.title,
-            courseDescription: course.description,
-            finalScore: dto.finalScore,
-            progress,
-            totalHours: dto.totalHours || course.estimatedHours,
-            metadata: dto.metadata,
-        });
-
-        this.logger.log(`Issued certificate ${certificate.id} (${certificateNumber})`);
-
-        return certificate;
+      }
+      if (template.minScore && dto.finalScore < template.minScore) {
+        throw new BadRequestException(
+          `Student score (${dto.finalScore}%) does not meet minimum requirement (${template.minScore}%)`,
+        );
+      }
     }
 
-    /**
-     * Get my certificates (for student)
-     */
-    async getMyCertificates(
-        studentId: string,
-        params?: {
-            skip?: number;
-            take?: number;
+    // Get student and course info
+    const student = await this.prisma.user.findUnique({
+      where: { id: dto.studentId },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        displayName: true,
+      },
+    });
+
+    if (!student) {
+      throw new NotFoundException(`Student not found with id ${dto.studentId}`);
+    }
+
+    const course = await this.prisma.course.findUnique({
+      where: { id: dto.courseId },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        estimatedHours: true,
+      },
+    });
+
+    if (!course) {
+      throw new NotFoundException(`Course not found with id ${dto.courseId}`);
+    }
+
+    // Generate certificate number and verification code
+    const certificateNumber = this.generateCertificateNumber(dto.courseId);
+    const verificationCode = uuidv4();
+
+    // Get student full name
+    const studentName =
+      student.displayName ||
+      [student.firstName, student.lastName].filter(Boolean).join(' ') ||
+      student.email ||
+      'Student';
+
+    // Create certificate
+    const certificate = await this.certificateRepo.create({
+      template: {
+        connect: { id: template.id },
+      },
+      student: {
+        connect: { id: dto.studentId },
+      },
+      course: {
+        connect: { id: dto.courseId },
+      },
+      ...(dto.classroomId && {
+        classroom: {
+          connect: { id: dto.classroomId },
         },
-    ): Promise<{ data: IssuedCertificate[]; total: number }> {
-        const where = {
-            studentId,
-            isRevoked: false,
-        };
+      }),
+      certificateNumber,
+      verificationCode,
+      studentName,
+      studentEmail: student.email || '',
+      courseName: course.title,
+      courseDescription: course.description,
+      finalScore: dto.finalScore,
+      progress,
+      totalHours: dto.totalHours || course.estimatedHours,
+      metadata: dto.metadata,
+    });
 
-        const [data, total] = await Promise.all([
-            this.certificateRepo.findMany({
-                where,
-                skip: params?.skip,
-                take: params?.take,
-                orderBy: { issueDate: 'desc' },
-            }),
-            this.certificateRepo.count(where),
-        ]);
+    this.logger.log(
+      `Issued certificate ${certificate.id} (${certificateNumber})`,
+    );
 
-        return { data, total };
+    return certificate;
+  }
+
+  /**
+   * Get my certificates (for student)
+   */
+  async getMyCertificates(
+    studentId: string,
+    params?: {
+      skip?: number;
+      take?: number;
+    },
+  ): Promise<{ data: IssuedCertificate[]; total: number }> {
+    const where = {
+      studentId,
+      isRevoked: false,
+    };
+
+    const [data, total] = await Promise.all([
+      this.certificateRepo.findMany({
+        where,
+        skip: params?.skip,
+        take: params?.take,
+        orderBy: { issueDate: 'desc' },
+      }),
+      this.certificateRepo.count(where),
+    ]);
+
+    return { data, total };
+  }
+
+  /**
+   * Get certificate by ID
+   */
+  async getCertificateById(id: string): Promise<IssuedCertificate> {
+    const certificate = await this.certificateRepo.findById(id);
+    if (!certificate) {
+      throw new NotFoundException(`Certificate not found with id ${id}`);
+    }
+    return certificate;
+  }
+
+  /**
+   * Verify certificate by verification code
+   */
+  async verifyCertificate(
+    verificationCode: string,
+  ): Promise<IssuedCertificate> {
+    const certificate =
+      await this.certificateRepo.findByVerificationCode(verificationCode);
+
+    if (!certificate) {
+      throw new NotFoundException('Certificate not found');
     }
 
-    /**
-     * Get certificate by ID
-     */
-    async getCertificateById(id: string): Promise<IssuedCertificate> {
-        const certificate = await this.certificateRepo.findById(id);
-        if (!certificate) {
-            throw new NotFoundException(`Certificate not found with id ${id}`);
-        }
-        return certificate;
+    // Update verified at timestamp
+    if (!certificate.verifiedAt) {
+      await this.certificateRepo.update(certificate.id, {
+        verifiedAt: new Date(),
+      });
     }
 
-    /**
-     * Verify certificate by verification code
-     */
-    async verifyCertificate(verificationCode: string): Promise<IssuedCertificate> {
-        const certificate = await this.certificateRepo.findByVerificationCode(verificationCode);
+    return certificate;
+  }
 
-        if (!certificate) {
-            throw new NotFoundException('Certificate not found');
-        }
+  /**
+   * Verify certificate by certificate number
+   */
+  async verifyCertificateByNumber(
+    certificateNumber: string,
+  ): Promise<IssuedCertificate> {
+    const certificate =
+      await this.certificateRepo.findByCertificateNumber(certificateNumber);
 
-        // Update verified at timestamp
-        if (!certificate.verifiedAt) {
-            await this.certificateRepo.update(certificate.id, {
-                verifiedAt: new Date(),
-            });
-        }
-
-        return certificate;
+    if (!certificate) {
+      throw new NotFoundException('Certificate not found');
     }
 
-    /**
-     * Verify certificate by certificate number
-     */
-    async verifyCertificateByNumber(certificateNumber: string): Promise<IssuedCertificate> {
-        const certificate = await this.certificateRepo.findByCertificateNumber(certificateNumber);
+    return certificate;
+  }
 
-        if (!certificate) {
-            throw new NotFoundException('Certificate not found');
-        }
+  /**
+   * Revoke certificate
+   */
+  async revokeCertificate(
+    id: string,
+    reason: string,
+  ): Promise<IssuedCertificate> {
+    this.logger.log(`Revoking certificate ${id}. Reason: ${reason}`);
 
-        return certificate;
+    const certificate = await this.getCertificateById(id);
+
+    if (certificate.isRevoked) {
+      throw new BadRequestException('Certificate is already revoked');
     }
 
-    /**
-     * Revoke certificate
-     */
-    async revokeCertificate(id: string, reason: string): Promise<IssuedCertificate> {
-        this.logger.log(`Revoking certificate ${id}. Reason: ${reason}`);
+    const revoked = await this.certificateRepo.revoke(id, reason);
 
-        const certificate = await this.getCertificateById(id);
+    this.logger.log(`Revoked certificate ${id}`);
+    return revoked;
+  }
 
-        if (certificate.isRevoked) {
-            throw new BadRequestException('Certificate is already revoked');
-        }
+  /**
+   * Get certificates for a course
+   */
+  async getCertificatesByCourse(
+    courseId: string,
+    params?: {
+      skip?: number;
+      take?: number;
+      includeRevoked?: boolean;
+    },
+  ): Promise<{ data: IssuedCertificate[]; total: number }> {
+    const where = {
+      courseId,
+      ...(params?.includeRevoked === false && { isRevoked: false }),
+    };
 
-        const revoked = await this.certificateRepo.revoke(id, reason);
+    const [data, total] = await Promise.all([
+      this.certificateRepo.findMany({
+        where,
+        skip: params?.skip,
+        take: params?.take,
+        orderBy: { issueDate: 'desc' },
+      }),
+      this.certificateRepo.count(where),
+    ]);
 
-        this.logger.log(`Revoked certificate ${id}`);
-        return revoked;
+    return { data, total };
+  }
+
+  /**
+   * Get all certificates (admin)
+   */
+  async getAllCertificates(params?: {
+    skip?: number;
+    take?: number;
+    includeRevoked?: boolean;
+    studentId?: string;
+    courseId?: string;
+  }): Promise<{ data: IssuedCertificate[]; total: number }> {
+    const where: any = {};
+
+    if (params?.includeRevoked === false) {
+      where.isRevoked = false;
     }
 
-    /**
-     * Get certificates for a course
-     */
-    async getCertificatesByCourse(
-        courseId: string,
-        params?: {
-            skip?: number;
-            take?: number;
-            includeRevoked?: boolean;
+    if (params?.studentId) {
+      where.studentId = params.studentId;
+    }
+
+    if (params?.courseId) {
+      where.courseId = params.courseId;
+    }
+
+    const [data, total] = await Promise.all([
+      this.certificateRepo.findMany({
+        where,
+        skip: params?.skip,
+        take: params?.take,
+        orderBy: { issueDate: 'desc' },
+      }),
+      this.certificateRepo.count(where),
+    ]);
+
+    return { data, total };
+  }
+
+  /**
+   * Generate unique certificate number
+   */
+  private generateCertificateNumber(courseId: string): string {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const coursePrefix = courseId.substring(0, 4).toUpperCase();
+
+    return `CERT-${coursePrefix}-${timestamp}-${random}`;
+  }
+
+  /**
+   * Generate certificate PDF
+   */
+  async generateCertificatePdf(
+    certificate: IssuedCertificate,
+  ): Promise<Buffer> {
+    // Use Chrome for Testing (ARM64 version for Mac Silicon)
+    const executablePath =
+      '/Users/hiteksofftware/.cache/puppeteer/chrome/mac_arm-134.0.6998.35/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing';
+
+    const browser = await puppeteer.launch({
+      headless: true,
+      executablePath,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu',
+        '--disable-extensions',
+      ],
+    });
+
+    try {
+      const page = await browser.newPage();
+
+      // Generate HTML content for the certificate
+      const htmlContent = this.generateCertificateHtml(certificate);
+
+      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+      // Generate PDF
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: {
+          top: '10mm',
+          right: '10mm',
+          bottom: '10mm',
+          left: '10mm',
         },
-    ): Promise<{ data: IssuedCertificate[]; total: number }> {
-        const where = {
-            courseId,
-            ...(params?.includeRevoked === false && { isRevoked: false }),
-        };
+      });
 
-        const [data, total] = await Promise.all([
-            this.certificateRepo.findMany({
-                where,
-                skip: params?.skip,
-                take: params?.take,
-                orderBy: { issueDate: 'desc' },
-            }),
-            this.certificateRepo.count(where),
-        ]);
-
-        return { data, total };
+      return Buffer.from(pdfBuffer);
+    } finally {
+      await browser.close();
     }
+  }
 
-    /**
-     * Get all certificates (admin)
-     */
-    async getAllCertificates(params?: {
-        skip?: number;
-        take?: number;
-        includeRevoked?: boolean;
-        studentId?: string;
-        courseId?: string;
-    }): Promise<{ data: IssuedCertificate[]; total: number }> {
-        const where: any = {};
+  /**
+   * Generate HTML content for certificate PDF
+   */
+  private generateCertificateHtml(certificate: IssuedCertificate): string {
+    const completionDate = new Date(
+      certificate.completionDate,
+    ).toLocaleDateString('vi-VN');
+    const issueDate = new Date(certificate.issueDate).toLocaleDateString(
+      'vi-VN',
+    );
 
-        if (params?.includeRevoked === false) {
-            where.isRevoked = false;
-        }
-
-        if (params?.studentId) {
-            where.studentId = params.studentId;
-        }
-
-        if (params?.courseId) {
-            where.courseId = params.courseId;
-        }
-
-        const [data, total] = await Promise.all([
-            this.certificateRepo.findMany({
-                where,
-                skip: params?.skip,
-                take: params?.take,
-                orderBy: { issueDate: 'desc' },
-            }),
-            this.certificateRepo.count(where),
-        ]);
-
-        return { data, total };
-    }
-
-    /**
-     * Generate unique certificate number
-     */
-    private generateCertificateNumber(courseId: string): string {
-        const timestamp = Date.now();
-        const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const coursePrefix = courseId.substring(0, 4).toUpperCase();
-
-        return `CERT-${coursePrefix}-${timestamp}-${random}`;
-    }
-
-    /**
-     * Generate certificate PDF
-     */
-    async generateCertificatePdf(certificate: IssuedCertificate): Promise<Buffer> {
-        // Use Chrome for Testing (ARM64 version for Mac Silicon)
-        const executablePath =
-            '/Users/hiteksofftware/.cache/puppeteer/chrome/mac_arm-134.0.6998.35/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing';
-
-        const browser = await puppeteer.launch({
-            headless: true,
-            executablePath,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu',
-                '--disable-extensions',
-            ],
-        });
-
-        try {
-            const page = await browser.newPage();
-
-            // Generate HTML content for the certificate
-            const htmlContent = this.generateCertificateHtml(certificate);
-
-            await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-
-            // Generate PDF
-            const pdfBuffer = await page.pdf({
-                format: 'A4',
-                printBackground: true,
-                margin: {
-                    top: '10mm',
-                    right: '10mm',
-                    bottom: '10mm',
-                    left: '10mm',
-                },
-            });
-
-            return Buffer.from(pdfBuffer);
-        } finally {
-            await browser.close();
-        }
-    }
-
-    /**
-     * Generate HTML content for certificate PDF
-     */
-    private generateCertificateHtml(certificate: IssuedCertificate): string {
-        const completionDate = new Date(certificate.completionDate).toLocaleDateString('vi-VN');
-        const issueDate = new Date(certificate.issueDate).toLocaleDateString('vi-VN');
-
-        return `
+    return `
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -617,6 +642,5 @@ export class IssuedCertificateService {
 </body>
 </html>
         `;
-    }
+  }
 }
-

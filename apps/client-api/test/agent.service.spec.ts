@@ -175,7 +175,8 @@ describe('AgentService', () => {
       expect(mockAgentChatRepository.createMessage).toHaveBeenCalledTimes(2);
 
       // Check user message
-      const userMessageCall = mockAgentChatRepository.createMessage.mock.calls[0][0];
+      const userMessageCall =
+        mockAgentChatRepository.createMessage.mock.calls[0][0];
       expect(userMessageCall.role).toBe('user');
       expect(userMessageCall.content).toBe('Hi');
       expect(userMessageCall.conversationId).toBe('conv-1');
@@ -460,10 +461,9 @@ describe('AgentService', () => {
 
       // Assert
       expect(result).toEqual(mockConversations);
-      expect(mockAgentChatRepository.findUserConversations).toHaveBeenCalledWith(
-        'user-1',
-        { limit: 20, offset: 0 },
-      );
+      expect(
+        mockAgentChatRepository.findUserConversations,
+      ).toHaveBeenCalledWith('user-1', { limit: 20, offset: 0 });
     });
 
     it('should return user conversations with custom pagination', async () => {
@@ -474,10 +474,9 @@ describe('AgentService', () => {
       await service.getUserConversations('user-1', 10, 5);
 
       // Assert
-      expect(mockAgentChatRepository.findUserConversations).toHaveBeenCalledWith(
-        'user-1',
-        { limit: 10, offset: 5 },
-      );
+      expect(
+        mockAgentChatRepository.findUserConversations,
+      ).toHaveBeenCalledWith('user-1', { limit: 10, offset: 5 });
     });
   });
 
@@ -506,9 +505,9 @@ describe('AgentService', () => {
       mockAgentChatRepository.findConversationById.mockResolvedValue(null);
 
       // Act & Assert
-      await expect(
-        service.getConversation('conv-1', 'user-1'),
-      ).rejects.toThrow('Conversation not found or access denied');
+      await expect(service.getConversation('conv-1', 'user-1')).rejects.toThrow(
+        'Conversation not found or access denied',
+      );
     });
 
     it('should throw error when user does not own conversation', async () => {
@@ -524,9 +523,9 @@ describe('AgentService', () => {
       );
 
       // Act & Assert
-      await expect(
-        service.getConversation('conv-1', 'user-1'),
-      ).rejects.toThrow('Conversation not found or access denied');
+      await expect(service.getConversation('conv-1', 'user-1')).rejects.toThrow(
+        'Conversation not found or access denied',
+      );
     });
   });
 

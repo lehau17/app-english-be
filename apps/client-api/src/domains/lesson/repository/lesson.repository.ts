@@ -351,7 +351,10 @@ export class LessonRepository {
     });
 
     // If already mastered, review_needed, or done - don't reset to in_progress
-    if (existing && ['mastered', 'review_needed', 'done'].includes(existing.state)) {
+    if (
+      existing &&
+      ['mastered', 'review_needed', 'done'].includes(existing.state)
+    ) {
       return this.prisma.progress.findUnique({
         where: { userId_activityId: { userId, activityId } },
       });

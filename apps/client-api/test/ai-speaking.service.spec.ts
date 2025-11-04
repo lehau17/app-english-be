@@ -738,9 +738,9 @@ describe('AiSpeakingService', () => {
         conversationDesigner,
       );
 
-      await expect(
-        svc.finalizeSession(userId, sessionId, dto),
-      ).rejects.toThrow(NotFoundException);
+      await expect(svc.finalizeSession(userId, sessionId, dto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -918,12 +918,12 @@ describe('AiSpeakingService', () => {
         conversationDesigner,
       );
 
-      await expect(
-        svc.getConversation(userId, conversationId),
-      ).rejects.toThrow(NotFoundException);
-      await expect(
-        svc.getConversation(userId, conversationId),
-      ).rejects.toThrow('Conversation không tồn tại');
+      await expect(svc.getConversation(userId, conversationId)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(svc.getConversation(userId, conversationId)).rejects.toThrow(
+        'Conversation không tồn tại',
+      );
     });
   });
 });

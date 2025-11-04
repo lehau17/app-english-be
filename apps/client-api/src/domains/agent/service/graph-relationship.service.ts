@@ -28,7 +28,9 @@ export class GraphRelationshipService {
   /**
    * Create a relationship between two entities
    */
-  async createRelationship(dto: CreateRelationshipDto): Promise<GraphRelationship> {
+  async createRelationship(
+    dto: CreateRelationshipDto,
+  ): Promise<GraphRelationship> {
     const weight = dto.weight || 1.0;
 
     const cypher = `
@@ -130,7 +132,10 @@ export class GraphRelationshipService {
       RETURN count(r) as deleted
     `;
 
-    const result = await this.neo4jService.runQuery(cypher, { sourceId, targetId });
+    const result = await this.neo4jService.runQuery(cypher, {
+      sourceId,
+      targetId,
+    });
     return result[0]?.deleted > 0;
   }
 

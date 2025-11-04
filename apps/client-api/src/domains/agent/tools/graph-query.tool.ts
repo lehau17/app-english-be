@@ -36,10 +36,7 @@ export class GraphQueryTool extends StructuredTool {
       .enum(['COURSE', 'LESSON', 'ACTIVITY', 'ALL'])
       .optional()
       .describe('Loại entity cần tìm (optional)'),
-    entityId: z
-      .string()
-      .optional()
-      .describe('ID của entity cụ thể (optional)'),
+    entityId: z.string().optional().describe('ID của entity cụ thể (optional)'),
   });
 
   private readonly logger = new Logger(GraphQueryTool.name);
@@ -184,7 +181,7 @@ CHỈ TRẢ VỀ CYPHER QUERY, KHÔNG CÓ GIẢI THÍCH HAY MARKDOWN:`;
       const response = await this.geminiService.generateResponse(prompt);
 
       // Clean response (remove markdown code blocks if any)
-      let cleanedQuery = response
+      const cleanedQuery = response
         .trim()
         .replace(/```cypher\n?/g, '')
         .replace(/```\n?/g, '')
@@ -197,9 +194,7 @@ CHỈ TRẢ VỀ CYPHER QUERY, KHÔNG CÓ GIẢI THÍCH HAY MARKDOWN:`;
 
       return cleanedQuery;
     } catch (error) {
-      this.logger.error(
-        `Failed to generate Cypher with AI: ${error.message}`,
-      );
+      this.logger.error(`Failed to generate Cypher with AI: ${error.message}`);
       // Fallback to simple query
       return this.generateFallbackQuery(
         naturalLanguageQuery,
@@ -233,8 +228,6 @@ CHỈ TRẢ VỀ CYPHER QUERY, KHÔNG CÓ GIẢI THÍCH HAY MARKDOWN:`;
       LIMIT 10
     `;
   }
-
-
 
   /**
    * Format Neo4j results for AI consumption

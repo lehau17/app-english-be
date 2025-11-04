@@ -64,7 +64,8 @@ describe('AuthService', () => {
 
   describe('register', () => {
     it('should successfully register a new user and return token', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const registerDto = {
         email: 'test@example.com',
@@ -102,8 +103,12 @@ describe('AuthService', () => {
 
       expect(result).toEqual({ ...mockToken, user: mockUser });
       expect(authRepository.findUserForLogin).toHaveBeenCalledTimes(2);
-      expect(authRepository.findUserForLogin).toHaveBeenCalledWith(registerDto.email);
-      expect(authRepository.findUserForLogin).toHaveBeenCalledWith(registerDto.phone);
+      expect(authRepository.findUserForLogin).toHaveBeenCalledWith(
+        registerDto.email,
+      );
+      expect(authRepository.findUserForLogin).toHaveBeenCalledWith(
+        registerDto.phone,
+      );
       expect(authRepository.register).toHaveBeenCalledWith(registerDto);
       expect(tokenRepository.generateToken).toHaveBeenCalledWith({
         role: 'student',
@@ -113,7 +118,8 @@ describe('AuthService', () => {
     });
 
     it('should throw BadRequestException if email already exists', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const registerDto = {
         email: 'existing@example.com',
@@ -128,10 +134,13 @@ describe('AuthService', () => {
         email: 'existing@example.com',
       };
 
-      authRepository.findUserForLogin.mockImplementation((identifier: string) => {
-        if (identifier === registerDto.email) return Promise.resolve(existingUser);
-        return Promise.resolve(null);
-      });
+      authRepository.findUserForLogin.mockImplementation(
+        (identifier: string) => {
+          if (identifier === registerDto.email)
+            return Promise.resolve(existingUser);
+          return Promise.resolve(null);
+        },
+      );
 
       const service = new AuthService(
         authRepository,
@@ -140,13 +149,18 @@ describe('AuthService', () => {
         configService,
       );
 
-      await expect(service.register(registerDto)).rejects.toThrow(BadRequestException);
-      await expect(service.register(registerDto)).rejects.toThrow('Email/Phone already exists');
+      await expect(service.register(registerDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.register(registerDto)).rejects.toThrow(
+        'Email/Phone already exists',
+      );
       expect(authRepository.register).not.toHaveBeenCalled();
     });
 
     it('should throw BadRequestException if phone already exists', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const registerDto = {
         email: 'new@example.com',
@@ -161,10 +175,13 @@ describe('AuthService', () => {
         phone: '+84901234567',
       };
 
-      authRepository.findUserForLogin.mockImplementation((identifier: string) => {
-        if (identifier === registerDto.phone) return Promise.resolve(existingUser);
-        return Promise.resolve(null);
-      });
+      authRepository.findUserForLogin.mockImplementation(
+        (identifier: string) => {
+          if (identifier === registerDto.phone)
+            return Promise.resolve(existingUser);
+          return Promise.resolve(null);
+        },
+      );
 
       const service = new AuthService(
         authRepository,
@@ -173,14 +190,17 @@ describe('AuthService', () => {
         configService,
       );
 
-      await expect(service.register(registerDto)).rejects.toThrow(BadRequestException);
+      await expect(service.register(registerDto)).rejects.toThrow(
+        BadRequestException,
+      );
       expect(authRepository.register).not.toHaveBeenCalled();
     });
   });
 
   describe('login', () => {
     it('should successfully login with valid credentials', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const loginDto = {
         email: 'test@example.com',
@@ -212,7 +232,9 @@ describe('AuthService', () => {
       const result = await service.login(loginDto);
 
       expect(result).toEqual({ ...mockToken, user: mockUser });
-      expect(authRepository.findUserForLogin).toHaveBeenCalledWith(loginDto.email);
+      expect(authRepository.findUserForLogin).toHaveBeenCalledWith(
+        loginDto.email,
+      );
       expect(tokenRepository.generateToken).toHaveBeenCalledWith({
         sub: mockUser.id,
         email: mockUser.email,
@@ -221,7 +243,8 @@ describe('AuthService', () => {
     });
 
     it('should throw BadRequestException if user not found', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const loginDto = {
         email: 'nonexistent@example.com',
@@ -237,12 +260,17 @@ describe('AuthService', () => {
         configService,
       );
 
-      await expect(service.login(loginDto)).rejects.toThrow(BadRequestException);
-      await expect(service.login(loginDto)).rejects.toThrow('Invalid credentials');
+      await expect(service.login(loginDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.login(loginDto)).rejects.toThrow(
+        'Invalid credentials',
+      );
     });
 
     it('should throw BadRequestException if password is invalid', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const loginDto = {
         email: 'test@example.com',
@@ -265,12 +293,17 @@ describe('AuthService', () => {
         configService,
       );
 
-      await expect(service.login(loginDto)).rejects.toThrow(BadRequestException);
-      await expect(service.login(loginDto)).rejects.toThrow('Invalid credentials');
+      await expect(service.login(loginDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.login(loginDto)).rejects.toThrow(
+        'Invalid credentials',
+      );
     });
 
     it('should throw BadRequestException if user has no password set', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const loginDto = {
         email: 'test@example.com',
@@ -293,12 +326,17 @@ describe('AuthService', () => {
         configService,
       );
 
-      await expect(service.login(loginDto)).rejects.toThrow(BadRequestException);
-      await expect(service.login(loginDto)).rejects.toThrow('No password set for this account');
+      await expect(service.login(loginDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.login(loginDto)).rejects.toThrow(
+        'No password set for this account',
+      );
     });
 
     it('should throw BadRequestException if user role is invalid', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const loginDto = {
         email: 'test@example.com',
@@ -321,14 +359,19 @@ describe('AuthService', () => {
         configService,
       );
 
-      await expect(service.login(loginDto)).rejects.toThrow(BadRequestException);
-      await expect(service.login(loginDto)).rejects.toThrow('Invalid credentials');
+      await expect(service.login(loginDto)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.login(loginDto)).rejects.toThrow(
+        'Invalid credentials',
+      );
     });
   });
 
   describe('changePassword', () => {
     it('should successfully change password with valid current password', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const userId = 'user-1';
       const changePasswordDto = {
@@ -356,11 +399,15 @@ describe('AuthService', () => {
 
       expect(result).toEqual({ success: true });
       expect(authRepository.findUserForLogin).toHaveBeenCalledWith(userId);
-      expect(authRepository.changePassword).toHaveBeenCalledWith(userId, changePasswordDto);
+      expect(authRepository.changePassword).toHaveBeenCalledWith(
+        userId,
+        changePasswordDto,
+      );
     });
 
     it('should throw BadRequestException if user not found', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const userId = 'nonexistent-user';
       const changePasswordDto = {
@@ -377,16 +424,17 @@ describe('AuthService', () => {
         configService,
       );
 
-      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(
-        'User not found',
-      );
+      await expect(
+        service.changePassword(userId, changePasswordDto),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.changePassword(userId, changePasswordDto),
+      ).rejects.toThrow('User not found');
     });
 
     it('should throw BadRequestException if current password is invalid', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const userId = 'user-1';
       const changePasswordDto = {
@@ -409,18 +457,19 @@ describe('AuthService', () => {
         configService,
       );
 
-      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.changePassword(userId, changePasswordDto)).rejects.toThrow(
-        'Current password invalid',
-      );
+      await expect(
+        service.changePassword(userId, changePasswordDto),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.changePassword(userId, changePasswordDto),
+      ).rejects.toThrow('Current password invalid');
     });
   });
 
   describe('refreshToken', () => {
     it('should successfully refresh token with valid refresh token', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const refreshTokenDto = {
         refreshToken: 'valid-refresh-token',
@@ -451,12 +500,17 @@ describe('AuthService', () => {
       const result = await service.refreshToken(refreshTokenDto);
 
       expect(result).toEqual(newTokens);
-      expect(tokenRepository.decodeToken).toHaveBeenCalledWith(refreshTokenDto.refreshToken);
-      expect(authRepository.refreshToken).toHaveBeenCalledWith(decodedToken.jti);
+      expect(tokenRepository.decodeToken).toHaveBeenCalledWith(
+        refreshTokenDto.refreshToken,
+      );
+      expect(authRepository.refreshToken).toHaveBeenCalledWith(
+        decodedToken.jti,
+      );
     });
 
     it('should throw UnauthorizedException if refresh token is invalid', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const refreshTokenDto = {
         refreshToken: 'invalid-refresh-token',
@@ -490,7 +544,8 @@ describe('AuthService', () => {
 
   describe('logout', () => {
     it('should successfully logout and revoke refresh token', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const logoutDto = {
         refreshToken: 'valid-refresh-token',
@@ -516,14 +571,19 @@ describe('AuthService', () => {
       const result = await service.logout(logoutDto);
 
       expect(result).toEqual({ success: true });
-      expect(tokenRepository.decodeToken).toHaveBeenCalledWith(logoutDto.refreshToken);
-      expect(authRepository.revokeRefreshToken).toHaveBeenCalledWith(decodedToken.jti);
+      expect(tokenRepository.decodeToken).toHaveBeenCalledWith(
+        logoutDto.refreshToken,
+      );
+      expect(authRepository.revokeRefreshToken).toHaveBeenCalledWith(
+        decodedToken.jti,
+      );
     });
   });
 
   describe('forgotPassword', () => {
     it('should send password reset email for existing user', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const forgotPasswordDto = {
         email: 'test@example.com',
@@ -551,8 +611,12 @@ describe('AuthService', () => {
       const result = await service.forgotPassword(forgotPasswordDto);
 
       expect(result).toEqual({ success: true });
-      expect(authRepository.findByEmail).toHaveBeenCalledWith('test@example.com');
-      expect(authRepository.invalidateUserResetTokens).toHaveBeenCalledWith(mockUser.id);
+      expect(authRepository.findByEmail).toHaveBeenCalledWith(
+        'test@example.com',
+      );
+      expect(authRepository.invalidateUserResetTokens).toHaveBeenCalledWith(
+        mockUser.id,
+      );
       expect(authRepository.createPasswordResetToken).toHaveBeenCalled();
       expect(kafkaService.send).toHaveBeenCalledWith(
         'notifications',
@@ -566,7 +630,8 @@ describe('AuthService', () => {
     });
 
     it('should return success even if user not found (security)', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const forgotPasswordDto = {
         email: 'nonexistent@example.com',
@@ -592,7 +657,8 @@ describe('AuthService', () => {
 
   describe('resetPassword', () => {
     it('should successfully reset password with valid token', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const resetPasswordDto = {
         token: 'valid-reset-token',
@@ -606,7 +672,9 @@ describe('AuthService', () => {
         expiresAt: new Date(Date.now() + 3600000),
       };
 
-      authRepository.findValidPasswordResetToken.mockResolvedValue(mockResetRecord);
+      authRepository.findValidPasswordResetToken.mockResolvedValue(
+        mockResetRecord,
+      );
       authRepository.updatePassword.mockResolvedValue(undefined);
       authRepository.markResetTokenUsed.mockResolvedValue(undefined);
       authRepository.invalidateUserResetTokens.mockResolvedValue(undefined);
@@ -626,14 +694,17 @@ describe('AuthService', () => {
         mockResetRecord.userId,
         resetPasswordDto.newPassword,
       );
-      expect(authRepository.markResetTokenUsed).toHaveBeenCalledWith(mockResetRecord.id);
+      expect(authRepository.markResetTokenUsed).toHaveBeenCalledWith(
+        mockResetRecord.id,
+      );
       expect(authRepository.invalidateUserResetTokens).toHaveBeenCalledWith(
         mockResetRecord.userId,
       );
     });
 
     it('should throw BadRequestException if reset token is invalid', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const resetPasswordDto = {
         token: 'invalid-reset-token',
@@ -660,7 +731,8 @@ describe('AuthService', () => {
 
   describe('updateProfile', () => {
     it('should successfully update profile', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const userId = 'user-1';
       const updateProfileDto = {
@@ -686,11 +758,15 @@ describe('AuthService', () => {
       const result = await service.updateProfile(userId, updateProfileDto);
 
       expect(result).toEqual(updatedUser);
-      expect(authRepository.updateProfile).toHaveBeenCalledWith(userId, updateProfileDto);
+      expect(authRepository.updateProfile).toHaveBeenCalledWith(
+        userId,
+        updateProfileDto,
+      );
     });
 
     it('should normalize email and check for duplicates', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const userId = 'user-1';
       const updateProfileDto = {
@@ -714,14 +790,17 @@ describe('AuthService', () => {
 
       const result = await service.updateProfile(userId, updateProfileDto);
 
-      expect(authRepository.findByEmail).toHaveBeenCalledWith('new@example.com');
+      expect(authRepository.findByEmail).toHaveBeenCalledWith(
+        'new@example.com',
+      );
       expect(authRepository.updateProfile).toHaveBeenCalledWith(userId, {
         email: 'new@example.com',
       });
     });
 
     it('should throw BadRequestException if email is already in use', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const userId = 'user-1';
       const updateProfileDto = {
@@ -742,18 +821,19 @@ describe('AuthService', () => {
         configService,
       );
 
-      await expect(service.updateProfile(userId, updateProfileDto)).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.updateProfile(userId, updateProfileDto)).rejects.toThrow(
-        'Email already in use',
-      );
+      await expect(
+        service.updateProfile(userId, updateProfileDto),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.updateProfile(userId, updateProfileDto),
+      ).rejects.toThrow('Email already in use');
     });
   });
 
   describe('me', () => {
     it('should return user info', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const userId = 'user-1';
       const mockUser = {
@@ -781,7 +861,8 @@ describe('AuthService', () => {
 
   describe('hasParent', () => {
     it('should return true with parent info when parent relation exists', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const userId = 'user-1';
       const mockParentRelation = {
@@ -815,7 +896,8 @@ describe('AuthService', () => {
     });
 
     it('should return false when no parent relation exists', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const userId = 'user-1';
 
@@ -839,7 +921,8 @@ describe('AuthService', () => {
 
   describe('adminLogin', () => {
     it('should successfully login admin user', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const loginDto = {
         email: 'admin@example.com',
@@ -879,7 +962,8 @@ describe('AuthService', () => {
     });
 
     it('should throw BadRequestException if user is not admin', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const loginDto = {
         email: 'student@example.com',
@@ -902,13 +986,16 @@ describe('AuthService', () => {
         configService,
       );
 
-      await expect(service.adminLogin(loginDto)).rejects.toThrow(BadRequestException);
+      await expect(service.adminLogin(loginDto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
   describe('parentLogin', () => {
     it('should successfully login parent user', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const loginDto = {
         email: 'parent@example.com',
@@ -950,7 +1037,8 @@ describe('AuthService', () => {
 
   describe('adminRegister', () => {
     it('should successfully register admin user', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const registerDto = {
         email: 'admin@example.com',
@@ -992,7 +1080,8 @@ describe('AuthService', () => {
     });
 
     it('should throw BadRequestException if registration fails', async () => {
-      const { authRepository, tokenRepository, kafkaService, configService } = makeMocks();
+      const { authRepository, tokenRepository, kafkaService, configService } =
+        makeMocks();
 
       const registerDto = {
         email: 'admin@example.com',
@@ -1010,7 +1099,9 @@ describe('AuthService', () => {
         configService,
       );
 
-      await expect(service.adminRegister(registerDto)).rejects.toThrow(BadRequestException);
+      await expect(service.adminRegister(registerDto)).rejects.toThrow(
+        BadRequestException,
+      );
       await expect(service.adminRegister(registerDto)).rejects.toThrow(
         'Failed to register admin user',
       );

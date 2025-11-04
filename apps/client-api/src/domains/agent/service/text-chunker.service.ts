@@ -89,7 +89,10 @@ export class TextChunkerService {
       }
 
       // If adding this sentence exceeds maxTokens, save current chunk
-      if (currentTokens + sentenceTokens > maxTokens && currentChunk.length > 0) {
+      if (
+        currentTokens + sentenceTokens > maxTokens &&
+        currentChunk.length > 0
+      ) {
         chunks.push(currentChunk.join(' '));
 
         // Start new chunk with overlap
@@ -138,7 +141,9 @@ export class TextChunkerService {
       i += maxWords - overlapWords; // Move forward with overlap
     }
 
-    this.logger.log(`✅ Created ${chunks.length} chunks (word-based splitting)`);
+    this.logger.log(
+      `✅ Created ${chunks.length} chunks (word-based splitting)`,
+    );
     return chunks;
   }
 

@@ -32,15 +32,22 @@ export class KafkaConfigService {
   }
 
   getConsumerConfig(groupId?: string) {
-    const enableSasl = this.configService.get<string>('KAFKA_ENABLE_SASL', 'false') === 'true';
+    const enableSasl =
+      this.configService.get<string>('KAFKA_ENABLE_SASL', 'false') === 'true';
     const username = this.configService.get<string>('KAFKA_USERNAME', 'user');
     const password = this.configService.get<string>('KAFKA_PASSWORD', '');
     const mechanism = this.configService.get<string>(
       'KAFKA_SASL_MECHANISM',
       'scram-sha-256',
     );
-    const connectionTimeout = this.configService.get<number>('KAFKA_CONNECTION_TIMEOUT', 30000);
-    const requestTimeout = this.configService.get<number>('KAFKA_REQUEST_TIMEOUT', 30000);
+    const connectionTimeout = this.configService.get<number>(
+      'KAFKA_CONNECTION_TIMEOUT',
+      30000,
+    );
+    const requestTimeout = this.configService.get<number>(
+      'KAFKA_REQUEST_TIMEOUT',
+      30000,
+    );
 
     const config: any = {
       clientId: this.clientId,
@@ -82,15 +89,22 @@ export class KafkaConfigService {
   }
 
   getProducerConfig(): KafkaConfig {
-    const enableSasl = this.configService.get<string>('KAFKA_ENABLE_SASL', 'false') === 'true';
+    const enableSasl =
+      this.configService.get<string>('KAFKA_ENABLE_SASL', 'false') === 'true';
     const username = this.configService.get<string>('KAFKA_USERNAME', 'user');
     const password = this.configService.get<string>('KAFKA_PASSWORD', '');
     const mechanism = this.configService.get<string>(
       'KAFKA_SASL_MECHANISM',
       'scram-sha-256',
     );
-    const connectionTimeout = this.configService.get<number>('KAFKA_CONNECTION_TIMEOUT', 30000);
-    const requestTimeout = this.configService.get<number>('KAFKA_REQUEST_TIMEOUT', 30000);
+    const connectionTimeout = this.configService.get<number>(
+      'KAFKA_CONNECTION_TIMEOUT',
+      30000,
+    );
+    const requestTimeout = this.configService.get<number>(
+      'KAFKA_REQUEST_TIMEOUT',
+      30000,
+    );
 
     const config: any = {
       clientId: this.clientId,

@@ -8,15 +8,15 @@ import { ClassroomRepository } from './repository';
 import { ClassroomService } from './service';
 import { AutoExamCreationService } from './services/auto-exam-creation.service';
 @Module({
-    imports: [AssignmentModule, EventsModule],
-    controllers: [PrivateClassroomController],
-    providers: [
-        ClassroomService,
-        ClassroomRepository,
-        EventsGateway,
-        LessonRepository,
-        AutoExamCreationService,
-    ],
-    exports: [ClassroomService, ClassroomRepository],
+  imports: [AssignmentModule, EventsModule],
+  controllers: [PrivateClassroomController],
+  providers: [
+    ClassroomService,
+    ClassroomRepository,
+    EventsGateway,
+    LessonRepository,
+    AutoExamCreationService,
+  ],
+  exports: [ClassroomService, ClassroomRepository],
 })
-export class ClassroomModule { }
+export class ClassroomModule {}

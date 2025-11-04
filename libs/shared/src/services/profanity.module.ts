@@ -6,9 +6,8 @@ import { ProfanityDetectionService } from './profanity-detection.service';
 
 @Global()
 @Module({
-    imports: [AiModule, RedisModule],
-    providers: [ProfanityDetectionService, ProfanityBanService],
-    exports: [ProfanityDetectionService, ProfanityBanService],
+  imports: [AiModule, RedisModule],
+  providers: [ProfanityDetectionService, ProfanityBanService],
+  exports: [ProfanityDetectionService, ProfanityBanService],
 })
-export class ProfanityModule { }
-
+export class ProfanityModule {}

@@ -38,11 +38,7 @@ export class SqlService {
         );
 
         // Generate SQL with error context from previous attempt
-        sqlResult = await this.generateSQL(
-          naturalQuery,
-          schema,
-          errorContext,
-        );
+        sqlResult = await this.generateSQL(naturalQuery, schema, errorContext);
         this.logger.log(`📝 Generated SQL: ${sqlResult.sql}`);
 
         if (!sqlResult.isValid) {
@@ -156,7 +152,10 @@ export class SqlService {
       context += `→ SQL chứa từ khoá nguy hiểm (DROP/DELETE/UPDATE/INSERT/ALTER TABLE/CREATE/TRUNCATE/EXEC).\n`;
       context += `→ CHỈ được dùng SELECT query. Có thể dùng subquery, CTE, window functions, date functions.\n`;
       context += `→ Kiểm tra xem có comment (--) hoặc nhiều statements (;) không.\n`;
-    } else if (errorMsg.includes('column') && errorMsg.includes('does not exist')) {
+    } else if (
+      errorMsg.includes('column') &&
+      errorMsg.includes('does not exist')
+    ) {
       const match = errorMsg.match(/column "([^"]+)" does not exist/);
       if (match) {
         context += `→ Cột "${match[1]}" không tồn tại trong schema. Kiểm tra lại tên cột chính xác.\n`;

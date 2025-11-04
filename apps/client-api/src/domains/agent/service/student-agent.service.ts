@@ -76,7 +76,11 @@ Bạn là trợ lý AI dành riêng cho HỌC SINH (Student).
         ['placeholder', '{agent_scratchpad}'],
       ]);
 
-      const agentRunnable = await createToolCallingAgent({ llm, tools, prompt });
+      const agentRunnable = await createToolCallingAgent({
+        llm,
+        tools,
+        prompt,
+      });
 
       this.agent = new AgentExecutor({
         agent: agentRunnable,
@@ -229,10 +233,7 @@ Bạn là trợ lý AI dành riêng cho HỌC SINH (Student).
     if (submissions.length === 0) return [];
 
     // Group by assignment title as topic
-    const topicMap = new Map<
-      string,
-      { totalScore: number; count: number }
-    >();
+    const topicMap = new Map<string, { totalScore: number; count: number }>();
 
     submissions.forEach((sub) => {
       const topic = sub.assignment.title || 'Chủ đề khác';
@@ -275,7 +276,7 @@ Bạn là trợ lý AI dành riêng cho HỌC SINH (Student).
       if (submissions.length === 0) return 0;
 
       let streak = 0;
-      let currentDate = new Date();
+      const currentDate = new Date();
       currentDate.setHours(0, 0, 0, 0);
 
       const submissionDates = new Set(
@@ -324,7 +325,8 @@ Bạn là trợ lý AI dành riêng cho HỌC SINH (Student).
     if (avgScore >= 80) {
       insights += '  ✅ Kết quả học tập rất tốt! Tiếp tục phát huy!\n';
     } else if (avgScore >= 60) {
-      insights += '  📚 Đang học khá tốt. Hãy ôn tập thêm để đạt điểm cao hơn!\n';
+      insights +=
+        '  📚 Đang học khá tốt. Hãy ôn tập thêm để đạt điểm cao hơn!\n';
     } else if (avgScore > 0) {
       insights +=
         '  💪 Cần cố gắng thêm. Đừng ngại hỏi thầy cô khi gặp khó khăn!\n';
@@ -336,8 +338,7 @@ Bạn là trợ lý AI dành riêng cho HỌC SINH (Student).
     } else if (streak >= 3) {
       insights += '  ⭐ Đang duy trì tốt! Cố gắng giữ vững nhé!\n';
     } else if (totalSubmissions > 0) {
-      insights +=
-        '  📅 Thử học đều đặn mỗi ngày để tạo thói quen tốt!\n';
+      insights += '  📅 Thử học đều đặn mỗi ngày để tạo thói quen tốt!\n';
     }
 
     // Activity-based insights
@@ -447,11 +448,7 @@ Bạn là trợ lý AI dành riêng cho HỌC SINH (Student).
     }
   }
 
-  async processQuery(
-    message: string,
-    userId: string,
-    conversationId?: string,
-  ) {
+  async processQuery(message: string, userId: string, conversationId?: string) {
     try {
       const startTime = Date.now();
 

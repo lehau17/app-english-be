@@ -26,7 +26,6 @@ export class RagTool extends StructuredTool {
 - "Tìm khóa liên quan" → RELATIONSHIP (use graph_query)
 - "Lộ trình học" → PATH (use graph_query)`;
 
-
   schema = z.object({
     query: z.string().describe('Câu hỏi cần tìm trong knowledge base'),
   });

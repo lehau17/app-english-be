@@ -52,7 +52,11 @@ describe('PodcastRatingService', () => {
 
     it('should create a new rating if one does not exist', async () => {
       prisma.podcastRating.findFirst.mockResolvedValue(null);
-      prisma.podcastRating.create.mockResolvedValue({ id: 'rating-1', ...createDto, userId });
+      prisma.podcastRating.create.mockResolvedValue({
+        id: 'rating-1',
+        ...createDto,
+        userId,
+      });
 
       const result = await service.createOrUpdate(userId, createDto);
 
@@ -66,9 +70,19 @@ describe('PodcastRatingService', () => {
     });
 
     it('should update an existing rating', async () => {
-      const existingRating = { id: 'rating-1', userId, podcastId: 'podcast-1', overallRating: 3, difficultyRating: 3, qualityRating: 3 };
+      const existingRating = {
+        id: 'rating-1',
+        userId,
+        podcastId: 'podcast-1',
+        overallRating: 3,
+        difficultyRating: 3,
+        qualityRating: 3,
+      };
       prisma.podcastRating.findFirst.mockResolvedValue(existingRating);
-      prisma.podcastRating.update.mockResolvedValue({ ...existingRating, ...createDto });
+      prisma.podcastRating.update.mockResolvedValue({
+        ...existingRating,
+        ...createDto,
+      });
 
       const result = await service.createOrUpdate(userId, createDto);
 
@@ -89,7 +103,12 @@ describe('PodcastRatingService', () => {
 
   describe('getByUserAndPodcast', () => {
     it('should return a rating for a user and podcast', async () => {
-      const rating = { id: 'rating-1', userId: 'user-1', podcastId: 'podcast-1', overallRating: 5 };
+      const rating = {
+        id: 'rating-1',
+        userId: 'user-1',
+        podcastId: 'podcast-1',
+        overallRating: 5,
+      };
       prisma.podcastRating.findFirst.mockResolvedValue(rating);
 
       const result = await service.getByUserAndPodcast('user-1', 'podcast-1');
@@ -103,30 +122,30 @@ describe('PodcastRatingService', () => {
 
   describe('getAggregatedForPodcast', () => {
     it('should return aggregated ratings for a podcast', async () => {
-        const ratings = [
-            { overallRating: 5, difficultyRating: 4, qualityRating: 5 },
-            { overallRating: 4, difficultyRating: 3, qualityRating: 4 },
-            { overallRating: null, difficultyRating: 5, qualityRating: 5 },
-        ];
-        prisma.podcastRating.findMany.mockResolvedValue(ratings);
+      const ratings = [
+        { overallRating: 5, difficultyRating: 4, qualityRating: 5 },
+        { overallRating: 4, difficultyRating: 3, qualityRating: 4 },
+        { overallRating: null, difficultyRating: 5, qualityRating: 5 },
+      ];
+      prisma.podcastRating.findMany.mockResolvedValue(ratings);
 
-        const result = await service.getAggregatedForPodcast('podcast-1');
+      const result = await service.getAggregatedForPodcast('podcast-1');
 
-        expect(prisma.podcastRating.findMany).toHaveBeenCalledWith({
-            where: { podcastId: 'podcast-1' },
-            select: {
-                overallRating: true,
-                difficultyRating: true,
-                qualityRating: true,
-            },
-        });
+      expect(prisma.podcastRating.findMany).toHaveBeenCalledWith({
+        where: { podcastId: 'podcast-1' },
+        select: {
+          overallRating: true,
+          difficultyRating: true,
+          qualityRating: true,
+        },
+      });
 
-        expect(result).toEqual({
-            averageOverall: 3.00,
-            averageDifficulty: 4.00,
-            averageQuality: 4.67,
-            total: 3,
-        });
+      expect(result).toEqual({
+        averageOverall: 3.0,
+        averageDifficulty: 4.0,
+        averageQuality: 4.67,
+        total: 3,
+      });
     });
 
     it('should return null averages when no ratings exist', async () => {
@@ -143,7 +162,11 @@ describe('PodcastRatingService', () => {
 
   describe('deleteRating', () => {
     it('should delete a rating if it exists', async () => {
-      const existingRating = { id: 'rating-1', userId: 'user-1', podcastId: 'podcast-1' };
+      const existingRating = {
+        id: 'rating-1',
+        userId: 'user-1',
+        podcastId: 'podcast-1',
+      };
       prisma.podcastRating.findFirst.mockResolvedValue(existingRating);
       prisma.podcastRating.delete.mockResolvedValue(existingRating);
 
@@ -192,7 +215,9 @@ describe('PodcastRatingService', () => {
           },
         },
       });
-      expect(prisma.podcastRating.count).toHaveBeenCalledWith({ where: { podcastId: 'podcast-1' } });
+      expect(prisma.podcastRating.count).toHaveBeenCalledWith({
+        where: { podcastId: 'podcast-1' },
+      });
       expect(result).toEqual({ data: ratings, total });
     });
   });

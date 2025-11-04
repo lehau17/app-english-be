@@ -1,4 +1,3 @@
-
 import { DatabaseModule } from '@app/database';
 import { AiModule, SharedModule, TtsService } from '@app/shared';
 import { Module } from '@nestjs/common';
@@ -18,35 +17,35 @@ import { BackgroundWorkerUploadService } from './services/upload.service';
 import { TtsListener } from './tts/tts.listener';
 
 @Module({
-    imports: [
-        ConfigModule.forRoot({ isGlobal: true }),
-        DatabaseModule,
-        SharedModule,
-        AiModule,
-        DashboardModule,
-        ScheduleModule.forRoot(),
-        LeaderboardWorkerModule,
-        ClassroomModule,
-    ],
-    controllers: [BackgroundWorkerController],
-    providers: [
-        BackgroundWorkerService,
-        // KafkaJS Listeners (replaced NestJS @MessagePattern)
-        TtsListener,
-        Neo4jSyncListener,
-        // Existing services
-        PodcastGenerationService,
-        PodcastCron,
-        ClassroomSessionCron,
-        ClassroomStatusCron,
-        {
-            provide: TtsService,
-            useFactory: (uploadService: BackgroundWorkerUploadService) => {
-                return new TtsService(uploadService);
-            },
-            inject: [BackgroundWorkerUploadService],
-        },
-        BackgroundWorkerUploadService,
-    ],
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    DatabaseModule,
+    SharedModule,
+    AiModule,
+    DashboardModule,
+    ScheduleModule.forRoot(),
+    LeaderboardWorkerModule,
+    ClassroomModule,
+  ],
+  controllers: [BackgroundWorkerController],
+  providers: [
+    BackgroundWorkerService,
+    // KafkaJS Listeners (replaced NestJS @MessagePattern)
+    TtsListener,
+    Neo4jSyncListener,
+    // Existing services
+    PodcastGenerationService,
+    PodcastCron,
+    ClassroomSessionCron,
+    ClassroomStatusCron,
+    {
+      provide: TtsService,
+      useFactory: (uploadService: BackgroundWorkerUploadService) => {
+        return new TtsService(uploadService);
+      },
+      inject: [BackgroundWorkerUploadService],
+    },
+    BackgroundWorkerUploadService,
+  ],
 })
-export class BackgroundWorkerModule { }
+export class BackgroundWorkerModule {}

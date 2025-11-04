@@ -6,17 +6,13 @@ import { Prisma } from '@prisma/client';
 export class SessionScheduleRepository {
   constructor(private readonly prisma: PrismaRepository) {}
 
-  async createMany(
-    data: Prisma.SessionScheduleCreateManyInput[],
-  ) {
+  async createMany(data: Prisma.SessionScheduleCreateManyInput[]) {
     return await this.prisma.sessionSchedule.createMany({
       data,
     });
   }
 
-  async create(
-    data: Prisma.SessionScheduleCreateInput,
-  ) {
+  async create(data: Prisma.SessionScheduleCreateInput) {
     return await this.prisma.sessionSchedule.create({
       data,
     });

@@ -1,6 +1,10 @@
 import { PodcastRepository } from './podcast.repository';
 import { PrismaRepository } from '@app/database';
-import { PodcastCategory, PodcastDifficulty, PodcastSource } from '@prisma/client';
+import {
+  PodcastCategory,
+  PodcastDifficulty,
+  PodcastSource,
+} from '@prisma/client';
 
 // Minimal mock implementations for dependencies
 const makeMocks = () => {
@@ -105,7 +109,9 @@ describe('PodcastRepository', () => {
       });
 
       const findManyCall = prisma.podcast.findMany.mock.calls[0][0];
-      expect(findManyCall.where.difficulty).toBe(PodcastDifficulty.intermediate);
+      expect(findManyCall.where.difficulty).toBe(
+        PodcastDifficulty.intermediate,
+      );
     });
 
     test('should filter by duration range (short)', async () => {

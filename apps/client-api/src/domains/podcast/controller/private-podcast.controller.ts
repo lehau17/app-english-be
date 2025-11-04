@@ -19,8 +19,10 @@ import {
 } from '@nestjs/swagger';
 import {
   CreatePodcastDto,
+  ExtractYouTubeTranscriptDto,
   GetPodcastsQueryDto,
   UpdatePodcastDto,
+  YouTubeTranscriptResponseDto,
 } from '../dto/podcast.dto';
 import {
   CreateRatingDto,
@@ -28,6 +30,7 @@ import {
 } from '../dto/user-interaction.dto';
 import { PodcastService } from '../service/podcast.service';
 import { TextToPodcastService } from '../service/text-to-podcast.service';
+import { YouTubeTranscriptService } from '../service/youtube-transcript.service';
 
 @ApiTags('Podcasts')
 @ApiBearerAuth('Authorization')
@@ -36,6 +39,7 @@ export class PodcastController {
   constructor(
     private readonly podcastService: PodcastService,
     private readonly textToPodcastService: TextToPodcastService,
+    private readonly youtubeTranscriptService: YouTubeTranscriptService,
   ) {}
 
   @Get()
@@ -158,5 +162,18 @@ export class PodcastController {
   ) {
     const userId = payload.sub;
     return this.podcastService.getPodcastAttempts(podcastId, userId);
+  }
+
+  @Post('youtube/extract-transcript')
+  @ApiOperation({
+    summary: 'Extract transcript from YouTube video',
+    description:
+      'Extracts transcript/captions from YouTube video URL. Returns full transcript text and segments with timestamps.',
+  })
+  @ResponseMessage('Transcript extracted successfully')
+  async extractYouTubeTranscript(
+    @Body() dto: ExtractYouTubeTranscriptDto,
+  ): Promise<YouTubeTranscriptResponseDto> {
+    return this.youtubeTranscriptService.extractTranscript(dto.videoUrl);
   }
 }

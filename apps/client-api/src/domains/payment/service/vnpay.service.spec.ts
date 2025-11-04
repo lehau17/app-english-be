@@ -11,7 +11,8 @@ describe('VNPayService', () => {
         const config: Record<string, string> = {
           VNPAY_TMN_CODE: 'test_tmn_code',
           VNPAY_HASH_SECRET: 'test_secret_key',
-          VNPAY_PAYMENT_URL: 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
+          VNPAY_PAYMENT_URL:
+            'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
           VNPAY_RETURN_URL: 'http://localhost:3000/payment/return',
         };
         return config[key] || defaultValue;
@@ -37,7 +38,9 @@ describe('VNPayService', () => {
 
       const url = service.createPaymentUrl(params);
 
-      expect(url).toContain('https://sandbox.vnpayment.vn/paymentv2/vpcpay.html');
+      expect(url).toContain(
+        'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html',
+      );
       expect(url).toContain('vnp_TxnRef=ORDER_20250101_001');
       expect(url).toContain('vnp_Amount=10000000'); // 100000 * 100
       expect(url).toContain('vnp_TmnCode=test_tmn_code');
@@ -55,7 +58,9 @@ describe('VNPayService', () => {
 
       const url = service.createPaymentUrl(params);
 
-      expect(url).toContain('vnp_ReturnUrl=http%3A%2F%2Flocalhost%3A3000%2Fpayment%2Freturn');
+      expect(url).toContain(
+        'vnp_ReturnUrl=http%3A%2F%2Flocalhost%3A3000%2Fpayment%2Freturn',
+      );
     });
 
     it('should normalize IPv6 address to IPv4', () => {
@@ -83,7 +88,9 @@ describe('VNPayService', () => {
       };
 
       // Mock the verification - in real scenario, this would calculate the actual hash
-      jest.spyOn(service as any, 'createSecureHash').mockReturnValue('valid_hash');
+      jest
+        .spyOn(service as any, 'createSecureHash')
+        .mockReturnValue('valid_hash');
 
       const result = service.verifyReturnData(returnData);
 
@@ -99,7 +106,9 @@ describe('VNPayService', () => {
         vnp_SecureHash: 'invalid_hash',
       };
 
-      jest.spyOn(service as any, 'createSecureHash').mockReturnValue('valid_hash');
+      jest
+        .spyOn(service as any, 'createSecureHash')
+        .mockReturnValue('valid_hash');
 
       const result = service.verifyReturnData(returnData);
 
@@ -128,12 +137,16 @@ describe('VNPayService', () => {
 
     it('should return correct message for user cancelled', () => {
       const message = service.getResponseMessage('24');
-      expect(message).toBe('Giao dịch không thành công do: Khách hàng hủy giao dịch');
+      expect(message).toBe(
+        'Giao dịch không thành công do: Khách hàng hủy giao dịch',
+      );
     });
 
     it('should return correct message for insufficient funds', () => {
       const message = service.getResponseMessage('51');
-      expect(message).toBe('Giao dịch không thành công do: Tài khoản của quý khách không đủ số dư để thực hiện giao dịch.');
+      expect(message).toBe(
+        'Giao dịch không thành công do: Tài khoản của quý khách không đủ số dư để thực hiện giao dịch.',
+      );
     });
 
     it('should return unknown error message for undefined codes', () => {

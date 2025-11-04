@@ -264,11 +264,7 @@ export class LessonService {
     );
 
     // Trigger parent notification if activity completed successfully
-    const passedStates: ProgressState[] = [
-      'done',
-      'mastered',
-      'review_needed',
-    ];
+    const passedStates: ProgressState[] = ['done', 'mastered', 'review_needed'];
     if (passedStates.includes(p.state as ProgressState)) {
       await this.notifyParentActivityCompleted(userId, activityId, score);
     }

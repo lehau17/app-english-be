@@ -1,14 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DifficultyLevel } from '@prisma/client';
 import {
-    IsEnum,
-    IsInt,
-    IsNotEmpty,
-    IsObject,
-    IsOptional,
-    IsString,
-    Max,
-    Min
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
 } from 'class-validator';
 
 export class StartAiSpeakingSessionDto {

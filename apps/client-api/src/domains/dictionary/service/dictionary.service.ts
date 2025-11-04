@@ -109,7 +109,11 @@ export class DictionaryService {
     const rhymes = await this.wordsApiService.getRhymes(normalizedWord);
 
     // Cache for 7 days
-    await this.redisService.set(cacheKey, JSON.stringify(rhymes), this.CACHE_TTL);
+    await this.redisService.set(
+      cacheKey,
+      JSON.stringify(rhymes),
+      this.CACHE_TTL,
+    );
 
     return rhymes;
   }
@@ -167,7 +171,11 @@ export class DictionaryService {
     }
 
     // Cache the result for 7 days
-    await this.redisService.set(cacheKey, JSON.stringify(result), this.CACHE_TTL);
+    await this.redisService.set(
+      cacheKey,
+      JSON.stringify(result),
+      this.CACHE_TTL,
+    );
 
     return result;
   }
@@ -222,16 +230,9 @@ export class DictionaryService {
     return null;
   }
 
-  private async cacheWord(
-    key: string,
-    data: WordResultDto,
-  ): Promise<void> {
+  private async cacheWord(key: string, data: WordResultDto): Promise<void> {
     try {
-      await this.redisService.set(
-        key,
-        JSON.stringify(data),
-        this.CACHE_TTL,
-      );
+      await this.redisService.set(key, JSON.stringify(data), this.CACHE_TTL);
     } catch (error) {
       this.logger.error(`Cache write error: ${error.message}`);
     }
@@ -267,7 +268,8 @@ export class DictionaryService {
       word,
       pronunciation,
       audioUrl: this.wordsApiService.getPronunciationUrl(word),
-      definitions: definitions.length > 0 ? definitions : this.getDefaultDefinition(word),
+      definitions:
+        definitions.length > 0 ? definitions : this.getDefaultDefinition(word),
       frequency: apiData.frequency,
       synonyms: Array.from(allSynonyms).slice(0, 10),
       antonyms: Array.from(allAntonyms).slice(0, 10),
@@ -308,20 +310,87 @@ export class DictionaryService {
   private getFallbackSuggestions(query: string, limit: number): string[] {
     // Common English words for autocomplete fallback
     const commonWords = [
-      'hello', 'world', 'example', 'test', 'word', 'language', 'english', 'learning',
-      'beautiful', 'wonderful', 'amazing', 'fantastic', 'excellent', 'great', 'good',
-      'happy', 'sad', 'angry', 'excited', 'calm', 'peaceful', 'strong', 'weak',
-      'hot', 'cold', 'warm', 'cool', 'big', 'small', 'large', 'tiny',
-      'cat', 'dog', 'bird', 'fish', 'animal', 'pet', 'house', 'home',
-      'book', 'read', 'write', 'learn', 'study', 'teach', 'school', 'student',
-      'work', 'play', 'run', 'walk', 'jump', 'swim', 'fly', 'drive',
-      'eat', 'drink', 'sleep', 'wake', 'talk', 'listen', 'watch', 'see',
-      'think', 'know', 'understand', 'believe', 'hope', 'wish', 'want', 'need',
-      'love', 'like', 'enjoy', 'prefer', 'choose', 'decide', 'try', 'help',
+      'hello',
+      'world',
+      'example',
+      'test',
+      'word',
+      'language',
+      'english',
+      'learning',
+      'beautiful',
+      'wonderful',
+      'amazing',
+      'fantastic',
+      'excellent',
+      'great',
+      'good',
+      'happy',
+      'sad',
+      'angry',
+      'excited',
+      'calm',
+      'peaceful',
+      'strong',
+      'weak',
+      'hot',
+      'cold',
+      'warm',
+      'cool',
+      'big',
+      'small',
+      'large',
+      'tiny',
+      'cat',
+      'dog',
+      'bird',
+      'fish',
+      'animal',
+      'pet',
+      'house',
+      'home',
+      'book',
+      'read',
+      'write',
+      'learn',
+      'study',
+      'teach',
+      'school',
+      'student',
+      'work',
+      'play',
+      'run',
+      'walk',
+      'jump',
+      'swim',
+      'fly',
+      'drive',
+      'eat',
+      'drink',
+      'sleep',
+      'wake',
+      'talk',
+      'listen',
+      'watch',
+      'see',
+      'think',
+      'know',
+      'understand',
+      'believe',
+      'hope',
+      'wish',
+      'want',
+      'need',
+      'love',
+      'like',
+      'enjoy',
+      'prefer',
+      'choose',
+      'decide',
+      'try',
+      'help',
     ];
 
-    return commonWords
-      .filter((w) => w.startsWith(query))
-      .slice(0, limit);
+    return commonWords.filter((w) => w.startsWith(query)).slice(0, limit);
   }
 }

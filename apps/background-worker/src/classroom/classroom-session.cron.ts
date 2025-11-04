@@ -131,12 +131,12 @@ export class ClassroomSessionCron {
 
       for (const userId of recipients) {
         try {
-            this.kafkaService.sendAsync('notifications', {
-              userId,
-              channel: 'email',
-              title,
-              body,
-            })
+          this.kafkaService.sendAsync('notifications', {
+            userId,
+            channel: 'email',
+            title,
+            body,
+          });
         } catch (error) {
           this.logger.error(
             `Failed to dispatch reminder for session ${session.id} to user ${userId}`,

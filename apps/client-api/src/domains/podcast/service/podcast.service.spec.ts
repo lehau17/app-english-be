@@ -1,7 +1,11 @@
 import { PodcastService } from './podcast.service';
 import { PodcastRepository } from '../repository/podcast.repository';
 import { PrismaRepository } from '@app/database';
-import { NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import {
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PodcastCategory, PodcastDifficulty } from '@prisma/client';
 
 // Minimal mock implementations for dependencies
@@ -78,14 +82,20 @@ describe('PodcastService', () => {
         total: 2,
       });
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
       const result = await service.findAll('user-1', { page: 1, limit: 20 });
 
       expect(result).toBeDefined();
       expect(result.data).toEqual(mockPodcasts);
       expect(result.totalItems).toBe(2);
-      expect(podcastRepository.findAll).toHaveBeenCalledWith('user-1', { page: 1, limit: 20 });
+      expect(podcastRepository.findAll).toHaveBeenCalledWith('user-1', {
+        page: 1,
+        limit: 20,
+      });
     });
   });
 
@@ -102,7 +112,10 @@ describe('PodcastService', () => {
 
       podcastRepository.findById.mockResolvedValue(mockPodcast);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
       const result = await service.getPodcastById('podcast-1');
 
@@ -115,9 +128,14 @@ describe('PodcastService', () => {
 
       podcastRepository.findById.mockResolvedValue(null);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      await expect(service.getPodcastById('non-existent')).rejects.toThrow(NotFoundException);
+      await expect(service.getPodcastById('non-existent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -169,18 +187,23 @@ describe('PodcastService', () => {
 
       podcastRepository.createPodcast.mockResolvedValue(mockCreatedPodcast);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
       const result = await service.createPodcast(createDto, 'author-1');
 
       expect(result).toEqual(mockCreatedPodcast);
       expect(podcastRepository.createPodcast).toHaveBeenCalled();
-      
+
       const callArgs = podcastRepository.createPodcast.mock.calls[0][0];
       expect(callArgs.title).toBe(createDto.title);
       expect(callArgs.transcript).toBe(createDto.content);
       expect(callArgs.author).toEqual({ connect: { id: 'author-1' } });
-      expect(callArgs.gaps).toEqual({ create: [{ startIndex: 0, endIndex: 4, answer: 'This', orderNo: 1 }] });
+      expect(callArgs.gaps).toEqual({
+        create: [{ startIndex: 0, endIndex: 4, answer: 'This', orderNo: 1 }],
+      });
     });
 
     test('should create podcast without gaps', async () => {
@@ -207,12 +230,15 @@ describe('PodcastService', () => {
 
       podcastRepository.createPodcast.mockResolvedValue(mockCreatedPodcast);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
       const result = await service.createPodcast(createDto, 'author-1');
 
       expect(result).toEqual(mockCreatedPodcast);
-      
+
       const callArgs = podcastRepository.createPodcast.mock.calls[0][0];
       expect(callArgs.gaps).toBeUndefined();
     });
@@ -239,12 +265,18 @@ describe('PodcastService', () => {
         ...updateDto,
       });
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
       const result = await service.update('podcast-1', updateDto, 'user-1');
 
       expect(result.title).toBe('New Title');
-      expect(podcastRepository.updatePodcast).toHaveBeenCalledWith('podcast-1', updateDto);
+      expect(podcastRepository.updatePodcast).toHaveBeenCalledWith(
+        'podcast-1',
+        updateDto,
+      );
     });
 
     test('should throw NotFoundException when podcast not found', async () => {
@@ -252,9 +284,14 @@ describe('PodcastService', () => {
 
       podcastRepository.findById.mockResolvedValue(null);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      await expect(service.update('podcast-1', { title: 'New' }, 'user-1')).rejects.toThrow(NotFoundException);
+      await expect(
+        service.update('podcast-1', { title: 'New' }, 'user-1'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     test('should throw ForbiddenException when user is not author', async () => {
@@ -268,9 +305,14 @@ describe('PodcastService', () => {
 
       podcastRepository.findById.mockResolvedValue(mockPodcast);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      await expect(service.update('podcast-1', { title: 'New' }, 'user-2')).rejects.toThrow(ForbiddenException);
+      await expect(
+        service.update('podcast-1', { title: 'New' }, 'user-2'),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
@@ -287,7 +329,10 @@ describe('PodcastService', () => {
       podcastRepository.findById.mockResolvedValue(mockPodcast);
       podcastRepository.deletePodcast.mockResolvedValue(mockPodcast);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
       await service.remove('podcast-1', 'user-1');
 
@@ -299,9 +344,14 @@ describe('PodcastService', () => {
 
       podcastRepository.findById.mockResolvedValue(null);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      await expect(service.remove('podcast-1', 'user-1')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('podcast-1', 'user-1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     test('should throw ForbiddenException when user is not author', async () => {
@@ -315,9 +365,14 @@ describe('PodcastService', () => {
 
       podcastRepository.findById.mockResolvedValue(mockPodcast);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      await expect(service.remove('podcast-1', 'user-2')).rejects.toThrow(ForbiddenException);
+      await expect(service.remove('podcast-1', 'user-2')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 
@@ -363,9 +418,16 @@ describe('PodcastService', () => {
       });
       podcastRepository.updatePodcast.mockResolvedValue({});
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      const result = await service.createRating('podcast-1', 'user-1', createRatingDto);
+      const result = await service.createRating(
+        'podcast-1',
+        'user-1',
+        createRatingDto,
+      );
 
       expect(result).toEqual(mockRating);
       expect(podcastRepository.upsertRating).toHaveBeenCalled();
@@ -377,14 +439,17 @@ describe('PodcastService', () => {
 
       podcastRepository.findById.mockResolvedValue(null);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
       await expect(
         service.createRating('podcast-1', 'user-1', {
           overallRating: 5,
           review: 'Test',
           title: 'Test',
-        })
+        }),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -415,9 +480,15 @@ describe('PodcastService', () => {
       podcastRepository.listRatings.mockResolvedValue(mockRatings);
       podcastRepository.countRatings.mockResolvedValue(2);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      const result = await service.getRatings('podcast-1', { page: 1, limit: 10 });
+      const result = await service.getRatings('podcast-1', {
+        page: 1,
+        limit: 10,
+      });
 
       expect(result.data).toEqual(mockRatings);
       expect(result.totalItems).toBe(2);
@@ -460,7 +531,10 @@ describe('PodcastService', () => {
         .mockResolvedValueOnce(null); // No last attempt
       prisma.podcastAttempt.create.mockResolvedValue(mockAttempt);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
       const result = await service.startPodcastAttempt('podcast-1', 'user-1');
 
@@ -503,7 +577,10 @@ describe('PodcastService', () => {
       prisma.podcast.findUnique.mockResolvedValue(mockPodcast);
       prisma.podcastAttempt.findFirst.mockResolvedValue(mockExistingAttempt);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
       const result = await service.startPodcastAttempt('podcast-1', 'user-1');
 
@@ -518,9 +595,14 @@ describe('PodcastService', () => {
 
       prisma.podcast.findUnique.mockResolvedValue(null);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      await expect(service.startPodcastAttempt('podcast-1', 'user-1')).rejects.toThrow(NotFoundException);
+      await expect(
+        service.startPodcastAttempt('podcast-1', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -558,9 +640,16 @@ describe('PodcastService', () => {
       prisma.podcastAttempt.findUnique.mockResolvedValue(mockAttempt);
       prisma.podcastAttempt.update.mockResolvedValue(mockUpdatedAttempt);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      const result = await service.submitPodcastAttempt('podcast-1', 'attempt-1', answers);
+      const result = await service.submitPodcastAttempt(
+        'podcast-1',
+        'attempt-1',
+        answers,
+      );
 
       expect(result.correctCount).toBe(1);
       expect(result.totalQuestions).toBe(2);
@@ -573,9 +662,14 @@ describe('PodcastService', () => {
 
       prisma.podcast.findUnique.mockResolvedValue(null);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      await expect(service.submitPodcastAttempt('podcast-1', 'attempt-1', {})).rejects.toThrow(NotFoundException);
+      await expect(
+        service.submitPodcastAttempt('podcast-1', 'attempt-1', {}),
+      ).rejects.toThrow(NotFoundException);
     });
 
     test('should throw NotFoundException when attempt not found', async () => {
@@ -589,9 +683,14 @@ describe('PodcastService', () => {
       prisma.podcast.findUnique.mockResolvedValue(mockPodcast);
       prisma.podcastAttempt.findUnique.mockResolvedValue(null);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      await expect(service.submitPodcastAttempt('podcast-1', 'attempt-1', {})).rejects.toThrow(NotFoundException);
+      await expect(
+        service.submitPodcastAttempt('podcast-1', 'attempt-1', {}),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -623,9 +722,17 @@ describe('PodcastService', () => {
       prisma.podcastAttempt.findUnique.mockResolvedValue(mockAttempt);
       prisma.podcastAttempt.update.mockResolvedValue(mockUpdatedAttempt);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      const result = await service.saveDraft('podcast-1', 'attempt-1', answers, 50);
+      const result = await service.saveDraft(
+        'podcast-1',
+        'attempt-1',
+        answers,
+        50,
+      );
 
       expect(result.attemptId).toBe('attempt-1');
       expect(result.savedAnswers).toEqual(answers);
@@ -647,9 +754,14 @@ describe('PodcastService', () => {
       prisma.podcast.findUnique.mockResolvedValue(mockPodcast);
       prisma.podcastAttempt.findUnique.mockResolvedValue(mockAttempt);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      await expect(service.saveDraft('podcast-1', 'attempt-1', {}, 50)).rejects.toThrow(BadRequestException);
+      await expect(
+        service.saveDraft('podcast-1', 'attempt-1', {}, 50),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -689,7 +801,10 @@ describe('PodcastService', () => {
       prisma.podcast.findUnique.mockResolvedValue(mockPodcast);
       prisma.podcastAttempt.findMany.mockResolvedValue(mockAttempts);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
       const result = await service.getPodcastAttempts('podcast-1', 'user-1');
 
@@ -703,9 +818,14 @@ describe('PodcastService', () => {
 
       prisma.podcast.findUnique.mockResolvedValue(null);
 
-      const service = new PodcastService(prisma as any, podcastRepository as any);
+      const service = new PodcastService(
+        prisma as any,
+        podcastRepository as any,
+      );
 
-      await expect(service.getPodcastAttempts('podcast-1', 'user-1')).rejects.toThrow(NotFoundException);
+      await expect(
+        service.getPodcastAttempts('podcast-1', 'user-1'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

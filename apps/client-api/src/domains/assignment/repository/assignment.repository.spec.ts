@@ -82,7 +82,11 @@ describe('AssignmentRepository', () => {
             id: 'activity-1',
             type: 'quiz' as any,
             title: 'Quiz Activity',
-            content: { question: 'Test?', options: ['A', 'B'], correctIndex: 0 },
+            content: {
+              question: 'Test?',
+              options: ['A', 'B'],
+              correctIndex: 0,
+            },
             points: 10,
           },
         ],
@@ -142,9 +146,7 @@ describe('AssignmentRepository', () => {
       const assignment = {
         id: 'assignment-1',
         title: 'Test Assignment',
-        submissions: [
-          { id: 'submission-1', studentId: 'student-1' },
-        ],
+        submissions: [{ id: 'submission-1', studentId: 'student-1' }],
       };
 
       mockPrisma.assignment.findUnique.mockResolvedValue(assignment);
@@ -173,10 +175,13 @@ describe('AssignmentRepository', () => {
       mockPrisma.assignment.findMany.mockResolvedValue(assignments);
       mockPrisma.assignment.count.mockResolvedValue(2);
 
-      const result = await repository.findAssignmentsByClassroom('classroom-1', {
-        page: 1,
-        limit: 20,
-      });
+      const result = await repository.findAssignmentsByClassroom(
+        'classroom-1',
+        {
+          page: 1,
+          limit: 20,
+        },
+      );
 
       expect(result.assignments).toEqual(assignments);
       expect(result.total).toBe(2);
@@ -262,7 +267,10 @@ describe('AssignmentRepository', () => {
       mockPrisma.assignment.update.mockResolvedValue(updatedAssignment);
       mockPrisma.assignment.findUnique.mockResolvedValue(updatedAssignment);
 
-      const result = await repository.updateAssignment('assignment-1', updateData);
+      const result = await repository.updateAssignment(
+        'assignment-1',
+        updateData,
+      );
 
       expect(result).toEqual(updatedAssignment);
       expect(mockPrisma.$transaction).toHaveBeenCalled();
@@ -293,7 +301,10 @@ describe('AssignmentRepository', () => {
       mockPrisma.assignmentActivity.createMany.mockResolvedValue({ count: 1 });
       mockPrisma.assignment.findUnique.mockResolvedValue(updatedAssignment);
 
-      const result = await repository.updateAssignment('assignment-1', updateData);
+      const result = await repository.updateAssignment(
+        'assignment-1',
+        updateData,
+      );
 
       expect(mockPrisma.$transaction).toHaveBeenCalled();
       expect(result).toEqual(updatedAssignment);
@@ -353,7 +364,9 @@ describe('AssignmentRepository', () => {
         },
       };
 
-      mockPrisma.assignmentSubmission.create.mockResolvedValue(expectedSubmission);
+      mockPrisma.assignmentSubmission.create.mockResolvedValue(
+        expectedSubmission,
+      );
 
       const result = await repository.submitAssignment(submissionData);
 
@@ -385,9 +398,14 @@ describe('AssignmentRepository', () => {
         student: { id: 'student-1', displayName: 'Student' },
       };
 
-      mockPrisma.assignmentSubmission.update.mockResolvedValue(gradedSubmission);
+      mockPrisma.assignmentSubmission.update.mockResolvedValue(
+        gradedSubmission,
+      );
 
-      const result = await repository.gradeSubmission('submission-1', gradeData);
+      const result = await repository.gradeSubmission(
+        'submission-1',
+        gradeData,
+      );
 
       expect(result).toEqual(gradedSubmission);
       expect(mockPrisma.assignmentSubmission.update).toHaveBeenCalledWith(
@@ -477,7 +495,8 @@ describe('AssignmentRepository', () => {
 
       mockPrisma.assignmentSubmission.findMany.mockResolvedValue(submissions);
 
-      const result = await repository.getSubmissionsByAssignment('assignment-1');
+      const result =
+        await repository.getSubmissionsByAssignment('assignment-1');
 
       expect(result).toEqual(submissions);
       expect(mockPrisma.assignmentSubmission.findMany).toHaveBeenCalledWith(

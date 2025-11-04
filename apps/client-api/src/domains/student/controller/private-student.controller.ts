@@ -2,26 +2,32 @@
 import { ResponseMessage } from '@app/shared'; // decorator message bạn đã tạo
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-    BadRequestException,
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    ParseUUIDPipe,
-    Patch,
-    Post,
-    Query,
-    UploadedFile,
-    UseInterceptors,
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { User } from '@prisma/client';
 import {
-    CreateStudentDto,
-    FilterStudentRequestDto,
-    UpdateStudentDto,
+  CreateStudentDto,
+  FilterStudentRequestDto,
+  UpdateStudentDto,
 } from '../dto/student.dto';
 import { StudentService } from '../service/student.service';
 
@@ -29,9 +35,7 @@ import { StudentService } from '../service/student.service';
 @ApiBearerAuth('Authorization')
 @Controller('/private/v1/students')
 export class StudentController {
-  constructor(
-    private readonly studentService: StudentService,
-  ) {}
+  constructor(private readonly studentService: StudentService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a student' })

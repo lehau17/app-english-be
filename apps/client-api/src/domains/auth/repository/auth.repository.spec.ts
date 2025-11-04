@@ -95,7 +95,10 @@ describe('AuthRepository', () => {
       // Verify password was hashed
       const createCall = prisma.user.create.mock.calls[0][0];
       const passwordHash = createCall.data.passwordHash;
-      const isPasswordHashed = await bcrypt.compare(registerDto.password, passwordHash);
+      const isPasswordHashed = await bcrypt.compare(
+        registerDto.password,
+        passwordHash,
+      );
       expect(isPasswordHashed).toBe(true);
     });
   });
@@ -132,7 +135,10 @@ describe('AuthRepository', () => {
       // Verify password was hashed
       const updateCall = prisma.user.update.mock.calls[0][0];
       const passwordHash = updateCall.data.passwordHash;
-      const isPasswordHashed = await bcrypt.compare(changePasswordDto.newPassword, passwordHash);
+      const isPasswordHashed = await bcrypt.compare(
+        changePasswordDto.newPassword,
+        passwordHash,
+      );
       expect(isPasswordHashed).toBe(true);
     });
   });
@@ -191,7 +197,9 @@ describe('AuthRepository', () => {
 
       const repository = new AuthRepository(prisma, tokenRepository);
 
-      const result = await repository.findUserForLogin('nonexistent@example.com');
+      const result = await repository.findUserForLogin(
+        'nonexistent@example.com',
+      );
 
       expect(result).toBeNull();
     });
@@ -452,7 +460,9 @@ describe('AuthRepository', () => {
 
       const repository = new AuthRepository(prisma, tokenRepository);
 
-      const result = await repository.findParentRelation('child-without-parent');
+      const result = await repository.findParentRelation(
+        'child-without-parent',
+      );
 
       expect(result).toBeNull();
     });
@@ -596,7 +606,11 @@ describe('AuthRepository', () => {
 
       const repository = new AuthRepository(prisma, tokenRepository);
 
-      const result = await repository.createPasswordResetToken(userId, tokenHash, expiresAt);
+      const result = await repository.createPasswordResetToken(
+        userId,
+        tokenHash,
+        expiresAt,
+      );
 
       expect(result).toEqual(mockToken);
       expect(prisma.passwordResetToken.create).toHaveBeenCalledWith({
@@ -653,7 +667,8 @@ describe('AuthRepository', () => {
 
       const repository = new AuthRepository(prisma, tokenRepository);
 
-      const result = await repository.findValidPasswordResetToken('invalid-token-hash');
+      const result =
+        await repository.findValidPasswordResetToken('invalid-token-hash');
 
       expect(result).toBeNull();
     });

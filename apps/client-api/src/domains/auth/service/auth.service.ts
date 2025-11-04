@@ -1,24 +1,24 @@
 import { CreateJwtPayload, JwtPayload, TokenRepository } from '@app/shared';
 import { KafkaService } from '@app/shared/kafka/kafka.service';
 import {
-    BadRequestException,
-    Injectable,
-    Logger,
-    UnauthorizedException,
+  BadRequestException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import {
-    ChangePasswordDto,
-    ForgotPasswordDto,
-    LoginDto,
-    LogoutDto,
-    RefreshTokenDto,
-    RegisterDto,
-    ResetPasswordDto,
-    UpdateProfileDto,
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  LoginDto,
+  LogoutDto,
+  RefreshTokenDto,
+  RegisterDto,
+  ResetPasswordDto,
+  UpdateProfileDto,
 } from '../dto';
 import { AuthRepository } from '../repository';
 
@@ -287,11 +287,13 @@ export class AuthService {
     const parentRelation = await this.authRepository.findParentRelation(userId);
     return {
       hasParent: !!parentRelation,
-      parentInfo: parentRelation ? {
-        id: parentRelation.parent.id,
-        displayName: parentRelation.parent.displayName,
-        email: parentRelation.parent.email
-      } : null
+      parentInfo: parentRelation
+        ? {
+            id: parentRelation.parent.id,
+            displayName: parentRelation.parent.displayName,
+            email: parentRelation.parent.email,
+          }
+        : null,
     };
   }
 }

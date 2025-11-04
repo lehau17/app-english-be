@@ -196,7 +196,10 @@ describe('PaymentRepository', () => {
 
       mockTransactionModel.update.mockResolvedValue(updatedTransaction);
 
-      const result = await repository.updateTransactionStatus(transactionId, status);
+      const result = await repository.updateTransactionStatus(
+        transactionId,
+        status,
+      );
 
       expect(result).toEqual(updatedTransaction);
       expect(mockTransactionModel.update).toHaveBeenCalledWith({
@@ -263,7 +266,11 @@ describe('PaymentRepository', () => {
 
       mockTransactionModel.findMany.mockResolvedValue(transactions);
 
-      const result = await repository.getStudentTransactions(studentId, 5, cursor);
+      const result = await repository.getStudentTransactions(
+        studentId,
+        5,
+        cursor,
+      );
 
       expect(result).toEqual(transactions);
       expect(mockTransactionModel.findMany).toHaveBeenCalledWith({
@@ -336,7 +343,11 @@ describe('PaymentRepository', () => {
         isPurchased: true,
       });
 
-      await repository.updateStudentPurchaseStatus(studentId, classroomId, true);
+      await repository.updateStudentPurchaseStatus(
+        studentId,
+        classroomId,
+        true,
+      );
 
       expect(mockClassroomStudentModel.update).toHaveBeenCalledWith({
         where: {
@@ -359,7 +370,11 @@ describe('PaymentRepository', () => {
         isPurchased: false,
       });
 
-      await repository.updateStudentPurchaseStatus(studentId, classroomId, false);
+      await repository.updateStudentPurchaseStatus(
+        studentId,
+        classroomId,
+        false,
+      );
 
       expect(mockClassroomStudentModel.update).toHaveBeenCalledWith({
         where: {
@@ -382,7 +397,10 @@ describe('PaymentRepository', () => {
         isPurchased: true,
       });
 
-      const result = await repository.getStudentPurchaseStatus(studentId, classroomId);
+      const result = await repository.getStudentPurchaseStatus(
+        studentId,
+        classroomId,
+      );
 
       expect(result).toEqual({ isPurchased: true });
       expect(mockClassroomStudentModel.findUnique).toHaveBeenCalledWith({
@@ -402,7 +420,10 @@ describe('PaymentRepository', () => {
 
       mockClassroomStudentModel.findUnique.mockResolvedValue(null);
 
-      const result = await repository.getStudentPurchaseStatus(studentId, classroomId);
+      const result = await repository.getStudentPurchaseStatus(
+        studentId,
+        classroomId,
+      );
 
       expect(result).toBeNull();
     });

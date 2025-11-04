@@ -8,7 +8,9 @@ async function bootstrap() {
   const app = await NestFactory.create(BackgroundWorkerModule);
 
   logger.log('🚀 Starting background worker...');
-  logger.log(`📡 Kafka brokers: ${process.env.KAFKA_BROKERS || 'localhost:19092'}`);
+  logger.log(
+    `📡 Kafka brokers: ${process.env.KAFKA_BROKERS || 'localhost:19092'}`,
+  );
   logger.log('🎧 KafkaJS listeners will auto-start via OnModuleInit');
 
   await app.listen(process.env.PORT ?? 3001);

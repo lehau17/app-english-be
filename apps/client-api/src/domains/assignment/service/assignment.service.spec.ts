@@ -59,7 +59,11 @@ describe('AssignmentService', () => {
             id: 'activity-1',
             type: 'quiz' as any,
             title: 'Quiz Activity',
-            content: { question: 'What is 2+2?', options: ['3', '4', '5'], correctIndex: 1 },
+            content: {
+              question: 'What is 2+2?',
+              options: ['3', '4', '5'],
+              correctIndex: 1,
+            },
             points: 10,
           },
         ],
@@ -76,10 +80,19 @@ describe('AssignmentService', () => {
         _count: { submissions: 0 },
       };
 
-      assignmentRepository.createAssignment.mockResolvedValue(expectedAssignment);
+      assignmentRepository.createAssignment.mockResolvedValue(
+        expectedAssignment,
+      );
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
-      const result = await service.createAssignment('teacher-1', dto, 'classroom-1');
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
+      const result = await service.createAssignment(
+        'teacher-1',
+        dto,
+        'classroom-1',
+      );
 
       expect(result).toEqual(expectedAssignment);
       expect(assignmentRepository.createAssignment).toHaveBeenCalledWith(
@@ -109,9 +122,14 @@ describe('AssignmentService', () => {
         isPublished: true,
       };
 
-      assignmentRepository.createAssignment.mockResolvedValue(expectedAssignment);
+      assignmentRepository.createAssignment.mockResolvedValue(
+        expectedAssignment,
+      );
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
       await service.createAssignment('teacher-1', dto, 'classroom-1');
 
       expect(assignmentRepository.createAssignment).toHaveBeenCalledWith(
@@ -135,11 +153,17 @@ describe('AssignmentService', () => {
 
       assignmentRepository.findAssignmentById.mockResolvedValue(assignment);
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
       const result = await service.getAssignmentById('assignment-1');
 
       expect(result).toEqual(assignment);
-      expect(assignmentRepository.findAssignmentById).toHaveBeenCalledWith('assignment-1', false);
+      expect(assignmentRepository.findAssignmentById).toHaveBeenCalledWith(
+        'assignment-1',
+        false,
+      );
     });
 
     test('should throw NotFoundException when assignment does not exist', async () => {
@@ -147,9 +171,14 @@ describe('AssignmentService', () => {
 
       assignmentRepository.findAssignmentById.mockResolvedValue(null);
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
 
-      await expect(service.getAssignmentById('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.getAssignmentById('nonexistent')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -174,11 +203,22 @@ describe('AssignmentService', () => {
         ...updateDto,
       };
 
-      assignmentRepository.findAssignmentById.mockResolvedValue(existingAssignment);
-      assignmentRepository.updateAssignment.mockResolvedValue(updatedAssignment);
+      assignmentRepository.findAssignmentById.mockResolvedValue(
+        existingAssignment,
+      );
+      assignmentRepository.updateAssignment.mockResolvedValue(
+        updatedAssignment,
+      );
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
-      const result = await service.updateAssignment('assignment-1', 'teacher-1', updateDto);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
+      const result = await service.updateAssignment(
+        'assignment-1',
+        'teacher-1',
+        updateDto,
+      );
 
       expect(result).toEqual(updatedAssignment);
       expect(assignmentRepository.updateAssignment).toHaveBeenCalled();
@@ -193,12 +233,19 @@ describe('AssignmentService', () => {
         title: 'Test Assignment',
       };
 
-      assignmentRepository.findAssignmentById.mockResolvedValue(existingAssignment);
+      assignmentRepository.findAssignmentById.mockResolvedValue(
+        existingAssignment,
+      );
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
 
       await expect(
-        service.updateAssignment('assignment-1', 'teacher-2', { title: 'New Title' }),
+        service.updateAssignment('assignment-1', 'teacher-2', {
+          title: 'New Title',
+        }),
       ).rejects.toThrow(ForbiddenException);
     });
   });
@@ -213,13 +260,20 @@ describe('AssignmentService', () => {
         _count: { submissions: 0 },
       };
 
-      assignmentRepository.findAssignmentById.mockResolvedValue(existingAssignment);
+      assignmentRepository.findAssignmentById.mockResolvedValue(
+        existingAssignment,
+      );
       assignmentRepository.deleteAssignment.mockResolvedValue(undefined);
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
       await service.deleteAssignment('assignment-1', 'teacher-1');
 
-      expect(assignmentRepository.deleteAssignment).toHaveBeenCalledWith('assignment-1');
+      expect(assignmentRepository.deleteAssignment).toHaveBeenCalledWith(
+        'assignment-1',
+      );
     });
 
     test('should throw ForbiddenException when teacher does not own the assignment', async () => {
@@ -231,13 +285,18 @@ describe('AssignmentService', () => {
         _count: { submissions: 0 },
       };
 
-      assignmentRepository.findAssignmentById.mockResolvedValue(existingAssignment);
-
-      const service = new AssignmentService(assignmentRepository, geminiService);
-
-      await expect(service.deleteAssignment('assignment-1', 'teacher-2')).rejects.toThrow(
-        ForbiddenException,
+      assignmentRepository.findAssignmentById.mockResolvedValue(
+        existingAssignment,
       );
+
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
+
+      await expect(
+        service.deleteAssignment('assignment-1', 'teacher-2'),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     test('should throw BadRequestException when assignment has submissions', async () => {
@@ -249,13 +308,18 @@ describe('AssignmentService', () => {
         _count: { submissions: 5 },
       };
 
-      assignmentRepository.findAssignmentById.mockResolvedValue(existingAssignment);
-
-      const service = new AssignmentService(assignmentRepository, geminiService);
-
-      await expect(service.deleteAssignment('assignment-1', 'teacher-1')).rejects.toThrow(
-        BadRequestException,
+      assignmentRepository.findAssignmentById.mockResolvedValue(
+        existingAssignment,
       );
+
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
+
+      await expect(
+        service.deleteAssignment('assignment-1', 'teacher-1'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -275,14 +339,26 @@ describe('AssignmentService', () => {
         status: AssignmentStatus.published,
       };
 
-      assignmentRepository.findAssignmentById.mockResolvedValue(existingAssignment);
-      assignmentRepository.publishAssignment.mockResolvedValue(publishedAssignment);
+      assignmentRepository.findAssignmentById.mockResolvedValue(
+        existingAssignment,
+      );
+      assignmentRepository.publishAssignment.mockResolvedValue(
+        publishedAssignment,
+      );
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
-      const result = await service.publishAssignment('assignment-1', 'teacher-1');
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
+      const result = await service.publishAssignment(
+        'assignment-1',
+        'teacher-1',
+      );
 
       expect(result).toEqual(publishedAssignment);
-      expect(assignmentRepository.publishAssignment).toHaveBeenCalledWith('assignment-1');
+      expect(assignmentRepository.publishAssignment).toHaveBeenCalledWith(
+        'assignment-1',
+      );
     });
 
     test('should throw ForbiddenException when teacher does not own the assignment', async () => {
@@ -294,13 +370,18 @@ describe('AssignmentService', () => {
         isPublished: false,
       };
 
-      assignmentRepository.findAssignmentById.mockResolvedValue(existingAssignment);
-
-      const service = new AssignmentService(assignmentRepository, geminiService);
-
-      await expect(service.publishAssignment('assignment-1', 'teacher-2')).rejects.toThrow(
-        ForbiddenException,
+      assignmentRepository.findAssignmentById.mockResolvedValue(
+        existingAssignment,
       );
+
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
+
+      await expect(
+        service.publishAssignment('assignment-1', 'teacher-2'),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     test('should throw BadRequestException when assignment is already published', async () => {
@@ -312,13 +393,18 @@ describe('AssignmentService', () => {
         isPublished: true,
       };
 
-      assignmentRepository.findAssignmentById.mockResolvedValue(existingAssignment);
-
-      const service = new AssignmentService(assignmentRepository, geminiService);
-
-      await expect(service.publishAssignment('assignment-1', 'teacher-1')).rejects.toThrow(
-        BadRequestException,
+      assignmentRepository.findAssignmentById.mockResolvedValue(
+        existingAssignment,
       );
+
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
+
+      await expect(
+        service.publishAssignment('assignment-1', 'teacher-1'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -357,13 +443,26 @@ describe('AssignmentService', () => {
       };
 
       assignmentRepository.findAssignmentById.mockResolvedValue(assignment);
-      assignmentRepository.findSubmissionByAssignmentAndStudent.mockResolvedValue(null);
-      assignmentRepository.submitAssignment.mockResolvedValue(expectedSubmission);
-      assignmentRepository.gradeSubmission.mockResolvedValue(expectedSubmission);
+      assignmentRepository.findSubmissionByAssignmentAndStudent.mockResolvedValue(
+        null,
+      );
+      assignmentRepository.submitAssignment.mockResolvedValue(
+        expectedSubmission,
+      );
+      assignmentRepository.gradeSubmission.mockResolvedValue(
+        expectedSubmission,
+      );
       geminiService.generateAttemptFeedback.mockResolvedValue('Great job!');
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
-      const result = await service.submitAssignment('assignment-1', 'student-1', submitDto);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
+      const result = await service.submitAssignment(
+        'assignment-1',
+        'student-1',
+        submitDto,
+      );
 
       expect(result).toBeDefined();
       expect(assignmentRepository.submitAssignment).toHaveBeenCalled();
@@ -379,10 +478,16 @@ describe('AssignmentService', () => {
 
       assignmentRepository.findAssignmentById.mockResolvedValue(assignment);
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
 
       await expect(
-        service.submitAssignment('assignment-1', 'student-1', { answers: {}, timeSpent: 0 }),
+        service.submitAssignment('assignment-1', 'student-1', {
+          answers: {},
+          timeSpent: 0,
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -397,10 +502,16 @@ describe('AssignmentService', () => {
 
       assignmentRepository.findAssignmentById.mockResolvedValue(assignment);
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
 
       await expect(
-        service.submitAssignment('assignment-1', 'student-1', { answers: {}, timeSpent: 0 }),
+        service.submitAssignment('assignment-1', 'student-1', {
+          answers: {},
+          timeSpent: 0,
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -416,10 +527,16 @@ describe('AssignmentService', () => {
 
       assignmentRepository.findAssignmentById.mockResolvedValue(assignment);
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
 
       await expect(
-        service.submitAssignment('assignment-1', 'student-1', { answers: {}, timeSpent: 0 }),
+        service.submitAssignment('assignment-1', 'student-1', {
+          answers: {},
+          timeSpent: 0,
+        }),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -444,10 +561,16 @@ describe('AssignmentService', () => {
         existingSubmission,
       );
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
 
       await expect(
-        service.submitAssignment('assignment-1', 'student-1', { answers: {}, timeSpent: 0 }),
+        service.submitAssignment('assignment-1', 'student-1', {
+          answers: {},
+          timeSpent: 0,
+        }),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -470,14 +593,24 @@ describe('AssignmentService', () => {
 
       assignmentRepository.gradeSubmission.mockResolvedValue(gradedSubmission);
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
-      const result = await service.gradeSubmission('submission-1', 'teacher-1', gradeDto);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
+      const result = await service.gradeSubmission(
+        'submission-1',
+        'teacher-1',
+        gradeDto,
+      );
 
       expect(result).toEqual(gradedSubmission);
-      expect(assignmentRepository.gradeSubmission).toHaveBeenCalledWith('submission-1', {
-        score: 85,
-        feedback: 'Good work!',
-      });
+      expect(assignmentRepository.gradeSubmission).toHaveBeenCalledWith(
+        'submission-1',
+        {
+          score: 85,
+          feedback: 'Good work!',
+        },
+      );
     });
   });
 
@@ -496,13 +629,23 @@ describe('AssignmentService', () => {
       ];
 
       assignmentRepository.findAssignmentById.mockResolvedValue(assignment);
-      assignmentRepository.getSubmissionsByAssignment.mockResolvedValue(submissions);
+      assignmentRepository.getSubmissionsByAssignment.mockResolvedValue(
+        submissions,
+      );
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
-      const result = await service.getSubmissionsByAssignment('assignment-1', 'teacher-1');
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
+      const result = await service.getSubmissionsByAssignment(
+        'assignment-1',
+        'teacher-1',
+      );
 
       expect(result).toEqual(submissions);
-      expect(assignmentRepository.getSubmissionsByAssignment).toHaveBeenCalledWith('assignment-1');
+      expect(
+        assignmentRepository.getSubmissionsByAssignment,
+      ).toHaveBeenCalledWith('assignment-1');
     });
 
     test('should throw ForbiddenException when teacher does not own the assignment', async () => {
@@ -515,7 +658,10 @@ describe('AssignmentService', () => {
 
       assignmentRepository.findAssignmentById.mockResolvedValue(assignment);
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
 
       await expect(
         service.getSubmissionsByAssignment('assignment-1', 'teacher-2'),
@@ -535,9 +681,14 @@ describe('AssignmentService', () => {
         total: 2,
       };
 
-      assignmentRepository.findAssignmentsByClassroom.mockResolvedValue(mockResult);
+      assignmentRepository.findAssignmentsByClassroom.mockResolvedValue(
+        mockResult,
+      );
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
       const result = await service.getAssignmentsByClassroom('classroom-1', {
         page: 1,
         limit: 20,
@@ -559,9 +710,14 @@ describe('AssignmentService', () => {
         total: 1,
       };
 
-      assignmentRepository.findAssignmentsByTeacher.mockResolvedValue(mockResult);
+      assignmentRepository.findAssignmentsByTeacher.mockResolvedValue(
+        mockResult,
+      );
 
-      const service = new AssignmentService(assignmentRepository, geminiService);
+      const service = new AssignmentService(
+        assignmentRepository,
+        geminiService,
+      );
       const result = await service.getAssignmentsByTeacher('teacher-1', {
         page: 1,
         limit: 20,

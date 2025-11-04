@@ -2539,15 +2539,19 @@ model Podcast {
 
     description String
 
-    // Media files
+    // Media files - Support both audio and video
 
-    audioUrl String
+    audioUrl String? // Optional now - for audio podcasts
+
+    videoUrl String? // New - for video podcasts
+
+    mediaType String @default("audio") // "audio" | "video"
 
     thumbnailUrl String?
 
     // Transcript & Test
 
-    transcript String // Toàn bộ transcript gốc
+    transcript String @db.Text // Toàn bộ transcript gốc
 
     gaps PodcastGap[] // Danh sách chỗ đục lỗ (bài kiểm)
 

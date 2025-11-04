@@ -108,7 +108,11 @@ export class WordsApiService {
       // WordsAPI returns { results: { data: string[] } }
       const data = response.data;
 
-      if (data.results && data.results.data && Array.isArray(data.results.data)) {
+      if (
+        data.results &&
+        data.results.data &&
+        Array.isArray(data.results.data)
+      ) {
         return data.results.data.slice(0, limit);
       }
 
@@ -117,7 +121,9 @@ export class WordsApiService {
         return data.results.map((r: any) => r.word || r).slice(0, limit);
       }
 
-      this.logger.warn(`Unexpected WordsAPI response format for query: ${query}`);
+      this.logger.warn(
+        `Unexpected WordsAPI response format for query: ${query}`,
+      );
       return [];
     } catch (error: any) {
       if (error.response?.status === 429) {

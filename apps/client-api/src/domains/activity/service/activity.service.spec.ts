@@ -18,7 +18,11 @@ describe('ActivityService', () => {
     lessonId: 'lesson-1',
     type: ActivityType.quiz,
     orderNo: 1,
-    content: { question: 'Test question?', options: ['A', 'B', 'C'], correctIndex: 0 },
+    content: {
+      question: 'Test question?',
+      options: ['A', 'B', 'C'],
+      correctIndex: 0,
+    },
     difficultyLevel: DifficultyLevel.beginner,
     points: 10,
     timeLimit: 60,
@@ -51,7 +55,11 @@ describe('ActivityService', () => {
         lessonId: 'lesson-1',
         type: ActivityType.quiz,
         orderNo: 1,
-        content: { question: 'Test question?', options: ['A', 'B', 'C'], correctIndex: 0 },
+        content: {
+          question: 'Test question?',
+          options: ['A', 'B', 'C'],
+          correctIndex: 0,
+        },
         difficultyLevel: DifficultyLevel.beginner,
         points: 10,
         timeLimit: 60,
@@ -120,12 +128,12 @@ describe('ActivityService', () => {
 
       repository.findById.mockResolvedValue(null);
 
-      await expect(service.update('non-existent-id', updateDto)).rejects.toThrow(
-        NotFoundException,
-      );
-      await expect(service.update('non-existent-id', updateDto)).rejects.toThrow(
-        'Activity with id non-existent-id not found',
-      );
+      await expect(
+        service.update('non-existent-id', updateDto),
+      ).rejects.toThrow(NotFoundException);
+      await expect(
+        service.update('non-existent-id', updateDto),
+      ).rejects.toThrow('Activity with id non-existent-id not found');
       expect(repository.findById).toHaveBeenCalledWith('non-existent-id');
       expect(repository.update).not.toHaveBeenCalled();
     });
@@ -166,12 +174,7 @@ describe('ActivityService', () => {
         limit: 10,
       };
 
-      const mockPageResponse = PageResponseDto.of(
-        [mockActivity],
-        1,
-        10,
-        1,
-      );
+      const mockPageResponse = PageResponseDto.of([mockActivity], 1, 10, 1);
 
       repository.list.mockResolvedValue(mockPageResponse);
 
@@ -189,12 +192,7 @@ describe('ActivityService', () => {
         lessonId: 'lesson-1',
       };
 
-      const mockPageResponse = PageResponseDto.of(
-        [mockActivity],
-        1,
-        10,
-        1,
-      );
+      const mockPageResponse = PageResponseDto.of([mockActivity], 1, 10, 1);
 
       repository.list.mockResolvedValue(mockPageResponse);
 
@@ -211,12 +209,7 @@ describe('ActivityService', () => {
         type: ActivityType.quiz,
       };
 
-      const mockPageResponse = PageResponseDto.of(
-        [mockActivity],
-        1,
-        10,
-        1,
-      );
+      const mockPageResponse = PageResponseDto.of([mockActivity], 1, 10, 1);
 
       repository.list.mockResolvedValue(mockPageResponse);
 
@@ -233,12 +226,7 @@ describe('ActivityService', () => {
         search: 'non-existent',
       };
 
-      const mockPageResponse = PageResponseDto.of(
-        [],
-        1,
-        10,
-        0,
-      );
+      const mockPageResponse = PageResponseDto.of([], 1, 10, 0);
 
       repository.list.mockResolvedValue(mockPageResponse);
 
@@ -256,16 +244,18 @@ describe('ActivityService', () => {
       repository.findById.mockResolvedValue(mockActivity);
 
       // Test indirectly through update
-      await expect(service.update('activity-1', { points: 20 })).resolves.not.toThrow();
+      await expect(
+        service.update('activity-1', { points: 20 }),
+      ).resolves.not.toThrow();
     });
 
     it('should throw NotFoundException when activity does not exist', async () => {
       repository.findById.mockResolvedValue(null);
 
       // Test indirectly through update
-      await expect(service.update('non-existent-id', { points: 20 })).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update('non-existent-id', { points: 20 }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

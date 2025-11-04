@@ -23,7 +23,8 @@ export class SqlTool extends StructuredTool {
     try {
       this.logger.log(`🗄️ SQL Tool xử lý: ${naturalQuery}`);
       // Use retry-enabled method
-      const result = await this.sqlService.generateAndExecuteSQLWithRetry(naturalQuery);
+      const result =
+        await this.sqlService.generateAndExecuteSQLWithRetry(naturalQuery);
       return JSON.stringify({
         success: true,
         answer: result.answer,

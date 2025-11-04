@@ -124,7 +124,8 @@ Returns a JSON object with public download URL (no auth required):
 
       // Add borders to all cells
       worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-        if (rowNumber > 2) { // Skip title and empty row
+        if (rowNumber > 2) {
+          // Skip title and empty row
           row.eachCell((cell) => {
             cell.border = {
               top: { style: 'thin' },

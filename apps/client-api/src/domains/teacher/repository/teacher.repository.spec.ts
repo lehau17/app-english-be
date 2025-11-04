@@ -70,7 +70,9 @@ describe('TeacherRepository', () => {
       jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockUser as any);
       const result = await repository.findByEmail('teacher@test.com');
       expect(result).toEqual(mockUser);
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: 'teacher@test.com' } });
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { email: 'teacher@test.com' },
+      });
     });
   });
 
@@ -79,7 +81,9 @@ describe('TeacherRepository', () => {
       jest.spyOn(prisma.user, 'findFirst').mockResolvedValue(mockUser as any);
       const result = await repository.findById('1');
       expect(result).toEqual(mockUser);
-      expect(prisma.user.findFirst).toHaveBeenCalledWith({ where: { id: '1', role: UserRole.teacher } });
+      expect(prisma.user.findFirst).toHaveBeenCalledWith({
+        where: { id: '1', role: UserRole.teacher },
+      });
     });
   });
 
@@ -91,7 +95,10 @@ describe('TeacherRepository', () => {
 
       const result = await repository.update('1', updateData);
       expect(result).toEqual(expectedUser);
-      expect(prisma.user.update).toHaveBeenCalledWith({ where: { id: '1' }, data: updateData });
+      expect(prisma.user.update).toHaveBeenCalledWith({
+        where: { id: '1' },
+        data: updateData,
+      });
     });
   });
 
@@ -106,29 +113,34 @@ describe('TeacherRepository', () => {
 
   describe('list', () => {
     it('should return a paginated list of teachers', async () => {
-        const users = [mockUser];
-        const total = 1;
-        const params = { page: 1, limit: 10 };
-        jest.spyOn(prisma.user, 'count').mockResolvedValue(total);
-        jest.spyOn(prisma.user, 'findMany').mockResolvedValue(users as any);
+      const users = [mockUser];
+      const total = 1;
+      const params = { page: 1, limit: 10 };
+      jest.spyOn(prisma.user, 'count').mockResolvedValue(total);
+      jest.spyOn(prisma.user, 'findMany').mockResolvedValue(users as any);
 
-        const result = await repository.list(params);
-        const expectedResult = PageResponseDto.of(users, params.page, params.limit, total);
+      const result = await repository.list(params);
+      const expectedResult = PageResponseDto.of(
+        users,
+        params.page,
+        params.limit,
+        total,
+      );
 
-        expect(result).toEqual(expectedResult);
-        expect(prisma.user.count).toHaveBeenCalled();
-        expect(prisma.user.findMany).toHaveBeenCalled();
+      expect(result).toEqual(expectedResult);
+      expect(prisma.user.count).toHaveBeenCalled();
+      expect(prisma.user.findMany).toHaveBeenCalled();
     });
   });
 
   describe('listAll', () => {
     it('should return all teachers matching the criteria', async () => {
-        const users = [mockUser];
-        jest.spyOn(prisma.user, 'findMany').mockResolvedValue(users as any);
+      const users = [mockUser];
+      jest.spyOn(prisma.user, 'findMany').mockResolvedValue(users as any);
 
-        const result = await repository.listAll({});
-        expect(result).toEqual(users);
-        expect(prisma.user.findMany).toHaveBeenCalled();
+      const result = await repository.listAll({});
+      expect(result).toEqual(users);
+      expect(prisma.user.findMany).toHaveBeenCalled();
     });
   });
 });

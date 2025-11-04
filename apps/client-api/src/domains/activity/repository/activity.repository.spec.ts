@@ -1,6 +1,11 @@
 import { ActivityRepository } from './activity.repository';
 import { PrismaRepository } from '@app/database';
-import { Activity, ActivityType, DifficultyLevel, Prisma } from '@prisma/client';
+import {
+  Activity,
+  ActivityType,
+  DifficultyLevel,
+  Prisma,
+} from '@prisma/client';
 import {
   CreateActivityDto,
   FilterActivityRequestDto,
@@ -16,7 +21,11 @@ describe('ActivityRepository', () => {
     lessonId: 'lesson-1',
     type: ActivityType.quiz,
     orderNo: 1,
-    content: { question: 'Test question?', options: ['A', 'B', 'C'], correctIndex: 0 },
+    content: {
+      question: 'Test question?',
+      options: ['A', 'B', 'C'],
+      correctIndex: 0,
+    },
     difficultyLevel: DifficultyLevel.beginner,
     points: 10,
     timeLimit: 60,
@@ -52,7 +61,11 @@ describe('ActivityRepository', () => {
         lessonId: 'lesson-1',
         type: ActivityType.quiz,
         orderNo: 1,
-        content: { question: 'Test question?', options: ['A', 'B', 'C'], correctIndex: 0 },
+        content: {
+          question: 'Test question?',
+          options: ['A', 'B', 'C'],
+          correctIndex: 0,
+        },
         difficultyLevel: DifficultyLevel.beginner,
         points: 10,
         timeLimit: 60,

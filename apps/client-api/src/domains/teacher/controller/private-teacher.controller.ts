@@ -1,34 +1,34 @@
 import { ResponseMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-    BadRequestException,
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    ParseUUIDPipe,
-    Post,
-    Put,
-    Query,
-    Res,
-    UploadedFile,
-    UseInterceptors,
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+  Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
-    ApiBearerAuth,
-    ApiBody,
-    ApiConsumes,
-    ApiOperation,
-    ApiTags,
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
 } from '@nestjs/swagger';
 import { User } from '@prisma/client';
 import { Response } from 'express';
 import {
-    CreateTeacherDto,
-    FilterTeacherRequestDto,
-    UpdateTeacherDto,
+  CreateTeacherDto,
+  FilterTeacherRequestDto,
+  UpdateTeacherDto,
 } from '../dto/teacher.dto';
 import { TeacherService } from '../service/teacher.service';
 

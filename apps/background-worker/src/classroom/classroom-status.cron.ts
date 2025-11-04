@@ -8,28 +8,27 @@ import { ClassroomService } from '../../../client-api/src/domains/classroom/serv
  */
 @Injectable()
 export class ClassroomStatusCron {
-    private readonly logger = new Logger(ClassroomStatusCron.name);
+  private readonly logger = new Logger(ClassroomStatusCron.name);
 
-    constructor(private readonly classroomService: ClassroomService) { }
+  constructor(private readonly classroomService: ClassroomService) {}
 
-    /**
-     * Auto-update classroom statuses daily
-     * - UPCOMING → ONGOING: when periodStart <= now < periodEnd
-     * - ONGOING → COMPLETED: when periodEnd <= now
-     */
-    @Cron('1 0 * * *', { timeZone: 'Asia/Ho_Chi_Minh' })
-    async updateClassroomStatuses(): Promise<void> {
-        try {
-            this.logger.log('🔄 Starting auto-update classroom statuses...');
+  /**
+   * Auto-update classroom statuses daily
+   * - UPCOMING → ONGOING: when periodStart <= now < periodEnd
+   * - ONGOING → COMPLETED: when periodEnd <= now
+   */
+  @Cron('1 0 * * *', { timeZone: 'Asia/Ho_Chi_Minh' })
+  async updateClassroomStatuses(): Promise<void> {
+    try {
+      this.logger.log('🔄 Starting auto-update classroom statuses...');
 
-            const result = await this.classroomService.autoUpdateClassroomStatuses();
+      const result = await this.classroomService.autoUpdateClassroomStatuses();
 
-            this.logger.log(
-                `✅ Classroom statuses updated successfully: ${result.activatedCount} activated, ${result.completedCount} completed`,
-            );
-        } catch (error) {
-            this.logger.error('❌ Failed to auto-update classroom statuses', error);
-        }
+      this.logger.log(
+        `✅ Classroom statuses updated successfully: ${result.activatedCount} activated, ${result.completedCount} completed`,
+      );
+    } catch (error) {
+      this.logger.error('❌ Failed to auto-update classroom statuses', error);
     }
+  }
 }
-

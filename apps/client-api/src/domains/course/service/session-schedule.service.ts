@@ -1,5 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateSessionScheduleDto, UpdateSessionScheduleDto } from '../dto/session-schedule.dto';
+import {
+  CreateSessionScheduleDto,
+  UpdateSessionScheduleDto,
+} from '../dto/session-schedule.dto';
 import { SessionScheduleRepository } from '../repository/session-schedule.repository';
 
 @Injectable()
@@ -12,7 +15,10 @@ export class SessionScheduleService {
     return this.sessionScheduleRepository.findByCourseId(courseId);
   }
 
-  async createSessionSchedules(courseId: string, schedules: CreateSessionScheduleDto[]) {
+  async createSessionSchedules(
+    courseId: string,
+    schedules: CreateSessionScheduleDto[],
+  ) {
     // Xóa tất cả lịch hiện có trước khi tạo mới
     await this.sessionScheduleRepository.deleteAllByCourseId(courseId);
 
@@ -45,11 +51,14 @@ export class SessionScheduleService {
     sessionNumber: number,
     dto: UpdateSessionScheduleDto,
   ) {
-    const sessions = await this.sessionScheduleRepository.findByCourseId(courseId);
-    const session = sessions.find(s => s.sessionNumber === sessionNumber);
+    const sessions =
+      await this.sessionScheduleRepository.findByCourseId(courseId);
+    const session = sessions.find((s) => s.sessionNumber === sessionNumber);
 
     if (!session) {
-      throw new NotFoundException(`Không tìm thấy buổi học số ${sessionNumber} cho khóa học ${courseId}`);
+      throw new NotFoundException(
+        `Không tìm thấy buổi học số ${sessionNumber} cho khóa học ${courseId}`,
+      );
     }
 
     // Xóa session cũ và tạo mới để đơn giản hóa logic

@@ -32,7 +32,8 @@ export class UpdateAssignmentDto {
   type?: AssignmentType;
 
   @ApiPropertyOptional({
-    description: 'Weight of the assignment in the final grade (e.g., 0.4 for 40%)',
+    description:
+      'Weight of the assignment in the final grade (e.g., 0.4 for 40%)',
     minimum: 0,
     maximum: 1,
   })

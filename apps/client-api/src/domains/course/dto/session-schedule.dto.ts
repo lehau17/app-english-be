@@ -14,7 +14,8 @@ import {
 export class SessionActivityDto {
   @ApiProperty({
     example: 'activity-uuid',
-    description: 'Activity ID (UUID) or activity reference (L1A2 format for course creation)'
+    description:
+      'Activity ID (UUID) or activity reference (L1A2 format for course creation)',
   })
   @IsString()
   @IsNotEmpty()
@@ -62,13 +63,17 @@ export class UpdateSessionScheduleDto {
   @Min(1)
   sessionNumber?: number;
 
-  @ApiPropertyOptional({ example: 'Buổi 1: Giới thiệu ngữ pháp cơ bản (cập nhật)' })
+  @ApiPropertyOptional({
+    example: 'Buổi 1: Giới thiệu ngữ pháp cơ bản (cập nhật)',
+  })
   @IsOptional()
   @IsString()
   @IsNotEmpty()
   title?: string;
 
-  @ApiPropertyOptional({ example: 'Học từ vựng và ngữ pháp cơ bản với phương pháp mới' })
+  @ApiPropertyOptional({
+    example: 'Học từ vựng và ngữ pháp cơ bản với phương pháp mới',
+  })
   @IsOptional()
   @IsString()
   @IsNotEmpty()

@@ -13,26 +13,38 @@ export function autoCalculateClassroomPeriod(
   plannedSessions: number,
   slots: { dayOfWeek: string }[],
   startDate?: Date,
-  endDate?: Date
+  endDate?: Date,
 ): { periodStart: Date; periodEnd: Date } {
   // Nếu không có slots hoặc plannedSessions, không thể tính toán
   if (!slots.length || !plannedSessions) {
-    throw new Error('Không thể tính toán thời gian lớp học khi không có lịch học hoặc số buổi');
+    throw new Error(
+      'Không thể tính toán thời gian lớp học khi không có lịch học hoặc số buổi',
+    );
   }
 
   // Chuyển đổi dayOfWeek thành số (0-6, 0 là Chủ Nhật)
-  const daysOfWeek = slots.map(slot => {
-    switch(slot.dayOfWeek) {
-      case 'mon': return 1;
-      case 'tue': return 2;
-      case 'wed': return 3;
-      case 'thu': return 4;
-      case 'fri': return 5;
-      case 'sat': return 6;
-      case 'sun': return 0;
-      default: return -1;
-    }
-  }).filter(day => day >= 0);
+  const daysOfWeek = slots
+    .map((slot) => {
+      switch (slot.dayOfWeek) {
+        case 'mon':
+          return 1;
+        case 'tue':
+          return 2;
+        case 'wed':
+          return 3;
+        case 'thu':
+          return 4;
+        case 'fri':
+          return 5;
+        case 'sat':
+          return 6;
+        case 'sun':
+          return 0;
+        default:
+          return -1;
+      }
+    })
+    .filter((day) => day >= 0);
 
   // Nếu daysOfWeek rỗng sau khi lọc, không thể tính toán
   if (!daysOfWeek.length) {
@@ -48,14 +60,18 @@ export function autoCalculateClassroomPeriod(
   // Số tuần cần để hoàn thành plannedSessions
   const totalWeeks = Math.ceil(plannedSessions / daysPerWeek);
 
-  let result = { periodStart: new Date(), periodEnd: new Date() };
+  const result = { periodStart: new Date(), periodEnd: new Date() };
 
   // Nếu có startDate, tính endDate
   if (startDate) {
     result.periodStart = new Date(startDate);
 
     // Tìm buổi học cuối cùng
-    const lastSessionDate = findLastSessionDate(result.periodStart, daysOfWeek, plannedSessions);
+    const lastSessionDate = findLastSessionDate(
+      result.periodStart,
+      daysOfWeek,
+      plannedSessions,
+    );
 
     // Thêm 1 ngày để đảm bảo kết thúc vào cuối ngày
     const endDate = new Date(lastSessionDate);
@@ -70,10 +86,13 @@ export function autoCalculateClassroomPeriod(
     const startDate = new Date(result.periodEnd);
 
     // Lùi về số tuần cần thiết
-    startDate.setDate(startDate.getDate() - (totalWeeks * 7));
+    startDate.setDate(startDate.getDate() - totalWeeks * 7);
 
     // Điều chỉnh ngày bắt đầu để phù hợp với lịch học
-    while (plannedSessionsBetween(startDate, result.periodEnd, daysOfWeek) > plannedSessions) {
+    while (
+      plannedSessionsBetween(startDate, result.periodEnd, daysOfWeek) >
+      plannedSessions
+    ) {
       startDate.setDate(startDate.getDate() + 1);
     }
 
@@ -84,7 +103,11 @@ export function autoCalculateClassroomPeriod(
     result.periodStart = new Date();
 
     // Tìm buổi học cuối cùng
-    const lastSessionDate = findLastSessionDate(result.periodStart, daysOfWeek, plannedSessions);
+    const lastSessionDate = findLastSessionDate(
+      result.periodStart,
+      daysOfWeek,
+      plannedSessions,
+    );
 
     // Thêm 1 ngày để đảm bảo kết thúc vào cuối ngày
     const endDate = new Date(lastSessionDate);
@@ -98,8 +121,12 @@ export function autoCalculateClassroomPeriod(
 /**
  * Tìm ngày của buổi học cuối cùng
  */
-function findLastSessionDate(startDate: Date, daysOfWeek: number[], plannedSessions: number): Date {
-  let currentDate = new Date(startDate);
+function findLastSessionDate(
+  startDate: Date,
+  daysOfWeek: number[],
+  plannedSessions: number,
+): Date {
+  const currentDate = new Date(startDate);
   let sessionCount = 0;
 
   while (sessionCount < plannedSessions) {
@@ -125,8 +152,12 @@ function findLastSessionDate(startDate: Date, daysOfWeek: number[], plannedSessi
 /**
  * Tính số buổi học giữa hai ngày
  */
-function plannedSessionsBetween(startDate: Date, endDate: Date, daysOfWeek: number[]): number {
-  let currentDate = new Date(startDate);
+function plannedSessionsBetween(
+  startDate: Date,
+  endDate: Date,
+  daysOfWeek: number[],
+): number {
+  const currentDate = new Date(startDate);
   let sessionCount = 0;
 
   while (currentDate < endDate) {

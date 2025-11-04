@@ -17,21 +17,21 @@ import { RealtimeAsrService } from './service/realtime-asr.service';
 import { RealtimeTtsService } from './service/realtime-tts.service';
 
 @Module({
-    imports: [DatabaseModule, SharedModule, ProfanityModule, ConfigModule],
-    controllers: [AiSpeakingController, AiSpeakingHealthController],
-    providers: [
-        AiSpeakingService,
-        AiSpeakingCoordinator,
-        ConversationDesignerService,
-        AiSpeakingRealtimeService,
-        AiSpeakingTurnManager,
-        AiSpeakingHealthService,
-        RealtimeTtsService,
-        RealtimeAsrService,
-        AiSpeakingRepository,
-        AiSpeakingGateway,
-        UploadService,
-    ],
-    exports: [AiSpeakingService],
+  imports: [DatabaseModule, SharedModule, ProfanityModule, ConfigModule],
+  controllers: [AiSpeakingController, AiSpeakingHealthController],
+  providers: [
+    AiSpeakingService,
+    AiSpeakingCoordinator,
+    ConversationDesignerService,
+    AiSpeakingRealtimeService,
+    AiSpeakingTurnManager,
+    AiSpeakingHealthService,
+    RealtimeTtsService,
+    RealtimeAsrService,
+    AiSpeakingRepository,
+    AiSpeakingGateway,
+    UploadService,
+  ],
+  exports: [AiSpeakingService],
 })
-export class AiSpeakingModule { }
+export class AiSpeakingModule {}

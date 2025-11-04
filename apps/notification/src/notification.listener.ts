@@ -1,6 +1,11 @@
 import { PrismaRepository } from '@app/database';
 import { KafkaConfigService, KafkaTopic } from '@app/shared';
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Consumer, Kafka } from 'kafkajs';
 import { NotificationService } from './notification.service';
 
@@ -47,7 +52,9 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
         topics: [KafkaTopic.NOTIFICATION_SEND_OTP_CREATED, 'notifications'],
         fromBeginning: false,
       });
-      this.logger.log(`✅ Subscribed to topics: ${KafkaTopic.NOTIFICATION_SEND_OTP_CREATED}, notifications`);
+      this.logger.log(
+        `✅ Subscribed to topics: ${KafkaTopic.NOTIFICATION_SEND_OTP_CREATED}, notifications`,
+      );
 
       // Event listeners
       this.consumer.on(this.consumer.events.GROUP_JOIN, (e) =>
@@ -100,13 +107,21 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
       // Handle different notification types
       if (notification.type === 'send-otp') {
         await this.handleSendOtp(notification);
-      } else if (notification.type === 'system' && notification.data?.action === 'password_reset') {
+      } else if (
+        notification.type === 'system' &&
+        notification.data?.action === 'password_reset'
+      ) {
         await this.handlePasswordReset(notification);
       } else {
-        this.logger.log(`Notification type "${notification.type}" - no email action needed`);
+        this.logger.log(
+          `Notification type "${notification.type}" - no email action needed`,
+        );
       }
     } catch (err) {
-      this.logger.error(`Failed to process notification: ${err.message}`, err.stack);
+      this.logger.error(
+        `Failed to process notification: ${err.message}`,
+        err.stack,
+      );
     }
   }
 
@@ -114,11 +129,18 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
     try {
       const user = await this.prisma.user.findUnique({
         where: { id: notification.userId },
-        select: { email: true, displayName: true, firstName: true, lastName: true },
+        select: {
+          email: true,
+          displayName: true,
+          firstName: true,
+          lastName: true,
+        },
       });
 
       if (!user?.email) {
-        this.logger.warn(`User ${notification.userId} has no email, skipping OTP email`);
+        this.logger.warn(
+          `User ${notification.userId} has no email, skipping OTP email`,
+        );
         return;
       }
 
@@ -138,7 +160,10 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
 
       this.logger.log(`✅ Sent OTP email to ${user.email}`);
     } catch (error) {
-      this.logger.error(`Failed to send OTP email: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to send OTP email: ${error.message}`,
+        error.stack,
+      );
     }
   }
 
@@ -146,11 +171,18 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
     try {
       const user = await this.prisma.user.findUnique({
         where: { id: notification.userId },
-        select: { email: true, displayName: true, firstName: true, lastName: true },
+        select: {
+          email: true,
+          displayName: true,
+          firstName: true,
+          lastName: true,
+        },
       });
 
       if (!user?.email) {
-        this.logger.warn(`User ${notification.userId} has no email, skipping password reset email`);
+        this.logger.warn(
+          `User ${notification.userId} has no email, skipping password reset email`,
+        );
         return;
       }
 
@@ -171,7 +203,10 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
 
       this.logger.log(`✅ Sent password reset email to ${user.email}`);
     } catch (error) {
-      this.logger.error(`Failed to send password reset email: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to send password reset email: ${error.message}`,
+        error.stack,
+      );
     }
   }
 }

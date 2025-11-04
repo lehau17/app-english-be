@@ -110,9 +110,9 @@ export class PaymentWebhookController {
 
     // Return redirect response
     return {
-        redirectUrl: redirectUrl.toString(),
-        success: result.success,
-        message: result.message,
+      redirectUrl: redirectUrl.toString(),
+      success: result.success,
+      message: result.message,
     };
   }
 

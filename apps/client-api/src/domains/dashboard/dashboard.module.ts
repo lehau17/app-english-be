@@ -7,15 +7,15 @@ import { DashboardTeacherService } from './service/dashboard-teacher.service';
 import { DashboardService } from './service/dashboard.service';
 
 @Module({
-    controllers: [
-        DashboardController,
-        StudentDashboardController,
-        TeacherDashboardController,
-    ],
-    providers: [
-        DashboardService,
-        DashboardStudentService,
-        DashboardTeacherService,
-    ],
+  controllers: [
+    DashboardController,
+    StudentDashboardController,
+    TeacherDashboardController,
+  ],
+  providers: [
+    DashboardService,
+    DashboardStudentService,
+    DashboardTeacherService,
+  ],
 })
-export class DashboardModule { }
+export class DashboardModule {}

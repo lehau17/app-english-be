@@ -68,7 +68,9 @@ export class GraphEntityService {
    * Create or update an entity
    */
   async createEntity(dto: CreateEntityDto): Promise<GraphEntity> {
-    const id = dto.sourceId || `entity_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+    const id =
+      dto.sourceId ||
+      `entity_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
     // Generate embedding if description is provided
     let embedding: number[] | undefined;
@@ -128,7 +130,10 @@ export class GraphEntityService {
       ORDER BY e.createdAt DESC
       LIMIT $limit
     `;
-    const result = await this.neo4jService.runQuery(cypher, { type, limit: parseInt(String(limit)) });
+    const result = await this.neo4jService.runQuery(cypher, {
+      type,
+      limit: parseInt(String(limit)),
+    });
     return result.map((r) => r.e);
   }
 
@@ -143,7 +148,10 @@ export class GraphEntityService {
       ORDER BY score DESC
       LIMIT $limit
     `;
-    const result = await this.neo4jService.runQuery(cypher, { query, limit: parseInt(String(limit)) });
+    const result = await this.neo4jService.runQuery(cypher, {
+      query,
+      limit: parseInt(String(limit)),
+    });
     return result.map((r) => r.e);
   }
 

@@ -219,7 +219,9 @@ export class GraphTraversalService {
     relationshipTypes?: string[],
   ): Promise<{ entity: GraphEntity; relationship: string; weight: number }[]> {
     let relPattern = '';
-    const typeFilter = relationshipTypes ? `:${relationshipTypes.join('|')}` : '';
+    const typeFilter = relationshipTypes
+      ? `:${relationshipTypes.join('|')}`
+      : '';
 
     if (direction === 'outgoing') {
       relPattern = `-[r${typeFilter}]->`;
@@ -250,7 +252,9 @@ export class GraphTraversalService {
     fromConceptId: string,
     toConceptId: string,
   ): Promise<TraversalResult | null> {
-    this.logger.log(`📚 Finding learning path from ${fromConceptId} to ${toConceptId}`);
+    this.logger.log(
+      `📚 Finding learning path from ${fromConceptId} to ${toConceptId}`,
+    );
 
     // Follow REQUIRES and TEACHES relationships
     const cypher = `

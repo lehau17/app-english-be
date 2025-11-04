@@ -42,12 +42,22 @@ describe('PrivateParentController', () => {
 
   describe('getDashboard', () => {
     it('should call parentService.getParentDashboard with the correct user id', async () => {
-      const dashboardData = { children: [], rewards: [], notifications: [], totalStudyTime: 0, completionRate: 0 };
-      (parentService.getParentDashboard as jest.Mock).mockResolvedValue(dashboardData);
+      const dashboardData = {
+        children: [],
+        rewards: [],
+        notifications: [],
+        totalStudyTime: 0,
+        completionRate: 0,
+      };
+      (parentService.getParentDashboard as jest.Mock).mockResolvedValue(
+        dashboardData,
+      );
 
       const result = await controller.getDashboard();
 
-      expect(parentService.getParentDashboard).toHaveBeenCalledWith(mockUser.sub);
+      expect(parentService.getParentDashboard).toHaveBeenCalledWith(
+        mockUser.sub,
+      );
       expect(result).toBe(dashboardData);
     });
   });
@@ -63,11 +73,16 @@ describe('PrivateParentController', () => {
         imageUrl: 'http://example.com/reward.png',
       };
       const createdReward = { id: 'reward-id-1' };
-      (parentService.createReward as jest.Mock).mockResolvedValue(createdReward);
+      (parentService.createReward as jest.Mock).mockResolvedValue(
+        createdReward,
+      );
 
       const result = await controller.createReward(dto);
 
-      expect(parentService.createReward).toHaveBeenCalledWith(mockUser.sub, dto);
+      expect(parentService.createReward).toHaveBeenCalledWith(
+        mockUser.sub,
+        dto,
+      );
       expect(result).toBe(createdReward);
     });
   });

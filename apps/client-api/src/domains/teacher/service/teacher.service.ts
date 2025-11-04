@@ -1,16 +1,16 @@
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-    BadRequestException,
-    Injectable,
-    NotFoundException,
+  BadRequestException,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { Gender, User, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { UploadService } from '../../upload/upload.service';
 import {
-    CreateTeacherDto,
-    FilterTeacherRequestDto,
-    UpdateTeacherDto,
+  CreateTeacherDto,
+  FilterTeacherRequestDto,
+  UpdateTeacherDto,
 } from '../dto/teacher.dto';
 import { TeacherRepository } from '../repository/teacher.repository';
 

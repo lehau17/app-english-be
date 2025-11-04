@@ -12,23 +12,27 @@ import { CoursesImportService } from './service/couse-import.service';
 import { SessionScheduleService } from './service/session-schedule.service';
 
 @Module({
-    imports: [GoogleTranslateModule, SharedModule, forwardRef(() => CertificateModule)],
-    controllers: [CourseController, SessionScheduleController],
-    providers: [
-        CourseService,
-        CourseRepository,
-        CoursesImportService,
-        GoogleTranslateFreeService,
-        UploadService,
-        SessionScheduleService,
-        SessionScheduleRepository,
-        {
-            provide: TtsService,
-            useFactory: (uploadService: UploadService) => {
-                return new TtsService(uploadService);
-            },
-            inject: [UploadService],
-        },
-    ],
+  imports: [
+    GoogleTranslateModule,
+    SharedModule,
+    forwardRef(() => CertificateModule),
+  ],
+  controllers: [CourseController, SessionScheduleController],
+  providers: [
+    CourseService,
+    CourseRepository,
+    CoursesImportService,
+    GoogleTranslateFreeService,
+    UploadService,
+    SessionScheduleService,
+    SessionScheduleRepository,
+    {
+      provide: TtsService,
+      useFactory: (uploadService: UploadService) => {
+        return new TtsService(uploadService);
+      },
+      inject: [UploadService],
+    },
+  ],
 })
-export class CourseModule { }
+export class CourseModule {}

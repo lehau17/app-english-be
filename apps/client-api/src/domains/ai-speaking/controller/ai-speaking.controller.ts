@@ -1,12 +1,5 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FinalizeAiSpeakingSessionDto } from '../dto/finalize-session.dto';
 import { AiSpeakingSessionResponseDto } from '../dto/session-response.dto';

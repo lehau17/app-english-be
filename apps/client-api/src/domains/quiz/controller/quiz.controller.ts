@@ -17,7 +17,7 @@ export class QuizController {
 
   @Get('/generate')
   @ApiOperation({
-    summary: 'Generate a quiz from the user\'s vocabulary book',
+    summary: "Generate a quiz from the user's vocabulary book",
   })
   @ApiQuery({
     name: 'questions',
@@ -35,7 +35,7 @@ export class QuizController {
   }
 
   @Get('/flashcards')
-  @ApiOperation({ summary: 'Get all flashcards from the user\'s vocabulary' })
+  @ApiOperation({ summary: "Get all flashcards from the user's vocabulary" })
   @ResponseMessage('Flashcards fetched successfully.')
   async getFlashcards(
     @PayloadToken() user: JwtPayload,

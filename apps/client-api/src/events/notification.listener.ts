@@ -1,5 +1,10 @@
 import { KafkaConfigService, KafkaTopic } from '@app/shared';
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Consumer, Kafka } from 'kafkajs';
 import { EventsGateway } from './events.gateway';
 
@@ -35,7 +40,9 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
         topics: [KafkaTopic.NOTIFICATION_SEND_OTP_CREATED],
         fromBeginning: false,
       });
-      this.logger.log(`✅ Subscribed to topic: ${KafkaTopic.NOTIFICATION_SEND_OTP_CREATED}`);
+      this.logger.log(
+        `✅ Subscribed to topic: ${KafkaTopic.NOTIFICATION_SEND_OTP_CREATED}`,
+      );
 
       // Event listeners
       this.consumer.on(this.consumer.events.GROUP_JOIN, (e) =>
@@ -105,7 +112,10 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
 
       this.logger.log(`Relayed notification to user: ${userId}`);
     } catch (err) {
-      this.logger.error(`Failed to process notification: ${err.message}`, err.stack);
+      this.logger.error(
+        `Failed to process notification: ${err.message}`,
+        err.stack,
+      );
     }
   }
 }

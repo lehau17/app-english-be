@@ -10,10 +10,7 @@ export class QuizService {
     private readonly dictionaryService: DictionaryService,
   ) {}
 
-  async generateQuiz(
-    userId: string,
-    numberOfQuestions = 10,
-  ): Promise<QuizDto> {
+  async generateQuiz(userId: string, numberOfQuestions = 10): Promise<QuizDto> {
     const savedWords = await this.vocabularyService.getSavedWords(userId);
     if (savedWords.length < 4) {
       throw new InternalServerErrorException(

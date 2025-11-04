@@ -41,7 +41,8 @@ export class FlashcardDto {
   pronunciation?: string;
 
   @ApiPropertyOptional({
-    example: 'the occurrence and development of events by chance in a happy or beneficial way',
+    example:
+      'the occurrence and development of events by chance in a happy or beneficial way',
   })
   definition?: string;
 

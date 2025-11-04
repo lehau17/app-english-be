@@ -1,9 +1,9 @@
 import { PrismaRepository } from '@app/database';
 import { Injectable } from '@nestjs/common';
 import {
-    AgentChatDto,
-    AgentChatResponseDto,
-    AgentRecommendationDto,
+  AgentChatDto,
+  AgentChatResponseDto,
+  AgentRecommendationDto,
 } from '../dto/agent.dto';
 import { AgentChatRepository } from '../repository';
 import { LangChainAgentService } from './langchain-agent.service';
@@ -62,7 +62,10 @@ export class AgentService {
     }
 
     // Build full name from firstName + lastName
-    const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || user.displayName || 'Chưa cập nhật';
+    const fullName =
+      [user.firstName, user.lastName].filter(Boolean).join(' ') ||
+      user.displayName ||
+      'Chưa cập nhật';
 
     let info = `- Tên: ${fullName}\n`;
     info += `- Email: ${user.email || 'Chưa có'}\n`;
@@ -88,7 +91,10 @@ export class AgentService {
     if (user.role === 'parent' && user.childRelations.length > 0) {
       const children = user.childRelations.map((relation) => {
         const child = relation.child;
-        const childName = [child.firstName, child.lastName].filter(Boolean).join(' ') || child.displayName || 'Con';
+        const childName =
+          [child.firstName, child.lastName].filter(Boolean).join(' ') ||
+          child.displayName ||
+          'Con';
         const childClasses = child.classroomsStudying.map(
           (cs) => `${cs.classroom.name}`,
         );
@@ -158,7 +164,8 @@ export class AgentService {
       );
 
       // Save AI response
-      const aiContent = (result as any).response || (result as any).answer || '';
+      const aiContent =
+        (result as any).response || (result as any).answer || '';
       await this.agentChatRepository.createMessage({
         conversationId,
         role: 'assistant',
@@ -178,7 +185,7 @@ export class AgentService {
       const processingTime = Date.now() - startTime;
 
       return {
-  response: aiContent,
+        response: aiContent,
         conversationId,
         confidence: 0.85, // Could be calculated based on result quality
         sources: ['Knowledge Base', 'Database', 'API Documentation'],

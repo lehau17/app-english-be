@@ -83,7 +83,9 @@ describe('DictionaryService', () => {
       };
 
       (wordsApiService.isConfigured as jest.Mock).mockReturnValue(true);
-      (wordsApiService.lookupWord as jest.Mock).mockResolvedValue(mockApiResponse);
+      (wordsApiService.lookupWord as jest.Mock).mockResolvedValue(
+        mockApiResponse,
+      );
       (redisService.get as jest.Mock).mockResolvedValue(null);
 
       const result = await service.lookupWord(word);

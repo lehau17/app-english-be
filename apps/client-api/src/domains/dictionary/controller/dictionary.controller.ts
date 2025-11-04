@@ -9,10 +9,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { AdvancedSearchDto, WordResultDto } from '../dto/dictionary.dto';
-import {
-  WordExamplesDto,
-  WordRelationsDto,
-} from '../dto/word-relation.dto';
+import { WordExamplesDto, WordRelationsDto } from '../dto/word-relation.dto';
 import { DictionaryService } from '../service/dictionary.service';
 import { WordOfTheDayService } from '../service/word-of-the-day.service';
 
@@ -44,7 +41,8 @@ export class DictionaryController {
   @Get('/lookup/:word')
   @ApiOperation({
     summary: 'Lookup word definition',
-    description: 'Get detailed information about a word including definitions, pronunciation, synonyms, etc.',
+    description:
+      'Get detailed information about a word including definitions, pronunciation, synonyms, etc.',
   })
   @ApiParam({ name: 'word', example: 'example' })
   @ResponseMessage('Word details fetched successfully')
@@ -132,7 +130,8 @@ export class DictionaryController {
   @Get('/search')
   @ApiOperation({
     summary: 'Advanced search for words',
-    description: 'Search for words using various criteria like patterns and part of speech.',
+    description:
+      'Search for words using various criteria like patterns and part of speech.',
   })
   @ResponseMessage('Search results fetched successfully')
   async advancedSearch(@Query() query: AdvancedSearchDto): Promise<any> {
@@ -142,7 +141,7 @@ export class DictionaryController {
   @Get('/recent')
   @ApiOperation({
     summary: 'Get recent searches',
-    description: 'Returns user\'s recent word searches',
+    description: "Returns user's recent word searches",
   })
   @ApiQuery({ name: 'limit', required: false, example: 10 })
   @ResponseMessage('Recent searches fetched successfully')

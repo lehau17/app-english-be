@@ -3,7 +3,11 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { PaymentProvider, PaymentStatus, TransactionType } from '@prisma/client';
+import {
+  PaymentProvider,
+  PaymentStatus,
+  TransactionType,
+} from '@prisma/client';
 import { PaymentRepository } from '../repository/payment.repository';
 import { PaymentService } from './payment.service';
 import { VNPayService } from './vnpay.service';
@@ -74,10 +78,13 @@ describe('PaymentService', () => {
         description: 'Test payment',
         createdAt: new Date(),
       };
-      const paymentUrl = 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_TxnRef=ORDER_20250101_001';
+      const paymentUrl =
+        'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_TxnRef=ORDER_20250101_001';
 
       paymentRepository.course.findUnique.mockResolvedValue(course as any);
-      paymentRepository.classroomStudent.findUnique.mockResolvedValue(classroomStudent as any);
+      paymentRepository.classroomStudent.findUnique.mockResolvedValue(
+        classroomStudent as any,
+      );
       paymentRepository.checkDuplicateTransaction.mockResolvedValue(null);
       vnpayService.generateOrderId.mockReturnValue(orderId);
       paymentRepository.createTransaction.mockResolvedValue(transaction as any);
@@ -141,7 +148,9 @@ describe('PaymentService', () => {
       const course = { id: 'course-456', price: 299000, title: 'Test Course' };
       const classroomStudent = { isPurchased: true };
       paymentRepository.course.findUnique.mockResolvedValue(course as any);
-      paymentRepository.classroomStudent.findUnique.mockResolvedValue(classroomStudent as any);
+      paymentRepository.classroomStudent.findUnique.mockResolvedValue(
+        classroomStudent as any,
+      );
 
       await expect(
         service.createPayment(studentId, createPaymentDto, '127.0.0.1'),
@@ -154,11 +163,18 @@ describe('PaymentService', () => {
     it('should throw ConflictException if duplicate transaction exists', async () => {
       const course = { id: 'course-456', price: 299000, title: 'Test Course' };
       const classroomStudent = { isPurchased: false };
-      const existingTransaction = { id: 'existing-txn', status: PaymentStatus.success };
+      const existingTransaction = {
+        id: 'existing-txn',
+        status: PaymentStatus.success,
+      };
 
       paymentRepository.course.findUnique.mockResolvedValue(course as any);
-      paymentRepository.classroomStudent.findUnique.mockResolvedValue(classroomStudent as any);
-      paymentRepository.checkDuplicateTransaction.mockResolvedValue(existingTransaction as any);
+      paymentRepository.classroomStudent.findUnique.mockResolvedValue(
+        classroomStudent as any,
+      );
+      paymentRepository.checkDuplicateTransaction.mockResolvedValue(
+        existingTransaction as any,
+      );
 
       await expect(
         service.createPayment(studentId, createPaymentDto, '127.0.0.1'),
@@ -184,7 +200,9 @@ describe('PaymentService', () => {
       const orderId = 'ORDER_20250101_002';
 
       paymentRepository.course.findUnique.mockResolvedValue(course as any);
-      paymentRepository.classroomStudent.findUnique.mockResolvedValue(classroomStudent as any);
+      paymentRepository.classroomStudent.findUnique.mockResolvedValue(
+        classroomStudent as any,
+      );
       paymentRepository.checkDuplicateTransaction.mockResolvedValue(null);
       vnpayService.generateOrderId.mockReturnValue(orderId);
       paymentRepository.createTransaction.mockResolvedValue({
@@ -193,7 +211,12 @@ describe('PaymentService', () => {
       } as any);
       vnpayService.createPaymentUrl.mockReturnValue('http://payment.url');
 
-      await service.createPayment('child-123', dtoWithStudent, '127.0.0.1', parentId);
+      await service.createPayment(
+        'child-123',
+        dtoWithStudent,
+        '127.0.0.1',
+        parentId,
+      );
 
       expect(paymentRepository.parentChild.findUnique).toHaveBeenCalledWith({
         where: {
@@ -215,10 +238,20 @@ describe('PaymentService', () => {
       paymentRepository.parentChild.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.createPayment('child-123', dtoWithStudent, '127.0.0.1', parentId),
+        service.createPayment(
+          'child-123',
+          dtoWithStudent,
+          '127.0.0.1',
+          parentId,
+        ),
       ).rejects.toThrow(NotFoundException);
       await expect(
-        service.createPayment('child-123', dtoWithStudent, '127.0.0.1', parentId),
+        service.createPayment(
+          'child-123',
+          dtoWithStudent,
+          '127.0.0.1',
+          parentId,
+        ),
       ).rejects.toThrow('Bạn không có quyền thanh toán cho học sinh này');
     });
   });
@@ -243,7 +276,9 @@ describe('PaymentService', () => {
 
     it('should handle successful payment', async () => {
       vnpayService.verifyReturnData.mockReturnValue(true);
-      paymentRepository.findTransactionByTxnRef.mockResolvedValue(transaction as any);
+      paymentRepository.findTransactionByTxnRef.mockResolvedValue(
+        transaction as any,
+      );
       vnpayService.isPaymentSuccess.mockReturnValue(true);
       vnpayService.getResponseMessage.mockReturnValue('Giao dịch thành công');
       paymentRepository.updateTransactionStatus.mockResolvedValue({} as any);
@@ -259,11 +294,9 @@ describe('PaymentService', () => {
         PaymentStatus.success,
         expect.any(Object),
       );
-      expect(paymentRepository.updateStudentPurchaseStatus).toHaveBeenCalledWith(
-        'student-123',
-        'classroom-789',
-        true,
-      );
+      expect(
+        paymentRepository.updateStudentPurchaseStatus,
+      ).toHaveBeenCalledWith('student-123', 'classroom-789', true);
     });
 
     it('should return error for invalid checksum', async () => {
@@ -290,7 +323,9 @@ describe('PaymentService', () => {
     it('should return error if amount mismatch', async () => {
       const wrongAmountData = { ...returnData, vnp_Amount: '10000000' };
       vnpayService.verifyReturnData.mockReturnValue(true);
-      paymentRepository.findTransactionByTxnRef.mockResolvedValue(transaction as any);
+      paymentRepository.findTransactionByTxnRef.mockResolvedValue(
+        transaction as any,
+      );
 
       const result = await service.handleVNPayReturn(wrongAmountData);
 
@@ -302,7 +337,9 @@ describe('PaymentService', () => {
     it('should handle failed payment', async () => {
       const failedReturnData = { ...returnData, vnp_ResponseCode: '51' };
       vnpayService.verifyReturnData.mockReturnValue(true);
-      paymentRepository.findTransactionByTxnRef.mockResolvedValue(transaction as any);
+      paymentRepository.findTransactionByTxnRef.mockResolvedValue(
+        transaction as any,
+      );
       vnpayService.isPaymentSuccess.mockReturnValue(false);
       vnpayService.getResponseMessage.mockReturnValue('Insufficient funds');
       paymentRepository.updateTransactionStatus.mockResolvedValue({} as any);
@@ -317,13 +354,17 @@ describe('PaymentService', () => {
         PaymentStatus.failed,
         expect.any(Object),
       );
-      expect(paymentRepository.updateStudentPurchaseStatus).not.toHaveBeenCalled();
+      expect(
+        paymentRepository.updateStudentPurchaseStatus,
+      ).not.toHaveBeenCalled();
     });
 
     it('should mark transaction as cancelled when user cancels', async () => {
       const cancelledReturnData = { ...returnData, vnp_ResponseCode: '24' };
       vnpayService.verifyReturnData.mockReturnValue(true);
-      paymentRepository.findTransactionByTxnRef.mockResolvedValue(transaction as any);
+      paymentRepository.findTransactionByTxnRef.mockResolvedValue(
+        transaction as any,
+      );
       vnpayService.isPaymentSuccess.mockReturnValue(false);
       vnpayService.getResponseMessage.mockReturnValue('User cancelled');
       paymentRepository.updateTransactionStatus.mockResolvedValue({} as any);
@@ -340,9 +381,13 @@ describe('PaymentService', () => {
 
     it('should handle errors during processing', async () => {
       vnpayService.verifyReturnData.mockReturnValue(true);
-      paymentRepository.findTransactionByTxnRef.mockResolvedValue(transaction as any);
+      paymentRepository.findTransactionByTxnRef.mockResolvedValue(
+        transaction as any,
+      );
       vnpayService.isPaymentSuccess.mockReturnValue(true);
-      paymentRepository.updateTransactionStatus.mockRejectedValue(new Error('Database error'));
+      paymentRepository.updateTransactionStatus.mockRejectedValue(
+        new Error('Database error'),
+      );
 
       const result = await service.handleVNPayReturn(returnData);
 
@@ -359,7 +404,9 @@ describe('PaymentService', () => {
         { id: 'txn-2', amount: 200000 },
       ];
 
-      paymentRepository.getStudentTransactions.mockResolvedValue(transactions as any);
+      paymentRepository.getStudentTransactions.mockResolvedValue(
+        transactions as any,
+      );
 
       const result = await service.getStudentTransactions(studentId);
 
@@ -375,9 +422,15 @@ describe('PaymentService', () => {
       const studentId = 'student-123';
       const transactions = [{ id: 'txn-3', amount: 300000 }];
 
-      paymentRepository.getStudentTransactions.mockResolvedValue(transactions as any);
+      paymentRepository.getStudentTransactions.mockResolvedValue(
+        transactions as any,
+      );
 
-      const result = await service.getStudentTransactions(studentId, 5, 'cursor-123');
+      const result = await service.getStudentTransactions(
+        studentId,
+        5,
+        'cursor-123',
+      );
 
       expect(result).toEqual(transactions);
       expect(paymentRepository.getStudentTransactions).toHaveBeenCalledWith(
@@ -397,7 +450,10 @@ describe('PaymentService', () => {
         isPurchased: true,
       } as any);
 
-      const result = await service.checkStudentPurchaseStatus(studentId, classroomId);
+      const result = await service.checkStudentPurchaseStatus(
+        studentId,
+        classroomId,
+      );
 
       expect(result.isPurchased).toBe(true);
       expect(paymentRepository.getStudentPurchaseStatus).toHaveBeenCalledWith(
@@ -414,7 +470,10 @@ describe('PaymentService', () => {
         isPurchased: false,
       } as any);
 
-      const result = await service.checkStudentPurchaseStatus(studentId, classroomId);
+      const result = await service.checkStudentPurchaseStatus(
+        studentId,
+        classroomId,
+      );
 
       expect(result.isPurchased).toBe(false);
     });
@@ -425,7 +484,10 @@ describe('PaymentService', () => {
 
       paymentRepository.getStudentPurchaseStatus.mockResolvedValue(null);
 
-      const result = await service.checkStudentPurchaseStatus(studentId, classroomId);
+      const result = await service.checkStudentPurchaseStatus(
+        studentId,
+        classroomId,
+      );
 
       expect(result.isPurchased).toBe(false);
     });

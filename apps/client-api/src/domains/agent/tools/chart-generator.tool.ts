@@ -39,7 +39,14 @@ Returns a JSON object with chart configuration for Recharts rendering.
         title = 'Chart',
         xLabel,
         yLabel,
-        colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'],
+        colors = [
+          '#3b82f6',
+          '#10b981',
+          '#f59e0b',
+          '#ef4444',
+          '#8b5cf6',
+          '#ec4899',
+        ],
       } = parsedInput;
 
       // Validate data
@@ -64,7 +71,9 @@ Returns a JSON object with chart configuration for Recharts rendering.
         },
       };
 
-      this.logger.log(`✅ Chart config generated: ${JSON.stringify(chartConfig)}`);
+      this.logger.log(
+        `✅ Chart config generated: ${JSON.stringify(chartConfig)}`,
+      );
 
       return JSON.stringify({
         success: true,

@@ -7,7 +7,12 @@ import {
   Neo4jSyncMessage,
   Neo4jSyncOperation,
 } from '@app/shared';
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Consumer, Kafka } from 'kafkajs';
 
 @Injectable()

@@ -10,9 +10,15 @@ export class Neo4jService implements OnModuleInit {
   constructor(private configService: ConfigService) {}
 
   async onModuleInit() {
-    const uri = this.configService.get<string>('NEO4J_URI', 'bolt://localhost:7687');
+    const uri = this.configService.get<string>(
+      'NEO4J_URI',
+      'bolt://localhost:7687',
+    );
     const username = this.configService.get<string>('NEO4J_USERNAME', 'neo4j');
-    const password = this.configService.get<string>('NEO4J_PASSWORD', 'neo4j123456');
+    const password = this.configService.get<string>(
+      'NEO4J_PASSWORD',
+      'neo4j123456',
+    );
 
     this.logger.log(`🔌 Connecting to Neo4j at ${uri}...`);
 
@@ -80,9 +86,7 @@ export class Neo4jService implements OnModuleInit {
   }
 
   // Helper method to run read transaction
-  async runReadTransaction<T = any>(
-    work: (tx: any) => Promise<T>,
-  ): Promise<T> {
+  async runReadTransaction<T = any>(work: (tx: any) => Promise<T>): Promise<T> {
     const session = this.getSession();
     try {
       return await session.executeRead(work);

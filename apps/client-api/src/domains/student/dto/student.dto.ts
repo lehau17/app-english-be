@@ -2,13 +2,13 @@ import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Gender, LanguageCode, TimezoneCode } from '@prisma/client';
 import {
-    IsEmail,
-    IsEnum,
-    IsNotEmpty,
-    IsOptional,
-    IsString,
-    Matches,
-    MinLength,
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MinLength,
 } from 'class-validator';
 
 export class FilterStudentRequestDto extends RequestPagingDto {

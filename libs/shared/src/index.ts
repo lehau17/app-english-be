@@ -1,7 +1,7 @@
 export * from './ai';
 export * from './payload';
 export * from './pipe';
-export * from "./redis";
+export * from './redis';
 export * from './services/profanity-ban.service';
 export * from './services/profanity-detection.service';
 export * from './services/profanity.module';
@@ -18,4 +18,3 @@ export * from './middleware';
 export * from './neo4j';
 export * from './repositories';
 export * from './request-context';
-

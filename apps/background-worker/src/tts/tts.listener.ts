@@ -1,6 +1,11 @@
 import { PrismaRepository } from '@app/database';
 import { KafkaConfigService, KafkaTopic, TtsService } from '@app/shared';
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
 import { Consumer, Kafka } from 'kafkajs';
 
 interface TTSTaskMessage {
@@ -44,7 +49,9 @@ export class TtsListener implements OnModuleInit, OnModuleDestroy {
         topics: [KafkaTopic.TTS_AUDIO_GENERATION],
         fromBeginning: false,
       });
-      this.logger.log(`✅ Subscribed to topic: ${KafkaTopic.TTS_AUDIO_GENERATION}`);
+      this.logger.log(
+        `✅ Subscribed to topic: ${KafkaTopic.TTS_AUDIO_GENERATION}`,
+      );
 
       // Event listeners
       this.consumer.on(this.consumer.events.GROUP_JOIN, (e) =>
@@ -155,7 +162,9 @@ export class TtsListener implements OnModuleInit, OnModuleDestroy {
           items[idx].audioUrl = url;
           processedItems++;
 
-          this.logger.debug(`Successfully generated audio for "${word}": ${url}`);
+          this.logger.debug(
+            `Successfully generated audio for "${word}": ${url}`,
+          );
         } catch (error) {
           this.logger.error(
             `Failed to generate audio for word "${word}": ${error.message}`,

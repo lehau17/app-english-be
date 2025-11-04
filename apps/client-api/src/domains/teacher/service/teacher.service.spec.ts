@@ -66,9 +66,20 @@ describe('TeacherService', () => {
 
   describe('create', () => {
     it('should create a new teacher', async () => {
-      const dto = { email: 'new@test.com', password: 'password', firstName: 'New', lastName: 'Teacher', phone: '123' };
+      const dto = {
+        email: 'new@test.com',
+        password: 'password',
+        firstName: 'New',
+        lastName: 'Teacher',
+        phone: '123',
+      };
       const hashedPassword = 'hashedpassword';
-      const createdUser = { ...mockUser, ...dto, id: '2', passwordHash: hashedPassword };
+      const createdUser = {
+        ...mockUser,
+        ...dto,
+        id: '2',
+        passwordHash: hashedPassword,
+      };
 
       jest.spyOn(repository, 'findByEmail').mockResolvedValue(null);
       (bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
@@ -89,9 +100,17 @@ describe('TeacherService', () => {
     });
 
     it('should throw BadRequestException if teacher already exists', async () => {
-      const dto = { email: 'teacher@test.com', password: 'password', firstName: 'Test', lastName: 'Teacher', phone: '123' };
+      const dto = {
+        email: 'teacher@test.com',
+        password: 'password',
+        firstName: 'Test',
+        lastName: 'Teacher',
+        phone: '123',
+      };
       jest.spyOn(repository, 'findByEmail').mockResolvedValue(mockUser as any);
-      await expect(service.create(dto as any)).rejects.toThrow(BadRequestException);
+      await expect(service.create(dto as any)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -111,95 +130,103 @@ describe('TeacherService', () => {
 
   describe('update', () => {
     it('should update a teacher', async () => {
-        const dto = { firstName: 'Updated' };
-        const updatedUser = { ...mockUser, ...dto };
+      const dto = { firstName: 'Updated' };
+      const updatedUser = { ...mockUser, ...dto };
 
-        jest.spyOn(service, 'findById').mockResolvedValue(mockUser as any);
-        jest.spyOn(repository, 'update').mockResolvedValue(updatedUser as any);
-        const result = await service.update('1', dto);
-        expect(result).toEqual(updatedUser);
-        expect(service.findById).toHaveBeenCalledWith('1');
-        expect(repository.update).toHaveBeenCalledWith('1', dto);
+      jest.spyOn(service, 'findById').mockResolvedValue(mockUser as any);
+      jest.spyOn(repository, 'update').mockResolvedValue(updatedUser as any);
+      const result = await service.update('1', dto);
+      expect(result).toEqual(updatedUser);
+      expect(service.findById).toHaveBeenCalledWith('1');
+      expect(repository.update).toHaveBeenCalledWith('1', dto);
     });
   });
 
   describe('uploadAvatar', () => {
     it('should upload an avatar and update the teacher', async () => {
-        const file = { originalname: 'avatar.jpg' } as any;
-        const avatarUrl = 'http://example.com/avatar.jpg';
-        const updatedUser = { ...mockUser, avatarUrl };
+      const file = { originalname: 'avatar.jpg' } as any;
+      const avatarUrl = 'http://example.com/avatar.jpg';
+      const updatedUser = { ...mockUser, avatarUrl };
 
-        jest.spyOn(service, 'findById').mockResolvedValue(mockUser as any);
-        jest.spyOn(uploadService, 'uploadFile').mockResolvedValue(avatarUrl);
-        jest.spyOn(repository, 'update').mockResolvedValue(updatedUser as any);
+      jest.spyOn(service, 'findById').mockResolvedValue(mockUser as any);
+      jest.spyOn(uploadService, 'uploadFile').mockResolvedValue(avatarUrl);
+      jest.spyOn(repository, 'update').mockResolvedValue(updatedUser as any);
 
-        const result = await service.uploadAvatar('1', file);
+      const result = await service.uploadAvatar('1', file);
 
-        expect(result).toEqual(updatedUser);
-        expect(service.findById).toHaveBeenCalledWith('1');
-        expect(uploadService.uploadFile).toHaveBeenCalledWith(file);
-        expect(repository.update).toHaveBeenCalledWith('1', { avatarUrl });
+      expect(result).toEqual(updatedUser);
+      expect(service.findById).toHaveBeenCalledWith('1');
+      expect(uploadService.uploadFile).toHaveBeenCalledWith(file);
+      expect(repository.update).toHaveBeenCalledWith('1', { avatarUrl });
     });
   });
 
   describe('delete', () => {
     it('should delete a teacher', async () => {
-        jest.spyOn(service, 'findById').mockResolvedValue(mockUser as any);
-        jest.spyOn(repository, 'delete').mockResolvedValue(mockUser as any);
-        const result = await service.delete('1');
+      jest.spyOn(service, 'findById').mockResolvedValue(mockUser as any);
+      jest.spyOn(repository, 'delete').mockResolvedValue(mockUser as any);
+      const result = await service.delete('1');
 
-        expect(result).toEqual(mockUser);
-        expect(service.findById).toHaveBeenCalledWith('1');
-        expect(repository.delete).toHaveBeenCalledWith('1');
+      expect(result).toEqual(mockUser);
+      expect(service.findById).toHaveBeenCalledWith('1');
+      expect(repository.delete).toHaveBeenCalledWith('1');
     });
   });
 
   describe('list', () => {
     it('should return a paginated list of teachers', async () => {
-        const params = { page: 1, limit: 10 };
-        const pagedResponse = PageResponseDto.of([mockUser], params.page, params.limit, 1);
-        jest.spyOn(repository, 'list').mockResolvedValue(pagedResponse as any);
-        const result = await service.list(params);
+      const params = { page: 1, limit: 10 };
+      const pagedResponse = PageResponseDto.of(
+        [mockUser],
+        params.page,
+        params.limit,
+        1,
+      );
+      jest.spyOn(repository, 'list').mockResolvedValue(pagedResponse as any);
+      const result = await service.list(params);
 
-        expect(result).toEqual(pagedResponse);
-        expect(repository.list).toHaveBeenCalledWith(params);
+      expect(result).toEqual(pagedResponse);
+      expect(repository.list).toHaveBeenCalledWith(params);
     });
   });
 
   describe('exportTeachers', () => {
     it('should export teachers to a CSV string', async () => {
-        const teachers = [mockUser];
-        jest.spyOn(repository, 'listAll').mockResolvedValue(teachers as any);
-        const result = await service.exportTeachers({});
+      const teachers = [mockUser];
+      jest.spyOn(repository, 'listAll').mockResolvedValue(teachers as any);
+      const result = await service.exportTeachers({});
 
-        expect(result).toContain('email,firstName,lastName');
-        expect(result).toContain(mockUser.email);
+      expect(result).toContain('email,firstName,lastName');
+      expect(result).toContain(mockUser.email);
     });
 
     it('should return empty string if no teachers found', async () => {
-        jest.spyOn(repository, 'listAll').mockResolvedValue([]);
-        const result = await service.exportTeachers({});
-        expect(result).toEqual('');
+      jest.spyOn(repository, 'listAll').mockResolvedValue([]);
+      const result = await service.exportTeachers({});
+      expect(result).toEqual('');
     });
   });
 
   describe('importTeachers', () => {
     it('should import teachers from a CSV buffer', async () => {
-        const csv = 'email,password,firstName,lastName,phone\nnew@test.com,pass,New,User,12345';
-        const buffer = Buffer.from(csv);
+      const csv =
+        'email,password,firstName,lastName,phone\nnew@test.com,pass,New,User,12345';
+      const buffer = Buffer.from(csv);
 
-        jest.spyOn(service, 'create').mockResolvedValue(mockUser as any);
-        const result = await service.importTeachers(buffer);
+      jest.spyOn(service, 'create').mockResolvedValue(mockUser as any);
+      const result = await service.importTeachers(buffer);
 
-        expect(result.created).toEqual(1);
-        expect(result.errors.length).toEqual(0);
-        expect(service.create).toHaveBeenCalled();
+      expect(result.created).toEqual(1);
+      expect(result.errors.length).toEqual(0);
+      expect(service.create).toHaveBeenCalled();
     });
 
     it('should throw BadRequestException for invalid CSV header', async () => {
-        const csv = 'invalid,header\n';
-        const buffer = Buffer.from(csv);
-        await expect(service.importTeachers(buffer)).rejects.toThrow(BadRequestException);
+      const csv = 'invalid,header\n';
+      const buffer = Buffer.from(csv);
+      await expect(service.importTeachers(buffer)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });

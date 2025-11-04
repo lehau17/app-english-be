@@ -7,7 +7,9 @@ async function bootstrap() {
   const app = await NestFactory.create(NotificationModule);
 
   logger.log('🚀 Starting notification service...');
-  logger.log(`📡 Kafka brokers: ${process.env.KAFKA_BROKERS || 'localhost:19092'}`);
+  logger.log(
+    `📡 Kafka brokers: ${process.env.KAFKA_BROKERS || 'localhost:19092'}`,
+  );
   logger.log('🎧 KafkaJS listener will auto-start via OnModuleInit');
 
   await app.listen(process.env.PORT ?? 3002);

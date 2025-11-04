@@ -32,7 +32,8 @@ export class StudentAgentTools {
   private getScoreReportTool() {
     return new DynamicStructuredTool({
       name: 'get_score_report',
-      description: 'Tạo báo cáo điểm số của học sinh với biểu đồ. Sử dụng khi học sinh hỏi về điểm số, thành tích, báo cáo học tập.',
+      description:
+        'Tạo báo cáo điểm số của học sinh với biểu đồ. Sử dụng khi học sinh hỏi về điểm số, thành tích, báo cáo học tập.',
       schema: z.object({
         userId: z.string().describe('ID của học sinh'),
         limit: z.number().optional().default(10).describe('Số lượng bài tập'),
@@ -43,27 +44,41 @@ export class StudentAgentTools {
 
           const submissions = await this.prisma.assignmentSubmission.findMany({
             where: { studentId: userId, score: { not: null } },
-            include: { assignment: { select: { title: true, totalPoints: true } } },
+            include: {
+              assignment: { select: { title: true, totalPoints: true } },
+            },
             orderBy: { submittedAt: 'desc' },
             take: limit,
           });
 
           if (submissions.length === 0) {
-            return JSON.stringify({ success: false, message: 'Chưa có bài được chấm điểm!' });
+            return JSON.stringify({
+              success: false,
+              message: 'Chưa có bài được chấm điểm!',
+            });
           }
 
-          const scores = submissions.map(s => s.score);
-          const totalPoints = submissions.map(s => s.assignment.totalPoints);
-          const percentages = submissions.map((s, idx) => (s.score / totalPoints[idx]) * 100);
+          const scores = submissions.map((s) => s.score);
+          const totalPoints = submissions.map((s) => s.assignment.totalPoints);
+          const percentages = submissions.map(
+            (s, idx) => (s.score / totalPoints[idx]) * 100,
+          );
           const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
-          const avgPercentage = percentages.reduce((a, b) => a + b, 0) / percentages.length;
+          const avgPercentage =
+            percentages.reduce((a, b) => a + b, 0) / percentages.length;
 
           const chartData = submissions.reverse().map((s, idx) => {
             const num = submissions.length - idx;
-            return 'Bài ' + num + ': ' + s.score + '/' + s.assignment.totalPoints;
+            return (
+              'Bài ' + num + ': ' + s.score + '/' + s.assignment.totalPoints
+            );
           });
 
-          const chartPrompt = 'Biểu đồ cột điểm số ' + submissions.length + ' bài tập. Dữ liệu: ' + chartData.join(', ');
+          const chartPrompt =
+            'Biểu đồ cột điểm số ' +
+            submissions.length +
+            ' bài tập. Dữ liệu: ' +
+            chartData.join(', ');
           const chartResult = await this.chartTool._call(chartPrompt);
 
           return JSON.stringify({
@@ -94,8 +109,8 @@ export class StudentAgentTools {
     else insights.push('Ôn tập nhiều hơn!');
 
     if (pcts.length >= 3) {
-      const r3 = pcts.slice(-3).reduce((a,b)=>a+b,0)/3;
-      const o3 = pcts.slice(0,3).reduce((a,b)=>a+b,0)/3;
+      const r3 = pcts.slice(-3).reduce((a, b) => a + b, 0) / 3;
+      const o3 = pcts.slice(0, 3).reduce((a, b) => a + b, 0) / 3;
       if (r3 > o3 + 10) insights.push('Điểm đang tăng!');
       else if (r3 < o3 - 10) insights.push('Cần cải thiện!');
     }
@@ -109,15 +124,30 @@ export class StudentAgentTools {
   private getAdaptiveRecommendationTool() {
     return new DynamicStructuredTool({
       name: 'recommend_lessons',
-      description: 'Gợi ý bài học phù hợp dựa trên điểm yếu và tiến độ của học sinh. Sử dụng khi học sinh hỏi "nên học gì tiếp", "bài học nào phù hợp", "làm sao cải thiện".',
+      description:
+        'Gợi ý bài học phù hợp dựa trên điểm yếu và tiến độ của học sinh. Sử dụng khi học sinh hỏi "nên học gì tiếp", "bài học nào phù hợp", "làm sao cải thiện".',
       schema: z.object({
         userId: z.string().describe('ID của học sinh'),
-        focusArea: z.enum(['vocabulary', 'grammar', 'listening', 'speaking', 'reading', 'writing', 'all']).optional().default('all').describe('Lĩnh vực cần tập trung'),
+        focusArea: z
+          .enum([
+            'vocabulary',
+            'grammar',
+            'listening',
+            'speaking',
+            'reading',
+            'writing',
+            'all',
+          ])
+          .optional()
+          .default('all')
+          .describe('Lĩnh vực cần tập trung'),
         limit: z.number().optional().default(3).describe('Số lượng gợi ý'),
       }),
       func: async ({ userId, focusArea = 'all', limit = 3 }) => {
         try {
-          this.logger.log(`Adaptive recommendation for user: ${userId}, focus: ${focusArea}`);
+          this.logger.log(
+            `Adaptive recommendation for user: ${userId}, focus: ${focusArea}`,
+          );
 
           // 1. Analyze student's weak topics
           const submissions = await this.prisma.assignmentSubmission.findMany({
@@ -183,7 +213,11 @@ export class StudentAgentTools {
             const assignmentId = sub.assignment.id;
 
             if (!topicScores.has(topic)) {
-              topicScores.set(topic, { total: 0, count: 0, assignmentIds: new Set() });
+              topicScores.set(topic, {
+                total: 0,
+                count: 0,
+                assignmentIds: new Set(),
+              });
             }
 
             const data = topicScores.get(topic)!;
@@ -245,7 +279,12 @@ export class StudentAgentTools {
             where: {
               OR: [
                 { title: { contains: searchKeywords, mode: 'insensitive' } },
-                { description: { contains: searchKeywords, mode: 'insensitive' } },
+                {
+                  description: {
+                    contains: searchKeywords,
+                    mode: 'insensitive',
+                  },
+                },
               ],
               isLocked: false,
             },
@@ -266,45 +305,47 @@ export class StudentAgentTools {
           });
 
           // 4. Match lessons to weak topics
-          const recommendations = recommendedLessons.slice(0, limit).map((lesson) => {
-            const matchedTopic = weakTopics.find((t) =>
-              lesson.title.toLowerCase().includes(t.topic.toLowerCase()),
-            );
+          const recommendations = recommendedLessons
+            .slice(0, limit)
+            .map((lesson) => {
+              const matchedTopic = weakTopics.find((t) =>
+                lesson.title.toLowerCase().includes(t.topic.toLowerCase()),
+              );
 
-            return {
-              lessonId: lesson.id,
-              title: lesson.title,
-              description: lesson.description,
-              course: lesson.course?.title,
-              difficulty: lesson.difficulty,
-              order: lesson.orderNo,
-              weakTopic: matchedTopic?.topic,
-              currentScore: matchedTopic?.avgScore.toFixed(1),
-              reason: matchedTopic
-                ? `Giúp cải thiện "${matchedTopic.topic}" (điểm hiện tại: ${matchedTopic.avgScore.toFixed(1)})`
-                : 'Bài học liên quan đến chủ đề yếu',
-              priority: matchedTopic ? 'high' : 'medium',
-            };
-          });
+              return {
+                lessonId: lesson.id,
+                title: lesson.title,
+                description: lesson.description,
+                course: lesson.course?.title,
+                difficulty: lesson.difficulty,
+                order: lesson.orderNo,
+                weakTopic: matchedTopic?.topic,
+                currentScore: matchedTopic?.avgScore.toFixed(1),
+                reason: matchedTopic
+                  ? `Giúp cải thiện "${matchedTopic.topic}" (điểm hiện tại: ${matchedTopic.avgScore.toFixed(1)})`
+                  : 'Bài học liên quan đến chủ đề yếu',
+                priority: matchedTopic ? 'high' : 'medium',
+              };
+            });
 
           return JSON.stringify({
             success: true,
             reason: `Phát hiện ${weakTopics.length} chủ đề cần cải thiện`,
-            weakTopics: weakTopics.map(t => ({
+            weakTopics: weakTopics.map((t) => ({
               topic: t.topic,
               avgScore: t.avgScore.toFixed(1),
-              attempts: t.count
+              attempts: t.count,
             })),
             recommendations,
-            suggestion: 'Nên tập trung ôn tập các bài học này để cải thiện điểm số.'
+            suggestion:
+              'Nên tập trung ôn tập các bài học này để cải thiện điểm số.',
           });
-
         } catch (error) {
           this.logger.error('Adaptive recommendation error:', error);
           return JSON.stringify({
             success: false,
             error: 'Không thể tạo gợi ý',
-            message: 'Vui lòng thử lại sau'
+            message: 'Vui lòng thử lại sau',
           });
         }
       },

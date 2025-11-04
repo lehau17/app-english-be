@@ -77,7 +77,7 @@ describe('PodcastRatingController', () => {
   });
 
   describe('myRating', () => {
-    it('should call the service to get the current user\'s rating', async () => {
+    it("should call the service to get the current user's rating", async () => {
       const payload = { sub: 'user-1' };
       await controller.myRating('p1', payload);
       expect(service.getByUserAndPodcast).toHaveBeenCalledWith('user-1', 'p1');

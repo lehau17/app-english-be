@@ -1,7 +1,22 @@
 import { PayloadToken } from '@app/shared';
 import { JwtPayload } from '@app/shared/payload';
-import { Body, Controller, Get, Logger, Param, Post, Query, Res, StreamableFile } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Logger,
+  Param,
+  Post,
+  Query,
+  Res,
+  StreamableFile,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Response } from 'express';
 import { createReadStream } from 'fs';
 import { join } from 'path';
@@ -78,7 +93,9 @@ export class PrivateAgentController {
       )) {
         chunkCount++;
         const data = JSON.stringify(chunk);
-        this.logger.debug(`📤 Chunk ${chunkCount}: ${data.substring(0, 100)}...`);
+        this.logger.debug(
+          `📤 Chunk ${chunkCount}: ${data.substring(0, 100)}...`,
+        );
         res.write(`data: ${data}\n\n`);
 
         // Flush the response to ensure data is sent immediately
@@ -313,7 +330,8 @@ export class PrivateAgentController {
 
     // Set response headers
     res.set({
-      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${filename}"`,
     });
 

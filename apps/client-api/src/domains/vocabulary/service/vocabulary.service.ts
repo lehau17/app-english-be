@@ -21,7 +21,9 @@ export class VocabularyService {
       normalizedWord,
     );
     if (existingWord) {
-      throw new ConflictException(`Word "${word}" is already in your vocabulary.`);
+      throw new ConflictException(
+        `Word "${word}" is already in your vocabulary.`,
+      );
     }
 
     return this.vocabularyRepository.create(userId, normalizedWord);
@@ -38,7 +40,9 @@ export class VocabularyService {
       normalizedWord,
     );
     if (!existingWord) {
-      throw new NotFoundException(`Word "${word}" not found in your vocabulary.`);
+      throw new NotFoundException(
+        `Word "${word}" not found in your vocabulary.`,
+      );
     }
 
     await this.vocabularyRepository.delete(userId, normalizedWord);
