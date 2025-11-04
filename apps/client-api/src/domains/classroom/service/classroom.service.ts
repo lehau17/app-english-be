@@ -221,7 +221,13 @@ export class ClassroomService {
 
     async list(
         params: FilterClassroomRequestDto,
+        user?: JwtPayload,
     ): Promise<PageResponseDto<Classroom>> {
+        // Auto-filter classrooms based on user role
+        if (user && user.role === UserRole.teacher) {
+            params.teacherId = user.sub;
+        }
+
         return this.classroomRepository.list(params);
     }
 
@@ -262,7 +268,12 @@ export class ClassroomService {
         });
     }
 
-    exportToCsv(params: FilterClassroomRequestDto): Readable {
+    exportToCsv(params: FilterClassroomRequestDto, user?: JwtPayload): Readable {
+        // Auto-filter classrooms based on user role
+        if (user && user.role === UserRole.teacher) {
+            params.teacherId = user.sub;
+        }
+
         const dataStream = this.classroomRepository.streamAll(params);
         const csvTransform = getCsvTransformStream();
         return dataStream.pipe(csvTransform);

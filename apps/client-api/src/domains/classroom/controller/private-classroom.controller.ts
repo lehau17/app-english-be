@@ -102,10 +102,14 @@ export class PrivateClassroomController {
 
     @Get('export')
     @ApiOperation({ summary: 'Export classrooms to CSV' })
-    exportToCsv(@Query() query: FilterClassroomRequestDto, @Res() res: Response) {
+    exportToCsv(
+        @Query() query: FilterClassroomRequestDto,
+        @PayloadToken() user: JwtPayload,
+        @Res() res: Response,
+    ) {
         res.header('Content-Type', 'text/csv');
         res.attachment('classrooms.csv');
-        const csvStream = this.classroomService.exportToCsv(query);
+        const csvStream = this.classroomService.exportToCsv(query, user);
         csvStream.pipe(res);
     }
 
@@ -145,8 +149,9 @@ export class PrivateClassroomController {
     @ResponseMessage('Classrooms listed successfully')
     list(
         @Query() query: FilterClassroomRequestDto,
+        @PayloadToken() user: JwtPayload,
     ): Promise<PageResponseDto<Classroom>> {
-        return this.classroomService.list(query);
+        return this.classroomService.list(query, user);
     }
 
     @Get('teacher/:teacherId/schedule')
