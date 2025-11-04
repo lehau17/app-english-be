@@ -25,3 +25,4 @@ WHERE table_name = 'podcasts'
 AND column_name IN ('audioUrl', 'videoUrl', 'mediaType')
 ORDER BY column_name;
 
+
