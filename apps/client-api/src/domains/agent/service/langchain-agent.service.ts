@@ -148,7 +148,9 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
       - "xuất Excel" → excel_export
       - "xuất PDF" → pdf_export
       - "xuất Word" → word_export
-   3. CHỈ NÓI: "File [format] đã sẵn sàng để tải xuống"
+   3. **SAU KHI GỌI TOOL:** CHỈ NÓI: "Tôi đã tạo file [format] với [số lượng] bản ghi."
+   4. **TUYỆT ĐỐI KHÔNG** viết link download, URL, hoặc markdown link vào response
+   5. **HỆ THỐNG SẼ TỰ ĐỘNG** hiển thị nút download cho người dùng
 
    **GỢI Ý FORMAT:**
    - Excel: Dữ liệu bảng lớn (>100 rows), cần phân tích/tính toán
@@ -469,8 +471,11 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
                     }
                 }
 
-                if (step.action?.tool === 'excel_export') {
-                    this.logger.log(`🎯 Found excel_export step!`);
+                // ✅ Detect all file export tools (Excel, PDF, Word)
+                const isFileExportTool = ['excel_export', 'pdf_export', 'word_export'].includes(step.action?.tool);
+
+                if (isFileExportTool) {
+                    this.logger.log(`🎯 Found ${step.action?.tool} step!`);
                     this.logger.log(`📄 Observation: ${JSON.stringify(step.observation).substring(0, 500)}`);
 
                     if (step.observation) {
@@ -482,7 +487,7 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
                             this.logger.log(`✅ Parsed file result:`, JSON.stringify(fileResult).substring(0, 300));
 
                             if (fileResult.success && fileResult.downloadUrl) {
-                                this.logger.log('📄 Sending file chunk NOW!');
+                                this.logger.log(`📄 Sending file chunk for ${step.action?.tool}!`);
                                 yield {
                                     type: 'file',
                                     file: {
