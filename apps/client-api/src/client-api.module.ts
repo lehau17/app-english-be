@@ -38,54 +38,56 @@ import { SwaggerLoaderModule } from './domains/swagger/swagger.module';
 import { TeacherModule } from './domains/teacher';
 import { UploadModule } from './domains/upload';
 import { UploadService } from './domains/upload/upload.service';
+import { VocabularyV2Module } from './domains/vocabulary-v2/vocabulary-v2.module';
 import { VocabularyModule } from './domains/vocabulary/vocabulary.module';
 import { EventsModule } from './events/events.module';
 
 @Module({
-  imports: [
-    DatabaseModule,
-    ScheduleModule.forRoot(),
-    AuthModule,
-    SharedModule,
-    StudentModule,
-    CourseModule,
-    EventsModule,
-    DashboardModule,
-    LessonModule,
-    ActivityModule,
-    ProgressModule,
-    AttemptModule,
-    ParentChildModule,
-    ParentModule,
-    DeviceTokenModule,
-    NotificationModule,
-    TeacherModule,
-    UploadModule,
-    ClassroomModule,
-    ConversationModule,
-    AssignmentModule,
-    GoogleTranslateModule,
-    AgentModule,
-    SwaggerLoaderModule,
-    RoomModule,
-    PodcastModule,
-    PodcastCommentModule,
-    PodcastRatingModule,
-    EvaluationModule,
-    LeaderboardModule,
-    AiSpeakingModule,
-    PaymentModule,
-    DictionaryModule,
-    VocabularyModule,
-    QuizModule,
-    LandingPageModule,
-    CertificateModule,
-  ],
-  controllers: [ClientApiController],
-  providers: [ClientApiService, UploadService],
+    imports: [
+        DatabaseModule,
+        ScheduleModule.forRoot(),
+        AuthModule,
+        SharedModule,
+        StudentModule,
+        CourseModule,
+        EventsModule,
+        DashboardModule,
+        LessonModule,
+        ActivityModule,
+        ProgressModule,
+        AttemptModule,
+        ParentChildModule,
+        ParentModule,
+        DeviceTokenModule,
+        NotificationModule,
+        TeacherModule,
+        UploadModule,
+        ClassroomModule,
+        ConversationModule,
+        AssignmentModule,
+        GoogleTranslateModule,
+        AgentModule,
+        SwaggerLoaderModule,
+        RoomModule,
+        PodcastModule,
+        PodcastCommentModule,
+        PodcastRatingModule,
+        EvaluationModule,
+        LeaderboardModule,
+        AiSpeakingModule,
+        PaymentModule,
+        DictionaryModule,
+        VocabularyModule,
+        VocabularyV2Module,
+        QuizModule,
+        LandingPageModule,
+        CertificateModule,
+    ],
+    controllers: [ClientApiController],
+    providers: [ClientApiService, UploadService],
 })
 export class ClientApiModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestContextMiddleware).forRoutes('*');
-  }
+    configure(consumer: MiddlewareConsumer) {
+        consumer.apply(RequestContextMiddleware).forRoutes('*');
+    }
 }
