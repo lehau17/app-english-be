@@ -3,6 +3,7 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
     GetDueCardsQueryDto,
+    ResetProgressDto,
     ReviewSessionResponseDto,
     ReviewStatsDto,
     StartReviewSessionDto,
@@ -60,6 +61,17 @@ export class VocabularyReviewController {
         @PayloadToken() user: JwtPayload,
     ): Promise<VocabularyTermResponseDto[]> {
         return this.reviewService.getDueCards(user.sub, query);
+    }
+
+    @Post('reset-progress')
+    @ApiOperation({ summary: 'Reset progress for a unit (Start Over)' })
+    @ApiResponse({ status: 200, description: 'Progress reset successfully' })
+    @ResponseMessage('Progress reset successfully')
+    async resetProgress(
+        @Body() dto: ResetProgressDto,
+        @PayloadToken() user: JwtPayload,
+    ): Promise<{ message: string; deletedCount: number }> {
+        return this.reviewService.resetUnitProgress(user.sub, dto.unitId);
     }
 }
 

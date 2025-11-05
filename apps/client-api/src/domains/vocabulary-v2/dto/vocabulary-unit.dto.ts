@@ -88,6 +88,15 @@ export class VocabularyUnitResponseDto {
     // Optional: include terms if requested
     @ApiPropertyOptional({ type: [VocabularyTermResponseDto] })
     terms?: VocabularyTermResponseDto[];
+
+    // User progress (if authenticated)
+    @ApiPropertyOptional({
+        description: 'User progress for this unit',
+    })
+    userProgress?: {
+        completedTerms: number;
+        totalTerms: number;
+    };
 }
 
 export class ReorderUnitsDto {

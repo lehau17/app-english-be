@@ -205,4 +205,10 @@ export class GetDueCardsQueryDto {
     limit?: number
 }
 
+export class ResetProgressDto {
+    @ApiProperty({ description: 'ID của vocabulary unit' })
+    @IsString()
+    unitId: string
+}
+
 

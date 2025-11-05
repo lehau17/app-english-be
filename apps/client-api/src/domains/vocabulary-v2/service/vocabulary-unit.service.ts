@@ -12,21 +12,45 @@ export class VocabularyUnitService {
     constructor(private readonly repository: VocabularyRepository) { }
 
     /**
-     * Get all units in a list
+     * Get all units in a list with user progress
      */
     async getUnits(listId: string, userId?: string): Promise<VocabularyUnitResponseDto[]> {
-        const units = await this.repository.findUnitsByListId(listId, false);
+        const units = await this.repository.findUnitsByListId(listId, true); // Include terms
 
-        return units.map((unit) => ({
-            id: unit.id,
-            listId: unit.listId,
-            title: unit.title,
-            description: unit.description || undefined,
-            orderIndex: unit.orderIndex,
-            termCount: unit.termCount,
-            createdAt: unit.createdAt,
-            updatedAt: unit.updatedAt,
-        }));
+        return Promise.all(
+            units.map(async (unit) => {
+                let completedTerms = 0;
+
+                // Calculate user progress if authenticated
+                if (userId && unit.terms) {
+                    const termIds = unit.terms.map((t) => t.id);
+
+                    // Count how many terms have progress
+                    for (const termId of termIds) {
+                        const progress = await this.repository.findProgress(userId, termId);
+                        if (progress && (progress.status === 'mastered' || progress.status === 'review')) {
+                            completedTerms++;
+                        }
+                    }
+                }
+
+                return {
+                    id: unit.id,
+                    listId: unit.listId,
+                    title: unit.title,
+                    description: unit.description || undefined,
+                    orderIndex: unit.orderIndex,
+                    termCount: unit.termCount,
+                    createdAt: unit.createdAt,
+                    updatedAt: unit.updatedAt,
+                    // Add progress info
+                    userProgress: userId ? {
+                        completedTerms,
+                        totalTerms: unit.termCount,
+                    } : undefined,
+                };
+            })
+        );
     }
 
     /**

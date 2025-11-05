@@ -271,6 +271,31 @@ export class VocabularyRepository {
         });
     }
 
+    async deleteProgress(userId: string, termId: string): Promise<boolean> {
+        try {
+            await this.prisma.userVocabularyProgress.delete({
+                where: {
+                    userId_termId: {
+                        userId,
+                        termId,
+                    },
+                },
+            });
+            return true;
+        } catch (error) {
+            // Progress doesn't exist, return false
+            return false;
+        }
+    }
+
+    async getTermsByUnit(unitId: string): Promise<VocabularyTerm[]> {
+        return this.prisma.vocabularyTerm.findMany({
+            where: {
+                unitId,
+            },
+        });
+    }
+
     async findUserProgress(userId: string, params?: {
         listId?: string;
         status?: string;

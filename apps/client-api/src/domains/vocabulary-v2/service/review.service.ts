@@ -425,5 +425,39 @@ export class ReviewService {
             },
         }));
     }
+
+    /**
+     * Reset progress for a unit (Start Over)
+     * Deletes all user progress for terms in the unit
+     */
+    async resetUnitProgress(userId: string, unitId: string): Promise<{ message: string; deletedCount: number }> {
+        this.logger.log(`Resetting progress for user ${userId}, unit ${unitId}`);
+
+        // Get all terms in the unit
+        const terms = await this.repository.getTermsByUnit(unitId);
+
+        if (!terms || terms.length === 0) {
+            return {
+                message: 'No terms found in this unit',
+                deletedCount: 0,
+            };
+        }
+
+        // Delete all progress for these terms
+        let deletedCount = 0;
+        for (const term of terms) {
+            const deleted = await this.repository.deleteProgress(userId, term.id);
+            if (deleted) {
+                deletedCount++;
+            }
+        }
+
+        this.logger.log(`Reset ${deletedCount} progress records for unit ${unitId}`);
+
+        return {
+            message: `Successfully reset progress for ${deletedCount} terms`,
+            deletedCount,
+        };
+    }
 }
 
