@@ -5,27 +5,41 @@ import { UploadService } from '../upload/upload.service';
 import { PlaylistController } from './controller/playlist.controller';
 import { PodcastTestController } from './controller/podcast-test.controller';
 import { PodcastController } from './controller/private-podcast.controller';
+import { PodcastRepository } from './repository/podcast.repository';
+import { AudioExtractionService } from './service/audio-extraction.service';
 import { PlaylistService } from './service/playlist.service';
 import { PodcastService } from './service/podcast.service';
 import { TextToPodcastService } from './service/text-to-podcast.service';
+import { VideoProcessingService } from './service/video-processing.service';
+import { WhisperService } from './service/whisper.service';
 import { YouTubeTranscriptService } from './service/youtube-transcript.service';
-import { PodcastRepository } from './repository/podcast.repository';
 
 @Module({
-  imports: [DatabaseModule, ConfigModule],
-  controllers: [
-    PodcastController,
-    PodcastTestController, // New simplified controller
-    PlaylistController,
-  ],
-  providers: [
-    PodcastService,
-    PlaylistService,
-    TextToPodcastService,
-    YouTubeTranscriptService,
-    UploadService,
-    PodcastRepository,
-  ],
-  exports: [PodcastService, PlaylistService, TextToPodcastService, YouTubeTranscriptService],
+    imports: [DatabaseModule, ConfigModule],
+    controllers: [
+        PodcastController,
+        PodcastTestController, // New simplified controller
+        PlaylistController,
+    ],
+    providers: [
+        PodcastService,
+        PlaylistService,
+        TextToPodcastService,
+        YouTubeTranscriptService,
+        AudioExtractionService,
+        VideoProcessingService,
+        WhisperService,
+        UploadService,
+        PodcastRepository,
+    ],
+    exports: [
+        PodcastService,
+        PlaylistService,
+        TextToPodcastService,
+        YouTubeTranscriptService,
+        AudioExtractionService,
+        VideoProcessingService,
+        WhisperService,
+    ],
 })
-export class PodcastModule {}
+export class PodcastModule { }

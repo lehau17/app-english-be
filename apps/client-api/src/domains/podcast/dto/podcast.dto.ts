@@ -324,3 +324,27 @@ export class YouTubeTranscriptResponseDto {
         duration: number;
     }>;
 }
+
+// Video Upload Response DTO
+export class VideoUploadResponseDto {
+    @ApiProperty({ description: 'S3 URL of uploaded video' })
+    videoUrl: string;
+
+    @ApiProperty({ description: 'S3 URL of extracted audio (optional)', required: false })
+    audioUrl?: string;
+
+    @ApiProperty({ description: 'Auto-generated transcript (optional)', required: false })
+    transcript?: string;
+
+    @ApiProperty({ description: 'Video duration in seconds' })
+    duration: number;
+
+    @ApiProperty({ description: 'Video file size in bytes' })
+    sizeBytes: number;
+
+    @ApiProperty({ description: 'Processing status' })
+    status: 'completed' | 'partial' | 'failed';
+
+    @ApiProperty({ description: 'Processing message', required: false })
+    message?: string;
+}
