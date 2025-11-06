@@ -348,3 +348,14 @@ export class VideoUploadResponseDto {
     @ApiProperty({ description: 'Processing message', required: false })
     message?: string;
 }
+
+// Get User Attempts History DTO
+export class GetUserAttemptsQueryDto extends RequestPagingDto {
+    @ApiPropertyOptional({
+        description: 'Filter by attempt status',
+        enum: ['in_progress', 'completed', 'abandoned'],
+    })
+    @IsOptional()
+    @IsString()
+    status?: 'in_progress' | 'completed' | 'abandoned';
+}

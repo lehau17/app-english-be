@@ -9,6 +9,7 @@ import {
 import {
     CreatePodcastDto,
     GetPodcastsQueryDto,
+    GetUserAttemptsQueryDto,
     UpdatePodcastDto,
 } from '../dto/podcast.dto';
 import {
@@ -474,5 +475,58 @@ export class PodcastService {
             createdAt: a.createdAt,
             answers: a.answers,
         }));
+    }
+
+    // ===================== USER ATTEMPTS HISTORY =====================
+
+    async getAllUserAttempts(
+        userId: string,
+        query: GetUserAttemptsQueryDto,
+    ) {
+        const page = query.page ?? 1;
+        const limit = query.limit ?? 50;
+        const skip = (page - 1) * limit;
+
+        const where: any = { userId };
+        if (query.status) {
+            where.status = query.status;
+        }
+
+        const [attempts, total] = await Promise.all([
+            this.prisma.podcastAttempt.findMany({
+                where,
+                include: {
+                    podcast: {
+                        select: {
+                            id: true,
+                            title: true,
+                            category: true,
+                            difficulty: true,
+                            code: true,
+                        },
+                    },
+                },
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit,
+            }),
+            this.prisma.podcastAttempt.count({ where }),
+        ]);
+
+        const data = attempts.map((a) => ({
+            attemptId: a.id,
+            attemptNo: a.attemptNo,
+            podcastId: a.podcastId,
+            podcast: a.podcast,
+            status: a.status,
+            scorePercent: a.scorePercent,
+            correctCount: a.correctCount,
+            totalQuestions: a.totalQuestions,
+            timeSpent: a.timeSpent,
+            createdAt: a.createdAt,
+            answers: a.answers,
+        }));
+
+        return PageResponseDto.of(data, page, limit, total);
     }
 }

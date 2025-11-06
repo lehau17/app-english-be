@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { UploadService } from '../upload/upload.service';
 import { PlaylistController } from './controller/playlist.controller';
+import { PodcastAttemptController } from './controller/podcast-attempt.controller';
 import { PodcastTestController } from './controller/podcast-test.controller';
 import { PodcastController } from './controller/private-podcast.controller';
 import { PodcastRepository } from './repository/podcast.repository';
@@ -19,6 +20,7 @@ import { YouTubeTranscriptService } from './service/youtube-transcript.service';
     imports: [DatabaseModule, ConfigModule],
     controllers: [
         PodcastController,
+        PodcastAttemptController, // Learning history controller
         PodcastTestController, // New simplified controller
         PlaylistController,
     ],

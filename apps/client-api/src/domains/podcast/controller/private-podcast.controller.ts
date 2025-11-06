@@ -27,6 +27,7 @@ import {
     CreatePodcastDto,
     ExtractYouTubeTranscriptDto,
     GetPodcastsQueryDto,
+    GetUserAttemptsQueryDto,
     UpdatePodcastDto,
     VideoUploadResponseDto,
     YouTubeTranscriptResponseDto,
@@ -167,6 +168,9 @@ export class PodcastController {
     }
 
     @Get(':id/attempts')
+    @ApiOperation({ summary: 'Get attempts for a podcast' })
+    @ApiParam({ name: 'id', description: 'Podcast ID' })
+    @ResponseMessage('Attempts retrieved successfully')
     async getAttempts(
         @Param('id') podcastId: string,
         @PayloadToken() payload: JwtPayload,
