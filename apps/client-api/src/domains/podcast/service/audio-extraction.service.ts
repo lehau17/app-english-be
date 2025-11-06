@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import ffmpeg from 'fluent-ffmpeg';
+import * as ffmpeg from 'fluent-ffmpeg';
 import * as fs from 'fs';
 import { promisify } from 'util';
 
