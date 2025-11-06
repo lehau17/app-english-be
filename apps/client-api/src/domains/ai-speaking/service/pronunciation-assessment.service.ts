@@ -116,8 +116,8 @@ export class PronunciationAssessmentService {
         enableWordConfidence: true,
 
         // Enable pronunciation assessment
-        enableSpokenPunctuation: false,
-        enableSpokenEmojis: false,
+        enableSpokenPunctuation: { value: false },
+        enableSpokenEmojis: { value: false },
 
         // Use enhanced model for better accuracy
         model: 'latest_long',
@@ -247,12 +247,16 @@ export class PronunciationAssessmentService {
       }
 
       // Extract timing
-      const startTime =
-        wordInfo.startTime?.seconds?.toNumber() || 0 +
-        (wordInfo.startTime?.nanos || 0) / 1e9;
-      const endTime =
-        wordInfo.endTime?.seconds?.toNumber() || 0 +
-        (wordInfo.endTime?.nanos || 0) / 1e9;
+      const startSeconds = typeof wordInfo.startTime?.seconds === 'object' 
+        ? (wordInfo.startTime.seconds as any).toNumber() 
+        : (wordInfo.startTime?.seconds || 0);
+      const startTime = Number(startSeconds) + (wordInfo.startTime?.nanos || 0) / 1e9;
+      
+      const endSeconds = typeof wordInfo.endTime?.seconds === 'object'
+        ? (wordInfo.endTime.seconds as any).toNumber()
+        : (wordInfo.endTime?.seconds || 0);
+      const endTime = Number(endSeconds) + (wordInfo.endTime?.nanos || 0) / 1e9;
+      
       const duration = endTime - startTime;
 
       // Estimate phoneme-level (simplified)
@@ -448,9 +452,10 @@ export class PronunciationAssessmentService {
     }
 
     const lastWord = alternative.words[alternative.words.length - 1];
-    const endTime =
-      lastWord.endTime?.seconds?.toNumber() || 0 +
-      (lastWord.endTime?.nanos || 0) / 1e9;
+    const endSeconds = typeof lastWord.endTime?.seconds === 'object'
+      ? (lastWord.endTime.seconds as any).toNumber()
+      : (lastWord.endTime?.seconds || 0);
+    const endTime = Number(endSeconds) + (lastWord.endTime?.nanos || 0) / 1e9;
 
     return endTime;
   }

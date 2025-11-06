@@ -6,6 +6,7 @@ import * as path from 'path';
 import { promisify } from 'util';
 import { UploadService } from '../../upload/upload.service';
 import { AudioExtractionService } from './audio-extraction.service';
+import { GoogleTranscriptionService } from './google-transcription.service';
 import { WhisperService } from './whisper.service';
 
 const writeFile = promisify(fs.writeFile);
@@ -32,6 +33,7 @@ export class VideoProcessingService {
         private readonly uploadService: UploadService,
         private readonly configService: ConfigService,
         private readonly whisperService: WhisperService,
+        private readonly googleTranscriptionService: GoogleTranscriptionService,
     ) {
         // Ensure temp directory exists
         this.ensureTempDir();
@@ -78,32 +80,55 @@ export class VideoProcessingService {
             );
             this.logger.log(`Audio uploaded: ${audioUploadResult.url}`);
 
-            // Step 5: Transcribe with Whisper (optional)
+            // Step 5: Transcribe audio to text
             let transcript: string | undefined;
-            const whisperEnabled = this.configService.get<string>('ENABLE_WHISPER_TRANSCRIPTION') !== 'false';
-
-            if (whisperEnabled) {
+            const transcriptionMode = this.configService.get<string>('TRANSCRIPTION_SERVICE') || 'whisper';
+            
+            // Try Google STT first (faster), fallback to Whisper
+            if (transcriptionMode === 'google' && this.googleTranscriptionService.isAvailable()) {
                 try {
-                    this.logger.log('Step 4/5: Transcribing with Whisper...');
+                    this.logger.log('Step 4/5: Transcribing with Google Speech-to-Text...');
 
-                    // Use the extracted MP3 audio for transcription
-                    const transcriptionResult = await this.whisperService.transcribe(audioResult.audioPath);
+                    const transcriptionResult = await this.googleTranscriptionService.transcribe(audioResult.audioPath);
 
                     if (transcriptionResult.success && transcriptionResult.transcript) {
                         transcript = transcriptionResult.transcript;
                         this.logger.log(
-                            `Transcription completed in ${transcriptionResult.duration.toFixed(2)}s: ` +
+                            `Google STT completed in ${transcriptionResult.duration.toFixed(2)}s: ` +
                             `${transcript.substring(0, 100)}...`
                         );
                     } else {
-                        this.logger.warn(`Transcription failed: ${transcriptionResult.error}`);
+                        this.logger.warn(`Google STT failed: ${transcriptionResult.error}`);
                     }
                 } catch (error) {
-                    this.logger.warn('Whisper transcription error:', error);
-                    // Continue without transcript
+                    this.logger.warn('Google STT error, skipping transcription:', error.message);
+                }
+            } else if (transcriptionMode === 'whisper') {
+                const whisperEnabled = this.configService.get<string>('ENABLE_WHISPER_TRANSCRIPTION') !== 'false';
+                
+                if (whisperEnabled) {
+                    try {
+                        this.logger.log('Step 4/5: Transcribing with Whisper (may take several minutes)...');
+
+                        const transcriptionResult = await this.whisperService.transcribe(audioResult.audioPath);
+
+                        if (transcriptionResult.success && transcriptionResult.transcript) {
+                            transcript = transcriptionResult.transcript;
+                            this.logger.log(
+                                `Whisper completed in ${transcriptionResult.duration.toFixed(2)}s: ` +
+                                `${transcript.substring(0, 100)}...`
+                            );
+                        } else {
+                            this.logger.warn(`Whisper failed: ${transcriptionResult.error}`);
+                        }
+                    } catch (error) {
+                        this.logger.warn('Whisper error:', error.message);
+                    }
+                } else {
+                    this.logger.log('Whisper transcription disabled');
                 }
             } else {
-                this.logger.log('Whisper transcription disabled (set ENABLE_WHISPER_TRANSCRIPTION=true to enable)');
+                this.logger.log('Transcription disabled (set TRANSCRIPTION_SERVICE=google or TRANSCRIPTION_SERVICE=whisper to enable)');
             }
 
             // Step 6: Cleanup temp files

@@ -7,6 +7,7 @@ import { PodcastTestController } from './controller/podcast-test.controller';
 import { PodcastController } from './controller/private-podcast.controller';
 import { PodcastRepository } from './repository/podcast.repository';
 import { AudioExtractionService } from './service/audio-extraction.service';
+import { GoogleTranscriptionService } from './service/google-transcription.service';
 import { PlaylistService } from './service/playlist.service';
 import { PodcastService } from './service/podcast.service';
 import { TextToPodcastService } from './service/text-to-podcast.service';
@@ -29,6 +30,7 @@ import { YouTubeTranscriptService } from './service/youtube-transcript.service';
         AudioExtractionService,
         VideoProcessingService,
         WhisperService,
+        GoogleTranscriptionService,
         UploadService,
         PodcastRepository,
     ],
@@ -40,6 +42,7 @@ import { YouTubeTranscriptService } from './service/youtube-transcript.service';
         AudioExtractionService,
         VideoProcessingService,
         WhisperService,
+        GoogleTranscriptionService,
     ],
 })
 export class PodcastModule { }
