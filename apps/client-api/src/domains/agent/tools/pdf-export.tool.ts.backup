@@ -82,21 +82,10 @@ Returns:
       });
 
       // Register Vietnamese-compatible fonts
-      let fontRegular = 'Helvetica';
-      let fontBold = 'Helvetica-Bold';
-
-      try {
-        const robotoRegular = join(this.fontsDir, 'Roboto-Regular.ttf');
-        const robotoBold = join(this.fontsDir, 'Roboto-Bold.ttf');
-        doc.registerFont('Roboto', robotoRegular);
-        doc.registerFont('Roboto-Bold', robotoBold);
-        fontRegular = 'Roboto';
-        fontBold = 'Roboto-Bold';
-        this.logger.log('✅ Fonts registered successfully');
-      } catch (fontError) {
-        this.logger.warn('⚠️ Font registration failed, using default fonts:', fontError);
-        // Fallback to Helvetica if font files not found
-      }
+      const robotoRegular = join(this.fontsDir, 'Roboto-Regular.ttf');
+      const robotoBold = join(this.fontsDir, 'Roboto-Bold.ttf');
+      doc.registerFont('Roboto', robotoRegular);
+      doc.registerFont('Roboto-Bold', robotoBold);
 
       const timestamp = Date.now();
       const safeFilename = filename.replace(/[^a-z0-9_-]/gi, '_');
@@ -106,20 +95,20 @@ Returns:
       const stream = doc.pipe(createWriteStream(filePath));
 
       // Add header
-      doc.fontSize(20).font(fontBold).text(title, { align: 'center' });
+      doc.fontSize(20).font('Roboto-Bold').text(title, { align: 'center' });
 
       doc.moveDown();
 
       if (description) {
         doc
           .fontSize(12)
-          .font(fontRegular)
+          .font('Roboto')
           .text(description, { align: 'center' });
         doc.moveDown();
       }
 
       // Add generation date
-      doc.fontSize(10).font(fontRegular).text(`Ngày tạo: ${new Date().toLocaleString('vi-VN')}`, {
+      doc.fontSize(10).text(`Ngày tạo: ${new Date().toLocaleString('vi-VN')}`, {
         align: 'right',
       });
 
@@ -127,44 +116,32 @@ Returns:
 
       // Add statistics if requested
       if (includeStatistics) {
-        doc.fontSize(14).font(fontBold).text('Thống kê tổng quan');
+        doc.fontSize(14).font('Roboto-Bold').text('Thống kê tổng quan');
         doc.moveDown();
 
         doc
-          .fontSize(11)
-          .font(fontRegular)
+          .fontSize(10)
+          .font('Roboto')
           .text(`Tổng số bản ghi: ${data.length}`);
-        doc.text(`Số trường: ${Object.keys(data[0]).length}`);
+        doc.moveDown();
 
-        doc.moveDown(2);
-      }
+            // Render table header
+      doc.fontSize(10).font('Roboto-Bold');
+      const headerY = doc.y;
+      let headerX = 50;
 
-      // Add table header
-      const headers = Object.keys(data[0]);
-      const pageWidth = doc.page.width - 100;
-      const colWidth = Math.min(pageWidth / headers.length, 120);
-
-      doc.fontSize(10).font(fontBold);
-      let xPos = 50;
-      headers.forEach((header) => {
-        doc.text(String(header).substring(0, 15), xPos, doc.y, {
+      columns.forEach((col) => {
+        doc.text(col, headerX, headerY, {
           width: colWidth,
           align: 'left',
-          continued: false,
         });
-        xPos += colWidth;
+        headerX += colWidth;
       });
 
       doc.moveDown();
-      doc.strokeColor('#000000').lineWidth(1);
-      doc
-        .moveTo(50, doc.y)
-        .lineTo(doc.page.width - 50, doc.y)
-        .stroke();
-      doc.moveDown();
 
-      // Add table rows
-      doc.fontSize(9).font(fontRegular);
+      // Render table rows
+      doc.fontSize(9).font('Roboto');
       data.forEach((row, idx) => {
         if (doc.y > doc.page.height - 100) {
           doc.addPage();
@@ -202,7 +179,6 @@ Returns:
         doc.switchToPage(i);
         doc
           .fontSize(8)
-          .font(fontRegular)
           .text(`Trang ${i + 1} / ${range.count}`, 50, doc.page.height - 50, {
             align: 'center',
           });
@@ -211,7 +187,7 @@ Returns:
       // Finalize PDF
       doc.end();
 
-      await new Promise<void>((resolve) => stream.on('finish', () => resolve()));
+      await new Promise((resolve) => stream.on('finish', resolve));
 
       this.logger.log(`✅ PDF file created: ${fullFilename}`);
 

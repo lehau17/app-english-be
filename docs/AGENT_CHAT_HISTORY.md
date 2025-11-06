@@ -1,5 +1,7 @@
 # Agent Chat History Feature
 
+> Last updated: 2025-11-05 — Tóm tắt: Tính năng lưu lịch sử chat để cung cấp câu trả lời có ngữ cảnh cho AI agent.
+
 ## Overview
 
 This feature enables the AI agent to maintain conversation history with users, providing context-aware responses by passing previous messages to the RAG (Retrieval-Augmented Generation) system.

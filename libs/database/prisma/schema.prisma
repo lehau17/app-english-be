@@ -2625,6 +2625,8 @@ model AiSpeakingTurn {
 
     evaluation Json?
 
+    pronunciationFeedback Json?
+
     suggestions String[] @default([])
 
     score Int?

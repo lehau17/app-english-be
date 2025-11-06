@@ -13,6 +13,7 @@ import { AiSpeakingRealtimeService } from './service/ai-speaking-realtime.servic
 import { AiSpeakingTurnManager } from './service/ai-speaking-turn-manager.service';
 import { AiSpeakingService } from './service/ai-speaking.service';
 import { ConversationDesignerService } from './service/conversation-designer.service';
+import { PronunciationAssessmentService } from './service/pronunciation-assessment.service';
 import { RealtimeAsrService } from './service/realtime-asr.service';
 import { RealtimeTtsService } from './service/realtime-tts.service';
 
@@ -23,6 +24,7 @@ import { RealtimeTtsService } from './service/realtime-tts.service';
     AiSpeakingService,
     AiSpeakingCoordinator,
     ConversationDesignerService,
+    PronunciationAssessmentService,
     AiSpeakingRealtimeService,
     AiSpeakingTurnManager,
     AiSpeakingHealthService,

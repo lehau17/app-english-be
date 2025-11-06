@@ -1,12 +1,16 @@
 import { PrismaRepository } from '@app/database';
+import { GeminiService } from '@app/shared';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
 import { RagService } from '../service/rag.service';
 import { SqlService } from '../service/sql.service';
 import { ChartGeneratorTool } from './chart-generator.tool';
+import { GrammarExplainerTool } from './grammar-explainer.tool';
+import { PronunciationCoachTool } from './pronunciation-coach.tool';
 import { RagTool } from './rag.tool';
 import { SqlTool } from './sql.tool';
+import { VocabularyLookupTool } from './vocabulary-lookup.tool';
 
 @Injectable()
 export class StudentAgentTools {
@@ -17,13 +21,34 @@ export class StudentAgentTools {
     private sqlService: SqlService,
     private prisma: PrismaRepository,
     private chartTool: ChartGeneratorTool,
+    private gemini: GeminiService,
   ) {}
 
   getTools() {
+    // Initialize new learning tools
+    const vocabularyLookup = new VocabularyLookupTool(
+      this.prisma,
+      this.gemini,
+      this.ragService,
+    );
+    const grammarExplainer = new GrammarExplainerTool(
+      this.gemini,
+      this.ragService,
+    );
+    const pronunciationCoach = new PronunciationCoachTool(this.gemini);
+
     return [
+      // Core tools
       new RagTool(this.ragService),
       new SqlTool(this.sqlService),
       this.chartTool,
+
+      // Learning assistant tools (NEW!)
+      vocabularyLookup.getTool(),
+      grammarExplainer.getTool(),
+      pronunciationCoach.getTool(),
+
+      // Progress tools
       this.getScoreReportTool(),
       this.getAdaptiveRecommendationTool(),
     ];

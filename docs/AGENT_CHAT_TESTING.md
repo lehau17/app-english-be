@@ -1,5 +1,7 @@
 # Agent Chat History - Manual Testing Guide
 
+> Last updated: 2025-11-05 — Tóm tắt: Hướng dẫn kiểm thử thủ công cho tính năng lưu lịch sử chat của Agent.
+
 This guide provides steps to manually test the agent chat history feature.
 
 ## Prerequisites
@@ -172,23 +174,23 @@ curl -X GET "http://localhost:3334/agent/conversations/:id?id=OTHER_USER_CONVERS
 
 ### View all conversations for a user:
 ```sql
-SELECT * FROM "AgentConversation" 
-WHERE "userId" = 'USER_ID' 
+SELECT * FROM "AgentConversation"
+WHERE "userId" = 'USER_ID'
 ORDER BY "updatedAt" DESC;
 ```
 
 ### View all messages in a conversation:
 ```sql
-SELECT * FROM "AgentMessage" 
-WHERE "conversationId" = 'CONVERSATION_ID' 
+SELECT * FROM "AgentMessage"
+WHERE "conversationId" = 'CONVERSATION_ID'
 ORDER BY "createdAt" ASC;
 ```
 
 ### Count messages per conversation:
 ```sql
-SELECT 
-  c.id, 
-  c.title, 
+SELECT
+  c.id,
+  c.title,
   COUNT(m.id) as message_count
 FROM "AgentConversation" c
 LEFT JOIN "AgentMessage" m ON m."conversationId" = c.id
@@ -198,7 +200,7 @@ ORDER BY c."updatedAt" DESC;
 
 ### View conversation with messages:
 ```sql
-SELECT 
+SELECT
   c.id as conversation_id,
   c.title,
   m.role,

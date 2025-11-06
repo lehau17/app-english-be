@@ -1,5 +1,7 @@
 # Tính năng Lưu Lịch Sử Chat với AI Agent
 
+> Last updated: 2025-11-05 — Tóm tắt: Tài liệu tiếng Việt mô tả lưu lịch sử chat, schema, API và luồng xử lý.
+
 ## Tổng Quan
 
 Tính năng này cho phép AI agent lưu trữ và sử dụng lịch sử hội thoại với người dùng, giúp cung cấp câu trả lời có ngữ cảnh bằng cách truyền các tin nhắn trước đó vào hệ thống RAG (Retrieval-Augmented Generation).
@@ -8,7 +10,7 @@ Tính năng này cho phép AI agent lưu trữ và sử dụng lịch sử hội
 
 **Vấn đề ban đầu:** Trong RAG hiện tại chưa lưu đoạn chat của AI với admin, và luôn truyền mảng rỗng vào RAG thay vì tin nhắn cũ.
 
-**Giải pháp:** 
+**Giải pháp:**
 - ✅ Lưu trữ toàn bộ lịch sử hội thoại trong database
 - ✅ Tự động load 10 tin nhắn gần nhất làm context
 - ✅ Truyền lịch sử vào RAG để có câu trả lời có ngữ cảnh
