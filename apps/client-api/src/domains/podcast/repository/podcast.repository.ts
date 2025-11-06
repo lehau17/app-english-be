@@ -138,6 +138,15 @@ export class PodcastRepository {
       where: { id },
       include: {
         gaps: true,
+        author: {
+          select: {
+            id: true,
+            displayName: true,
+            firstName: true,
+            lastName: true,
+            avatarUrl: true,
+          },
+        },
       },
     });
   }
