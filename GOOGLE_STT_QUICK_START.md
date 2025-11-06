@@ -262,10 +262,10 @@ pm2 logs main -f
 
 ---
 
-**Ready to deploy!** 
-**Setup time:** ~15 minutes  
-**Processing time:** 10-30s per video (instead of 15 min!)  
-**Cost:** FREE for first 60 min/month  
+**Ready to deploy!**
+**Setup time:** ~15 minutes
+**Processing time:** 10-30s per video (instead of 15 min!)
+**Cost:** FREE for first 60 min/month
 
 🚀 **MUCH BETTER than Whisper on weak CPU!**
 

@@ -83,7 +83,7 @@ export class VideoProcessingService {
             // Step 5: Transcribe audio to text
             let transcript: string | undefined;
             const transcriptionMode = this.configService.get<string>('TRANSCRIPTION_SERVICE') || 'whisper';
-            
+
             // Try Google STT first (faster), fallback to Whisper
             if (transcriptionMode === 'google' && this.googleTranscriptionService.isAvailable()) {
                 try {
@@ -105,7 +105,7 @@ export class VideoProcessingService {
                 }
             } else if (transcriptionMode === 'whisper') {
                 const whisperEnabled = this.configService.get<string>('ENABLE_WHISPER_TRANSCRIPTION') !== 'false';
-                
+
                 if (whisperEnabled) {
                     try {
                         this.logger.log('Step 4/5: Transcribing with Whisper (may take several minutes)...');

@@ -17,15 +17,15 @@ export interface GoogleTranscriptionResult {
 
 /**
  * Google Cloud Speech-to-Text service for video transcription
- * 
+ *
  * Advantages over Whisper:
  * - Runs on Google Cloud (no local CPU needed)
  * - Much faster (10-30s for 3-min audio)
  * - Very accurate
- * 
+ *
  * Cost: ~$0.024/minute (~$0.07 for 3-min video)
  * Free tier: 60 minutes/month
- * 
+ *
  * Setup:
  * 1. Create Google Cloud project
  * 2. Enable Speech-to-Text API
@@ -40,7 +40,7 @@ export class GoogleTranscriptionService {
 
   constructor(private readonly configService: ConfigService) {
     const credentialsPath = this.configService.get<string>('GOOGLE_APPLICATION_CREDENTIALS');
-    
+
     if (credentialsPath && fs.existsSync(credentialsPath)) {
       this.client = new SpeechClient();
       this.enabled = true;
@@ -62,7 +62,7 @@ export class GoogleTranscriptionService {
 
   /**
    * Transcribe audio file to text using Google Speech-to-Text
-   * 
+   *
    * @param audioPath Path to audio file (WAV, MP3, FLAC)
    * @param languageCode Language code (default: en-US)
    * @returns Transcription result
@@ -102,7 +102,7 @@ export class GoogleTranscriptionService {
       // Determine encoding from file extension
       const extension = audioPath.split('.').pop()?.toLowerCase();
       let encoding: google.cloud.speech.v1.RecognitionConfig.AudioEncoding;
-      
+
       switch (extension) {
         case 'wav':
           encoding = 'LINEAR16' as any;
@@ -215,7 +215,7 @@ export class GoogleTranscriptionService {
   /**
    * Transcribe long audio (> 1 minute) using async recognition
    * Better for long videos but requires Cloud Storage
-   * 
+   *
    * @param audioGcsUri Google Cloud Storage URI (gs://bucket/file.wav)
    * @param languageCode Language code
    */

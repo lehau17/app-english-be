@@ -327,9 +327,9 @@ pm2 logs main -f
 
 ---
 
-**Status:** Code ready, waiting for Google credentials  
-**Time:** 10-30s per video (instead of 15 minutes!)  
-**Cost:** ~$0.07 per 3-min video (60 min/month FREE)  
+**Status:** Code ready, waiting for Google credentials
+**Time:** 10-30s per video (instead of 15 minutes!)
+**Cost:** ~$0.07 per 3-min video (60 min/month FREE)
 
 **MUCH BETTER than local Whisper on weak CPU!** 🚀
 
