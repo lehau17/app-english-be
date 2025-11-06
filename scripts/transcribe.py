@@ -20,7 +20,12 @@ Requirements:
 
 import sys
 import os
+import time
 from faster_whisper import WhisperModel
+
+def log(message):
+    """Print to stderr so it doesn't interfere with stdout transcript"""
+    print(f"[WHISPER] {message}", file=sys.stderr, flush=True)
 
 def transcribe_audio(audio_path: str, model_size: str = "base"):
     """
@@ -44,8 +49,18 @@ def transcribe_audio(audio_path: str, model_size: str = "base"):
         print(f"ERROR: File not found: {audio_path}", file=sys.stderr)
         sys.exit(1)
 
+    # Get file size
+    file_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
+    log(f"Starting transcription...")
+    log(f"  Audio file: {audio_path}")
+    log(f"  File size: {file_size_mb:.2f} MB")
+    log(f"  Model: {model_size}")
+
     try:
         # Initialize model
+        log(f"Loading Whisper model '{model_size}'... (may take 10-30s on first run)")
+        start_load = time.time()
+
         # device: "cpu" or "cuda" (GPU)
         # compute_type: "int8" for CPU (faster), "float16" for GPU
         model = WhisperModel(
@@ -55,7 +70,13 @@ def transcribe_audio(audio_path: str, model_size: str = "base"):
             download_root="./models/whisper"  # Cache models here
         )
 
+        load_time = time.time() - start_load
+        log(f"Model loaded in {load_time:.2f}s")
+
         # Transcribe
+        log(f"Starting transcription... (this may take 1-5 minutes for 2 min audio)")
+        start_transcribe = time.time()
+
         # language: "en" for English, None for auto-detect
         # beam_size: Higher = more accurate but slower (default: 5)
         # vad_filter: Voice Activity Detection to remove silence
@@ -67,13 +88,35 @@ def transcribe_audio(audio_path: str, model_size: str = "base"):
             word_timestamps=False  # Set True if you need word-level timestamps
         )
 
+        log(f"Transcription started. Language detected: {info.language} (probability: {info.language_probability:.2f})")
+        log(f"Duration: {info.duration:.2f}s")
+        log(f"Processing segments...")
+
         # Collect all segments
         transcript_parts = []
+        segment_count = 0
+        last_log_time = time.time()
+
         for segment in segments:
             transcript_parts.append(segment.text.strip())
+            segment_count += 1
+
+            # Log progress every 5 seconds or every 10 segments
+            current_time = time.time()
+            if current_time - last_log_time > 5 or segment_count % 10 == 0:
+                elapsed = current_time - start_transcribe
+                log(f"  Processed {segment_count} segments in {elapsed:.1f}s...")
+                last_log_time = current_time
+
+        transcribe_time = time.time() - start_transcribe
+        log(f"Transcription completed! Processed {segment_count} segments in {transcribe_time:.2f}s")
 
         # Join with space
         transcript = " ".join(transcript_parts)
+
+        log(f"Transcript length: {len(transcript)} characters, {len(transcript.split())} words")
+        log(f"First 100 chars: {transcript[:100]}...")
+        log(f"SUCCESS! Total time: {time.time() - start_load:.2f}s")
 
         # Print to stdout (NodeJS will capture this)
         print(transcript)
@@ -82,10 +125,16 @@ def transcribe_audio(audio_path: str, model_size: str = "base"):
         return 0
 
     except Exception as e:
-        print(f"ERROR: Transcription failed: {str(e)}", file=sys.stderr)
+        log(f"ERROR: Transcription failed: {str(e)}")
+        import traceback
+        log(traceback.format_exc())
         sys.exit(1)
 
 if __name__ == "__main__":
+    log("=" * 60)
+    log("Faster-Whisper Transcription Script")
+    log("=" * 60)
+
     # Parse arguments
     if len(sys.argv) < 2:
         print("Usage: python3 transcribe.py <audio_file_path> [model_size]", file=sys.stderr)
@@ -95,12 +144,18 @@ if __name__ == "__main__":
     audio_path = sys.argv[1]
     model_size = sys.argv[2] if len(sys.argv) > 2 else "base"
 
+    log(f"Arguments received:")
+    log(f"  Audio path: {audio_path}")
+    log(f"  Model size: {model_size}")
+
     # Validate model size
     valid_models = ["tiny", "base", "small", "medium", "large-v2"]
     if model_size not in valid_models:
-        print(f"ERROR: Invalid model size '{model_size}'. Valid options: {', '.join(valid_models)}", file=sys.stderr)
+        log(f"ERROR: Invalid model size '{model_size}'. Valid options: {', '.join(valid_models)}")
         sys.exit(1)
 
     # Run transcription
-    sys.exit(transcribe_audio(audio_path, model_size))
+    exit_code = transcribe_audio(audio_path, model_size)
+    log("=" * 60)
+    sys.exit(exit_code)
 
