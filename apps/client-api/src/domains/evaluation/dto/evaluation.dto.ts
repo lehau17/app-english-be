@@ -13,12 +13,13 @@ import {
 } from 'class-validator';
 
 export class EvaluateBaseDto {
-  @ApiProperty({
-    description: 'Activity ID',
+  @ApiPropertyOptional({
+    description: 'Activity ID (optional, only required if saving to Activity attempts)',
     example: '2b7f1c87-d8aa-4ec7-a323-63d811f5c001',
   })
+  @IsOptional()
   @IsUUID()
-  activityId!: string;
+  activityId?: string;
 }
 
 export class EvaluateSpeechDto extends EvaluateBaseDto {
