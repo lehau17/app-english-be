@@ -161,12 +161,26 @@ Nhận xét:`;
   }): Promise<EvaluationPayload> {
     const { audioBase64, mimeType, targetPhrase } = params;
     const prompt = `Bạn là giáo viên tiếng Anh. Học sinh vừa đọc câu: "${targetPhrase}".
-Nếu bạn không nghe thấy giọng nói rõ ràng, file quá ngắn (<0.5 giây), hoặc chỉ có tiếng ồn/tĩnh lặng, hãy đặt score = 0 và feedback = "Không nhận được ghi âm hợp lệ".
-Ngược lại, chấm phát âm của học sinh và trả về JSON với cấu trúc:
+
+QUAN TRỌNG: Trước khi chấm điểm, hãy kiểm tra kỹ:
+1. Nếu bạn KHÔNG nghe thấy bất kỳ giọng nói nào (chỉ có im lặng, tiếng ồn nền, hoặc không có âm thanh)
+2. Nếu file quá ngắn (<0.5 giây)
+3. Nếu transcript rỗng hoặc không có từ nào được nhận diện
+
+→ Hãy trả về:
+{
+  "score": 0,
+  "feedback": "Không nhận được ghi âm hợp lệ. Bạn chưa nói gì hoặc ghi âm quá ngắn. Vui lòng nói rõ ràng và ghi âm lại.",
+  "transcript": "",
+  "categories": [],
+  "detail": { "mispronounced": [] }
+}
+
+Nếu CÓ giọng nói rõ ràng, hãy chấm phát âm và trả về JSON với cấu trúc:
 {
   "score": number (0-100),
-  "feedback": string,
-  "transcript": string,
+  "feedback": string (bằng tiếng Việt, khuyến khích và chỉ rõ âm cần sửa),
+  "transcript": string (phải có nội dung, không được rỗng),
   "categories": [
     { "name": "Accuracy", "comment": "..." },
     { "name": "Stress", "comment": "..." },
@@ -176,7 +190,8 @@ Ngược lại, chấm phát âm của học sinh và trả về JSON với cấ
     "mispronounced": ["word", ...]
   }
 }
-Giữ phản hồi bằng tiếng Việt, khuyến khích và chỉ rõ âm cần sửa.`;
+
+Lưu ý: transcript PHẢI có nội dung nếu có giọng nói. Nếu transcript rỗng thì coi như không có giọng nói.`;
 
     return this.generateEvaluation(
       [
