@@ -1,4 +1,8 @@
-import { ListBucketsCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  ListBucketsCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as sharp from 'sharp';
@@ -48,7 +52,9 @@ export class UploadService {
       let contentType = file.mimetype;
       let originalname = file.originalname;
 
-      this.logger.log(`Uploading file: ${originalname} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+      this.logger.log(
+        `Uploading file: ${originalname} (${(file.size / 1024 / 1024).toFixed(2)}MB)`,
+      );
 
       // Check if the file is an image
       if (file.mimetype.startsWith('image/')) {
@@ -100,7 +106,7 @@ export class UploadService {
 
       throw new Error(
         `Failed to upload to S3 (${this.s3Endpoint}): ${error.message}. ` +
-        `Check if MinIO/S3 is accessible and credentials are correct.`
+          `Check if MinIO/S3 is accessible and credentials are correct.`,
       );
     }
   }
@@ -113,7 +119,9 @@ export class UploadService {
     try {
       const key = `${uuidv4()}-${filename}`;
 
-      this.logger.log(`Uploading buffer: ${filename} (${(buffer.length / 1024 / 1024).toFixed(2)}MB)`);
+      this.logger.log(
+        `Uploading buffer: ${filename} (${(buffer.length / 1024 / 1024).toFixed(2)}MB)`,
+      );
 
       const command = new PutObjectCommand({
         Bucket: this.s3BucketName,
@@ -147,7 +155,7 @@ export class UploadService {
       }
 
       throw new Error(
-        `Failed to upload buffer to S3 (${this.s3Endpoint}): ${error.message}`
+        `Failed to upload buffer to S3 (${this.s3Endpoint}): ${error.message}`,
       );
     }
   }
@@ -170,10 +178,12 @@ export class UploadService {
       const command = new ListBucketsCommand({});
       const response = await this.s3Client.send(command);
 
-      const bucketNames = response.Buckets?.map(b => b.Name) || [];
+      const bucketNames = response.Buckets?.map((b) => b.Name) || [];
       const bucketExists = bucketNames.includes(this.s3BucketName);
 
-      this.logger.log(`S3 connection successful. Found ${bucketNames.length} buckets.`);
+      this.logger.log(
+        `S3 connection successful. Found ${bucketNames.length} buckets.`,
+      );
 
       return {
         success: true,

@@ -14,7 +14,8 @@ import {
 
 export class EvaluateBaseDto {
   @ApiPropertyOptional({
-    description: 'Activity ID (optional, only required if saving to Activity attempts)',
+    description:
+      'Activity ID (optional, only required if saving to Activity attempts)',
     example: '2b7f1c87-d8aa-4ec7-a323-63d811f5c001',
   })
   @IsOptional()

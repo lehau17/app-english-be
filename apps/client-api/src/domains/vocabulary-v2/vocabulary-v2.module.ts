@@ -12,29 +12,26 @@ import { VocabularyTermService } from './service/vocabulary-term.service';
 import { VocabularyUnitService } from './service/vocabulary-unit.service';
 
 @Module({
-    imports: [NotificationModule], // Import để inject NotificationService
-    controllers: [
-        VocabularyListController,
-        VocabularyUnitController,
-        VocabularyReviewController,
-        AdminVocabularyController,
-    ],
-    providers: [
-        VocabularyRepository,
-        SRSService,
-        VocabularyListService,
-        VocabularyUnitService,
-        VocabularyTermService,
-        ReviewService,
-    ],
-    exports: [
-        VocabularyListService,
-        VocabularyUnitService,
-        VocabularyTermService,
-        ReviewService,
-    ],
+  imports: [NotificationModule], // Import để inject NotificationService
+  controllers: [
+    VocabularyListController,
+    VocabularyUnitController,
+    VocabularyReviewController,
+    AdminVocabularyController,
+  ],
+  providers: [
+    VocabularyRepository,
+    SRSService,
+    VocabularyListService,
+    VocabularyUnitService,
+    VocabularyTermService,
+    ReviewService,
+  ],
+  exports: [
+    VocabularyListService,
+    VocabularyUnitService,
+    VocabularyTermService,
+    ReviewService,
+  ],
 })
-export class VocabularyV2Module { }
-
-
-
+export class VocabularyV2Module {}

@@ -74,6 +74,8 @@ Returns:
         });
       }
 
+      await this.ensureUploadsDirExists();
+
       // Create PDF
       const doc = new PDFDocument({
         size: 'A4',
@@ -94,7 +96,10 @@ Returns:
         fontBold = 'Roboto-Bold';
         this.logger.log('✅ Fonts registered successfully');
       } catch (fontError) {
-        this.logger.warn('⚠️ Font registration failed, using default fonts:', fontError);
+        this.logger.warn(
+          '⚠️ Font registration failed, using default fonts:',
+          fontError,
+        );
         // Fallback to Helvetica if font files not found
       }
 
@@ -104,6 +109,9 @@ Returns:
       const filePath = join(this.uploadsDir, fullFilename);
 
       const stream = doc.pipe(createWriteStream(filePath));
+      stream.on('error', (err) => {
+        this.logger.error('❌ PDF stream error:', err);
+      });
 
       // Add header
       doc.fontSize(20).font(fontBold).text(title, { align: 'center' });
@@ -119,9 +127,12 @@ Returns:
       }
 
       // Add generation date
-      doc.fontSize(10).font(fontRegular).text(`Ngày tạo: ${new Date().toLocaleString('vi-VN')}`, {
-        align: 'right',
-      });
+      doc
+        .fontSize(10)
+        .font(fontRegular)
+        .text(`Ngày tạo: ${new Date().toLocaleString('vi-VN')}`, {
+          align: 'right',
+        });
 
       doc.moveDown(2);
 
@@ -142,40 +153,13 @@ Returns:
       // Add table header
       const headers = Object.keys(data[0]);
       const pageWidth = doc.page.width - 100;
-      const colWidth = Math.min(pageWidth / headers.length, 120);
 
-      doc.fontSize(10).font(fontBold);
-      let xPos = 50;
-      headers.forEach((header) => {
-        doc.text(String(header).substring(0, 15), xPos, doc.y, {
-          width: colWidth,
-          align: 'left',
-          continued: false,
-        });
-        xPos += colWidth;
-      });
-
-      doc.moveDown();
-      doc.strokeColor('#000000').lineWidth(1);
-      doc
-        .moveTo(50, doc.y)
-        .lineTo(doc.page.width - 50, doc.y)
-        .stroke();
-      doc.moveDown();
-
-      // Add table rows
-      doc.fontSize(9).font(fontRegular);
-      data.forEach((row, idx) => {
-        if (doc.y > doc.page.height - 100) {
-          doc.addPage();
-          doc.y = 50;
-        }
-
-        const rowY = doc.y;
-        xPos = 50;
+      if (headers.length > 0) {
+        const colWidth = Math.min(pageWidth / headers.length, 120);
+        doc.fontSize(10).font(fontBold);
+        let xPos = 50;
         headers.forEach((header) => {
-          const value = row[header] ?? '';
-          doc.text(String(value).substring(0, 30), xPos, rowY, {
+          doc.text(String(header).substring(0, 15), xPos, doc.y, {
             width: colWidth,
             align: 'left',
             continued: false,
@@ -183,18 +167,63 @@ Returns:
           xPos += colWidth;
         });
 
-        doc.moveDown(0.5);
+        doc.moveDown();
+        doc.strokeColor('#000000').lineWidth(1);
+        doc
+          .moveTo(50, doc.y)
+          .lineTo(doc.page.width - 50, doc.y)
+          .stroke();
+        doc.moveDown();
+      }
 
-        // Add separator line every 5 rows
-        if ((idx + 1) % 5 === 0) {
-          doc.strokeColor('#cccccc').lineWidth(0.5);
-          doc
-            .moveTo(50, doc.y)
-            .lineTo(doc.page.width - 50, doc.y)
-            .stroke();
+      // Add table rows
+      if (headers.length > 0) {
+        const colWidth = Math.min(pageWidth / headers.length, 120);
+        doc.fontSize(9).font(fontRegular);
+        data.forEach((row, idx) => {
+          if (doc.y > doc.page.height - 100) {
+            doc.addPage();
+            doc.y = 50;
+          }
+
+          const rowY = doc.y;
+          let xPos = 50;
+          headers.forEach((header) => {
+            const rawValue = row[header];
+            const value =
+              rawValue === null || rawValue === undefined
+                ? ''
+                : typeof rawValue === 'object'
+                  ? JSON.stringify(rawValue)
+                  : String(rawValue);
+            doc.text(value.substring(0, 80), xPos, rowY, {
+              width: colWidth,
+              align: 'left',
+              continued: false,
+            });
+            xPos += colWidth;
+          });
+
           doc.moveDown(0.5);
-        }
-      });
+
+          // Add separator line every 5 rows
+          if ((idx + 1) % 5 === 0) {
+            doc.strokeColor('#cccccc').lineWidth(0.5);
+            doc
+              .moveTo(50, doc.y)
+              .lineTo(doc.page.width - 50, doc.y)
+              .stroke();
+            doc.moveDown(0.5);
+          }
+        });
+      } else {
+        doc
+          .fontSize(12)
+          .font(fontRegular)
+          .text('Không có dữ liệu dạng bảng để hiển thị.', {
+            align: 'center',
+          });
+      }
 
       // Add footer
       const range = doc.bufferedPageRange();
@@ -211,7 +240,10 @@ Returns:
       // Finalize PDF
       doc.end();
 
-      await new Promise<void>((resolve) => stream.on('finish', () => resolve()));
+      await new Promise<void>((resolve, reject) => {
+        stream.on('finish', () => resolve());
+        stream.on('error', (err) => reject(err));
+      });
 
       this.logger.log(`✅ PDF file created: ${fullFilename}`);
 

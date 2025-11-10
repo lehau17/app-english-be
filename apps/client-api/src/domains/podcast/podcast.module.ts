@@ -17,34 +17,34 @@ import { WhisperService } from './service/whisper.service';
 import { YouTubeTranscriptService } from './service/youtube-transcript.service';
 
 @Module({
-    imports: [DatabaseModule, ConfigModule],
-    controllers: [
-        PodcastController,
-        PodcastAttemptController, // Learning history controller
-        PodcastTestController, // New simplified controller
-        PlaylistController,
-    ],
-    providers: [
-        PodcastService,
-        PlaylistService,
-        TextToPodcastService,
-        YouTubeTranscriptService,
-        AudioExtractionService,
-        VideoProcessingService,
-        WhisperService,
-        GoogleTranscriptionService,
-        UploadService,
-        PodcastRepository,
-    ],
-    exports: [
-        PodcastService,
-        PlaylistService,
-        TextToPodcastService,
-        YouTubeTranscriptService,
-        AudioExtractionService,
-        VideoProcessingService,
-        WhisperService,
-        GoogleTranscriptionService,
-    ],
+  imports: [DatabaseModule, ConfigModule],
+  controllers: [
+    PodcastController,
+    PodcastAttemptController, // Learning history controller
+    PodcastTestController, // New simplified controller
+    PlaylistController,
+  ],
+  providers: [
+    PodcastService,
+    PlaylistService,
+    TextToPodcastService,
+    YouTubeTranscriptService,
+    AudioExtractionService,
+    VideoProcessingService,
+    WhisperService,
+    GoogleTranscriptionService,
+    UploadService,
+    PodcastRepository,
+  ],
+  exports: [
+    PodcastService,
+    PlaylistService,
+    TextToPodcastService,
+    YouTubeTranscriptService,
+    AudioExtractionService,
+    VideoProcessingService,
+    WhisperService,
+    GoogleTranscriptionService,
+  ],
 })
-export class PodcastModule { }
+export class PodcastModule {}

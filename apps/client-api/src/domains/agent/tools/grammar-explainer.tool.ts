@@ -42,9 +42,16 @@ export class GrammarExplainerTool {
           .default('intermediate')
           .describe('Độ khó của giải thích'),
       }),
-      func: async ({ topic, includeExamples, includeCommonMistakes, difficulty }) => {
+      func: async ({
+        topic,
+        includeExamples,
+        includeCommonMistakes,
+        difficulty,
+      }) => {
         try {
-          this.logger.log(`📖 Explaining grammar topic: "${topic}" (${difficulty})`);
+          this.logger.log(
+            `📖 Explaining grammar topic: "${topic}" (${difficulty})`,
+          );
 
           // 1. Search RAG for related lessons
           let relatedLessons = [];
@@ -152,9 +159,8 @@ Format as JSON array:
 ]
 `;
 
-            const practiceResponse = await this.gemini.generateResponse(
-              practicePrompt,
-            );
+            const practiceResponse =
+              await this.gemini.generateResponse(practicePrompt);
 
             try {
               const cleaned = practiceResponse

@@ -1,3 +1,4 @@
+import { GeminiService } from '@app/shared';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -7,12 +8,11 @@ import {
   DifficultyLevel,
   Prisma,
 } from '@prisma/client';
-import { GeminiService } from '@app/shared';
+import { AiSpeakingGateway } from '../gateway/ai-speaking.gateway';
 import { AiSpeakingRepository } from '../repository/ai-speaking.repository';
+import { AiSpeakingCoordinator } from './ai-speaking-coordinator.service';
 import { ConversationDesignerService } from './conversation-designer.service';
 import { PronunciationAssessmentService } from './pronunciation-assessment.service';
-import { AiSpeakingGateway } from '../gateway/ai-speaking.gateway';
-import { AiSpeakingCoordinator } from './ai-speaking-coordinator.service';
 
 const DIFFICULTY_ORDER: DifficultyLevel[] = [
   DifficultyLevel.beginner,
@@ -87,26 +87,34 @@ export class AiSpeakingTurnManager {
       : [];
 
     // ✅ Pronunciation assessment với Google Cloud Speech-to-Text
-    let pronunciationFeedback: Awaited<ReturnType<typeof this.pronunciationService.assessPronunciation>> | null = null;
+    let pronunciationFeedback: Awaited<
+      ReturnType<typeof this.pronunciationService.assessPronunciation>
+    > | null = null;
     try {
-      const referenceText = evaluation.transcript || turn.userTranscript || undefined;
-      pronunciationFeedback = await this.pronunciationService.assessPronunciation(
-        audioBuffer,
-        referenceText,
-        'en-US',
-      );
+      const referenceText =
+        evaluation.transcript || turn.userTranscript || undefined;
+      pronunciationFeedback =
+        await this.pronunciationService.assessPronunciation(
+          audioBuffer,
+          referenceText,
+          'en-US',
+        );
 
       this.logger.log(
         `Pronunciation assessed for turn ${turnId}: overall=${pronunciationFeedback.pronunciationScore}, ` +
-        `accuracy=${pronunciationFeedback.accuracyScore}, fluency=${pronunciationFeedback.fluencyScore}, ` +
-        `problematic=[${pronunciationFeedback.problematicPhonemes.join(', ')}]`,
+          `accuracy=${pronunciationFeedback.accuracyScore}, fluency=${pronunciationFeedback.fluencyScore}, ` +
+          `problematic=[${pronunciationFeedback.problematicPhonemes.join(', ')}]`,
       );
 
       // Emit pronunciation feedback to frontend
-      this.gateway.emitToSession(sessionId, 'ai-speaking:pronunciation-feedback', {
-        turnId,
-        pronunciationFeedback,
-      });
+      this.gateway.emitToSession(
+        sessionId,
+        'ai-speaking:pronunciation-feedback',
+        {
+          turnId,
+          pronunciationFeedback,
+        },
+      );
     } catch (error) {
       this.logger.warn(
         `Pronunciation assessment failed for turn ${turnId}: ${error.message}. Continuing without phoneme feedback.`,
@@ -134,7 +142,8 @@ export class AiSpeakingTurnManager {
       suggestions,
       userTranscript: transcript,
       metrics,
-      pronunciationFeedback: pronunciationFeedback as unknown as Prisma.JsonObject ?? null,
+      pronunciationFeedback:
+        (pronunciationFeedback as unknown as Prisma.JsonObject) ?? null,
     });
 
     this.gateway.emitToSession(sessionId, 'ai-speaking:turn-evaluated', {

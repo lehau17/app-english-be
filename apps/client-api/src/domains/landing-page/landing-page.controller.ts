@@ -1,8 +1,8 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { LandingPageService } from './landing-page.service';
+import { ContactFormPayload, LandingPageService } from './landing-page.service';
 
-export class ContactFormDto {
+export class ContactFormDto implements ContactFormPayload {
   name: string;
   phone: string;
   email: string;
@@ -111,6 +111,6 @@ export class LandingPageController {
     },
   })
   async submitContactForm(@Body() contactFormDto: ContactFormDto) {
-    return await this.landingPageService.getContactFormData();
+    return await this.landingPageService.submitContactForm(contactFormDto);
   }
 }

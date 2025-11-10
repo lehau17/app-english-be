@@ -14,7 +14,15 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { Course, LanguageCode, Prisma, UserRole } from '@prisma/client';
+import {
+  ClassroomStatus,
+  Course,
+  DifficultyLevel,
+  LanguageCode,
+  Prisma,
+  UserRole,
+  Weekday,
+} from '@prisma/client';
 import { CertificateTemplateService } from '../../certificate/services';
 import { GoogleTranslateFreeService } from '../../google-translate/google-translate.service';
 import {
@@ -652,9 +660,257 @@ export class CourseService {
     return this.courseRepository.update(id, { isPublished: false });
   }
 
+  async getPublicCourses(): Promise<{
+    courses: Array<{
+      id: string;
+      name: string;
+      description: string;
+      level: string;
+      duration: string;
+      price: number;
+      thumbnail?: string | null;
+      status: 'ACTIVE' | 'INACTIVE';
+    }>;
+    total: number;
+  }> {
+    const courses = await this.prisma.course.findMany({
+      where: { isPublished: true },
+      orderBy: [{ orderNo: 'asc' }, { createdAt: 'desc' }],
+    });
+
+    return {
+      courses: courses.map((course) => this.mapCourseToPublicCourse(course)),
+      total: courses.length,
+    };
+  }
+
+  async getPublicClassrooms(courseId: string): Promise<{
+    classrooms: Array<{
+      id: string;
+      courseId: string;
+      courseName: string;
+      name: string;
+      startDate: string | null;
+      endDate: string | null;
+      schedule: string;
+      teacher: string;
+      maxStudents: number;
+      currentStudents: number;
+      price: number;
+      status: 'OPEN' | 'FULL' | 'CLOSED' | 'IN_PROGRESS';
+    }>;
+    total: number;
+  }> {
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+    });
+
+    if (!course || !course.isPublished) {
+      throw new NotFoundException(`Course with id ${courseId} not found`);
+    }
+
+    const classrooms = await this.prisma.classroom.findMany({
+      where: {
+        courseId,
+        isActive: true,
+        status: { in: [ClassroomStatus.upcoming, ClassroomStatus.ongoing] },
+      },
+      orderBy: { periodStart: 'asc' },
+      include: {
+        teacher: {
+          select: {
+            displayName: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        students: {
+          where: { isActive: true },
+          select: { studentId: true },
+        },
+        slots: {
+          select: {
+            dayOfWeek: true,
+            startMinuteOfDay: true,
+            endMinuteOfDay: true,
+          },
+        },
+      },
+    });
+
+    return {
+      classrooms: classrooms.map((classroom) =>
+        this.mapClassroomToPublicClassroom(classroom, course),
+      ),
+      total: classrooms.length,
+    };
+  }
+
   private async ensureExists(id: string): Promise<void> {
     const exists = await this.courseRepository.findById(id);
     if (!exists) throw new NotFoundException(`Course with id ${id} not found`);
+  }
+
+  private mapCourseToPublicCourse(course: Course) {
+    return {
+      id: course.id,
+      name: course.title,
+      description: course.description ?? '',
+      level: this.resolveDifficultyLabel(course.difficulty),
+      duration: this.formatCourseDurationPublic(course),
+      price: course.price ?? 0,
+      thumbnail: course.imageUrl,
+      status: course.isPublished ? 'ACTIVE' : 'INACTIVE',
+    };
+  }
+
+  private mapClassroomToPublicClassroom(
+    classroom: {
+      id: string;
+      name: string;
+      periodStart: Date | null;
+      periodEnd: Date | null;
+      maxStudents: number | null;
+      status: ClassroomStatus;
+      teacher: {
+        displayName: string | null;
+        firstName: string | null;
+        lastName: string | null;
+      } | null;
+      students: Array<{ studentId: string }>;
+      slots: Array<{
+        dayOfWeek: Weekday;
+        startMinuteOfDay: number;
+        endMinuteOfDay: number;
+      }>;
+    },
+    course: Course,
+  ) {
+    const maxStudents = classroom.maxStudents ?? course.maxStudents ?? 0;
+    return {
+      id: classroom.id,
+      courseId: course.id,
+      courseName: course.title,
+      name: classroom.name,
+      startDate: classroom.periodStart
+        ? classroom.periodStart.toISOString()
+        : null,
+      endDate: classroom.periodEnd ? classroom.periodEnd.toISOString() : null,
+      schedule: this.formatClassSchedulePublic(classroom.slots),
+      teacher: this.resolveTeacherNamePublic(classroom.teacher),
+      maxStudents,
+      currentStudents: classroom.students.length,
+      price: course.price ?? 0,
+      status: this.mapClassroomStatus(classroom.status),
+    };
+  }
+
+  private resolveDifficultyLabel(difficulty: DifficultyLevel | null): string {
+    switch (difficulty) {
+      case DifficultyLevel.beginner:
+        return 'Beginner';
+      case DifficultyLevel.elementary:
+        return 'Elementary';
+      case DifficultyLevel.intermediate:
+        return 'Intermediate';
+      case DifficultyLevel.upper_intermediate:
+        return 'Upper Intermediate';
+      case DifficultyLevel.advanced:
+        return 'Advanced';
+      case DifficultyLevel.expert:
+        return 'Expert';
+      default:
+        return 'General English';
+    }
+  }
+
+  private formatCourseDurationPublic(course: Course): string {
+    if (course.plannedSessions && course.estimatedHours) {
+      return `${course.plannedSessions} buổi (~${Math.round(
+        course.estimatedHours,
+      )} giờ)`;
+    }
+    if (course.plannedSessions) {
+      return `${course.plannedSessions} buổi`;
+    }
+    if (course.estimatedHours) {
+      return `~${Math.round(course.estimatedHours)} giờ học`;
+    }
+    return 'Theo lộ trình riêng';
+  }
+
+  private formatClassSchedulePublic(
+    slots: Array<{
+      dayOfWeek: Weekday;
+      startMinuteOfDay: number;
+      endMinuteOfDay: number;
+    }> | null,
+  ): string {
+    if (!slots || slots.length === 0) {
+      return 'Lịch học linh hoạt';
+    }
+
+    const weekDayLabel: Record<Weekday, string> = {
+      mon: 'Thứ 2',
+      tue: 'Thứ 3',
+      wed: 'Thứ 4',
+      thu: 'Thứ 5',
+      fri: 'Thứ 6',
+      sat: 'Thứ 7',
+      sun: 'Chủ nhật',
+    };
+
+    return slots
+      .map((slot) => {
+        const day = weekDayLabel[slot.dayOfWeek];
+        return `${day} ${this.formatTimePublic(slot.startMinuteOfDay)}-${this.formatTimePublic(
+          slot.endMinuteOfDay,
+        )}`;
+      })
+      .join(', ');
+  }
+
+  private formatTimePublic(minutes: number): string {
+    const hours = Math.floor(minutes / 60)
+      .toString()
+      .padStart(2, '0');
+    const mins = (minutes % 60).toString().padStart(2, '0');
+    return `${hours}:${mins}`;
+  }
+
+  private resolveTeacherNamePublic(
+    teacher:
+      | {
+          displayName: string | null;
+          firstName: string | null;
+          lastName: string | null;
+        }
+      | null
+      | undefined,
+  ): string {
+    if (!teacher) return 'Đang cập nhật';
+    if (teacher.displayName) return teacher.displayName;
+    const name = [teacher.firstName, teacher.lastName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    return name.length > 0 ? name : 'Đang cập nhật';
+  }
+
+  private mapClassroomStatus(
+    status: ClassroomStatus,
+  ): 'OPEN' | 'FULL' | 'CLOSED' | 'IN_PROGRESS' {
+    switch (status) {
+      case ClassroomStatus.upcoming:
+        return 'OPEN';
+      case ClassroomStatus.ongoing:
+        return 'IN_PROGRESS';
+      case ClassroomStatus.completed:
+      case ClassroomStatus.cancelled:
+        return 'CLOSED';
+      default:
+        return 'OPEN';
+    }
   }
 
   /**

@@ -39,7 +39,12 @@ export class VocabularyLookupTool {
           .default(true)
           .describe('Có tạo câu hỏi luyện tập không'),
       }),
-      func: async ({ word, includeSynonyms, includeExamples, includePractice }) => {
+      func: async ({
+        word,
+        includeSynonyms,
+        includeExamples,
+        includePractice,
+      }) => {
         try {
           this.logger.log(`📚 Looking up word: "${word}"`);
 
@@ -226,9 +231,8 @@ Format as JSON array:
 ]
 `;
 
-              const practiceResponse = await this.gemini.generateResponse(
-                practicePrompt,
-              );
+              const practiceResponse =
+                await this.gemini.generateResponse(practicePrompt);
 
               try {
                 const cleaned = practiceResponse

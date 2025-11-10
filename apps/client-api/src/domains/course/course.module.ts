@@ -4,7 +4,11 @@ import { CertificateModule } from '../certificate/certificate.module';
 import { GoogleTranslateModule } from '../google-translate/google-translate.module';
 import { GoogleTranslateFreeService } from '../google-translate/google-translate.service';
 import { UploadService } from '../upload/upload.service';
-import { CourseController, SessionScheduleController } from './controller';
+import {
+  CourseController,
+  PublicCourseController,
+  SessionScheduleController,
+} from './controller';
 import { CourseRepository } from './repository/course.repository';
 import { SessionScheduleRepository } from './repository/session-schedule.repository';
 import { CourseService } from './service/course.service';
@@ -17,7 +21,11 @@ import { SessionScheduleService } from './service/session-schedule.service';
     SharedModule,
     forwardRef(() => CertificateModule),
   ],
-  controllers: [CourseController, SessionScheduleController],
+  controllers: [
+    CourseController,
+    SessionScheduleController,
+    PublicCourseController,
+  ],
   providers: [
     CourseService,
     CourseRepository,

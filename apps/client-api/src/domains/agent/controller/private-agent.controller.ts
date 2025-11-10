@@ -5,6 +5,7 @@ import {
   Controller,
   Get,
   Logger,
+  NotFoundException,
   Param,
   Post,
   Query,
@@ -319,7 +320,7 @@ export class PrivateAgentController {
     description: 'Excel file download',
   })
   async downloadFile(
-    @Query('filename') filename: string,
+    @Param('filename') filename: string,
     @PayloadToken() payload: JwtPayload,
     @Res({ passthrough: true }) res: Response,
   ): Promise<StreamableFile> {
@@ -327,6 +328,14 @@ export class PrivateAgentController {
 
     const uploadsDir = join(process.cwd(), 'uploads', 'exports');
     const filePath = join(uploadsDir, filename);
+
+    const fs = await import('fs/promises');
+    try {
+      await fs.access(filePath);
+    } catch (error) {
+      this.logger.error(`❌ File not found: ${filePath}`);
+      throw new NotFoundException('File not found');
+    }
 
     // Set response headers
     res.set({

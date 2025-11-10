@@ -21,9 +21,7 @@ export class PronunciationCoachTool {
         'Sử dụng khi học sinh hỏi: "Cách phát âm từ X", "Nhấn âm của từ Y ở đâu", ' +
         '"Phân tích phát âm câu này"',
       schema: z.object({
-        text: z
-          .string()
-          .describe('Từ hoặc câu cần phân tích phát âm'),
+        text: z.string().describe('Từ hoặc câu cần phân tích phát âm'),
         userAudioUrl: z
           .string()
           .optional()
@@ -82,9 +80,8 @@ Format as JSON:
 }
 `;
 
-          const phoneticsResponse = await this.gemini.generateResponse(
-            phoneticsPrompt,
-          );
+          const phoneticsResponse =
+            await this.gemini.generateResponse(phoneticsPrompt);
 
           let phonetics: any;
           try {
@@ -121,9 +118,8 @@ Format as JSON array:
 
           let similarWords = [];
           try {
-            const similarResponse = await this.gemini.generateResponse(
-              similarWordsPrompt,
-            );
+            const similarResponse =
+              await this.gemini.generateResponse(similarWordsPrompt);
             const cleaned = similarResponse
               .replace(/```json\n?/g, '')
               .replace(/```\n?/g, '')

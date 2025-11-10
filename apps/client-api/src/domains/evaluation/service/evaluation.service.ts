@@ -70,7 +70,8 @@ export class EvaluationService {
 
     // Check if Gemini detected silence/empty audio
     // Priority: transcript empty > feedback contains silence keywords > score 0 with empty transcript
-    const transcriptEmpty = !result.transcript || result.transcript.trim() === '';
+    const transcriptEmpty =
+      !result.transcript || result.transcript.trim() === '';
     const feedbackLower = result.feedback?.toLowerCase() || '';
     const isSilenceDetected =
       feedbackLower.includes('không nhận được') ||
@@ -226,7 +227,10 @@ export class EvaluationService {
   }
 
   private calculateSpeechDuration(
-    results: google.cloud.speech.v1.ISpeechRecognitionResult[] | null | undefined,
+    results:
+      | google.cloud.speech.v1.ISpeechRecognitionResult[]
+      | null
+      | undefined,
   ): number {
     if (!results || results.length === 0) return 0;
     const last = results[results.length - 1];
@@ -296,7 +300,10 @@ export class EvaluationService {
         throw error;
       }
 
-      this.logger.error('Kiểm tra Google Speech-to-Text thất bại', error as any);
+      this.logger.error(
+        'Kiểm tra Google Speech-to-Text thất bại',
+        error as any,
+      );
       // Nếu STT lỗi (ví dụ quota, cấu hình), tiếp tục quy trình để tránh chặn người dùng
     }
   }

@@ -1,361 +1,367 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-    PodcastCategory,
-    PodcastDifficulty,
-    PodcastSource,
-    PodcastStatus,
+  PodcastCategory,
+  PodcastDifficulty,
+  PodcastSource,
+  PodcastStatus,
 } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
-    IsArray,
-    IsBoolean,
-    IsEnum,
-    IsIn,
-    IsInt,
-    IsNumber,
-    IsOptional,
-    IsString,
-    IsUrl,
-    Min,
-    ValidateNested,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Min,
+  ValidateNested,
 } from 'class-validator';
 
 // Media type enum for podcast
 export enum PodcastMediaType {
-    AUDIO = 'audio',
-    VIDEO = 'video',
+  AUDIO = 'audio',
+  VIDEO = 'video',
 }
 
 export class GetPodcastsQueryDto extends RequestPagingDto {
-    @ApiPropertyOptional({
-        enum: PodcastCategory,
-        description: 'Filter by category',
-    })
-    @IsOptional()
-    @IsEnum(PodcastCategory)
-    category?: PodcastCategory;
+  @ApiPropertyOptional({
+    enum: PodcastCategory,
+    description: 'Filter by category',
+  })
+  @IsOptional()
+  @IsEnum(PodcastCategory)
+  category?: PodcastCategory;
 
-    @ApiPropertyOptional({ enum: PodcastSource, description: 'Filter by source' })
-    @IsOptional()
-    @IsEnum(PodcastSource)
-    source?: PodcastSource;
+  @ApiPropertyOptional({ enum: PodcastSource, description: 'Filter by source' })
+  @IsOptional()
+  @IsEnum(PodcastSource)
+  source?: PodcastSource;
 
-    @ApiPropertyOptional({
-        enum: PodcastDifficulty,
-        description: 'Filter by difficulty',
-    })
-    @IsOptional()
-    @IsEnum(PodcastDifficulty)
-    difficulty?: PodcastDifficulty;
+  @ApiPropertyOptional({
+    enum: PodcastDifficulty,
+    description: 'Filter by difficulty',
+  })
+  @IsOptional()
+  @IsEnum(PodcastDifficulty)
+  difficulty?: PodcastDifficulty;
 
-    @ApiPropertyOptional({
-        description: 'Filter by duration range (short|medium|long)',
-    })
-    @IsOptional()
-    @IsString()
-    duration?: 'short' | 'medium' | 'long';
+  @ApiPropertyOptional({
+    description: 'Filter by duration range (short|medium|long)',
+  })
+  @IsOptional()
+  @IsString()
+  duration?: 'short' | 'medium' | 'long';
 
-    @ApiPropertyOptional({ description: 'Show only recommended podcasts' })
-    @IsOptional()
-    @Type(() => Boolean)
-    @IsBoolean()
-    recommended?: boolean;
+  @ApiPropertyOptional({ description: 'Show only recommended podcasts' })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  recommended?: boolean;
 
-    @ApiPropertyOptional({ description: 'Show only premium content' })
-    @IsOptional()
-    @Type(() => Boolean)
-    @IsBoolean()
-    premium?: boolean;
+  @ApiPropertyOptional({ description: 'Show only premium content' })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  premium?: boolean;
 
-    @ApiPropertyOptional({
-        description: 'Filter by user tab',
-        enum: ['all', 'recommended', 'listening', 'completed'],
-    })
-    @IsOptional()
-    @IsString()
-    tab?: 'all' | 'recommended' | 'listening' | 'completed';
+  @ApiPropertyOptional({
+    description: 'Filter by user tab',
+    enum: ['all', 'recommended', 'listening', 'completed'],
+  })
+  @IsOptional()
+  @IsString()
+  tab?: 'all' | 'recommended' | 'listening' | 'completed';
 }
 
 export class CreatePodcastGapDto {
-    @ApiProperty({ description: 'Vị trí ký tự bắt đầu trong transcript' })
-    @IsInt()
-    startIndex: number;
+  @ApiProperty({ description: 'Vị trí ký tự bắt đầu trong transcript' })
+  @IsInt()
+  startIndex: number;
 
-    @ApiProperty({ description: 'Vị trí ký tự kết thúc trong transcript' })
-    @IsInt()
-    endIndex: number;
+  @ApiProperty({ description: 'Vị trí ký tự kết thúc trong transcript' })
+  @IsInt()
+  endIndex: number;
 
-    @ApiProperty({ description: 'Đáp án đúng' })
-    @IsString()
-    answer: string;
+  @ApiProperty({ description: 'Đáp án đúng' })
+  @IsString()
+  answer: string;
 
-    @ApiPropertyOptional({ description: 'Thứ tự câu hỏi' })
-    @IsOptional()
-    @IsInt()
-    orderNo?: number;
+  @ApiPropertyOptional({ description: 'Thứ tự câu hỏi' })
+  @IsOptional()
+  @IsInt()
+  orderNo?: number;
 }
 
 export class CreatePodcastDto {
-    @ApiProperty({ description: 'Tiêu đề podcast' })
-    @IsString()
-    title: string;
+  @ApiProperty({ description: 'Tiêu đề podcast' })
+  @IsString()
+  title: string;
 
-    @ApiProperty({ description: 'Mô tả podcast' })
-    @IsString()
-    description: string;
+  @ApiProperty({ description: 'Mô tả podcast' })
+  @IsString()
+  description: string;
 
-    @ApiProperty({
-        description:
-            'Nội dung podcast - transcript cho upload hoặc text cho generate',
-    })
-    @IsString()
-    content: string;
+  @ApiProperty({
+    description:
+      'Nội dung podcast - transcript cho upload hoặc text cho generate',
+  })
+  @IsString()
+  content: string;
 
-    @ApiPropertyOptional({ description: 'URL audio (cho mediaType=audio)' })
-    @IsOptional()
-    @IsString()
-    @IsUrl()
-    audioUrl?: string;
+  @ApiPropertyOptional({ description: 'URL audio (cho mediaType=audio)' })
+  @IsOptional()
+  @IsString()
+  @IsUrl()
+  audioUrl?: string;
 
-    @ApiPropertyOptional({ description: 'URL video (cho mediaType=video)' })
-    @IsOptional()
-    @IsString()
-    @IsUrl()
-    videoUrl?: string;
+  @ApiPropertyOptional({ description: 'URL video (cho mediaType=video)' })
+  @IsOptional()
+  @IsString()
+  @IsUrl()
+  videoUrl?: string;
 
-    @ApiProperty({
-        description: 'Loại media',
-        enum: PodcastMediaType,
-        default: PodcastMediaType.AUDIO,
-    })
-    @IsEnum(PodcastMediaType)
-    mediaType: PodcastMediaType;
+  @ApiProperty({
+    description: 'Loại media',
+    enum: PodcastMediaType,
+    default: PodcastMediaType.AUDIO,
+  })
+  @IsEnum(PodcastMediaType)
+  mediaType: PodcastMediaType;
 
-    @ApiPropertyOptional({ description: 'URL thumbnail' })
-    @IsOptional()
-    @IsString()
-    thumbnailUrl?: string;
+  @ApiPropertyOptional({ description: 'URL thumbnail' })
+  @IsOptional()
+  @IsString()
+  thumbnailUrl?: string;
 
-    @ApiProperty({ enum: PodcastCategory, description: 'Danh mục' })
-    @IsEnum(PodcastCategory)
-    category: PodcastCategory;
+  @ApiProperty({ enum: PodcastCategory, description: 'Danh mục' })
+  @IsEnum(PodcastCategory)
+  category: PodcastCategory;
 
-    @ApiProperty({ enum: PodcastDifficulty, description: 'Độ khó' })
-    @IsEnum(PodcastDifficulty)
-    difficulty: PodcastDifficulty;
+  @ApiProperty({ enum: PodcastDifficulty, description: 'Độ khó' })
+  @IsEnum(PodcastDifficulty)
+  difficulty: PodcastDifficulty;
 
-    @ApiProperty({ description: 'Chế độ audio', enum: ['upload', 'generate'] })
-    @IsIn(['upload', 'generate'])
-    audioMode: 'upload' | 'generate';
+  @ApiProperty({ description: 'Chế độ audio', enum: ['upload', 'generate'] })
+  @IsIn(['upload', 'generate'])
+  audioMode: 'upload' | 'generate';
 
-    @ApiPropertyOptional({ description: 'Loại giọng đọc (cho generate mode)' })
-    @IsOptional()
-    @IsString()
-    voiceType?: string;
+  @ApiPropertyOptional({ description: 'Loại giọng đọc (cho generate mode)' })
+  @IsOptional()
+  @IsString()
+  voiceType?: string;
 
-    @ApiPropertyOptional({ description: 'Tốc độ đọc (cho generate mode)' })
-    @IsOptional()
-    @IsNumber()
-    speechSpeed?: number;
+  @ApiPropertyOptional({ description: 'Tốc độ đọc (cho generate mode)' })
+  @IsOptional()
+  @IsNumber()
+  speechSpeed?: number;
 
-    @ApiPropertyOptional({ description: 'Thời lượng audio (giây)' })
-    @IsOptional()
-    @IsNumber()
-    duration?: number;
+  @ApiPropertyOptional({ description: 'Thời lượng audio (giây)' })
+  @IsOptional()
+  @IsNumber()
+  duration?: number;
 
-    @ApiPropertyOptional({
-        description:
-            'Gaps cho fill-in-the-blank (tùy chọn, sẽ auto-generate từ content nếu có [word])',
-    })
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => CreatePodcastGapDto)
-    gaps: CreatePodcastGapDto[];
+  @ApiPropertyOptional({
+    description:
+      'Gaps cho fill-in-the-blank (tùy chọn, sẽ auto-generate từ content nếu có [word])',
+  })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreatePodcastGapDto)
+  gaps: CreatePodcastGapDto[];
 }
 
 export class UpdatePodcastDto {
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    title?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  title?: string;
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    subtitle?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  subtitle?: string;
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    description?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  description?: string;
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    @IsUrl()
-    audioUrl?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @IsUrl()
+  audioUrl?: string;
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    @IsUrl()
-    videoUrl?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @IsUrl()
+  videoUrl?: string;
 
-    @ApiPropertyOptional({ enum: PodcastMediaType })
-    @IsOptional()
-    @IsEnum(PodcastMediaType)
-    mediaType?: PodcastMediaType;
+  @ApiPropertyOptional({ enum: PodcastMediaType })
+  @IsOptional()
+  @IsEnum(PodcastMediaType)
+  mediaType?: PodcastMediaType;
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsUrl()
-    thumbnailUrl?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsUrl()
+  thumbnailUrl?: string;
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    transcript?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  transcript?: string;
 
-    @ApiPropertyOptional({ enum: PodcastCategory })
-    @IsOptional()
-    @IsEnum(PodcastCategory)
-    category?: PodcastCategory;
+  @ApiPropertyOptional({ enum: PodcastCategory })
+  @IsOptional()
+  @IsEnum(PodcastCategory)
+  category?: PodcastCategory;
 
-    @ApiPropertyOptional({ enum: PodcastSource })
-    @IsOptional()
-    @IsEnum(PodcastSource)
-    source?: PodcastSource;
+  @ApiPropertyOptional({ enum: PodcastSource })
+  @IsOptional()
+  @IsEnum(PodcastSource)
+  source?: PodcastSource;
 
-    @ApiPropertyOptional({ enum: PodcastDifficulty })
-    @IsOptional()
-    @IsEnum(PodcastDifficulty)
-    difficulty?: PodcastDifficulty;
+  @ApiPropertyOptional({ enum: PodcastDifficulty })
+  @IsOptional()
+  @IsEnum(PodcastDifficulty)
+  difficulty?: PodcastDifficulty;
 
-    @ApiPropertyOptional({ type: [String] })
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    tags?: string[];
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsNumber()
-    @Min(1)
-    duration?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  duration?: number;
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    durationFormatted?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  durationFormatted?: string;
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    slug?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  slug?: string;
 
-    @ApiPropertyOptional({ type: [String] })
-    @IsOptional()
-    @IsArray()
-    @IsString({ each: true })
-    keywords?: string[];
+  @ApiPropertyOptional({ type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  keywords?: string[];
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsBoolean()
-    isRecommended?: boolean;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isRecommended?: boolean;
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsBoolean()
-    isPremium?: boolean;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isPremium?: boolean;
 
-    @ApiPropertyOptional()
-    @IsOptional()
-    @IsString()
-    authorName?: string;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  authorName?: string;
 
-    @ApiPropertyOptional({ enum: PodcastStatus })
-    @IsOptional()
-    @IsEnum(PodcastStatus)
-    status?: PodcastStatus;
+  @ApiPropertyOptional({ enum: PodcastStatus })
+  @IsOptional()
+  @IsEnum(PodcastStatus)
+  status?: PodcastStatus;
 }
 
 export class PodcastResponseDto {
-    @ApiProperty()
-    success: boolean;
+  @ApiProperty()
+  success: boolean;
 
-    @ApiProperty()
-    data: any;
+  @ApiProperty()
+  data: any;
 
-    @ApiPropertyOptional()
-    message?: string;
+  @ApiPropertyOptional()
+  message?: string;
 
-    @ApiPropertyOptional()
-    meta?: {
-        total: number;
-        page: number;
-        limit: number;
-        totalPages: number;
-    };
+  @ApiPropertyOptional()
+  meta?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 // YouTube Transcript DTOs
 export class ExtractYouTubeTranscriptDto {
-    @ApiProperty({
-        description: 'YouTube video URL or video ID',
-        example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-    })
-    @IsString()
-    videoUrl: string;
+  @ApiProperty({
+    description: 'YouTube video URL or video ID',
+    example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+  })
+  @IsString()
+  videoUrl: string;
 }
 
 export class YouTubeTranscriptResponseDto {
-    @ApiProperty({ description: 'Full transcript text' })
-    transcript: string;
+  @ApiProperty({ description: 'Full transcript text' })
+  transcript: string;
 
-    @ApiProperty({
-        description: 'Transcript segments with timestamps',
-        type: [Object],
-    })
-    segments: Array<{
-        text: string;
-        offset: number;
-        duration: number;
-    }>;
+  @ApiProperty({
+    description: 'Transcript segments with timestamps',
+    type: [Object],
+  })
+  segments: Array<{
+    text: string;
+    offset: number;
+    duration: number;
+  }>;
 }
 
 // Video Upload Response DTO
 export class VideoUploadResponseDto {
-    @ApiProperty({ description: 'S3 URL of uploaded video' })
-    videoUrl: string;
+  @ApiProperty({ description: 'S3 URL of uploaded video' })
+  videoUrl: string;
 
-    @ApiProperty({ description: 'S3 URL of extracted audio (optional)', required: false })
-    audioUrl?: string;
+  @ApiProperty({
+    description: 'S3 URL of extracted audio (optional)',
+    required: false,
+  })
+  audioUrl?: string;
 
-    @ApiProperty({ description: 'Auto-generated transcript (optional)', required: false })
-    transcript?: string;
+  @ApiProperty({
+    description: 'Auto-generated transcript (optional)',
+    required: false,
+  })
+  transcript?: string;
 
-    @ApiProperty({ description: 'Video duration in seconds' })
-    duration: number;
+  @ApiProperty({ description: 'Video duration in seconds' })
+  duration: number;
 
-    @ApiProperty({ description: 'Video file size in bytes' })
-    sizeBytes: number;
+  @ApiProperty({ description: 'Video file size in bytes' })
+  sizeBytes: number;
 
-    @ApiProperty({ description: 'Processing status' })
-    status: 'completed' | 'partial' | 'failed';
+  @ApiProperty({ description: 'Processing status' })
+  status: 'completed' | 'partial' | 'failed';
 
-    @ApiProperty({ description: 'Processing message', required: false })
-    message?: string;
+  @ApiProperty({ description: 'Processing message', required: false })
+  message?: string;
 }
 
 // Get User Attempts History DTO
 export class GetUserAttemptsQueryDto extends RequestPagingDto {
-    @ApiPropertyOptional({
-        description: 'Filter by attempt status',
-        enum: ['in_progress', 'completed', 'abandoned'],
-    })
-    @IsOptional()
-    @IsString()
-    status?: 'in_progress' | 'completed' | 'abandoned';
+  @ApiPropertyOptional({
+    description: 'Filter by attempt status',
+    enum: ['in_progress', 'completed', 'abandoned'],
+  })
+  @IsOptional()
+  @IsString()
+  status?: 'in_progress' | 'completed' | 'abandoned';
 }
