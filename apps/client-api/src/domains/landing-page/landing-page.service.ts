@@ -56,6 +56,8 @@ export interface LandingPageData {
   stats: LandingPageStat[];
   testimonials: LandingPageTestimonial[];
   classes: LandingPageClass[];
+  classSchedule: LandingPageScheduleRow[];
+  teachers: LandingPageTeacher[];
   footerSections: LandingPageFooterSection[];
 }
 
@@ -66,6 +68,21 @@ export interface ContactFormPayload {
   level?: string;
   goals?: string[];
   message?: string;
+}
+
+export interface LandingPageTeacher {
+  name: string;
+  role: string;
+  flag: string;
+  experience?: string;
+  specialty?: string;
+  education?: string;
+  bio?: string;
+}
+
+export interface LandingPageScheduleRow {
+  time: string;
+  days: Partial<Record<Weekday, string>>;
 }
 
 const FEATURE_CARDS: LandingPageFeature[] = [
@@ -222,6 +239,60 @@ const FALLBACK_CLASSES: LandingPageClass[] = [
   },
 ];
 
+const FALLBACK_SCHEDULE: LandingPageScheduleRow[] = [
+  {
+    time: '18:00-20:00',
+    days: {
+      mon: 'Advanced',
+      wed: 'Advanced',
+      fri: 'Advanced',
+    },
+  },
+  {
+    time: '19:00-21:00',
+    days: {
+      mon: 'Beginner',
+      wed: 'Beginner',
+      fri: 'Beginner',
+    },
+  },
+  {
+    time: '19:30-21:30',
+    days: {
+      tue: 'Intermediate',
+      thu: 'Intermediate',
+      sat: 'Intermediate',
+    },
+  },
+];
+
+const FALLBACK_TEACHERS: LandingPageTeacher[] = [
+  {
+    name: 'Ms. Sarah Johnson',
+    role: 'Giám đốc học thuật',
+    flag: '🇺🇸',
+    experience: '8 năm kinh nghiệm',
+    specialty: 'Phương pháp giao tiếp & phát âm',
+    education: 'Thạc sĩ TESOL - Stanford University',
+  },
+  {
+    name: 'Mr. David Smith',
+    role: 'Trưởng khoa Intermediate',
+    flag: '🇬🇧',
+    experience: '6 năm kinh nghiệm',
+    specialty: 'Ngữ pháp và luyện thi IELTS',
+    education: 'Cử nhân Ngôn ngữ Anh - Cambridge',
+  },
+  {
+    name: 'Ms. Emma Wilson',
+    role: 'Chuyên gia Advanced',
+    flag: '🇦🇺',
+    experience: '10 năm kinh nghiệm',
+    specialty: 'Business English & Academic Writing',
+    education: 'Thạc sĩ Giáo dục - Melbourne University',
+  },
+];
+
 type DifficultyLiteral = DifficultyLevel | 'default';
 
 const DIFFICULTY_LABELS: Record<DifficultyLiteral, { en: string; vi: string }> =
@@ -297,17 +368,20 @@ export class LandingPageService {
 
   async getLandingPageData(): Promise<LandingPageData> {
     try {
-      const [stats, testimonials, classes] = await Promise.all([
+      const [stats, testimonials, classData, teachers] = await Promise.all([
         this.buildStats(),
         this.buildTestimonials(),
         this.buildClasses(),
+        this.buildTeachers(),
       ]);
 
       return {
         features: FEATURE_CARDS,
         stats,
         testimonials,
-        classes,
+        classes: classData.classes,
+        classSchedule: classData.schedule,
+        teachers,
         footerSections: FOOTER_SECTIONS,
       };
     } catch (error) {
@@ -402,7 +476,10 @@ export class LandingPageService {
     });
   }
 
-  private async buildClasses(): Promise<LandingPageClass[]> {
+  private async buildClasses(): Promise<{
+    classes: LandingPageClass[];
+    schedule: LandingPageScheduleRow[];
+  }> {
     const courses = await this.prisma.course.findMany({
       where: { isPublished: true },
       orderBy: [{ orderNo: 'asc' }, { createdAt: 'desc' }],
@@ -410,7 +487,7 @@ export class LandingPageService {
     });
 
     if (courses.length === 0) {
-      return FALLBACK_CLASSES;
+      return { classes: FALLBACK_CLASSES, schedule: FALLBACK_SCHEDULE };
     }
 
     const classrooms = await Promise.all(
@@ -450,6 +527,14 @@ export class LandingPageService {
     );
 
     const classes: LandingPageClass[] = [];
+    const scheduleMap = new Map<
+      string,
+      {
+        start: number;
+        end: number;
+        days: Partial<Record<Weekday, string>>;
+      }
+    >();
 
     courses.forEach((course, index) => {
       const classroom = classrooms[index];
@@ -460,9 +545,75 @@ export class LandingPageService {
       classes.push(
         this.mapCourseToLandingClass(course, classroom, index === 0),
       );
+
+      classroom.slots.forEach((slot) => {
+        const key = `${formatTime(slot.startMinuteOfDay)}-${formatTime(
+          slot.endMinuteOfDay,
+        )}`;
+        const existing =
+          scheduleMap.get(key) ??
+          ({
+            start: slot.startMinuteOfDay,
+            end: slot.endMinuteOfDay,
+            days: {},
+          } as {
+            start: number;
+            end: number;
+            days: Partial<Record<Weekday, string>>;
+          });
+        existing.days[slot.dayOfWeek] = classroom.name;
+        scheduleMap.set(key, existing);
+      });
     });
 
-    return classes.length > 0 ? classes : FALLBACK_CLASSES;
+    const schedule =
+      scheduleMap.size > 0
+        ? Array.from(scheduleMap.entries())
+            .sort((a, b) => a[1].start - b[1].start)
+            .map(([time, value]) => ({
+              time,
+              days: value.days,
+            }))
+        : FALLBACK_SCHEDULE;
+
+    return {
+      classes: classes.length > 0 ? classes : FALLBACK_CLASSES,
+      schedule,
+    };
+  }
+
+  private async buildTeachers(): Promise<LandingPageTeacher[]> {
+    const teachers = await this.prisma.user.findMany({
+      where: { role: UserRole.teacher },
+      select: {
+        displayName: true,
+        firstName: true,
+        lastName: true,
+        nationality: true,
+        experience: true,
+        highlights: true,
+        bio: true,
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 6,
+    });
+
+    if (teachers.length === 0) {
+      return FALLBACK_TEACHERS;
+    }
+
+    return teachers.map((teacher) => ({
+      name: resolveTeacherName(teacher),
+      role: teacher.highlights?.[0] ?? 'Giáo viên EngliMaster',
+      flag: resolveTeacherFlag(teacher.nationality),
+      experience:
+        teacher.experience != null
+          ? `${teacher.experience} năm kinh nghiệm`
+          : undefined,
+      specialty: teacher.highlights?.[1],
+      education: teacher.highlights?.[2],
+      bio: teacher.bio ?? undefined,
+    }));
   }
 
   private mapCourseToLandingClass(
@@ -523,6 +674,8 @@ export class LandingPageService {
       ],
       testimonials: FALLBACK_TESTIMONIALS,
       classes: FALLBACK_CLASSES,
+      classSchedule: FALLBACK_SCHEDULE,
+      teachers: FALLBACK_TEACHERS,
       footerSections: FOOTER_SECTIONS,
     };
   }
