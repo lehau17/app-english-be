@@ -533,6 +533,12 @@ Hãy trả lời dựa trên hồ sơ học tập của học sinh ở trên. N�
       // Save user message
       await this.saveMessage(conversation.id, 'user', message);
 
+      // Send metadata event with conversation id
+      yield {
+        type: 'metadata',
+        data: { conversationId: conversation.id },
+      };
+
       let fullResponse = '';
 
       const stream = await this.agent.stream({
@@ -554,6 +560,41 @@ Hãy trả lời dựa trên hồ sơ học tập của học sinh ở trên. N�
       }
     } catch (error) {
       this.logger.error('Error streaming student query:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get learning analytics directly (without going through agent chat)
+   */
+  async getLearningAnalytics(
+    userId: string,
+    timeRange: 'week' | 'month' | 'quarter' | 'year' | 'all-time' = 'month',
+    includeCharts: boolean = true,
+    includePrediction: boolean = true,
+  ) {
+    try {
+      // Get the learning analytics tool from student tools
+      const tools = this.studentTools.getTools();
+      const analyticsTool = tools.find((t) => t.name === 'learning_analytics');
+
+      if (!analyticsTool) {
+        throw new Error('Learning analytics tool not found');
+      }
+
+      // Call the tool directly
+      const result = await (analyticsTool as any)._call({
+        userId,
+        timeRange,
+        includeCharts,
+        includePrediction,
+      });
+
+      // Parse JSON response
+      const parsed = JSON.parse(result);
+      return parsed;
+    } catch (error) {
+      this.logger.error('Error getting learning analytics:', error);
       throw error;
     }
   }

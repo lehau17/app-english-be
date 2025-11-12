@@ -5,14 +5,16 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AssignmentStatus } from '@prisma/client';
+import { AssignmentStatus, AssignmentType } from '@prisma/client';
 import {
+  CloneAssignmentDto,
   CreateAssignmentDto,
   GradeAssignmentDto,
   QueryAssignmentsDto,
   SubmitAssignmentDto,
   UpdateAssignmentDto,
 } from '../dto';
+import { v4 as uuidv4 } from 'uuid';
 import { AssignmentActivityDto } from '../dto/create-assignment.dto';
 import {
   AssignmentActivityModel,
@@ -53,6 +55,8 @@ export class AssignmentService {
         this.mapActivityDto(activity, index),
       ),
       customContent: dto.customContent,
+      type: dto.type ?? AssignmentType.HOMEWORK,
+      weight: dto.weight ?? 0,
     };
 
     return this.assignmentRepository.createAssignment(assignmentData);
@@ -204,6 +208,86 @@ export class AssignmentService {
     }
 
     return this.assignmentRepository.publishAssignment(assignmentId);
+  }
+
+  async cloneAssignment(
+    teacherId: string,
+    assignmentId: string,
+    dto: CloneAssignmentDto,
+  ): Promise<AssignmentWithDetails> {
+    const source = await this.getAssignmentById(assignmentId);
+
+    if (source.teacherId !== teacherId) {
+      throw new ForbiddenException(
+        'You can only clone assignments that you created',
+      );
+    }
+
+    const activities = source.assignmentActivities || [];
+    if (activities.length === 0) {
+      throw new BadRequestException(
+        'Source assignment does not contain any activities to clone',
+      );
+    }
+
+    let selectedActivities = activities;
+    if (dto.activityIds && dto.activityIds.length > 0) {
+      const allowedIds = new Set(dto.activityIds);
+      selectedActivities = activities.filter((activity) =>
+        allowedIds.has(activity.id),
+      );
+    }
+
+    if (selectedActivities.length === 0) {
+      throw new BadRequestException(
+        'Please select at least one activity to clone',
+      );
+    }
+
+    const clonedActivities = selectedActivities.map((activity) => ({
+      id: uuidv4(),
+      type: activity.type,
+      title: activity.title,
+      instructions: activity.instructions ?? undefined,
+      content: JSON.parse(JSON.stringify(activity.content ?? {})),
+      points: activity.points ?? 10,
+      passingScore: activity.passingScore ?? undefined,
+      difficulty: activity.difficulty ?? undefined,
+      hints: activity.hints ?? [],
+    }));
+
+    const totalPoints =
+      dto.totalPoints ??
+      source.totalPoints ??
+      clonedActivities.reduce((sum, item) => sum + (item.points ?? 0), 0);
+
+    const dueDate =
+      dto.dueDate !== undefined
+        ? dto.dueDate
+          ? new Date(dto.dueDate)
+          : undefined
+        : (source.dueDate ?? undefined);
+
+    const isPublished = dto.isPublished ?? false;
+
+    return this.assignmentRepository.createAssignment({
+      teacherId,
+      classroomId: dto.targetClassroomId,
+      title: dto.title ?? source.title,
+      description: dto.description ?? source.description ?? undefined,
+      instructions: dto.instructions ?? source.instructions ?? undefined,
+      dueDate,
+      totalPoints,
+      timeLimit: dto.timeLimit ?? source.timeLimit ?? undefined,
+      maxAttempts: dto.maxAttempts ?? source.maxAttempts ?? 1,
+      status: isPublished ? AssignmentStatus.published : AssignmentStatus.draft,
+      isPublished,
+      assignedTo: [],
+      activities: clonedActivities,
+      customContent: dto.customContent ?? source.customContent ?? undefined,
+      weight: dto.weight ?? source.weight ?? 0,
+      type: source.type,
+    });
   }
 
   // Student methods

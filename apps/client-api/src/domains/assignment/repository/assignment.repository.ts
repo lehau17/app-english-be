@@ -4,6 +4,7 @@ import {
   Assignment,
   AssignmentStatus,
   AssignmentSubmission,
+  AssignmentType,
   DifficultyLevel,
   Prisma,
   AssignmentActivity as PrismaAssignmentActivity,
@@ -65,12 +66,15 @@ export interface CreateAssignmentData {
   description?: string;
   instructions?: string;
   dueDate?: Date;
+  startTime?: Date;
   totalPoints?: number;
   timeLimit?: number;
   maxAttempts?: number;
   status?: AssignmentStatus;
   isPublished?: boolean;
   assignedTo?: string[];
+  type?: AssignmentType;
+  weight?: number | null;
   activities: AssignmentActivityInput[];
   customContent?: any;
 }
@@ -80,12 +84,15 @@ export interface UpdateAssignmentData {
   description?: string;
   instructions?: string;
   dueDate?: Date;
+  startTime?: Date;
   totalPoints?: number;
   timeLimit?: number;
   maxAttempts?: number;
   status?: AssignmentStatus;
   isPublished?: boolean;
   assignedTo?: string[];
+  type?: AssignmentType;
+  weight?: number | null;
   activities?: AssignmentActivityInput[];
   customContent?: any;
 }

@@ -7,6 +7,7 @@ import {
 } from '../dto/agent.dto';
 import { AgentChatRepository } from '../repository';
 import { LangChainAgentService } from './langchain-agent.service';
+import { StudentAgentService } from './student-agent.service';
 
 @Injectable()
 export class AgentService {
@@ -14,6 +15,7 @@ export class AgentService {
     private langchainAgent: LangChainAgentService,
     private agentChatRepository: AgentChatRepository,
     private prisma: PrismaRepository,
+    private studentAgentService: StudentAgentService,
   ) {}
 
   /**
@@ -111,6 +113,26 @@ export class AgentService {
     userId: string,
     userRole: string = 'student',
   ): Promise<AgentChatResponseDto> {
+    if (userRole === 'student') {
+      const result = await this.studentAgentService.processQuery(
+        chatDto.message,
+        userId,
+        chatDto.conversationId,
+      );
+
+      return {
+        response: result.answer,
+        conversationId: result.conversationId,
+        confidence: 0.9,
+        sources: ['Student profile', 'Knowledge base'],
+        suggestions: [],
+        toolsUsed: result.toolsUsed,
+        reasoning: result.reasoning,
+        processingTime: result.processingTime,
+        executionSteps: result.executionSteps,
+      };
+    }
+
     try {
       const startTime = Date.now();
 
@@ -293,6 +315,26 @@ export class AgentService {
     userId: string,
     userRole: string = 'student',
   ): AsyncGenerator<any, void, unknown> {
+    if (userRole === 'student') {
+      try {
+        for await (const chunk of this.studentAgentService.streamQuery(
+          chatDto.message,
+          userId,
+          chatDto.conversationId,
+        )) {
+          yield chunk;
+        }
+      } catch (error) {
+        yield {
+          type: 'error',
+          content:
+            (error as Error).message ||
+            'I apologize, but I encountered an error. Please try again.',
+        };
+      }
+      return;
+    }
+
     try {
       const startTime = Date.now();
 
@@ -386,6 +428,7 @@ export class AgentService {
         metadata: {
           toolsUsed,
           reasoning,
+          executionSteps,
           processingTime: Date.now() - startTime,
         },
       });

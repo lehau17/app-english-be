@@ -3,6 +3,7 @@ import { JwtPayload } from '@app/shared/payload';
 import {
   Body,
   Controller,
+  ForbiddenException,
   Get,
   Logger,
   NotFoundException,
@@ -29,6 +30,7 @@ import {
 import { AgentService } from '../service/agent.service';
 import { AutoReindexService } from '../service/auto-reindex.service';
 import { RagService } from '../service/rag.service';
+import { StudentAgentService } from '../service/student-agent.service';
 
 @ApiTags('Agent')
 @ApiBearerAuth('Authorization')
@@ -40,6 +42,7 @@ export class PrivateAgentController {
     private readonly agentService: AgentService,
     private readonly ragService: RagService,
     private readonly autoReindexService: AutoReindexService,
+    private readonly studentAgentService: StudentAgentService,
   ) {}
 
   @Post('chat')
@@ -112,6 +115,74 @@ export class PrivateAgentController {
       this.logger.error(`❌ Stream error: ${error.message}`, error.stack);
       res.write(
         `data: ${JSON.stringify({ type: 'error', content: error.message })}\n\n`,
+      );
+      res.end();
+    }
+  }
+
+  @Get('student/chat/stream')
+  @ApiOperation({ summary: 'Stream chat with Student AI Agent using SSE' })
+  @ApiResponse({
+    status: 200,
+    description: 'SSE stream of AI response (student tools)',
+  })
+  async streamStudentChat(
+    @Query('message') message: string,
+    @Query('conversationId') conversationId: string | undefined,
+    @PayloadToken() payload: JwtPayload,
+    @Res() res: Response,
+  ): Promise<void> {
+    if (payload.role !== 'student') {
+      throw new ForbiddenException(
+        'Student chat endpoint is for students only',
+      );
+    }
+
+    this.logger.log(
+      `👩‍🎓 Student stream request: message="${message}" conversationId=${conversationId}`,
+    );
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    try {
+      let chunkCount = 0;
+      for await (const chunk of this.studentAgentService.streamQuery(
+        message,
+        payload.sub,
+        conversationId,
+      )) {
+        chunkCount++;
+        const data = JSON.stringify(chunk);
+        this.logger.debug(
+          `📤 Student chunk ${chunkCount}: ${data.substring(0, 100)}...`,
+        );
+        res.write(`data: ${data}\n\n`);
+
+        if ((res as any).flush) {
+          (res as any).flush();
+        }
+      }
+
+      this.logger.log(
+        `✅ Student stream completed: ${chunkCount} chunks sent (student tools)`,
+      );
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } catch (error) {
+      this.logger.error(
+        `❌ Student stream error: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'error',
+          content:
+            (error as Error).message ||
+            'Đã xảy ra lỗi khi kết nối với trợ lý học tập.',
+        })}\n\n`,
       );
       res.end();
     }
@@ -311,6 +382,31 @@ export class PrivateAgentController {
       id,
       action,
     };
+  }
+
+  @Get('learning-analytics')
+  @ApiOperation({
+    summary: 'Get learning analytics for student',
+    description:
+      'Get comprehensive learning statistics, charts, and recommendations',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Learning analytics data',
+  })
+  async getLearningAnalytics(
+    @PayloadToken() payload: JwtPayload,
+    @Query('timeRange')
+    timeRange: 'week' | 'month' | 'quarter' | 'year' | 'all-time' = 'month',
+    @Query('includeCharts') includeCharts: string = 'true',
+    @Query('includePrediction') includePrediction: string = 'true',
+  ) {
+    return this.studentAgentService.getLearningAnalytics(
+      payload.sub,
+      timeRange,
+      includeCharts === 'true',
+      includePrediction === 'true',
+    );
   }
 
   @Get('download/:filename')

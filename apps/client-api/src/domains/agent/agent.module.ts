@@ -16,6 +16,7 @@ import { RagService } from './service/rag.service';
 import { ReportGeneratorService } from './service/report-generator.service';
 import { RerankerService } from './service/reranker.service';
 import { SqlService } from './service/sql.service';
+import { StudentAgentService } from './service/student-agent.service';
 import { TextChunkerService } from './service/text-chunker.service';
 import { ChartGeneratorTool } from './tools/chart-generator.tool';
 import { ExcelExportTool } from './tools/excel-export.tool';
@@ -43,6 +44,7 @@ import { WordExportTool } from './tools/word-export.tool';
     GraphEntityService,
     GraphRelationshipService,
     GraphTraversalService,
+    StudentAgentService,
     ChartGeneratorTool,
     ExcelExportTool,
     PdfExportTool,

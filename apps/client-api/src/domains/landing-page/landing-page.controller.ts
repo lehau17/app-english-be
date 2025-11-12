@@ -1,5 +1,10 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Request } from 'express';
+import {
+  GuestEnrollmentDto,
+  GuestEnrollmentRole,
+} from './dto/guest-enrollment.dto';
 import { ContactFormPayload, LandingPageService } from './landing-page.service';
 
 export class ContactFormDto implements ContactFormPayload {
@@ -76,7 +81,6 @@ export class LandingPageController {
               price: { type: 'string' },
               features: { type: 'array', items: { type: 'string' } },
               nextClass: { type: 'string' },
-              popular: { type: 'boolean', required: false },
             },
           },
         },
@@ -112,5 +116,35 @@ export class LandingPageController {
   })
   async submitContactForm(@Body() contactFormDto: ContactFormDto) {
     return await this.landingPageService.submitContactForm(contactFormDto);
+  }
+
+  @Post('guest-enrollment')
+  @ApiOperation({
+    summary: 'Đăng ký khóa học từ landing page (khách vãng lai)',
+    description:
+      'Cho phép khách chọn đăng ký với tư cách học viên hoặc phụ huynh, tự động tạo tài khoản và sinh link VNPay.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Khởi tạo đăng ký thành công',
+    schema: {
+      type: 'object',
+      properties: {
+        paymentUrl: { type: 'string' },
+        transactionId: { type: 'string' },
+        studentId: { type: 'string' },
+        parentId: { type: 'string', nullable: true },
+        role: { type: 'string', enum: Object.values(GuestEnrollmentRole) },
+        message: { type: 'string' },
+      },
+    },
+  })
+  async createGuestEnrollment(
+    @Body() payload: GuestEnrollmentDto,
+    @Req() req: Request,
+  ) {
+    const ipAddress =
+      req.ip || req.headers['x-forwarded-for']?.toString() || '127.0.0.1';
+    return this.landingPageService.createGuestEnrollment(payload, ipAddress);
   }
 }

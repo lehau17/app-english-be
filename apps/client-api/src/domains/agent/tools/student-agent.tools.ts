@@ -51,6 +51,7 @@ export class StudentAgentTools {
       // Progress tools
       this.getScoreReportTool(),
       this.getAdaptiveRecommendationTool(),
+      this.getLearningAnalyticsTool(),
     ];
   }
 
@@ -375,5 +376,635 @@ export class StudentAgentTools {
         }
       },
     });
+  }
+
+  /**
+   * Learning Analytics Tool
+   * Comprehensive learning statistics and analytics dashboard
+   */
+  private getLearningAnalyticsTool() {
+    return new DynamicStructuredTool({
+      name: 'learning_analytics',
+      description:
+        'Thống kê học tập chi tiết với biểu đồ, xu hướng, dự đoán và gợi ý cải thiện. Sử dụng khi học sinh hỏi về "thống kê học tập", "tiến độ", "điểm mạnh yếu", "cần học gì tiếp".',
+      schema: z.object({
+        userId: z.string().describe('ID của học sinh'),
+        timeRange: z
+          .enum(['week', 'month', 'quarter', 'year', 'all-time'])
+          .optional()
+          .default('month')
+          .describe('Khoảng thời gian thống kê'),
+        includeCharts: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('Bao gồm dữ liệu biểu đồ'),
+        includePrediction: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('Bao gồm dự đoán trình độ'),
+      }),
+      func: async ({
+        userId,
+        timeRange = 'month',
+        includeCharts = true,
+        includePrediction = true,
+      }) => {
+        try {
+          this.logger.log(
+            `Learning analytics for user: ${userId}, range: ${timeRange}`,
+          );
+
+          // Calculate date range
+          const now = new Date();
+          const startDate = this.getStartDate(now, timeRange);
+
+          // 1. Assignment Submissions
+          const submissions = await this.prisma.assignmentSubmission.findMany({
+            where: {
+              studentId: userId,
+              submittedAt: { gte: startDate },
+              score: { not: null },
+            },
+            include: {
+              assignment: {
+                select: {
+                  title: true,
+                  totalPoints: true,
+                  type: true,
+                },
+              },
+            },
+            orderBy: { submittedAt: 'desc' },
+          });
+
+          // 2. Vocabulary Progress
+          const vocabProgress =
+            await this.prisma.userVocabularyProgress.findMany({
+              where: {
+                userId,
+                updatedAt: { gte: startDate },
+              },
+              include: {
+                term: {
+                  include: {
+                    unit: {
+                      include: {
+                        list: {
+                          select: {
+                            title: true,
+                            difficulty: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            });
+
+          // 3. Podcast Attempts
+          const podcastAttempts = await this.prisma.podcastAttempt.findMany({
+            where: {
+              userId,
+              completedAt: { gte: startDate, not: null },
+            },
+            select: {
+              id: true,
+              score: true,
+              completedAt: true,
+              timeSpent: true,
+            },
+            orderBy: { completedAt: 'desc' },
+          });
+
+          // 4. AI Speaking Sessions
+          const speakingSessions = await this.prisma.aiSpeakingSession.findMany(
+            {
+              where: {
+                userId,
+                createdAt: { gte: startDate },
+                state: 'completed',
+              },
+              include: {
+                turns: {
+                  where: {
+                    status: 'completed',
+                  },
+                  select: {
+                    pronunciationScore: true,
+                    grammarScore: true,
+                    vocabularyScore: true,
+                    fluencyScore: true,
+                  },
+                },
+              },
+            },
+          );
+
+          // Calculate summary statistics
+          const totalStudyTime = this.calculateStudyTime(
+            submissions,
+            podcastAttempts,
+            speakingSessions,
+          );
+          const lessonsCompleted = await this.countCompletedLessons(
+            userId,
+            startDate,
+          );
+          const assignmentsSubmitted = submissions.length;
+          const avgScore = this.calculateAverageScore(submissions);
+          const studyStreak = await this.calculateStreak(userId);
+          const certificatesEarned = await this.countCertificates(userId);
+
+          // Skill breakdown
+          const skillBreakdown = {
+            vocabulary: this.analyzeVocabulary(vocabProgress),
+            grammar: this.analyzeGrammar(submissions),
+            listening: this.analyzeListening(podcastAttempts),
+            speaking: this.analyzeSpeaking(speakingSessions),
+            reading: this.analyzeReading(submissions),
+            writing: this.analyzeWriting(submissions),
+          };
+
+          // Activity trend (for charts)
+          const activityTrend = includeCharts
+            ? this.buildActivityTrend(submissions, podcastAttempts, startDate)
+            : null;
+
+          // Score progression
+          const scoreProgression = includeCharts
+            ? this.buildScoreProgression(submissions)
+            : null;
+
+          // Predictions
+          const prediction = includePrediction
+            ? await this.generatePrediction(userId, avgScore, skillBreakdown)
+            : null;
+
+          // Recommendations
+          const recommendations = this.generateRecommendations(
+            skillBreakdown,
+            submissions,
+          );
+
+          return JSON.stringify({
+            success: true,
+            summary: {
+              totalStudyTime, // minutes
+              lessonsCompleted,
+              assignmentsSubmitted,
+              avgScore: avgScore.toFixed(1),
+              studyStreak,
+              certificatesEarned,
+            },
+            skillBreakdown,
+            activityTrend,
+            scoreProgression,
+            prediction,
+            recommendations,
+            timeRange,
+            period: {
+              start: startDate.toISOString(),
+              end: now.toISOString(),
+            },
+          });
+        } catch (error) {
+          this.logger.error('Learning analytics error:', error);
+          return JSON.stringify({
+            success: false,
+            error: 'Lỗi tạo thống kê học tập',
+            message: 'Vui lòng thử lại sau',
+          });
+        }
+      },
+    });
+  }
+
+  // Helper methods for learning analytics
+
+  private getStartDate(now: Date, range: string): Date {
+    const start = new Date(now);
+    switch (range) {
+      case 'week':
+        start.setDate(start.getDate() - 7);
+        break;
+      case 'month':
+        start.setMonth(start.getMonth() - 1);
+        break;
+      case 'quarter':
+        start.setMonth(start.getMonth() - 3);
+        break;
+      case 'year':
+        start.setFullYear(start.getFullYear() - 1);
+        break;
+      case 'all-time':
+        start.setFullYear(2020); // Very old date
+        break;
+    }
+    return start;
+  }
+
+  private calculateStudyTime(
+    submissions: any[],
+    podcastAttempts: any[],
+    speakingSessions: any[],
+  ): number {
+    let totalMinutes = 0;
+
+    // From submissions (timeSpent field if available)
+    submissions.forEach((s) => {
+      if (s.timeSpent) {
+        totalMinutes += s.timeSpent;
+      }
+    });
+
+    // From podcast attempts
+    podcastAttempts.forEach((p) => {
+      if (p.timeSpent) {
+        totalMinutes += p.timeSpent;
+      }
+    });
+
+    // From speaking sessions (estimate 5 minutes per session)
+    totalMinutes += speakingSessions.length * 5;
+
+    return Math.round(totalMinutes);
+  }
+
+  private async countCompletedLessons(
+    userId: string,
+    startDate: Date,
+  ): Promise<number> {
+    // Count unique lessons from completed assignments
+    const submissions = await this.prisma.assignmentSubmission.findMany({
+      where: {
+        studentId: userId,
+        submittedAt: { gte: startDate },
+        score: { not: null },
+      },
+      select: {
+        assignment: {
+          select: {
+            classroom: {
+              select: {
+                course: {
+                  select: {
+                    lessons: {
+                      select: { id: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const lessonIds = new Set<string>();
+    submissions.forEach((s) => {
+      s.assignment.classroom.course.lessons.forEach((l) => {
+        lessonIds.add(l.id);
+      });
+    });
+
+    return lessonIds.size;
+  }
+
+  private calculateAverageScore(submissions: any[]): number {
+    if (submissions.length === 0) return 0;
+
+    const percentages = submissions.map((s) => {
+      const total = s.assignment.totalPoints || 100;
+      return (s.score / total) * 100;
+    });
+
+    return percentages.reduce((a, b) => a + b, 0) / percentages.length;
+  }
+
+  private async calculateStreak(userId: string): Promise<number> {
+    // Get all submissions ordered by date
+    const submissions = await this.prisma.assignmentSubmission.findMany({
+      where: { studentId: userId },
+      select: { submittedAt: true },
+      orderBy: { submittedAt: 'desc' },
+    });
+
+    if (submissions.length === 0) return 0;
+
+    // Group by date
+    const dates = new Set<string>();
+    submissions.forEach((s) => {
+      if (s.submittedAt) {
+        const date = new Date(s.submittedAt).toDateString();
+        dates.add(date);
+      }
+    });
+
+    // Calculate consecutive days
+    const sortedDates = Array.from(dates)
+      .map((d) => new Date(d))
+      .sort((a, b) => b.getTime() - a.getTime());
+
+    let streak = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < sortedDates.length; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(checkDate.getDate() - i);
+      checkDate.setHours(0, 0, 0, 0);
+
+      const found = sortedDates.find(
+        (d) => d.toDateString() === checkDate.toDateString(),
+      );
+
+      if (found) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  }
+
+  private async countCertificates(userId: string): Promise<number> {
+    return this.prisma.issuedCertificate.count({
+      where: { studentId: userId },
+    });
+  }
+
+  private analyzeVocabulary(progress: any[]) {
+    const mastered = progress.filter(
+      (p) => p.masteryLevel === 'mastered',
+    ).length;
+    const total = progress.length;
+    const masteryRate = total > 0 ? (mastered / total) * 100 : 0;
+
+    // Group by difficulty
+    const byDifficulty = new Map<string, number>();
+    progress.forEach((p) => {
+      const diff = p.term?.unit?.list?.difficulty || 'unknown';
+      byDifficulty.set(diff, (byDifficulty.get(diff) || 0) + 1);
+    });
+
+    return {
+      wordsLearned: total,
+      masteryRate: Math.round(masteryRate),
+      weakTopics: [], // Could analyze by category
+      strongTopics: [],
+    };
+  }
+
+  private analyzeGrammar(submissions: any[]) {
+    // Filter grammar-related assignments
+    const grammarSubs = submissions.filter((s) =>
+      s.assignment.title.toLowerCase().includes('grammar'),
+    );
+
+    if (grammarSubs.length === 0) {
+      return {
+        topicsCompleted: 0,
+        masteryRate: 0,
+        weakTopics: [],
+        strongTopics: [],
+      };
+    }
+
+    const percentages = grammarSubs.map((s) => {
+      const total = s.assignment.totalPoints || 100;
+      return (s.score / total) * 100;
+    });
+
+    const avgScore =
+      percentages.reduce((a, b) => a + b, 0) / percentages.length;
+
+    return {
+      topicsCompleted: grammarSubs.length,
+      masteryRate: Math.round(avgScore),
+      weakTopics: [],
+      strongTopics: [],
+    };
+  }
+
+  private analyzeListening(podcastAttempts: any[]) {
+    if (podcastAttempts.length === 0) {
+      return {
+        minutesPracticed: 0,
+        masteryRate: 0,
+        avgAccuracy: 0,
+      };
+    }
+
+    const totalMinutes = podcastAttempts.reduce(
+      (sum, p) => sum + (p.timeSpent || 0),
+      0,
+    );
+    const scores = podcastAttempts
+      .map((p) => p.score)
+      .filter((s) => s !== null);
+    const avgAccuracy =
+      scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+
+    return {
+      minutesPracticed: Math.round(totalMinutes),
+      masteryRate: Math.round(avgAccuracy),
+      avgAccuracy: Math.round(avgAccuracy),
+    };
+  }
+
+  private analyzeSpeaking(sessions: any[]) {
+    if (sessions.length === 0) {
+      return {
+        minutesPracticed: 0,
+        masteryRate: 0,
+        avgPronunciationScore: 0,
+      };
+    }
+
+    const totalMinutes = sessions.length * 5; // Estimate
+    const allScores: number[] = [];
+
+    sessions.forEach((s) => {
+      s.turns.forEach((t: any) => {
+        if (t.pronunciationScore) allScores.push(t.pronunciationScore);
+      });
+    });
+
+    const avgScore =
+      allScores.length > 0
+        ? allScores.reduce((a, b) => a + b, 0) / allScores.length
+        : 0;
+
+    return {
+      minutesPracticed: totalMinutes,
+      masteryRate: Math.round(avgScore * 10), // Convert to percentage
+      avgPronunciationScore: Math.round(avgScore * 10) / 10,
+    };
+  }
+
+  private analyzeReading(submissions: any[]) {
+    const readingSubs = submissions.filter((s) =>
+      s.assignment.title.toLowerCase().includes('reading'),
+    );
+
+    return {
+      articlesRead: readingSubs.length,
+      masteryRate: readingSubs.length > 0 ? 75 : 0, // Placeholder
+      readingSpeed: 180, // Placeholder
+    };
+  }
+
+  private analyzeWriting(submissions: any[]) {
+    const writingSubs = submissions.filter(
+      (s) =>
+        s.assignment.title.toLowerCase().includes('writing') ||
+        s.assignment.type === 'ESSAY',
+    );
+
+    const avgScore =
+      writingSubs.length > 0
+        ? writingSubs.reduce((sum, s) => {
+            const total = s.assignment.totalPoints || 100;
+            return sum + (s.score / total) * 100;
+          }, 0) / writingSubs.length
+        : 0;
+
+    return {
+      essaysWritten: writingSubs.length,
+      avgScore: Math.round(avgScore * 10) / 10,
+      wordCount: 0, // Would need to track separately
+    };
+  }
+
+  private buildActivityTrend(
+    submissions: any[],
+    podcastAttempts: any[],
+    startDate: Date,
+  ) {
+    // Group by date
+    const dailyActivity = new Map<string, number>();
+
+    submissions.forEach((s) => {
+      if (s.submittedAt) {
+        const date = new Date(s.submittedAt).toISOString().split('T')[0];
+        dailyActivity.set(date, (dailyActivity.get(date) || 0) + 1);
+      }
+    });
+
+    podcastAttempts.forEach((p) => {
+      if (p.completedAt) {
+        const date = new Date(p.completedAt).toISOString().split('T')[0];
+        dailyActivity.set(date, (dailyActivity.get(date) || 0) + 1);
+      }
+    });
+
+    const data = Array.from(dailyActivity.entries())
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return {
+      type: 'line',
+      title: 'Hoạt động học tập',
+      data,
+    };
+  }
+
+  private buildScoreProgression(submissions: any[]) {
+    const data = submissions
+      .reverse()
+      .map((s, idx) => {
+        const total = s.assignment.totalPoints || 100;
+        const percentage = (s.score / total) * 100;
+        return {
+          assignment: `Bài ${idx + 1}`,
+          score: s.score,
+          maxScore: total,
+          percentage: Math.round(percentage),
+        };
+      })
+      .slice(-10); // Last 10 assignments
+
+    const trend =
+      data.length >= 3
+        ? data[data.length - 1].percentage > data[0].percentage
+          ? 'improving'
+          : 'declining'
+        : 'stable';
+
+    return {
+      type: 'line',
+      title: 'Xu hướng điểm số',
+      data,
+      trend,
+    };
+  }
+
+  private async generatePrediction(
+    userId: string,
+    currentAvgScore: number,
+    skillBreakdown: any,
+  ) {
+    // Simple prediction based on current performance
+    const overallMastery =
+      (skillBreakdown.vocabulary.masteryRate +
+        skillBreakdown.grammar.masteryRate +
+        skillBreakdown.listening.masteryRate +
+        skillBreakdown.speaking.masteryRate +
+        skillBreakdown.reading.masteryRate +
+        skillBreakdown.writing.masteryRate) /
+      6;
+
+    // Estimate level based on mastery
+    let currentLevel = 'A1';
+    if (overallMastery >= 80) currentLevel = 'C1';
+    else if (overallMastery >= 70) currentLevel = 'B2';
+    else if (overallMastery >= 60) currentLevel = 'B1';
+    else if (overallMastery >= 50) currentLevel = 'A2';
+
+    // Predict next level in 30 days if improving
+    let projectedLevel = currentLevel;
+    if (overallMastery >= 75 && overallMastery < 80) {
+      projectedLevel = 'B2';
+    } else if (overallMastery >= 65 && overallMastery < 70) {
+      projectedLevel = 'B1';
+    } else if (overallMastery >= 55 && overallMastery < 60) {
+      projectedLevel = 'A2';
+    }
+
+    return {
+      projectedLevelIn30Days: projectedLevel,
+      currentLevel,
+      confidence: Math.round(overallMastery),
+      basedOn: 'Current performance and mastery rates',
+    };
+  }
+
+  private generateRecommendations(skillBreakdown: any, submissions: any[]) {
+    const recommendations: any[] = [];
+
+    // Check for weak skills
+    if (skillBreakdown.grammar.masteryRate < 60) {
+      recommendations.push({
+        priority: 'high',
+        action: 'Tập trung vào Grammar',
+        reason: `Điểm grammar hiện tại: ${skillBreakdown.grammar.masteryRate}%`,
+        suggestedLessons: [],
+      });
+    }
+
+    if (skillBreakdown.speaking.masteryRate < 60) {
+      recommendations.push({
+        priority: 'medium',
+        action: 'Tăng thời gian luyện speaking',
+        reason: `Điểm speaking hiện tại: ${skillBreakdown.speaking.masteryRate}%`,
+        suggestedLessons: [],
+      });
+    }
+
+    return recommendations;
   }
 }

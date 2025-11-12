@@ -23,6 +23,7 @@ import {
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import {
+  CloneAssignmentDto,
   CreateAssignmentDto,
   GradeAssignmentDto,
   ImportAssignmentDto,
@@ -197,6 +198,28 @@ export class PrivateAssignmentController {
       throw new Error('classroomId is required to create assignment');
     }
     return this.assignmentService.createAssignment(payload.sub, dto, cid);
+  }
+
+  @Post(':id/clone')
+  @ApiOperation({
+    summary: 'Clone assignment to another classroom (Teacher only)',
+    description:
+      'Allows reusing an existing assignment by copying selected activities to a target classroom.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Assignment cloned successfully',
+  })
+  async cloneAssignment(
+    @Param('id') assignmentId: string,
+    @PayloadToken() payload: JwtPayload,
+    @Body() dto: CloneAssignmentDto,
+  ) {
+    return this.assignmentService.cloneAssignment(
+      payload.sub,
+      assignmentId,
+      dto,
+    );
   }
 
   @Get('my-assignments')

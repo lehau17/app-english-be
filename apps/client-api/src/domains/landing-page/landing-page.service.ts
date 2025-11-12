@@ -1,14 +1,28 @@
 import { PrismaRepository } from '@app/database';
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   Classroom,
   ClassroomStatus,
   Course,
   DifficultyLevel,
+  Prisma,
+  Status,
   User,
   UserRole,
   Weekday,
 } from '@prisma/client';
+import { PaymentService } from '../payment/service/payment.service';
+import {
+  GuestEnrollmentDto,
+  GuestEnrollmentRole,
+  GuestPersonDto,
+} from './dto/guest-enrollment.dto';
 
 export interface LandingPageFeature {
   icon: string;
@@ -44,6 +58,10 @@ export interface LandingPageClass {
   features: string[];
   nextClass: string;
   popular?: boolean;
+  paymentEligible?: boolean;
+  courseId?: string;
+  courseTitle?: string;
+  classroomId?: string;
 }
 
 export interface LandingPageFooterSection {
@@ -61,13 +79,20 @@ export interface LandingPageData {
   footerSections: LandingPageFooterSection[];
 }
 
+export interface GuestEnrollmentResponse {
+  paymentUrl: string;
+  transactionId: string;
+  studentId: string;
+  parentId?: string | null;
+  role: GuestEnrollmentRole;
+}
+
 export interface ContactFormPayload {
   name: string;
   phone: string;
   email: string;
   level?: string;
   goals?: string[];
-  message?: string;
 }
 
 export interface LandingPageTeacher {
@@ -191,6 +216,7 @@ const FALLBACK_CLASSES: LandingPageClass[] = [
       'Luyện nghe với audio đơn giản',
     ],
     nextClass: '15/01/2025',
+    paymentEligible: false,
   },
   {
     level: 'Intermediate',
@@ -214,6 +240,7 @@ const FALLBACK_CLASSES: LandingPageClass[] = [
     ],
     nextClass: '22/01/2025',
     popular: true,
+    paymentEligible: false,
   },
   {
     level: 'Advanced',
@@ -236,6 +263,7 @@ const FALLBACK_CLASSES: LandingPageClass[] = [
       'Viết essay, báo cáo chuyên nghiệp',
     ],
     nextClass: '29/01/2025',
+    paymentEligible: false,
   },
 ];
 
@@ -364,7 +392,10 @@ const WEEKDAY_LABEL: Record<Weekday, string> = {
 export class LandingPageService {
   private readonly logger = new Logger(LandingPageService.name);
 
-  constructor(private readonly prisma: PrismaRepository) {}
+  constructor(
+    private readonly prisma: PrismaRepository,
+    private readonly paymentService: PaymentService,
+  ) {}
 
   async getLandingPageData(): Promise<LandingPageData> {
     try {
@@ -407,6 +438,156 @@ export class LandingPageService {
     return {
       success: true,
       message: 'Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi trong vòng 2 giờ.',
+    };
+  }
+
+  async createGuestEnrollment(
+    payload: GuestEnrollmentDto,
+    ipAddress?: string,
+  ): Promise<GuestEnrollmentResponse> {
+    const role = payload.role;
+    this.logger.log({
+      message: 'Guest enrollment request received',
+      role,
+      courseId: payload.courseId,
+      classroomId: payload.classroomId,
+      studentEmail: payload.student?.email,
+      parentEmail: payload.parent?.email,
+    });
+
+    const course = await this.prisma.course.findUnique({
+      where: { id: payload.courseId },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        currency: true,
+        isPublished: true,
+      },
+    });
+
+    if (!course || !course.isPublished) {
+      throw new NotFoundException(
+        'Khóa học không tồn tại hoặc chưa mở đăng ký công khai',
+      );
+    }
+
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: payload.classroomId },
+      select: {
+        id: true,
+        courseId: true,
+        isActive: true,
+        status: true,
+        maxStudents: true,
+        name: true,
+      },
+    });
+
+    if (!classroom || classroom.courseId !== course.id) {
+      throw new NotFoundException(
+        'Không tìm thấy lớp học tương ứng với khóa học đã chọn',
+      );
+    }
+
+    if (
+      !classroom.isActive ||
+      (classroom.status !== ClassroomStatus.ongoing &&
+        classroom.status !== ClassroomStatus.upcoming)
+    ) {
+      throw new BadRequestException(
+        'Lớp học này hiện không mở để đăng ký mới. Vui lòng chọn lớp khác.',
+      );
+    }
+
+    if (!payload.student) {
+      throw new BadRequestException('Thiếu thông tin học viên đăng ký');
+    }
+
+    if (role === GuestEnrollmentRole.parent && !payload.parent) {
+      throw new BadRequestException(
+        'Vui lòng cung cấp thông tin phụ huynh khi đăng ký với tư cách phụ huynh',
+      );
+    }
+
+    const returnUrl =
+      payload.returnUrl ||
+      process.env.LANDING_PAGE_PAYMENT_RETURN_URL ||
+      'http://localhost:3000/payment/return';
+
+    const supportNotes = this.buildSupportNote(payload);
+
+    let studentUser: User;
+    let parentUser: User | null = null;
+
+    await this.prisma.$transaction(async (tx) => {
+      studentUser = await this.ensureGuestUser(
+        tx,
+        payload.student,
+        UserRole.student,
+        payload.source,
+        supportNotes,
+      );
+
+      if (role === GuestEnrollmentRole.parent && payload.parent) {
+        parentUser = await this.ensureGuestUser(
+          tx,
+          payload.parent,
+          UserRole.parent,
+          payload.source,
+          supportNotes,
+        );
+        await this.ensureParentChildLink(tx, parentUser.id, studentUser.id);
+      }
+
+      await this.ensureClassroomMembership(
+        tx,
+        classroom,
+        studentUser.id,
+        supportNotes,
+      );
+    });
+
+    const amount = course.price;
+
+    if (!amount || amount <= 0) {
+      throw new BadRequestException(
+        'Khóa học chưa được cấu hình giá. Vui lòng liên hệ đội tư vấn.',
+      );
+    }
+
+    const description = payload.note
+      ? `Thanh toán khóa học ${course.title} (${payload.note})`
+      : `Thanh toán khóa học: ${course.title}`;
+
+    const payment = await this.paymentService.createPayment(
+      studentUser.id,
+      {
+        courseId: payload.courseId,
+        classroomId: payload.classroomId,
+        amount,
+        currency: course.currency || 'VND',
+        description,
+        returnUrl,
+        studentId: studentUser.id,
+      },
+      ipAddress,
+      parentUser?.id ?? studentUser.id,
+    );
+
+    this.logger.log({
+      message: 'Guest enrollment created successfully',
+      transactionId: payment.transactionId,
+      studentId: studentUser.id,
+      parentId: parentUser?.id,
+    });
+
+    return {
+      paymentUrl: payment.paymentUrl,
+      transactionId: payment.transactionId,
+      studentId: studentUser.id,
+      parentId: parentUser?.id ?? null,
+      role,
     };
   }
 
@@ -461,7 +642,9 @@ export class LandingPageService {
         role: true,
       },
     });
-    const userMap = new Map<string, User>(users.map((user) => [user.id, user]));
+    const userMap = new Map<string, User>(
+      users.map((user) => [user.id, user as User]),
+    );
 
     return ratings.slice(0, 3).map((rating) => {
       const user = userMap.get(rating.userId);
@@ -616,6 +799,271 @@ export class LandingPageService {
     }));
   }
 
+  private async ensureGuestUser(
+    tx: Prisma.TransactionClient,
+    person: GuestPersonDto,
+    role: UserRole,
+    source?: string,
+    note?: string | null,
+  ): Promise<User> {
+    const email = person.email?.trim().toLowerCase();
+
+    if (!email) {
+      throw new BadRequestException('Email không được bỏ trống');
+    }
+
+    const existing = await tx.user.findUnique({
+      where: { email },
+    });
+
+    if (existing) {
+      if (existing.role !== role) {
+        throw new ConflictException(
+          `Email ${email} đã đăng ký với vai trò khác (${existing.role}). Vui lòng dùng email khác.`,
+        );
+      }
+
+      const updateData: Prisma.UserUpdateInput = {};
+
+      if (!existing.firstName && person.firstName) {
+        updateData.firstName = person.firstName;
+      }
+
+      if (!existing.lastName && person.lastName) {
+        updateData.lastName = person.lastName;
+      }
+
+      if (!existing.displayName) {
+        updateData.displayName =
+          person.displayName ||
+          this.buildDisplayName(person.firstName, person.lastName, email);
+      }
+
+      if (!existing.phone && person.phone) {
+        await this.ensurePhoneAvailable(tx, person.phone, existing.id);
+        updateData.phone = person.phone;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        updateData.preferences = this.mergePreferences(
+          existing.preferences,
+          source,
+          note,
+        );
+        return tx.user.update({
+          where: { id: existing.id },
+          data: updateData,
+        });
+      }
+
+      if (source || note) {
+        await tx.user.update({
+          where: { id: existing.id },
+          data: {
+            preferences: this.mergePreferences(
+              existing.preferences,
+              source,
+              note,
+            ),
+          },
+        });
+      }
+
+      return existing;
+    }
+
+    if (person.phone) {
+      await this.ensurePhoneAvailable(tx, person.phone);
+    }
+
+    return tx.user.create({
+      data: {
+        email,
+        phone: person.phone,
+        firstName: person.firstName,
+        lastName: person.lastName,
+        displayName:
+          person.displayName ||
+          this.buildDisplayName(person.firstName, person.lastName, email),
+        role,
+        status: Status.pending,
+        provider: 'local',
+        preferences: this.mergePreferences(null, source, note),
+      },
+    });
+  }
+
+  private async ensurePhoneAvailable(
+    tx: Prisma.TransactionClient,
+    phone: string,
+    ignoreUserId?: string,
+  ) {
+    const existing = await tx.user.findUnique({
+      where: { phone },
+      select: { id: true },
+    });
+
+    if (existing && existing.id !== ignoreUserId) {
+      throw new ConflictException(
+        'Số điện thoại này đã được sử dụng cho tài khoản khác.',
+      );
+    }
+  }
+
+  private buildDisplayName(
+    firstName?: string,
+    lastName?: string,
+    fallbackEmail?: string,
+  ): string {
+    const parts = [firstName, lastName].filter(
+      (part) => part && part.trim().length > 0,
+    );
+    if (parts.length > 0) {
+      return parts.join(' ').trim();
+    }
+    if (fallbackEmail) {
+      return fallbackEmail.split('@')[0];
+    }
+    return 'Guest';
+  }
+
+  private mergePreferences(
+    current: unknown,
+    source?: string,
+    note?: string | null,
+  ) {
+    const existing =
+      typeof current === 'object' && current !== null
+        ? { ...(current as any) }
+        : {};
+    if (source) {
+      existing.landingSource = source;
+    }
+    if (note) {
+      existing.landingNote = note;
+    }
+    existing.lastLandingSignupAt = new Date().toISOString();
+    return existing;
+  }
+
+  private async ensureParentChildLink(
+    tx: Prisma.TransactionClient,
+    parentId: string,
+    childId: string,
+  ) {
+    await tx.parentChild.upsert({
+      where: {
+        parentId_childId: { parentId, childId },
+      },
+      update: {
+        createdAt: new Date(),
+      },
+      create: {
+        parentId,
+        childId,
+      },
+    });
+  }
+
+  private async ensureClassroomMembership(
+    tx: Prisma.TransactionClient,
+    classroom: Pick<Classroom, 'id' | 'maxStudents' | 'name'>,
+    studentId: string,
+    note?: string | null,
+  ) {
+    const existing = await tx.classroomStudent.findUnique({
+      where: {
+        classroomId_studentId: {
+          classroomId: classroom.id,
+          studentId,
+        },
+      },
+    });
+
+    if (existing) {
+      if (existing.isPurchased) {
+        throw new ConflictException(
+          'Học viên đã hoàn tất thanh toán cho lớp này trước đó.',
+        );
+      }
+
+      if (!existing.isActive) {
+        await tx.classroomStudent.update({
+          where: {
+            classroomId_studentId: {
+              classroomId: classroom.id,
+              studentId,
+            },
+          },
+          data: {
+            isActive: true,
+            notes: note ?? existing.notes,
+          },
+        });
+      } else if (note && note !== existing.notes) {
+        await tx.classroomStudent.update({
+          where: {
+            classroomId_studentId: {
+              classroomId: classroom.id,
+              studentId,
+            },
+          },
+          data: {
+            notes: note,
+          },
+        });
+      }
+      return;
+    }
+
+    if (classroom.maxStudents) {
+      const activeCount = await tx.classroomStudent.count({
+        where: {
+          classroomId: classroom.id,
+          isActive: true,
+        },
+      });
+
+      if (activeCount >= classroom.maxStudents) {
+        throw new ConflictException(
+          `Lớp ${classroom.name} đã đủ sĩ số. Vui lòng chọn lớp khác.`,
+        );
+      }
+    }
+
+    await tx.classroomStudent.create({
+      data: {
+        classroomId: classroom.id,
+        studentId,
+        isActive: true,
+        isPurchased: false,
+        notes: note ?? undefined,
+      },
+    });
+  }
+
+  private buildSupportNote(payload: GuestEnrollmentDto): string | null {
+    const segments: string[] = [];
+
+    if (payload.supportNeeds && payload.supportNeeds.length > 0) {
+      segments.push(`Nhu cầu: ${payload.supportNeeds.join(', ')}`);
+    }
+
+    if (payload.note) {
+      segments.push(`Ghi chú: ${payload.note}`);
+    }
+
+    if (payload.consentToContact) {
+      segments.push('Khách đồng ý nhận tư vấn');
+    }
+
+    if (segments.length === 0) {
+      return null;
+    }
+
+    return segments.join(' | ');
+  }
+
   private mapCourseToLandingClass(
     course: Course,
     classroom: Classroom & {
@@ -660,6 +1108,10 @@ export class LandingPageService {
       features: buildClassFeatures(course),
       nextClass: formatDate(classroom.periodStart),
       popular: markPopular || undefined,
+      paymentEligible: true,
+      courseId: course.id,
+      courseTitle: course.title ?? course.name ?? labels.vi,
+      classroomId: classroom.id,
     };
   }
 
