@@ -111,11 +111,7 @@ export class SqlService {
     const schema = await this.getDatabaseSchema(); // lấy cấu trúc DB
     const sqlResult = await this.generateSQL(naturalQuery, schema);
     this.logger.log('Check sql:', sqlResult.sql);
-    // if (!sqlResult.isValid) {
-    //   throw new Error(`SQL không hợp lệ cho query: ${naturalQuery}`);
-    // }
 
-    // Thực thi SELECT bằng $queryRawUnsafe (đã validate trước đó)
     this.logger.log(`🗄️ Executing SQL: ${sqlResult.sql}`);
     const data = await this.prisma.$queryRawUnsafe<any[]>(sqlResult.sql);
     const dataParsed = normalizeBigInt(data);
@@ -274,10 +270,6 @@ CHỈ TRẢ VỀ SQL (hoặc SCHEMA_MISMATCH), KHÔNG GIẢI THÍCH:
     if (dangerousPatterns.some((pattern) => pattern.test(sql))) {
       return false;
     }
-
-    // // Allow single semicolon at end, but block multiple statements
-    // const trimmedSql = sql.trim();
-    // const semicolonCount = (sql.match(/;/g) || []).length;
 
     return true;
   }
