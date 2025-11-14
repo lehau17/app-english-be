@@ -103,9 +103,14 @@ export class ParentChildService {
    * @param studentIdentifier Email của student (trong tương lai có thể thêm studentCode)
    */
   async createLinkRequest(parentId: string, studentIdentifier: string) {
+    // 1. Tìm student by email (TODO: có thể thêm studentCode sau)
     const student = await this.prisma.user.findFirst({
       where: {
-        OR: [{ email: studentIdentifier }],
+        OR: [
+          { email: studentIdentifier },
+          // TODO: Nếu có trường studentCode trong User model, uncomment dòng này:
+          // { studentCode: studentIdentifier },
+        ],
         role: UserRole.student,
       },
     });
@@ -142,6 +147,17 @@ export class ParentChildService {
       parentId,
       studentId: student.id,
     });
+
+    // TODO: Optional - Gửi notification qua Kafka
+    // await this.kafkaProducerService.send({
+    //   topic: 'notification-created',
+    //   messages: [{
+    //     value: JSON.stringify({
+    //       type: 'parent_child_link_request',
+    //       linkRequestId: linkRequest.id,
+    //     }),
+    //   }],
+    // });
 
     return linkRequest;
   }
@@ -194,6 +210,7 @@ export class ParentChildService {
           data: {
             parentId: request.parentId,
             childId: request.studentId,
+            // TODO: Nếu đã implement Prompt 2, thêm trường isVerifiedByAdmin: false
           },
         });
       }
@@ -228,6 +245,9 @@ export class ParentChildService {
         },
       });
 
+      // TODO: Optional - Gửi notification cho parent và student
+      // await this.kafkaProducerService.send(...)
+
       return updatedRequest;
     });
   }
@@ -257,6 +277,9 @@ export class ParentChildService {
       resolvedAt: new Date(),
       resolvedBy: { connect: { id: adminUserId } },
     });
+
+    // TODO: Optional - Gửi notification cho parent
+    // await this.kafkaProducerService.send(...)
 
     return updatedRequest;
   }

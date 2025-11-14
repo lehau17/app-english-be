@@ -861,6 +861,9 @@ export class AssignmentService {
       },
     );
 
+    // TODO: Optional - Send notification to student about graded assignment
+    // TODO: Optional - Update student progress/stats
+
     console.log(
       `✅ Submission ${submissionId} graded by teacher ${teacherUserId}: ${grade}/${assignment.totalPoints}`,
     );

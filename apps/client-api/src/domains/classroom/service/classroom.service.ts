@@ -1850,6 +1850,9 @@ export class ClassroomService {
       `✅ Classroom ${classroomId} status updated: ${currentStatus} → ${newStatus} by ${adminUserId}`,
     );
 
+    // TODO: Optional - Send notification to students/teacher about status change
+    // await this.notificationService.notifyClassroomStatusChange(classroomId, currentStatus, newStatus);
+
     return updatedClassroom;
   }
 
@@ -2021,6 +2024,9 @@ export class ClassroomService {
       console.log(
         `✅ Student ${studentId} transferred from classroom ${currentClassroomId} to ${newClassroomId} by ${adminUserId}`,
       );
+
+      // TODO: Optional - Gửi notification cho học sinh về việc chuyển lớp
+      // TODO: Optional - Log action vào audit log
 
       return {
         success: true,

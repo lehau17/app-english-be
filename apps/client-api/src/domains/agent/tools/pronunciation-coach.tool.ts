@@ -163,10 +163,14 @@ Format as JSON array:
           let userFeedback = null;
 
           if (userAudioUrl && provideFeedback) {
+            // TODO: Integrate Google Speech-to-Text API
+            // For now, provide mock feedback structure
+
             this.logger.log(
               `🎧 User audio provided: ${userAudioUrl} (Speech-to-Text not yet integrated)`,
             );
 
+            // Mock feedback structure (will be replaced with actual Speech API)
             userFeedback = {
               message:
                 'Speech-to-Text integration coming soon. For now, please compare your pronunciation with the IPA guide above.',
@@ -194,7 +198,7 @@ Format as JSON array:
             similarSoundingWords: similarWords,
             practiceSentences,
             userFeedback,
-            nativeSpeakerAudio: null,
+            nativeSpeakerAudio: null, // TODO: Add TTS generation or link to native audio
             tips: [
               'Listen to native speakers and repeat',
               'Record yourself and compare',
