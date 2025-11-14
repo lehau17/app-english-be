@@ -6,10 +6,3 @@ import { SwaggerService } from './swagger.service';
   exports: [SwaggerService],
 })
 export class SwaggerLoaderModule {}
-
-//   implements OnModuleInit {
-//   constructor(private readonly swagger: SwaggerService) {}
-//   async onModuleInit() {
-//     await this.swagger.loadSpec();
-//   }
-// }
