@@ -1,3 +1,4 @@
+import { GeminiService } from '@app/shared';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { VocabularyTermResponseDto } from '../dto/vocabulary-term.dto';
 import {
@@ -9,7 +10,115 @@ import { VocabularyRepository } from '../repository/vocabulary.repository';
 
 @Injectable()
 export class VocabularyUnitService {
-  constructor(private readonly repository: VocabularyRepository) {}
+  constructor(
+    private readonly repository: VocabularyRepository,
+    private readonly geminiService: GeminiService,
+  ) {}
+
+  /**
+   * Get AI suggestions for new unit
+   */
+  async suggestUnit(
+    listId: string,
+  ): Promise<{ suggestions: Array<{ title: string; description: string }> }> {
+    // Get list info
+    const list = await this.repository.findListById(listId, true);
+    if (!list) {
+      throw new NotFoundException(`List with ID ${listId} not found`);
+    }
+
+    // Get existing units
+    const units = await this.repository.findUnitsByListId(listId, false);
+
+    // Build metadata for AI
+    const existingTitles = units.map((u) => u.title);
+    const existingDescriptions = units
+      .filter((u) => u.description)
+      .map((u) => u.description);
+
+    const prompt = `You are an expert English vocabulary curriculum designer. Generate 3 creative and pedagogically sound unit suggestions for a vocabulary list.
+
+Vocabulary List Information:
+- Title: ${list.title}
+- Description: ${list.description || 'No description'}
+- Language: ${list.language}
+- Level: ${list.level || 'general'}
+- Current number of units: ${list.totalUnits}
+- Total terms: ${list.totalTerms}
+
+${existingTitles.length > 0 ? `Existing Units (avoid duplication):\n${existingTitles.map((t, i) => `${i + 1}. ${t}`).join('\n')}` : 'This list has no units yet. Create foundational units.'}
+
+Requirements:
+1. Generate exactly 3 unit suggestions
+2. Each unit should have:
+   - A clear, descriptive title (3-10 words)
+   - A brief description explaining what students will learn (20-50 words)
+3. Units should be different from existing ones
+4. Maintain logical progression (beginner → intermediate → advanced)
+5. Tailor content to the list's theme and level
+6. Use English for titles and descriptions
+
+Return ONLY valid JSON in this exact format:
+{
+  "suggestions": [
+    {"title": "Unit title 1", "description": "Unit description 1"},
+    {"title": "Unit title 2", "description": "Unit description 2"},
+    {"title": "Unit title 3", "description": "Unit description 3"}
+  ]
+}`;
+
+    try {
+      const response = await this.geminiService.generateResponse(prompt);
+
+      // Try to extract JSON from response
+      let jsonStr = response.trim();
+
+      // Remove markdown code blocks if present
+      if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      }
+
+      // Parse and validate
+      const parsed = JSON.parse(jsonStr);
+
+      if (
+        !parsed.suggestions ||
+        !Array.isArray(parsed.suggestions) ||
+        parsed.suggestions.length !== 3
+      ) {
+        throw new Error('Invalid response format from AI');
+      }
+
+      // Validate each suggestion
+      for (const suggestion of parsed.suggestions) {
+        if (!suggestion.title || !suggestion.description) {
+          throw new Error('Each suggestion must have title and description');
+        }
+      }
+
+      return parsed;
+    } catch (error) {
+      console.error('AI suggestion error:', error);
+
+      // Fallback suggestions if AI fails
+      return {
+        suggestions: [
+          {
+            title: `Unit ${list.totalUnits + 1}: Core Concepts`,
+            description: `Learn fundamental vocabulary related to ${list.title}. Build a strong foundation with essential terms.`,
+          },
+          {
+            title: `Unit ${list.totalUnits + 2}: Practical Application`,
+            description: `Apply your knowledge with real-world vocabulary. Practice common phrases and expressions.`,
+          },
+          {
+            title: `Unit ${list.totalUnits + 3}: Advanced Topics`,
+            description: `Expand your vocabulary with advanced terms and nuanced meanings. Master complex expressions.`,
+          },
+        ],
+      };
+    }
+  }
 
   /**
    * Get all units in a list with user progress

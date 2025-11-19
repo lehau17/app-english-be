@@ -1,3 +1,4 @@
+import { GeminiService } from '@app/shared';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
@@ -6,10 +7,17 @@ import {
   VocabularyTermResponseDto,
 } from '../dto/vocabulary-term.dto';
 import { VocabularyRepository } from '../repository/vocabulary.repository';
+import { GoogleTranslateFreeService } from '../../google-translate/google-translate.service';
+import { UploadService } from '../../upload/upload.service';
 
 @Injectable()
 export class VocabularyTermService {
-  constructor(private readonly repository: VocabularyRepository) {}
+  constructor(
+    private readonly repository: VocabularyRepository,
+    private readonly geminiService: GeminiService,
+    private readonly googleTranslateService: GoogleTranslateFreeService,
+    private readonly uploadService: UploadService,
+  ) {}
 
   /**
    * Get all terms in a unit
@@ -276,6 +284,180 @@ export class VocabularyTermService {
         this.repository.updateTerm(termId, { orderIndex: index }),
       ),
     );
+  }
+
+  /**
+   * AI suggest new terms for unit (check existing terms and generate new ones)
+   */
+  async suggestTerms(
+    unitId: string,
+  ): Promise<{ suggestions: Array<{ word: string; hint: string }> }> {
+    // Get unit and list info
+    const unit = await this.repository.findUnitById(unitId, true);
+    if (!unit) {
+      throw new NotFoundException(`Unit with ID ${unitId} not found`);
+    }
+
+    const list = await this.repository.findListById(unit.listId);
+    if (!list) {
+      throw new NotFoundException(`List not found`);
+    }
+
+    // Get existing terms
+    const existingTerms = unit.terms || [];
+    const existingWords = existingTerms.map((t) => t.word.toLowerCase());
+
+    const prompt = `You are an expert English vocabulary educator. Suggest 3-5 NEW vocabulary words for this unit.
+
+Unit Information:
+- Unit Title: ${unit.title}
+- Unit Description: ${unit.description || 'No description'}
+- List Title: ${list.title}
+- List Level: ${list.level || 'general'}
+- Language: ${list.language}
+- Current term count: ${unit.termCount}
+
+${existingWords.length > 0 ? `Existing Words (DO NOT suggest these):\n${existingWords.join(', ')}` : 'This unit has no terms yet. Suggest foundational words.'}
+
+Requirements:
+1. Generate 3-5 word suggestions
+2. Each suggestion must be NEW and NOT in the existing words list
+3. Words should fit the unit theme and level
+4. For each word, provide a brief hint (5-10 words) about what it means
+5. Maintain difficulty progression
+
+Return ONLY valid JSON:
+{
+  "suggestions": [
+    {"word": "word1", "hint": "brief description of meaning"},
+    {"word": "word2", "hint": "brief description of meaning"},
+    ...
+  ]
+}`;
+
+    try {
+      const response = await this.geminiService.generateResponse(prompt);
+      let jsonStr = response.trim();
+
+      // Remove markdown code blocks
+      if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      }
+
+      const parsed = JSON.parse(jsonStr);
+
+      if (
+        !parsed.suggestions ||
+        !Array.isArray(parsed.suggestions) ||
+        parsed.suggestions.length === 0
+      ) {
+        throw new Error('Invalid AI response');
+      }
+
+      // Validate and filter out duplicates
+      const validSuggestions = parsed.suggestions.filter((s: any) => {
+        return (
+          s.word &&
+          s.hint &&
+          !existingWords.includes(s.word.toLowerCase())
+        );
+      });
+
+      return { suggestions: validSuggestions.slice(0, 5) };
+    } catch (error) {
+      console.error('AI suggest terms error:', error);
+
+      // Fallback suggestions
+      return {
+        suggestions: [
+          { word: 'vocabulary', hint: 'words used in language' },
+          { word: 'comprehension', hint: 'ability to understand' },
+          { word: 'fluency', hint: 'smooth and effortless speech' },
+        ],
+      };
+    }
+  }
+
+  /**
+   * AI auto-complete term data from word + generate audio via Google TTS + upload to MinIO
+   */
+  async autoCompleteTerm(word: string): Promise<{
+    word: string;
+    definition: string;
+    translationVi: string;
+    pronunciation: string;
+    partOfSpeech: string;
+    synonyms: string[];
+    antonyms: string[];
+    examples: Array<{ sentence: string; translation: string }>;
+    difficulty: string;
+    audioUrl?: string;
+  }> {
+    const prompt = `You are an English dictionary and language expert. Provide comprehensive information about this word: "${word}"
+
+Generate detailed and accurate information:
+1. Definition (clear, concise English definition)
+2. Vietnamese translation
+3. IPA pronunciation (US)
+4. Part of speech (noun, verb, adjective, etc.)
+5. 2-3 synonyms
+6. 2-3 antonyms (if applicable)
+7. 2-3 example sentences with Vietnamese translations
+8. Difficulty level (beginner, intermediate, advanced, expert)
+
+Return ONLY valid JSON:
+{
+  "word": "${word}",
+  "definition": "clear definition",
+  "translationVi": "bản dịch tiếng Việt",
+  "pronunciation": "/aɪ piː eɪ/",
+  "partOfSpeech": "noun",
+  "synonyms": ["synonym1", "synonym2"],
+  "antonyms": ["antonym1", "antonym2"],
+  "examples": [
+    {"sentence": "Example sentence.", "translation": "Câu ví dụ."}
+  ],
+  "difficulty": "intermediate"
+}`;
+
+    try {
+      const response = await this.geminiService.generateResponse(prompt);
+      let jsonStr = response.trim();
+
+      if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      }
+
+      const data = JSON.parse(jsonStr);
+
+      // Generate audio using Google TTS and upload to MinIO
+      let audioUrl: string | undefined;
+      try {
+        const audioResult =
+          await this.googleTranslateService.createAudioWithUrl(word, 'en');
+        audioUrl = audioResult.url; // This is the MinIO S3 URL
+        console.log(`✅ Generated and uploaded audio for "${word}": ${audioUrl}`);
+      } catch (audioError) {
+        console.error(`⚠️  Failed to generate audio for "${word}":`, audioError);
+        // Continue without audio
+      }
+
+      return {
+        word: data.word || word,
+        definition: data.definition || '',
+        translationVi: data.translationVi || '',
+        pronunciation: data.pronunciation || '',
+        partOfSpeech: data.partOfSpeech || '',
+        synonyms: data.synonyms || [],
+        antonyms: data.antonyms || [],
+        examples: data.examples || [],
+        difficulty: data.difficulty || 'intermediate',
+        audioUrl,
+      };
+    } catch (error) {
+      console.error('AI auto-complete error:', error);
+      throw new Error('Failed to auto-complete term data');
+    }
   }
 
   /**

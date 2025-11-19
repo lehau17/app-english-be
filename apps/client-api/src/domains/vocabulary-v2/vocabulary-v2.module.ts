@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { NotificationModule } from '../notification/notification.module';
+import { GoogleTranslateModule } from '../google-translate/google-translate.module';
+import { UploadModule } from '../upload/upload.module';
 import { AdminVocabularyController } from './controller/admin-vocabulary.controller';
 import { VocabularyListController } from './controller/vocabulary-list.controller';
 import { VocabularyReviewController } from './controller/vocabulary-review.controller';
@@ -12,7 +14,7 @@ import { VocabularyTermService } from './service/vocabulary-term.service';
 import { VocabularyUnitService } from './service/vocabulary-unit.service';
 
 @Module({
-  imports: [NotificationModule], // Import để inject NotificationService
+  imports: [NotificationModule, GoogleTranslateModule, UploadModule],
   controllers: [
     VocabularyListController,
     VocabularyUnitController,

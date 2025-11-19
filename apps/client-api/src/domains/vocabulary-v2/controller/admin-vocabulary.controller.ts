@@ -89,6 +89,17 @@ export class AdminVocabularyController {
 
   // ==================== UNITS ====================
 
+  @Post('lists/:listId/units/suggest')
+  @ApiOperation({ summary: 'Get AI suggestions for new unit' })
+  @ApiParam({ name: 'listId', description: 'List ID' })
+  @ApiResponse({ status: 200, description: 'Returns 3 AI-generated unit suggestions' })
+  @ResponseMessage('Unit suggestions generated successfully')
+  async suggestUnit(
+    @Param('listId') listId: string,
+  ): Promise<{ suggestions: Array<{ title: string; description: string }> }> {
+    return this.unitService.suggestUnit(listId);
+  }
+
   @Post('lists/:listId/units')
   @ApiOperation({ summary: 'Create unit in list' })
   @ApiParam({ name: 'listId', description: 'List ID' })
@@ -136,6 +147,43 @@ export class AdminVocabularyController {
   }
 
   // ==================== TERMS ====================
+
+  @Post('units/:unitId/terms/suggest')
+  @ApiOperation({ summary: 'Get AI suggestions for new terms in unit' })
+  @ApiParam({ name: 'unitId', description: 'Unit ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns 3-5 AI-generated term suggestions',
+  })
+  @ResponseMessage('Term suggestions generated successfully')
+  async suggestTerms(
+    @Param('unitId') unitId: string,
+  ): Promise<{ suggestions: Array<{ word: string; hint: string }> }> {
+    return this.termService.suggestTerms(unitId);
+  }
+
+  @Post('terms/auto-complete')
+  @ApiOperation({ summary: 'Auto-complete term data using AI + Google TTS' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Returns complete term data with audio URL uploaded to MinIO',
+  })
+  @ResponseMessage('Term auto-completed successfully')
+  async autoCompleteTerm(@Body() body: { word: string }): Promise<{
+    word: string;
+    definition: string;
+    translationVi: string;
+    pronunciation: string;
+    partOfSpeech: string;
+    synonyms: string[];
+    antonyms: string[];
+    examples: Array<{ sentence: string; translation: string }>;
+    difficulty: string;
+    audioUrl?: string;
+  }> {
+    return this.termService.autoCompleteTerm(body.word);
+  }
 
   @Post('units/:unitId/terms')
   @ApiOperation({ summary: 'Create term in unit' })
