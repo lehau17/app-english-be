@@ -6,6 +6,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClientApiController } from './client-api.controller';
 import { ClientApiService } from './client-api.service';
 import { ActivityModule } from './domains/activity';
+import { ActivityAIModule } from './domains/activity-ai/activity-ai.module';
 import { AgentModule } from './domains/agent/agent.module';
 import { AiSpeakingModule } from './domains/ai-speaking';
 import { AssignmentModule } from './domains/assignment';
@@ -54,6 +55,7 @@ import { EventsModule } from './events/events.module';
     DashboardModule,
     LessonModule,
     ActivityModule,
+    ActivityAIModule,
     ProgressModule,
     AttemptModule,
     ParentChildModule,

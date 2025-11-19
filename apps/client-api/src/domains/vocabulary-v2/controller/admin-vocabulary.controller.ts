@@ -1,38 +1,38 @@
 import { JwtPayload, PayloadToken, ResponseMessage, Roles } from '@app/shared';
 import {
-  Body,
-  Controller,
-  Delete,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Post,
-  Put,
+    Body,
+    Controller,
+    Delete,
+    HttpCode,
+    HttpStatus,
+    Param,
+    Post,
+    Put,
 } from '@nestjs/common';
 import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiParam,
-  ApiResponse,
-  ApiTags,
+    ApiBearerAuth,
+    ApiOperation,
+    ApiParam,
+    ApiResponse,
+    ApiTags,
 } from '@nestjs/swagger';
 import {
-  CreateVocabularyListDto,
-  UpdateVocabularyListDto,
-  VocabularyListResponseDto,
+    CreateVocabularyListDto,
+    UpdateVocabularyListDto,
+    VocabularyListResponseDto,
 } from '../dto/vocabulary-list.dto';
 import {
-  CreateVocabularyTermDto,
-  ImportTermsDto,
-  ReorderTermsDto,
-  UpdateVocabularyTermDto,
-  VocabularyTermResponseDto,
+    CreateVocabularyTermDto,
+    ImportTermsDto,
+    ReorderTermsDto,
+    UpdateVocabularyTermDto,
+    VocabularyTermResponseDto,
 } from '../dto/vocabulary-term.dto';
 import {
-  CreateVocabularyUnitDto,
-  ReorderUnitsDto,
-  UpdateVocabularyUnitDto,
-  VocabularyUnitResponseDto,
+    CreateVocabularyUnitDto,
+    ReorderUnitsDto,
+    UpdateVocabularyUnitDto,
+    VocabularyUnitResponseDto,
 } from '../dto/vocabulary-unit.dto';
 import { VocabularyListService } from '../service/vocabulary-list.service';
 import { VocabularyTermService } from '../service/vocabulary-term.service';
@@ -160,6 +160,23 @@ export class AdminVocabularyController {
     @Param('unitId') unitId: string,
   ): Promise<{ suggestions: Array<{ word: string; hint: string }> }> {
     return this.termService.suggestTerms(unitId);
+  }
+
+  @Post('units/:unitId/terms/bulk-generate')
+  @ApiOperation({
+    summary: 'AI bulk generate and create 1-10 terms at once with full data',
+  })
+  @ApiParam({ name: 'unitId', description: 'Unit ID' })
+  @ApiResponse({
+    status: 201,
+    description: 'Returns created terms',
+  })
+  @ResponseMessage('Terms bulk generated successfully')
+  async bulkGenerateTerms(
+    @Param('unitId') unitId: string,
+    @Body() body: { count: number },
+  ): Promise<{ created: number; terms: VocabularyTermResponseDto[] }> {
+    return this.termService.bulkGenerateTerms(unitId, body.count);
   }
 
   @Post('terms/auto-complete')

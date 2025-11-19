@@ -1,14 +1,14 @@
 import { GeminiService } from '@app/shared';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import {
-  CreateVocabularyTermDto,
-  UpdateVocabularyTermDto,
-  VocabularyTermResponseDto,
-} from '../dto/vocabulary-term.dto';
-import { VocabularyRepository } from '../repository/vocabulary.repository';
 import { GoogleTranslateFreeService } from '../../google-translate/google-translate.service';
 import { UploadService } from '../../upload/upload.service';
+import {
+    CreateVocabularyTermDto,
+    UpdateVocabularyTermDto,
+    VocabularyTermResponseDto,
+} from '../dto/vocabulary-term.dto';
+import { VocabularyRepository } from '../repository/vocabulary.repository';
 
 @Injectable()
 export class VocabularyTermService {
@@ -457,6 +457,162 @@ Return ONLY valid JSON:
     } catch (error) {
       console.error('AI auto-complete error:', error);
       throw new Error('Failed to auto-complete term data');
+    }
+  }
+
+  /**
+   * AI bulk generate and create multiple terms (1-10) at once
+   */
+  async bulkGenerateTerms(
+    unitId: string,
+    count: number,
+  ): Promise<{ created: number; terms: VocabularyTermResponseDto[] }> {
+    // Validate count
+    const termCount = Math.min(Math.max(1, count), 10); // Clamp between 1-10
+
+    // Get unit info
+    const unit = await this.repository.findUnitById(unitId, true);
+    if (!unit) {
+      throw new NotFoundException(`Unit with ID ${unitId} not found`);
+    }
+
+    const list = await this.repository.findListById(unit.listId);
+    if (!list) {
+      throw new NotFoundException(`List not found`);
+    }
+
+    // Get existing terms to avoid duplicates
+    const existingTerms = unit.terms || [];
+    const existingWords = existingTerms.map((t) => t.word.toLowerCase());
+
+    const prompt = `You are an expert English vocabulary educator. Generate ${termCount} complete vocabulary terms for this unit.
+
+Unit Information:
+- Unit Title: ${unit.title}
+- Unit Description: ${unit.description || 'No description'}
+- List Title: ${list.title}
+- List Level: ${list.level || 'general'}
+- Language: ${list.language}
+- Current term count: ${unit.termCount}
+
+${existingWords.length > 0 ? `Existing Words (DO NOT use these):\n${existingWords.join(', ')}` : 'This unit has no terms yet.'}
+
+Requirements:
+1. Generate exactly ${termCount} complete terms
+2. Each term must be NEW and NOT in existing words
+3. For EACH term, provide:
+   - word (the vocabulary word)
+   - definition (clear English definition)
+   - translationVi (Vietnamese translation)
+   - pronunciation (IPA format)
+   - partOfSpeech (noun/verb/adjective/etc)
+   - synonyms (array of 2-3 words)
+   - antonyms (array of 1-2 words, can be empty)
+   - examples (array of 2 objects with "sentence" and "translation")
+   - difficulty (beginner/intermediate/advanced/expert)
+4. Words should fit unit theme and progress in difficulty
+
+Return ONLY valid JSON:
+{
+  "terms": [
+    {
+      "word": "vocabulary",
+      "definition": "words used in language",
+      "translationVi": "từ vựng",
+      "pronunciation": "/vəˈkæbjʊləri/",
+      "partOfSpeech": "noun",
+      "synonyms": ["lexicon", "terminology"],
+      "antonyms": [],
+      "examples": [
+        {"sentence": "Build your vocabulary.", "translation": "Xây dựng vốn từ vựng."}
+      ],
+      "difficulty": "intermediate"
+    }
+  ]
+}`;
+
+    try {
+      const response = await this.geminiService.generateResponse(prompt);
+      let jsonStr = response.trim();
+
+      if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+      }
+
+      const parsed = JSON.parse(jsonStr);
+
+      if (!parsed.terms || !Array.isArray(parsed.terms)) {
+        throw new Error('Invalid AI response format');
+      }
+
+      // Filter valid terms and avoid duplicates
+      const validTerms = parsed.terms
+        .filter((t: any) => {
+          return (
+            t.word &&
+            t.definition &&
+            !existingWords.includes(t.word.toLowerCase())
+          );
+        })
+        .slice(0, termCount);
+
+      if (validTerms.length === 0) {
+        throw new Error('AI generated no valid terms');
+      }
+
+      // Create terms with audio generation
+      const createdTerms: VocabularyTermResponseDto[] = [];
+
+      for (let i = 0; i < validTerms.length; i++) {
+        const termData = validTerms[i];
+
+        // Generate audio for this term
+        let audioUrl: string | undefined;
+        try {
+          const audioResult =
+            await this.googleTranslateService.createAudioWithUrl(
+              termData.word,
+              'en',
+            );
+          audioUrl = audioResult.url;
+          console.log(
+            `✅ Generated audio ${i + 1}/${validTerms.length} for "${termData.word}"`,
+          );
+        } catch (audioError) {
+          console.error(
+            `⚠️  Failed to generate audio for "${termData.word}":`,
+            audioError,
+          );
+        }
+
+        // Create term in database
+        const createDto: CreateVocabularyTermDto = {
+          word: termData.word,
+          definition: termData.definition,
+          translationVi: termData.translationVi || undefined,
+          pronunciation: termData.pronunciation || undefined,
+          partOfSpeech: termData.partOfSpeech || undefined,
+          audioUrl: audioUrl || undefined,
+          synonyms: termData.synonyms || [],
+          antonyms: termData.antonyms || [],
+          examples: termData.examples || [],
+          difficulty: termData.difficulty || 'intermediate',
+          orderIndex: unit.termCount + i,
+        };
+
+        const created = await this.createTerm(unitId, createDto);
+        createdTerms.push(created);
+      }
+
+      return {
+        created: createdTerms.length,
+        terms: createdTerms,
+      };
+    } catch (error) {
+      console.error('AI bulk generate error:', error);
+      throw new Error(
+        `Failed to bulk generate terms: ${(error as Error).message}`,
+      );
     }
   }
 
