@@ -287,6 +287,13 @@ export class UpdateCourseDto {
   @IsInt()
   @Min(0)
   totalDuration?: number;
+
+  @ApiPropertyOptional({ type: () => [CreateLessonDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateLessonDto)
+  lessons?: CreateLessonDto[];
 }
 
 export class FilterCourseRequestDto extends RequestPagingDto {

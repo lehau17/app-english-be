@@ -565,6 +565,29 @@ export class CourseService {
         throw new ConflictException('orderNo đã được dùng cho khóa học khác');
     }
 
+    // Validate lessons/activities if provided
+    if (dto.lessons && dto.lessons.length > 0) {
+      const lessonOrders = new Set<number>();
+      for (const ls of dto.lessons) {
+        if (lessonOrders.has(ls.orderNo)) {
+          throw new BadRequestException(
+            `Trùng orderNo giữa các lesson: ${ls.orderNo}`,
+          );
+        }
+        lessonOrders.add(ls.orderNo);
+
+        const actOrders = new Set<number>();
+        for (const ac of ls.activities) {
+          if (actOrders.has(ac.orderNo)) {
+            throw new BadRequestException(
+              `Trùng orderNo trong activities của lesson "${ls.title}": ${ac.orderNo}`,
+            );
+          }
+          actOrders.add(ac.orderNo);
+        }
+      }
+    }
+
     // Session schedule validation if provided
     if (dto.sessionSchedules && dto.sessionSchedules.length > 0) {
       const sessionNumbers = new Set<number>();
@@ -613,6 +636,69 @@ export class CourseService {
 
     // Cập nhật thông tin cơ bản của Course
     const course = await this.courseRepository.update(id, data);
+
+    // Cập nhật lessons/activities nếu có (delete và recreate để đơn giản)
+    if (dto.lessons && dto.lessons.length > 0) {
+      await this.prisma.$transaction(async (tx) => {
+        // Xóa lessons cũ (cascades to activities)
+        await tx.lesson.deleteMany({
+          where: { courseId: id },
+        });
+
+        let totalLessons = 0;
+        let totalDuration = 0; // minutes
+
+        // Tạo lessons và activities mới
+        for (const lessonDto of dto.lessons) {
+          const lesson = await tx.lesson.create({
+            data: {
+              course: { connect: { id } },
+              title: lessonDto.title,
+              description: lessonDto.description ?? undefined,
+              orderNo: lessonDto.orderNo,
+              difficulty: lessonDto.difficulty ?? dto.difficulty ?? course.difficulty,
+              estimatedTime: lessonDto.estimatedTime ?? undefined, // minutes
+              isLocked: lessonDto.isLocked ?? true,
+              objectives: lessonDto.objectives ?? [],
+            },
+          });
+
+          totalLessons++;
+          totalDuration += lessonDto.estimatedTime ?? 0;
+
+          for (const activityDto of lessonDto.activities) {
+            await tx.activity.create({
+              data: {
+                lesson: { connect: { id: lesson.id } },
+                type: activityDto.type as any,
+                orderNo: activityDto.orderNo,
+                title: activityDto.title,
+                content: activityDto.content as any, // JSONB - content theo cấu trúc mới từ DTO
+                passingScore: activityDto.passingScore ?? undefined,
+                difficulty:
+                  activityDto.difficulty ??
+                  lessonDto.difficulty ??
+                  dto.difficulty ??
+                  course.difficulty,
+                points: activityDto.points ?? 10,
+                instructions: activityDto.instructions ?? undefined,
+                hints: activityDto.hints ?? [],
+                mediaUrls: activityDto.mediaUrls ?? [],
+              },
+            });
+          }
+        }
+
+        // Cập nhật totals
+        await tx.course.update({
+          where: { id },
+          data: {
+            totalLessons,
+            totalDuration, // minutes
+          },
+        });
+      });
+    }
 
     // Cập nhật session schedules nếu có
     if (dto.sessionSchedules && dto.sessionSchedules.length > 0) {

@@ -30,6 +30,7 @@ import {
 import { AgentService } from '../service/agent.service';
 import { AutoReindexService } from '../service/auto-reindex.service';
 import { RagService } from '../service/rag.service';
+import { ParentAgentService } from '../service/parent-agent.service';
 import { StudentAgentService } from '../service/student-agent.service';
 
 @ApiTags('Agent')
@@ -43,6 +44,7 @@ export class PrivateAgentController {
     private readonly ragService: RagService,
     private readonly autoReindexService: AutoReindexService,
     private readonly studentAgentService: StudentAgentService,
+    private readonly parentAgentService: ParentAgentService,
   ) {}
 
   @Post('chat')
@@ -182,6 +184,74 @@ export class PrivateAgentController {
           content:
             (error as Error).message ||
             'Đã xảy ra lỗi khi kết nối với trợ lý học tập.',
+        })}\n\n`,
+      );
+      res.end();
+    }
+  }
+
+  @Get('parent/chat/stream')
+  @ApiOperation({ summary: 'Stream chat with Parent AI Agent using SSE' })
+  @ApiResponse({
+    status: 200,
+    description: 'SSE stream of AI response (parent tools)',
+  })
+  async streamParentChat(
+    @Query('message') message: string,
+    @Query('conversationId') conversationId: string | undefined,
+    @PayloadToken() payload: JwtPayload,
+    @Res() res: Response,
+  ): Promise<void> {
+    if (payload.role !== 'parent') {
+      throw new ForbiddenException(
+        'Parent chat endpoint is for parents only',
+      );
+    }
+
+    this.logger.log(
+      `👨‍👩‍👧 Parent stream request: message="${message}" conversationId=${conversationId}`,
+    );
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    try {
+      let chunkCount = 0;
+      for await (const chunk of this.parentAgentService.streamQuery(
+        message,
+        payload.sub,
+        conversationId,
+      )) {
+        chunkCount++;
+        const data = JSON.stringify(chunk);
+        this.logger.debug(
+          `📤 Parent chunk ${chunkCount}: ${data.substring(0, 100)}...`,
+        );
+        res.write(`data: ${data}\n\n`);
+
+        if ((res as any).flush) {
+          (res as any).flush();
+        }
+      }
+
+      this.logger.log(
+        `✅ Parent stream completed: ${chunkCount} chunks sent (parent tools)`,
+      );
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } catch (error) {
+      this.logger.error(
+        `❌ Parent stream error: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'error',
+          content:
+            (error as Error).message ||
+            'Đã xảy ra lỗi khi kết nối với trợ lý phụ huynh.',
         })}\n\n`,
       );
       res.end();

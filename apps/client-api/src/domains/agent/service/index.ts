@@ -4,6 +4,7 @@ export * from './graph-entity.service';
 export * from './graph-relationship.service';
 export * from './graph-traversal.service';
 export * from './langchain-agent.service';
+export * from './parent-agent.service';
 export * from './rag-cache.service';
 export * from './rag.service';
 export * from './report-generator.service';

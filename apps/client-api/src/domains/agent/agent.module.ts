@@ -10,17 +10,20 @@ import { AutoReindexService } from './service/auto-reindex.service';
 import { GraphEntityService } from './service/graph-entity.service';
 import { GraphRelationshipService } from './service/graph-relationship.service';
 import { GraphTraversalService } from './service/graph-traversal.service';
+import { LandingConsultantService } from './service/landing-consultant.service';
 import { LangChainAgentService } from './service/langchain-agent.service';
 import { RagCacheService } from './service/rag-cache.service';
 import { RagService } from './service/rag.service';
 import { ReportGeneratorService } from './service/report-generator.service';
 import { RerankerService } from './service/reranker.service';
 import { SqlService } from './service/sql.service';
+import { ParentAgentService } from './service/parent-agent.service';
 import { StudentAgentService } from './service/student-agent.service';
 import { TextChunkerService } from './service/text-chunker.service';
 import { ChartGeneratorTool } from './tools/chart-generator.tool';
 import { ExcelExportTool } from './tools/excel-export.tool';
 import { GraphQueryTool } from './tools/graph-query.tool';
+import { ParentAgentTools } from './tools/parent-agent.tools';
 import { PdfExportTool } from './tools/pdf-export.tool';
 import { ReportAdvisorTool } from './tools/report-advisor.tool';
 import { StudentAgentTools } from './tools/student-agent.tools';
@@ -35,6 +38,7 @@ import { WordExportTool } from './tools/word-export.tool';
     AgentChatRepository,
     AutoReindexService,
     LangChainAgentService,
+    LandingConsultantService,
     RagCacheService,
     TextChunkerService,
     RagService,
@@ -45,6 +49,7 @@ import { WordExportTool } from './tools/word-export.tool';
     GraphRelationshipService,
     GraphTraversalService,
     StudentAgentService,
+    ParentAgentService,
     ChartGeneratorTool,
     ExcelExportTool,
     PdfExportTool,
@@ -52,6 +57,7 @@ import { WordExportTool } from './tools/word-export.tool';
     ReportAdvisorTool,
     GraphQueryTool,
     StudentAgentTools,
+    ParentAgentTools,
   ],
   exports: [
     AgentService,

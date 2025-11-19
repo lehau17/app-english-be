@@ -7,6 +7,7 @@ import {
 } from '../dto/agent.dto';
 import { AgentChatRepository } from '../repository';
 import { LangChainAgentService } from './langchain-agent.service';
+import { ParentAgentService } from './parent-agent.service';
 import { StudentAgentService } from './student-agent.service';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class AgentService {
     private agentChatRepository: AgentChatRepository,
     private prisma: PrismaRepository,
     private studentAgentService: StudentAgentService,
+    private parentAgentService: ParentAgentService,
   ) {}
 
   /**
@@ -125,6 +127,26 @@ export class AgentService {
         conversationId: result.conversationId,
         confidence: 0.9,
         sources: ['Student profile', 'Knowledge base'],
+        suggestions: [],
+        toolsUsed: result.toolsUsed,
+        reasoning: result.reasoning,
+        processingTime: result.processingTime,
+        executionSteps: result.executionSteps,
+      };
+    }
+
+    if (userRole === 'parent') {
+      const result = await this.parentAgentService.processQuery(
+        chatDto.message,
+        userId,
+        chatDto.conversationId,
+      );
+
+      return {
+        response: result.answer,
+        conversationId: result.conversationId,
+        confidence: 0.9,
+        sources: ['Parent profile', 'Knowledge base'],
         suggestions: [],
         toolsUsed: result.toolsUsed,
         reasoning: result.reasoning,
@@ -330,6 +352,26 @@ export class AgentService {
           content:
             (error as Error).message ||
             'I apologize, but I encountered an error. Please try again.',
+        };
+      }
+      return;
+    }
+
+    if (userRole === 'parent') {
+      try {
+        for await (const chunk of this.parentAgentService.streamQuery(
+          chatDto.message,
+          userId,
+          chatDto.conversationId,
+        )) {
+          yield chunk;
+        }
+      } catch (error) {
+        yield {
+          type: 'error',
+          content:
+            (error as Error).message ||
+            'Xin lỗi, đã xảy ra lỗi khi kết nối với trợ lý phụ huynh. Vui lòng thử lại.',
         };
       }
       return;
