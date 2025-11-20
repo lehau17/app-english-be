@@ -22,7 +22,38 @@ export class DashboardService {
       this.getRecentNotifications(now),
     ]);
 
-    const baseSnapshot = this.mapSnapshot(latestSnapshot);
+    // Use snapshot if available and recent (within 24 hours), otherwise use real-time
+    const snapshotAge = latestSnapshot
+      ? now.getTime() - latestSnapshot.createdAt.getTime()
+      : Infinity;
+    const useSnapshot = latestSnapshot && snapshotAge < 24 * 60 * 60 * 1000;
+
+    let baseSnapshot: DashboardDto;
+
+    if (useSnapshot) {
+      baseSnapshot = this.mapSnapshot(latestSnapshot);
+    } else {
+      // Real-time queries as fallback
+      const [realTimeStats, recentStudentsRaw, registrationTrendRaw] =
+        await Promise.all([
+          this.getRealTimeStats(),
+          this.getRecentStudents(),
+          this.getRegistrationTrend(),
+        ]);
+
+      baseSnapshot = {
+        totalStudents: realTimeStats.totalStudents,
+        totalCourses: realTimeStats.totalCourses,
+        totalLessons: realTimeStats.totalLessons,
+        totalActivities: realTimeStats.totalActivities,
+        recentStudents: this.mapRecentStudents(recentStudentsRaw),
+        registrationTrend: registrationTrendRaw,
+        courseDistribution: [], // Will be set below
+        upcomingClasses: [], // Will be set below
+        notifications: [], // Will be set below
+      };
+    }
+
     const courseDistribution = this.mapCourseDistribution(
       courseDistributionRaw,
     );
@@ -68,9 +99,18 @@ export class DashboardService {
       },
       orderBy: { startTime: 'asc' },
       take: 5,
-      include: {
+      select: {
+        id: true,
+        startTime: true,
+        endTime: true,
+        type: true,
+        meetingUrl: true,
+        location: true,
         classroom: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            maxStudents: true,
             students: {
               where: { isActive: true },
               select: { studentId: true },
@@ -96,6 +136,76 @@ export class DashboardService {
       orderBy: { createdAt: 'desc' },
       take: 5,
     });
+  }
+
+  // Real-time queries (fallback when snapshot is null or old)
+  private async getRealTimeStats() {
+    const [totalStudents, totalCourses, totalLessons, totalActivities] =
+      await Promise.all([
+        this.prisma.user.count({ where: { role: 'student' } }),
+        this.prisma.course.count(),
+        this.prisma.lesson.count(),
+        this.prisma.activity.count(),
+      ]);
+
+    return {
+      totalStudents,
+      totalCourses,
+      totalLessons,
+      totalActivities,
+    };
+  }
+
+  private getRecentStudents() {
+    return this.prisma.user.findMany({
+      where: { role: 'student' },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+  }
+
+  private async getRegistrationTrend() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sevenDaysAgo = new Date(today);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const registrations = await this.prisma.user.findMany({
+      where: {
+        role: 'student',
+        createdAt: { gte: sevenDaysAgo },
+      },
+      select: {
+        createdAt: true,
+      },
+    });
+
+    // Group by date
+    const trendMap = new Map<string, number>();
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(sevenDaysAgo);
+      date.setDate(date.getDate() + i);
+      const dateKey = date.toISOString().split('T')[0];
+      trendMap.set(dateKey, 0);
+    }
+
+    registrations.forEach((reg) => {
+      const dateKey = reg.createdAt.toISOString().split('T')[0];
+      const current = trendMap.get(dateKey) || 0;
+      trendMap.set(dateKey, current + 1);
+    });
+
+    return Array.from(trendMap.entries()).map(([date, count]) => ({
+      date,
+      count,
+    }));
   }
 
   // ---------- Mapping ----------
@@ -147,6 +257,14 @@ export class DashboardService {
       const classroom = session.classroom;
       const activeStudents = classroom?.students?.length ?? 0;
 
+      // Determine room name: use location for offline, meetingUrl for online, or null
+      const roomName =
+        session.type === 'online'
+          ? session.meetingUrl
+            ? 'Online (Meeting Link)'
+            : null
+          : session.location || null;
+
       return {
         id: session.id,
         classroomName: classroom?.name ?? 'Lớp học chưa đặt tên',
@@ -154,6 +272,7 @@ export class DashboardService {
         teacherName,
         startTime: session.startTime.toISOString(),
         endTime: session.endTime.toISOString(),
+        roomName,
         activeStudents,
         maxStudents: classroom?.maxStudents ?? null,
       };
@@ -179,6 +298,16 @@ export class DashboardService {
       message: notification.body,
       type: severityMap[notification.type] ?? 'info',
       createdAt: notification.createdAt.toISOString(),
+    }));
+  }
+
+  private mapRecentStudents(raw: any[]) {
+    return raw.map((student) => ({
+      id: student.id,
+      email: student.email,
+      displayName: student.displayName,
+      firstName: student.firstName,
+      lastName: student.lastName,
     }));
   }
 }
