@@ -15,6 +15,7 @@ import { TextToPodcastService } from './service/text-to-podcast.service';
 import { VideoProcessingService } from './service/video-processing.service';
 import { WhisperService } from './service/whisper.service';
 import { YouTubeTranscriptService } from './service/youtube-transcript.service';
+import { AiPodcastRecommenderService } from './service/ai-podcast-recommender.service';
 
 @Module({
   imports: [DatabaseModule, ConfigModule],
@@ -35,6 +36,7 @@ import { YouTubeTranscriptService } from './service/youtube-transcript.service';
     GoogleTranscriptionService,
     UploadService,
     PodcastRepository,
+    AiPodcastRecommenderService,
   ],
   exports: [
     PodcastService,
@@ -47,4 +49,4 @@ import { YouTubeTranscriptService } from './service/youtube-transcript.service';
     GoogleTranscriptionService,
   ],
 })
-export class PodcastModule {}
+export class PodcastModule { }

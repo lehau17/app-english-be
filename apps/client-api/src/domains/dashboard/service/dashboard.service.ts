@@ -1,11 +1,23 @@
 import { PrismaRepository } from '@app/database';
-import { Injectable } from '@nestjs/common';
+import { GeminiService } from '@app/shared';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { NotificationType } from '@prisma/client';
+import {
+  AnalyticsInsight,
+  AnalyticsRecommendation,
+  AnalyticsPeriod,
+  ClassAnalyticsResponse,
+  StrugglingStudent,
+  StudentAnalyticsResponse,
+} from '../dto/analytics.dto';
 import { DashboardDto } from '../dto/dashboard.dto';
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaRepository) {}
+  constructor(
+    private readonly prisma: PrismaRepository,
+    private readonly geminiService: GeminiService,
+  ) { }
 
   async getDashboardData(): Promise<DashboardDto> {
     const now = new Date();
@@ -309,6 +321,391 @@ export class DashboardService {
       firstName: student.firstName,
       lastName: student.lastName,
     }));
+  }
+
+  // ==================== AI Analytics Methods ====================
+
+  async getStudentAIAnalytics(
+    studentId: string,
+    period: AnalyticsPeriod = AnalyticsPeriod.LAST_30_DAYS,
+  ): Promise<StudentAnalyticsResponse> {
+    // 1. Validate student exists
+    const student = await this.prisma.user.findUnique({
+      where: { id: studentId, role: 'student' },
+      select: {
+        id: true,
+        displayName: true,
+        firstName: true,
+        lastName: true,
+      },
+    });
+
+    if (!student) {
+      throw new NotFoundException('Student not found');
+    }
+
+    const studentName =
+      student.displayName ||
+      [student.firstName, student.lastName].filter(Boolean).join(' ') ||
+      'Student';
+
+    // 2. Calculate date range
+    const dateRange = this.getDateRange(period);
+
+    // 3. Fetch progress data
+    const progressData = await this.prisma.progress.findMany({
+      where: {
+        userId: studentId,
+        updatedAt: { gte: dateRange },
+      },
+      include: {
+        activity: {
+          select: {
+            type: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    // 4. Aggregate statistics
+    const totalActivities = progressData.length;
+    const completedActivities = progressData.filter(
+      (p) => p.state === 'done',
+    ).length;
+    const totalScore = progressData.reduce((sum, p) => sum + (p.score || 0), 0);
+    const totalTimeSpent = progressData.reduce(
+      (sum, p) => sum + (p.timeSpentSec || 0),
+      0,
+    );
+
+    const averageScore =
+      totalActivities > 0 ? totalScore / totalActivities : 0;
+    const completionRate =
+      totalActivities > 0 ? (completedActivities / totalActivities) * 100 : 0;
+
+    // 5. Group by activity type
+    const activityTypeStats: Record<
+      string,
+      { count: number; totalScore: number }
+    > = {};
+
+    progressData.forEach((p) => {
+      const type = p.activity?.type || 'other';
+      if (!activityTypeStats[type]) {
+        activityTypeStats[type] = { count: 0, totalScore: 0 };
+      }
+      activityTypeStats[type].count++;
+      activityTypeStats[type].totalScore += p.score || 0;
+    });
+
+    const activityTypePerformance = Object.entries(activityTypeStats).map(
+      ([type, stats]) => ({
+        type,
+        averageScore: stats.count > 0 ? stats.totalScore / stats.count : 0,
+        count: stats.count,
+      }),
+    );
+
+    // 6. Generate AI insights using Gemini
+    const prompt = `Bạn là một chuyên gia phân tích giáo dục. Dựa trên dữ liệu học tập của học viên sau đây, hãy phân tích và đưa ra nhận xét chi tiết.
+
+Thông tin học viên:
+- Tên: ${studentName}
+- Thời gian phân tích: ${this.getPeriodLabel(period)}
+- Tổng số hoạt động: ${totalActivities}
+- Hoạt động hoàn thành: ${completedActivities} (${completionRate.toFixed(1)}%)
+- Điểm trung bình: ${averageScore.toFixed(1)}/100
+- Tổng thời gian học: ${Math.round(totalTimeSpent / 60)} phút
+
+Phân tích theo loại hoạt động:
+${activityTypePerformance
+        .map(
+          (a) =>
+            `- ${a.type}: ${a.averageScore.toFixed(1)}/100 (${a.count} hoạt động)`,
+        )
+        .join('\n')}
+
+Yêu cầu:
+1. Xác định 2-3 điểm mạnh của học viên
+2. Xác định 2-3 điểm cần cải thiện
+3. Đưa ra 3-4 khuyến nghị cụ thể để học viên tiến bộ
+4. Viết tóm tắt tổng quan về tiến độ học tập
+
+Trả về kết quả dưới dạng JSON với cấu trúc:
+{
+  "insights": [
+    { "category": "Điểm mạnh", "insight": "...", "sentiment": "positive" },
+    { "category": "Điểm yếu", "insight": "...", "sentiment": "negative" }
+  ],
+  "recommendations": [
+    { "title": "...", "description": "...", "priority": "high|medium|low" }
+  ],
+  "summary": "Tóm tắt tổng quan (2-3 câu)"
+}`;
+
+    const aiResponse = await this.geminiService.generateResponse(prompt);
+    const aiData = this.parseAIResponse(aiResponse);
+
+    return {
+      studentId,
+      studentName,
+      totalActivitiesCompleted: completedActivities,
+      averageScore: parseFloat(averageScore.toFixed(1)),
+      completionRate: parseFloat(completionRate.toFixed(1)),
+      totalTimeSpentMinutes: Math.round(totalTimeSpent / 60),
+      insights: aiData.insights,
+      recommendations: aiData.recommendations,
+      aiSummary: aiData.summary,
+      generatedAt: new Date(),
+    };
+  }
+
+  async getClassAIAnalytics(
+    classroomId: string,
+    period: AnalyticsPeriod = AnalyticsPeriod.LAST_30_DAYS,
+  ): Promise<ClassAnalyticsResponse> {
+    // 1. Validate classroom exists
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      select: {
+        id: true,
+        name: true,
+        students: {
+          where: { isActive: true },
+          select: {
+            student: {
+              select: {
+                id: true,
+                displayName: true,
+                firstName: true,
+                lastName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!classroom) {
+      throw new NotFoundException('Classroom not found');
+    }
+
+    const totalStudents = classroom.students.length;
+    const studentIds = classroom.students.map((s) => s.student.id);
+
+    // 2. Calculate date range
+    const dateRange = this.getDateRange(period);
+
+    // 3. Fetch class progress data
+    const classProgress = await this.prisma.progress.findMany({
+      where: {
+        userId: { in: studentIds },
+        updatedAt: { gte: dateRange },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            displayName: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        activity: {
+          select: {
+            type: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    // 4. Aggregate class statistics
+    const totalActivities = classProgress.length;
+    const completedActivities = classProgress.filter(
+      (p) => p.state === 'done',
+    ).length;
+    const totalScore = classProgress.reduce((sum, p) => sum + (p.score || 0), 0);
+
+    const classAverageScore =
+      totalActivities > 0 ? totalScore / totalActivities : 0;
+    const classCompletionRate =
+      totalActivities > 0 ? (completedActivities / totalActivities) * 100 : 0;
+
+    // 5. Identify struggling students
+    const studentPerformance: Record<
+      string,
+      {
+        name: string;
+        totalScore: number;
+        activities: number;
+      }
+    > = {};
+
+    classProgress.forEach((p) => {
+      const studentId = p.userId;
+      if (!studentPerformance[studentId]) {
+        const student = p.user;
+        studentPerformance[studentId] = {
+          name:
+            student.displayName ||
+            [student.firstName, student.lastName].filter(Boolean).join(' ') ||
+            'Student',
+          totalScore: 0,
+          activities: 0,
+        };
+      }
+      studentPerformance[studentId].totalScore += p.score || 0;
+      studentPerformance[studentId].activities++;
+    });
+
+    const strugglingStudents: StrugglingStudent[] = Object.entries(
+      studentPerformance,
+    )
+      .map(([id, data]) => ({
+        studentId: id,
+        studentName: data.name,
+        averageScore: data.activities > 0 ? data.totalScore / data.activities : 0,
+        issue: '',
+      }))
+      .filter((s) => s.averageScore < 70)
+      .sort((a, b) => a.averageScore - b.averageScore)
+      .slice(0, 5);
+
+    // 6. Generate AI insights using Gemini
+    const prompt = `Bạn là một chuyên gia phân tích giáo dục. Dựa trên dữ liệu học tập của cả lớp học sau đây, hãy phân tích và đưa ra nhận xét chi tiết.
+
+Thông tin lớp học:
+- Tên lớp: ${classroom.name}
+- Số học viên: ${totalStudents}
+- Thời gian phân tích: ${this.getPeriodLabel(period)}
+- Tổng số hoạt động học tập: ${totalActivities}
+- Hoạt động hoàn thành: ${completedActivities} (${classCompletionRate.toFixed(1)}%)
+- Điểm trung bình lớp: ${classAverageScore.toFixed(1)}/100
+- Số học viên gặp khó khăn (điểm < 70): ${strugglingStudents.length}
+
+${strugglingStudents.length > 0 ? `Học viên cần hỗ trợ:\n${strugglingStudents.map((s) => `- ${s.studentName}: ${s.averageScore.toFixed(1)}/100`).join('\n')}` : ''}
+
+Yêu cầu:
+1. Đánh giá tổng quan về tiến độ học tập của lớp
+2. Xác định các điểm mạnh và điểm cần cải thiện của lớp
+3. Đưa ra khuyến nghị cho giáo viên để cải thiện chất lượng giảng dạy
+4. Nếu có học viên gặp khó khăn, đề xuất cách hỗ trợ
+
+Trả về kết quả dưới dạng JSON với cấu trúc:
+{
+  "insights": [
+    { "category": "Điểm mạnh", "insight": "...", "sentiment": "positive" },
+    { "category": "Điểm cần cải thiện", "insight": "...", "sentiment": "neutral" }
+  ],
+  "recommendations": [
+    { "title": "...", "description": "...", "priority": "high|medium|low" }
+  ],
+  "summary": "Tóm tắt tổng quan (2-3 câu)",
+  "strugglingStudentsAnalysis": [
+    { "studentId": "...", "issue": "Mô tả ngắn gọn vấn đề" }
+  ]
+}`;
+
+    const aiResponse = await this.geminiService.generateResponse(prompt);
+    const aiData = this.parseAIResponse(aiResponse);
+
+    // Update struggling students with AI-generated issues
+    if (aiData.strugglingStudentsAnalysis) {
+      aiData.strugglingStudentsAnalysis.forEach((analysis: any) => {
+        const student = strugglingStudents.find(
+          (s) => s.studentId === analysis.studentId,
+        );
+        if (student) {
+          student.issue = analysis.issue;
+        }
+      });
+    }
+
+    return {
+      classroomId,
+      classroomName: classroom.name,
+      totalStudents,
+      classAverageScore: parseFloat(classAverageScore.toFixed(1)),
+      classCompletionRate: parseFloat(classCompletionRate.toFixed(1)),
+      strugglingStudents,
+      insights: aiData.insights,
+      recommendations: aiData.recommendations,
+      aiSummary: aiData.summary,
+      generatedAt: new Date(),
+    };
+  }
+
+  private getDateRange(period: AnalyticsPeriod): Date {
+    const now = new Date();
+    switch (period) {
+      case AnalyticsPeriod.LAST_7_DAYS:
+        return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      case AnalyticsPeriod.LAST_30_DAYS:
+        return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      case AnalyticsPeriod.LAST_90_DAYS:
+        return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      case AnalyticsPeriod.ALL_TIME:
+      default:
+        return new Date(0); // Beginning of time
+    }
+  }
+
+  private getPeriodLabel(period: AnalyticsPeriod): string {
+    switch (period) {
+      case AnalyticsPeriod.LAST_7_DAYS:
+        return '7 ngày qua';
+      case AnalyticsPeriod.LAST_30_DAYS:
+        return '30 ngày qua';
+      case AnalyticsPeriod.LAST_90_DAYS:
+        return '90 ngày qua';
+      case AnalyticsPeriod.ALL_TIME:
+      default:
+        return 'Toàn bộ thời gian';
+    }
+  }
+
+  private parseAIResponse(response: string): {
+    insights: AnalyticsInsight[];
+    recommendations: AnalyticsRecommendation[];
+    summary: string;
+    strugglingStudentsAnalysis?: Array<{ studentId: string; issue: string }>;
+  } {
+    try {
+      // Try to extract JSON from response
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        return {
+          insights: parsed.insights || [],
+          recommendations: parsed.recommendations || [],
+          summary: parsed.summary || 'Không có tóm tắt.',
+          strugglingStudentsAnalysis: parsed.strugglingStudentsAnalysis,
+        };
+      }
+    } catch (error) {
+      console.error('Failed to parse AI response:', error);
+    }
+
+    // Fallback
+    return {
+      insights: [
+        {
+          category: 'Thông tin',
+          insight: 'Không thể phân tích dữ liệu lúc này.',
+          sentiment: 'neutral',
+        },
+      ],
+      recommendations: [
+        {
+          title: 'Tiếp tục học tập',
+          description: 'Hãy tiếp tục nỗ lực học tập.',
+          priority: 'medium',
+        },
+      ],
+      summary: 'Phân tích AI tạm thời không khả dụng.',
+    };
   }
 }
 

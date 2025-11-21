@@ -52,6 +52,53 @@ export class PaymentRepository extends PrismaRepository {
     });
   }
 
+  async getAllTransactions(
+    limit: number = 10,
+    cursor?: string,
+    filters?: {
+      status?: PaymentStatus;
+      startDate?: Date;
+      endDate?: Date;
+      studentId?: string;
+    },
+  ): Promise<{ data: Transaction[]; total: number; nextCursor?: string }> {
+    const where: Prisma.TransactionWhereInput = {
+      ...(filters?.status ? { status: filters.status } : {}),
+      ...(filters?.studentId ? { studentId: filters.studentId } : {}),
+      ...(filters?.startDate || filters?.endDate
+        ? {
+            createdAt: {
+              ...(filters.startDate ? { gte: filters.startDate } : {}),
+              ...(filters.endDate ? { lte: filters.endDate } : {}),
+            },
+          }
+        : {}),
+    };
+
+    const [data, total] = await Promise.all([
+      this.transaction.findMany({
+        where,
+        include: {
+          student: true,
+          course: true,
+          classroom: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: limit + 1, // Take one more to check for next page
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      }),
+      this.transaction.count({ where }),
+    ]);
+
+    let nextCursor: string | undefined = undefined;
+    if (data.length > limit) {
+      const nextItem = data.pop();
+      nextCursor = nextItem?.id;
+    }
+
+    return { data, total, nextCursor };
+  }
+
   async getStudentTransactions(
     studentId: string,
     limit: number = 10,
@@ -62,6 +109,7 @@ export class PaymentRepository extends PrismaRepository {
       include: {
         course: true,
         classroom: true,
+        classroomSession: true,
       },
       orderBy: { createdAt: 'desc' },
       take: limit,

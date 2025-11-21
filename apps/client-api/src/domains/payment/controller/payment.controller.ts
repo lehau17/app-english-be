@@ -1,4 +1,10 @@
-import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
+import {
+  JwtPayload,
+  PayloadToken,
+  ResponseMessage,
+  Roles,
+  RolesGuard,
+} from '@app/shared';
 import {
   Body,
   Controller,
@@ -10,6 +16,7 @@ import {
   Post,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -17,6 +24,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
+import { PaymentStatus, UserRole } from '@prisma/client';
 import { Request } from 'express';
 import { CreatePaymentDto } from '../dto/create-payment.dto';
 import { VNPayReturnDto } from '../dto/vnpay-return.dto';
@@ -28,7 +36,7 @@ import { PaymentService } from '../service/payment.service';
 export class PaymentController {
   private readonly logger = new Logger(PaymentController.name);
 
-  constructor(private readonly paymentService: PaymentService) {}
+  constructor(private readonly paymentService: PaymentService) { }
 
   @Post('/create')
   @ApiOperation({ summary: 'Tạo link thanh toán VNPay cho khóa học' })
@@ -79,6 +87,34 @@ export class PaymentController {
       classroomId,
     );
   }
+
+  @Get('/admin/transactions')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.admin)
+  @ApiOperation({ summary: 'Lấy danh sách toàn bộ giao dịch (Admin)' })
+  @ResponseMessage('Danh sách giao dịch')
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'cursor', required: false, type: String })
+  @ApiQuery({ name: 'status', required: false, enum: PaymentStatus })
+  @ApiQuery({ name: 'studentId', required: false, type: String })
+  @ApiQuery({ name: 'startDate', required: false, type: Date })
+  @ApiQuery({ name: 'endDate', required: false, type: Date })
+  async getAllTransactions(
+    @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
+    @Query('status') status?: PaymentStatus,
+    @Query('studentId') studentId?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : 10;
+    return this.paymentService.getAllTransactions(parsedLimit, cursor, {
+      status,
+      studentId,
+      startDate: startDate ? new Date(startDate) : undefined,
+      endDate: endDate ? new Date(endDate) : undefined,
+    });
+  }
 }
 
 @ApiTags('Payment Webhook')
@@ -86,7 +122,7 @@ export class PaymentController {
 export class PaymentWebhookController {
   private readonly logger = new Logger(PaymentWebhookController.name);
 
-  constructor(private readonly paymentService: PaymentService) {}
+  constructor(private readonly paymentService: PaymentService) { }
 
   @Get('/vnpay/return')
   @ApiOperation({ summary: 'VNPay return URL (webhook)' })

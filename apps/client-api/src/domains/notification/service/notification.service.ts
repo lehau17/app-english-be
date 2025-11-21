@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { Notification, UserRole } from '@prisma/client';
 import {
+  CreateBroadcastNotificationDto,
   CreateClassroomAnnouncementDto,
   CreateClassroomNotificationDto,
   CreateNotificationDto,
@@ -23,7 +24,7 @@ export class NotificationService {
     private readonly notificationRepository: NotificationRepository,
     private readonly kafkaService: KafkaService,
     private readonly prisma: PrismaRepository,
-  ) {}
+  ) { }
 
   async create(dto: CreateNotificationDto): Promise<Notification> {
     const notification = await this.notificationRepository.create(dto);
@@ -219,5 +220,69 @@ export class NotificationService {
       count: notifications.length,
       notificationIds: notifications.map((n) => n.id),
     };
+  }
+
+  async broadcast(
+    dto: CreateBroadcastNotificationDto,
+    senderUserId: string,
+  ): Promise<{ count: number }> {
+    let userIds: string[] = [];
+
+    // 1. Determine target users
+    if (dto.target === 'all') {
+      const users = await this.prisma.user.findMany({
+        where: { status: 'active' },
+        select: { id: true },
+      });
+      userIds = users.map((u) => u.id);
+    } else if (dto.target === 'role') {
+      if (!dto.targetRoles || dto.targetRoles.length === 0) {
+        throw new ForbiddenException('Target roles required');
+      }
+      const users = await this.prisma.user.findMany({
+        where: {
+          status: 'active',
+          role: { in: dto.targetRoles },
+        },
+        select: { id: true },
+      });
+      userIds = users.map((u) => u.id);
+    } else if (dto.target === 'users') {
+      if (!dto.targetUserIds || dto.targetUserIds.length === 0) {
+        throw new ForbiddenException('Target user IDs required');
+      }
+      userIds = dto.targetUserIds;
+    }
+
+    if (userIds.length === 0) {
+      return { count: 0 };
+    }
+
+    // 2. Create notifications in bulk
+    // Note: Prisma createMany is faster but doesn't return created records easily for Kafka in all DBs.
+    // For safety and Kafka consistency, we'll use $transaction with create.
+    // If list is huge, we might need chunking. For now assuming reasonable size.
+
+    const notifications = await this.prisma.$transaction(
+      userIds.map((userId) =>
+        this.prisma.notification.create({
+          data: {
+            userId,
+            type: 'system',
+            title: dto.title,
+            body: dto.body,
+            data: dto.data ? (JSON.parse(dto.data) as any) : undefined,
+            channel: dto.channel,
+          },
+        }),
+      ),
+    );
+
+    // 3. Send to Kafka
+    for (const n of notifications) {
+      this.kafkaService.send('notifications', n);
+    }
+
+    return { count: notifications.length };
   }
 }

@@ -15,6 +15,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Notification, UserRole } from '@prisma/client';
 import {
+  CreateBroadcastNotificationDto,
   CreateClassroomAnnouncementDto,
   CreateClassroomNotificationDto,
   CreateNotificationDto,
@@ -27,7 +28,7 @@ import { NotificationService } from '../service/notification.service';
 @ApiBearerAuth('Authorization')
 @Controller('/private/v1/notifications')
 export class PrivateNotificationController {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(private readonly notificationService: NotificationService) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a notification' })
@@ -101,5 +102,20 @@ export class PrivateNotificationController {
       dto,
       senderUserId,
     );
+  }
+
+  @Post('broadcast')
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.admin)
+  @ApiOperation({
+    summary: 'Broadcast notification to users (Admin only)',
+    description: 'Send notification to all users, specific roles, or user list',
+  })
+  @ResponseMessage('Broadcast notifications sent successfully')
+  broadcast(
+    @Body() dto: CreateBroadcastNotificationDto,
+    @PayloadToken('sub') senderUserId: string,
+  ) {
+    return this.notificationService.broadcast(dto, senderUserId);
   }
 }

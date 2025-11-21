@@ -39,6 +39,7 @@ import {
 import { AudioExtractionService } from '../service/audio-extraction.service';
 import { PodcastService } from '../service/podcast.service';
 import { TextToPodcastService } from '../service/text-to-podcast.service';
+import { AiPodcastRecommenderService } from '../service/ai-podcast-recommender.service';
 import { VideoProcessingService } from '../service/video-processing.service';
 import { YouTubeTranscriptService } from '../service/youtube-transcript.service';
 
@@ -49,10 +50,11 @@ export class PodcastController {
   constructor(
     private readonly podcastService: PodcastService,
     private readonly textToPodcastService: TextToPodcastService,
+    private readonly aiRecommenderService: AiPodcastRecommenderService,
     private readonly youtubeTranscriptService: YouTubeTranscriptService,
     private readonly audioExtractionService: AudioExtractionService,
     private readonly videoProcessingService: VideoProcessingService,
-  ) {}
+  ) { }
 
   @Get()
   @ApiOperation({ summary: 'Get all podcasts with filtering and pagination' })
@@ -64,6 +66,24 @@ export class PodcastController {
     const userId = payload.sub;
     return this.podcastService.findAll(userId, query);
   }
+
+  @Get('ai-recommendations')
+  @ApiOperation({
+    summary: 'Get AI-powered personalized podcast recommendations',
+    description:
+      'Analyzes user learning profile and returns personalized podcast recommendations using Gemini AI',
+  })
+  @ResponseMessage('AI recommendations generated successfully')
+  async getAIRecommendations(
+    @PayloadToken() payload: JwtPayload,
+    @Query('limit') limit?: number,
+  ) {
+    return this.aiRecommenderService.getPersonalizedRecommendations(
+      payload.sub,
+      limit || 10,
+    );
+  }
+
 
   @Get(':id')
   @ApiOperation({ summary: 'Get podcast by ID' })

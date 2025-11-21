@@ -1,6 +1,6 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { NotificationChannel, NotificationType } from '@prisma/client';
+import { NotificationChannel, NotificationType, UserRole } from '@prisma/client';
 import {
   IsBoolean,
   IsEnum,
@@ -122,3 +122,54 @@ export class CreateClassroomAnnouncementDto {
   @IsString()
   content: string;
 }
+
+export class CreateBroadcastNotificationDto {
+  @ApiProperty({
+    description: 'Target audience for the notification',
+    enum: ['all', 'role', 'users'],
+    example: 'all',
+  })
+  @IsEnum(['all', 'role', 'users'])
+  target: 'all' | 'role' | 'users';
+
+  @ApiPropertyOptional({
+    description: 'Target roles (required if target is role)',
+    enum: UserRole,
+    isArray: true,
+    example: [UserRole.student],
+  })
+  @IsOptional()
+  @IsEnum(UserRole, { each: true })
+  targetRoles?: UserRole[];
+
+  @ApiPropertyOptional({
+    description: 'Target user IDs (required if target is users)',
+    type: [String],
+    example: ['uuid1', 'uuid2'],
+  })
+  @IsOptional()
+  @IsUUID('4', { each: true })
+  targetUserIds?: string[];
+
+  @ApiProperty({ example: 'System Maintenance' })
+  @IsString()
+  title: string;
+
+  @ApiPropertyOptional({ example: 'The system will be down for maintenance...' })
+  @IsOptional()
+  @IsString()
+  body?: string;
+
+  @ApiPropertyOptional({ example: '{}' })
+  @IsOptional()
+  @IsJSON()
+  data?: string;
+
+  @ApiProperty({
+    enum: NotificationChannel,
+    example: NotificationChannel.in_app,
+  })
+  @IsEnum(NotificationChannel)
+  channel: NotificationChannel;
+}
+

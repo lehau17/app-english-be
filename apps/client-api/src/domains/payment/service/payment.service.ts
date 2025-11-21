@@ -21,7 +21,7 @@ export class PaymentService {
   constructor(
     private readonly paymentRepository: PaymentRepository,
     private readonly vnpayService: VNPayService,
-  ) {}
+  ) { }
 
   /**
    * Tạo link thanh toán cho khóa học
@@ -300,5 +300,21 @@ export class PaymentService {
     return {
       isPurchased: result?.isPurchased || false,
     };
+  }
+
+  /**
+   * Lấy danh sách toàn bộ giao dịch (Admin)
+   */
+  async getAllTransactions(
+    limit: number = 10,
+    cursor?: string,
+    filters?: {
+      status?: PaymentStatus;
+      startDate?: Date;
+      endDate?: Date;
+      studentId?: string;
+    },
+  ) {
+    return this.paymentRepository.getAllTransactions(limit, cursor, filters);
   }
 }
