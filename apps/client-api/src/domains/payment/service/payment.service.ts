@@ -81,7 +81,7 @@ export class PaymentService {
       );
     }
 
-    // Kiểm tra học sinh có trong lớp
+    // Check nếu đã có ClassroomStudent và đã thanh toán rồi
     const classroomStudent =
       await this.paymentRepository.classroomStudent.findUnique({
         where: {
@@ -92,13 +92,13 @@ export class PaymentService {
         },
       });
 
-    if (!classroomStudent) {
-      throw new NotFoundException('Bạn chưa tham gia lớp học này');
-    }
-
-    if (classroomStudent.isPurchased) {
+    // Nếu đã tham gia và đã thanh toán → không cho thanh toán lại
+    if (classroomStudent?.isPurchased) {
       throw new ConflictException('Bạn đã thanh toán cho khóa học này rồi');
     }
+
+    // Note: KHÔNG throw error nếu chưa có ClassroomStudent
+    // Vì với guest enrollment, ClassroomStudent được tạo SAU khi thanh toán thành công
 
     // Kiểm tra giao dịch trùng lặp
     const existingTransaction =
