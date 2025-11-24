@@ -58,36 +58,41 @@ Bạn là trợ lý AI tư vấn khóa học chuyên nghiệp của EngliMaster.
 🛠️ CÔNG CỤ CÓ SẴN:
 1. **knowledge_search**: Tìm kiếm thông tin về khóa học, chương trình học, quy định
 2. **database_query**: Truy vấn thông tin khóa học, lớp học từ database
-3. **get_courses**: Lấy danh sách khóa học có sẵn
+3. **get_courses**: Lấy danh sách khóa học có sẵn (trả về ID khóa học)
 4. **get_classrooms**: Lấy danh sách lớp học của một khóa học
 
-📋 QUY TẮC:
-- Luôn thân thiện, nhiệt tình, chuyên nghiệp
-- Trả lời bằng tiếng Việt (trừ khi học viên yêu cầu tiếng Anh)
-- Đưa ra thông tin chính xác về khóa học từ database
-- Khuyến khích học viên đăng ký nhưng không ép buộc
-- Nếu không biết, hãy thừa nhận và đề xuất liên hệ tư vấn viên
-- Luôn đề xuất link đăng ký: "/enroll" khi phù hợp
+📋 QUY TẮC TRÍCH DẪN LINK:
+- **BẮT BUỘC**: Khi giới thiệu khóa học CỤ THỂ, PHẢI dùng format Markdown link
+- Format chuẩn: [Đăng ký ngay](/enroll?courseId=COURSE_ID)
+- Ví dụ thực tế:
+  * Khóa học ID: 45d78980-a98f-469d-8826-e4ac10e96f7d
+  * Link: [Đăng ký ngay](/enroll?courseId=45d78980-a98f-469d-8826-e4ac10e96f7d)
+- **KHÔNG BAO GIỜ** viết: "tại đây: /enroll" hoặc "tại /enroll"
+- **LUÔN LUÔN** viết: "[Đăng ký ngay](/enroll?courseId=xxx)"
 
 💡 CÁCH TRẢ LỜI:
 - Ngắn gọn, rõ ràng, dễ hiểu
 - Sử dụng emoji phù hợp (🎓 📚 💡 ✨)
-- Cung cấp thông tin cụ thể: giá, lịch học, giáo viên
-- Đề xuất các bước tiếp theo: "Bạn có thể đăng ký tại /enroll"
-- Tạo cảm giác tin cậy và chuyên nghiệp
+- Khi tool get_courses trả về danh sách khóa học, mỗi khóa có trường "id"
+- Dùng ID này để tạo link: [Đăng ký ngay](/enroll?courseId=ID_TỪ_TOOL)
+- Nếu không có ID cụ thể: [Xem tất cả khóa học](/enroll)
 
-📌 VÍ DỤ CÂU HỎI THƯỜNG GẶP:
-- "Khóa học nào phù hợp với người mới bắt đầu?"
-- "Học phí của khóa học IELTS là bao nhiêu?"
-- "Lịch học của lớp buổi tối như thế nào?"
-- "Tôi muốn học giao tiếp, khóa nào phù hợp?"
-- "Cách đăng ký khóa học như thế nào?"
+📝 VÍ DỤ RESPONSE ĐÚNG:
+User: "Khóa học nào cho người mới?"
+Agent gọi get_courses(level="beginner")
+Tool trả về: {"courses": [{"id": "abc-123", "name": "Test", "price": 10000}]}
+Agent trả lời:
+"Chào bạn! 🎓 Mình tìm thấy khóa Test phù hợp với bạn:
+- Giá: 10.000 VND
+- Trình độ: Sơ cấp
 
-⚠️ LƯU Ý:
-- KHÔNG được tạo tài khoản hoặc xử lý thanh toán
-- KHÔNG được thay đổi dữ liệu trong database
-- CHỈ tư vấn và cung cấp thông tin
-- Luôn hướng dẫn học viên đến trang /enroll để đăng ký
+[Đăng ký ngay](/enroll?courseId=abc-123) để bắt đầu học nhé! ✨"
+
+⚠️ LƯU Ý QUAN TRỌNG:
+- KHÔNG viết text đơn thuần như "/enroll" hay "tại /enroll"
+- PHẢI wrap trong markdown link [text](url)
+- PHẢI có courseId trong URL khi giới thiệu khóa học cụ thể
+- Tool get_courses luôn trả về trường "id" - hãy sử dụng nó!
 `,
                 ],
                 ['placeholder', '{chat_history}'],
@@ -127,60 +132,52 @@ Bạn là trợ lý AI tư vấn khóa học chuyên nghiệp của EngliMaster.
                 search: z.string().optional().describe('Tìm kiếm theo tên khóa học'),
             }),
             func: async ({ level, search }) => {
-                try {
-                    const where: any = { isPublished: true };
+                const where: any = { isPublished: true };
 
-                    if (level) {
-                        where.difficulty = level.toUpperCase();
-                    }
-
-                    if (search) {
-                        where.OR = [
-                            { title: { contains: search, mode: 'insensitive' } },
-                            { description: { contains: search, mode: 'insensitive' } },
-                        ];
-                    }
-
-                    const courses = await this.prisma.course.findMany({
-                        where,
-                        select: {
-                            id: true,
-                            title: true,
-                            description: true,
-                            difficulty: true,
-                            price: true,
-                            currency: true,
-                            plannedSessions: true,
-                            estimatedHours: true,
-                        },
-                        orderBy: { orderNo: 'asc' },
-                        take: 20,
-                    });
-
-                    return JSON.stringify({
-                        success: true,
-                        courses: courses.map((course) => ({
-                            id: course.id,
-                            name: course.title,
-                            description: course.description || '',
-                            level: course.difficulty || 'General',
-                            price: course.price || 0,
-                            currency: course.currency || 'VND',
-                            duration: course.plannedSessions
-                                ? `${course.plannedSessions} buổi`
-                                : course.estimatedHours
-                                    ? `~${Math.round(course.estimatedHours)} giờ`
-                                    : 'Theo lộ trình',
-                        })),
-                        total: courses.length,
-                    });
-                } catch (error) {
-                    this.logger.error('Error getting courses:', error);
-                    return JSON.stringify({
-                        success: false,
-                        error: 'Không thể lấy danh sách khóa học. Vui lòng thử lại sau.',
-                    });
+                if (level) {
+                    where.difficulty = level.toUpperCase();
                 }
+
+                if (search) {
+                    where.OR = [
+                        { title: { contains: search, mode: 'insensitive' } },
+                        { description: { contains: search, mode: 'insensitive' } },
+                    ];
+                }
+
+                const courses = await this.prisma.course.findMany({
+                    where,
+                    select: {
+                        id: true,
+                        title: true,
+                        description: true,
+                        difficulty: true,
+                        price: true,
+                        currency: true,
+                        plannedSessions: true,
+                        estimatedHours: true,
+                    },
+                    orderBy: { orderNo: 'asc' },
+                    take: 20,
+                });
+
+                return JSON.stringify({
+                    success: true,
+                    courses: courses.map((course) => ({
+                        id: course.id,
+                        name: course.title,
+                        description: course.description || '',
+                        level: course.difficulty || 'General',
+                        price: course.price || 0,
+                        currency: course.currency || 'VND',
+                        duration: course.plannedSessions
+                            ? `${course.plannedSessions} buổi`
+                            : course.estimatedHours
+                                ? `~${Math.round(course.estimatedHours)} giờ`
+                                : 'Theo lộ trình',
+                    })),
+                    total: courses.length,
+                });
             },
         });
     }
@@ -196,99 +193,88 @@ Bạn là trợ lý AI tư vấn khóa học chuyên nghiệp của EngliMaster.
                 courseId: z.string().describe('ID của khóa học'),
             }),
             func: async ({ courseId }) => {
-                try {
-                    const course = await this.prisma.course.findUnique({
-                        where: { id: courseId },
-                        select: { id: true, title: true, price: true },
-                    });
+                const course = await this.prisma.course.findUnique({
+                    where: { id: courseId },
+                    select: { id: true, title: true, price: true },
+                });
 
-                    if (!course) {
-                        return JSON.stringify({
-                            success: false,
-                            error: 'Không tìm thấy khóa học.',
-                        });
-                    }
-
-                    const classrooms = await this.prisma.classroom.findMany({
-                        where: {
-                            courseId,
-                            isActive: true,
-                            status: { in: ['upcoming', 'ongoing'] },
-                        },
-                        include: {
-                            teacher: {
-                                select: {
-                                    displayName: true,
-                                    firstName: true,
-                                    lastName: true,
-                                },
-                            },
-                            students: {
-                                where: { isActive: true },
-                                select: { studentId: true },
-                            },
-                            slots: {
-                                select: {
-                                    dayOfWeek: true,
-                                    startMinuteOfDay: true,
-                                    endMinuteOfDay: true,
-                                },
-                            },
-                        },
-                        orderBy: { periodStart: 'asc' },
-                    });
-
-                    const weekDayLabel: Record<string, string> = {
-                        mon: 'Thứ 2',
-                        tue: 'Thứ 3',
-                        wed: 'Thứ 4',
-                        thu: 'Thứ 5',
-                        fri: 'Thứ 6',
-                        sat: 'Thứ 7',
-                        sun: 'Chủ nhật',
-                    };
-
-                    return JSON.stringify({
-                        success: true,
-                        courseName: course.title,
-                        classrooms: classrooms.map((classroom) => {
-                            const schedule = classroom.slots
-                                .map((slot) => {
-                                    const day = weekDayLabel[slot.dayOfWeek] || slot.dayOfWeek;
-                                    const startHours = Math.floor(slot.startMinuteOfDay / 60);
-                                    const startMins = slot.startMinuteOfDay % 60;
-                                    const endHours = Math.floor(slot.endMinuteOfDay / 60);
-                                    const endMins = slot.endMinuteOfDay % 60;
-                                    return `${day} ${startHours.toString().padStart(2, '0')}:${startMins.toString().padStart(2, '0')}-${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
-                                })
-                                .join(', ');
-
-                            const teacherName =
-                                classroom.teacher?.displayName ||
-                                `${classroom.teacher?.firstName || ''} ${classroom.teacher?.lastName || ''}`.trim() ||
-                                'Chưa có giáo viên';
-
-                            return {
-                                id: classroom.id,
-                                name: classroom.name,
-                                schedule: schedule || 'Lịch học linh hoạt',
-                                teacher: teacherName,
-                                maxStudents: classroom.maxStudents || 0,
-                                currentStudents: classroom.students.length,
-                                availableSlots: (classroom.maxStudents || 0) - classroom.students.length,
-                                price: course.price || 0,
-                                startDate: classroom.periodStart,
-                            };
-                        }),
-                        total: classrooms.length,
-                    });
-                } catch (error) {
-                    this.logger.error('Error getting classrooms:', error);
-                    return JSON.stringify({
-                        success: false,
-                        error: 'Không thể lấy danh sách lớp học. Vui lòng thử lại sau.',
-                    });
+                if (!course) {
+                    throw new Error('Không tìm thấy khóa học với ID: ' + courseId);
                 }
+
+                const classrooms = await this.prisma.classroom.findMany({
+                    where: {
+                        courseId,
+                        isActive: true,
+                        status: { in: ['upcoming', 'ongoing'] },
+                    },
+                    include: {
+                        teacher: {
+                            select: {
+                                displayName: true,
+                                firstName: true,
+                                lastName: true,
+                            },
+                        },
+                        students: {
+                            where: { isActive: true },
+                            select: { studentId: true },
+                        },
+                        slots: {
+                            select: {
+                                dayOfWeek: true,
+                                startMinuteOfDay: true,
+                                endMinuteOfDay: true,
+                            },
+                        },
+                    },
+                    orderBy: { periodStart: 'asc' },
+                });
+
+                const weekDayLabel: Record<string, string> = {
+                    mon: 'Thứ 2',
+                    tue: 'Thứ 3',
+                    wed: 'Thứ 4',
+                    thu: 'Thứ 5',
+                    fri: 'Thứ 6',
+                    sat: 'Thứ 7',
+                    sun: 'Chủ nhật',
+                };
+
+                return JSON.stringify({
+                    success: true,
+                    courseName: course.title,
+                    classrooms: classrooms.map((classroom) => {
+                        const schedule = classroom.slots
+                            .map((slot) => {
+                                const day = weekDayLabel[slot.dayOfWeek] || slot.dayOfWeek;
+                                const startHours = Math.floor(slot.startMinuteOfDay / 60);
+                                const startMins = slot.startMinuteOfDay % 60;
+                                const endHours = Math.floor(slot.endMinuteOfDay / 60);
+                                const endMins = slot.endMinuteOfDay % 60;
+                                return `${day} ${startHours.toString().padStart(2, '0')}:${startMins.toString().padStart(2, '0')}-${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+                            })
+                            .join(', ');
+
+                        const teacherName =
+                            classroom.teacher?.displayName ||
+                            `${classroom.teacher?.firstName || ''} ${classroom.teacher?.lastName || ''}`.trim() ||
+                            'Chưa có giáo viên';
+
+                        return {
+                            id: classroom.id,
+                            name: classroom.name,
+                            schedule: schedule || 'Lịch học linh hoạt',
+                            teacher: teacherName,
+                            maxStudents: classroom.maxStudents || 0,
+                            currentStudents: classroom.students.length,
+                            availableSlots: (classroom.maxStudents || 0) - classroom.students.length,
+                            price: course.price || 0,
+                            startDate: classroom.periodStart,
+                        };
+                    }),
+                    total: classrooms.length,
+                });
             },
         });
     }
