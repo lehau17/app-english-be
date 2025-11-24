@@ -137,7 +137,7 @@ Bạn là trợ lý AI tư vấn khóa học chuyên nghiệp của EngliMaster.
                     if (search) {
                         where.OR = [
                             { title: { contains: search, mode: 'insensitive' } },
-                            { name: { contains: search, mode: 'insensitive' } },
+                            { description: { contains: search, mode: 'insensitive' } },
                         ];
                     }
 
@@ -146,7 +146,6 @@ Bạn là trợ lý AI tư vấn khóa học chuyên nghiệp của EngliMaster.
                         select: {
                             id: true,
                             title: true,
-                            name: true,
                             description: true,
                             difficulty: true,
                             price: true,
@@ -162,7 +161,7 @@ Bạn là trợ lý AI tư vấn khóa học chuyên nghiệp của EngliMaster.
                         success: true,
                         courses: courses.map((course) => ({
                             id: course.id,
-                            name: course.title || course.name,
+                            name: course.title,
                             description: course.description || '',
                             level: course.difficulty || 'General',
                             price: course.price || 0,
