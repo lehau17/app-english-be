@@ -523,46 +523,64 @@ export class LandingPageService {
     let parentUser: User | null = null;
 
     await this.prisma.$transaction(async (tx) => {
-      // Create all students
-      for (const studentData of payload.students) {
-        const studentUser = await this.ensureGuestUser(
-          tx,
-          studentData,
-          UserRole.student,
-          payload.source,
-          supportNotes,
-        );
-        studentUsers.push(studentUser);
-      }
-
-      // Create parent if role is parent
-      if (role === GuestEnrollmentRole.parent && payload.parent) {
+      if (role === GuestEnrollmentRole.student) {
+        // Role = student: Chỉ tạo students, không tạo parent
+        for (const studentData of payload.students) {
+          const studentUser = await this.ensureGuestUser(
+            tx,
+            studentData,
+            UserRole.student,
+            payload.source,
+            supportNotes,
+          );
+          studentUsers.push(studentUser);
+        }
+        
+        // Enroll tất cả students vào classroom
+        for (const studentUser of studentUsers) {
+          await this.ensureClassroomMembership(
+            tx,
+            classroom,
+            studentUser.id,
+            supportNotes,
+          );
+        }
+      } else if (role === GuestEnrollmentRole.parent) {
+        // Role = parent: Tạo parent trước, sau đó tạo students và link
         parentUser = await this.ensureGuestUser(
           tx,
-          payload.parent,
+          payload.parent!,
           UserRole.parent,
           payload.source,
           supportNotes,
         );
 
-        // Link parent to all students
-        for (const studentUser of studentUsers) {
+        // Tạo tất cả students
+        for (const studentData of payload.students) {
+          const studentUser = await this.ensureGuestUser(
+            tx,
+            studentData,
+            UserRole.student,
+            payload.source,
+            supportNotes,
+          );
+          studentUsers.push(studentUser);
+          
+          // Link parent với student
           await this.ensureParentChildLink(tx, parentUser.id, studentUser.id);
         }
-      }
 
-      // Enroll all students to classroom
-      for (const studentUser of studentUsers) {
-        await this.ensureClassroomMembership(
-          tx,
-          classroom,
-          studentUser.id,
-          supportNotes,
-        );
+        // Enroll tất cả students vào classroom
+        for (const studentUser of studentUsers) {
+          await this.ensureClassroomMembership(
+            tx,
+            classroom,
+            studentUser.id,
+            supportNotes,
+          );
+        }
       }
-    });
-
-    // Calculate total amount: price * number of students
+    });    // Calculate total amount: price * number of students
     const baseAmount = course.price;
     if (!baseAmount || baseAmount <= 0) {
       throw new BadRequestException(
