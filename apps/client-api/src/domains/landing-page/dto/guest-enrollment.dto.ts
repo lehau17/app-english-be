@@ -98,12 +98,13 @@ export class GuestEnrollmentDto {
   classroomId: string;
 
   @ApiProperty({
-    description: 'Thông tin học viên sẽ tham gia lớp',
-    type: () => GuestPersonDto,
+    description: 'Thông tin học viên sẽ tham gia lớp (có thể nhiều học sinh nếu role=parent)',
+    type: () => [GuestPersonDto],
   })
-  @ValidateNested()
+  @ValidateNested({ each: true })
   @Type(() => GuestPersonDto)
-  student: GuestPersonDto;
+  @IsArray()
+  students: GuestPersonDto[];
 
   @ApiProperty({
     description: 'Thông tin phụ huynh (bắt buộc nếu role=parent)',

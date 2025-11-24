@@ -446,12 +446,18 @@ export class LandingPageService {
     ipAddress?: string,
   ): Promise<GuestEnrollmentResponse> {
     const role = payload.role;
+    const studentsCount = payload.students?.length || 0;
+    
+    if (studentsCount === 0) {
+      throw new BadRequestException('Vui lòng cung cấp ít nhất một học sinh');
+    }
+
     this.logger.log({
       message: 'Guest enrollment request received',
       role,
       courseId: payload.courseId,
       classroomId: payload.classroomId,
-      studentEmail: payload.student?.email,
+      studentsCount,
       parentEmail: payload.parent?.email,
     });
 
@@ -500,10 +506,6 @@ export class LandingPageService {
       );
     }
 
-    if (!payload.student) {
-      throw new BadRequestException('Thiếu thông tin học viên đăng ký');
-    }
-
     if (role === GuestEnrollmentRole.parent && !payload.parent) {
       throw new BadRequestException(
         'Vui lòng cung cấp thông tin phụ huynh khi đăng ký với tư cách phụ huynh',
@@ -517,18 +519,23 @@ export class LandingPageService {
 
     const supportNotes = this.buildSupportNote(payload);
 
-    let studentUser: User;
+    const studentUsers: User[] = [];
     let parentUser: User | null = null;
 
     await this.prisma.$transaction(async (tx) => {
-      studentUser = await this.ensureGuestUser(
-        tx,
-        payload.student,
-        UserRole.student,
-        payload.source,
-        supportNotes,
-      );
+      // Create all students
+      for (const studentData of payload.students) {
+        const studentUser = await this.ensureGuestUser(
+          tx,
+          studentData,
+          UserRole.student,
+          payload.source,
+          supportNotes,
+        );
+        studentUsers.push(studentUser);
+      }
 
+      // Create parent if role is parent
       if (role === GuestEnrollmentRole.parent && payload.parent) {
         parentUser = await this.ensureGuestUser(
           tx,
@@ -537,55 +544,69 @@ export class LandingPageService {
           payload.source,
           supportNotes,
         );
-        await this.ensureParentChildLink(tx, parentUser.id, studentUser.id);
+        
+        // Link parent to all students
+        for (const studentUser of studentUsers) {
+          await this.ensureParentChildLink(tx, parentUser.id, studentUser.id);
+        }
       }
 
-      await this.ensureClassroomMembership(
-        tx,
-        classroom,
-        studentUser.id,
-        supportNotes,
-      );
+      // Enroll all students to classroom
+      for (const studentUser of studentUsers) {
+        await this.ensureClassroomMembership(
+          tx,
+          classroom,
+          studentUser.id,
+          supportNotes,
+        );
+      }
     });
 
-    const amount = course.price;
-
-    if (!amount || amount <= 0) {
+    // Calculate total amount: price * number of students
+    const baseAmount = course.price;
+    if (!baseAmount || baseAmount <= 0) {
       throw new BadRequestException(
         'Khóa học chưa được cấu hình giá. Vui lòng liên hệ đội tư vấn.',
       );
     }
 
+    const totalAmount = baseAmount * studentsCount;
+
     const description = payload.note
-      ? `Thanh toán khóa học ${course.title} (${payload.note})`
-      : `Thanh toán khóa học: ${course.title}`;
+      ? `Thanh toán khóa học ${course.title} cho ${studentsCount} học sinh (${payload.note})`
+      : `Thanh toán khóa học: ${course.title} (${studentsCount} học sinh)`;
+
+    // Use first student as primary for payment
+    const primaryStudent = studentUsers[0];
 
     const payment = await this.paymentService.createPayment(
-      studentUser.id,
+      primaryStudent.id,
       {
         courseId: payload.courseId,
         classroomId: payload.classroomId,
-        amount,
+        amount: totalAmount,
         currency: course.currency || 'VND',
         description,
         returnUrl,
-        studentId: studentUser.id,
+        studentId: primaryStudent.id,
       },
       ipAddress,
-      parentUser?.id ?? studentUser.id,
+      parentUser?.id ?? primaryStudent.id,
     );
 
     this.logger.log({
       message: 'Guest enrollment created successfully',
       transactionId: payment.transactionId,
-      studentId: studentUser.id,
+      studentsCount,
+      totalAmount,
+      studentIds: studentUsers.map(s => s.id),
       parentId: parentUser?.id,
     });
 
     return {
       paymentUrl: payment.paymentUrl,
       transactionId: payment.transactionId,
-      studentId: studentUser.id,
+      studentId: primaryStudent.id,
       parentId: parentUser?.id ?? null,
       role,
     };
