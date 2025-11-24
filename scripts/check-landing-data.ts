@@ -4,7 +4,7 @@
  * Run: npx ts-node scripts/check-landing-data.ts
  */
 
-import { PrismaClient, UserRole, ClassroomStatus } from '@prisma/client';
+import { ClassroomStatus, PrismaClient, UserRole } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -165,7 +165,7 @@ async function checkLandingData() {
         },
       });
       const userMap = new Map(users.map(u => [u.id, u]));
-      
+
       ratings.forEach((r, i) => {
         const user = userMap.get(r.userId);
         const userName = user

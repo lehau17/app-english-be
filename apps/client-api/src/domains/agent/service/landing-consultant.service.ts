@@ -3,12 +3,12 @@ import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { Injectable, Logger } from '@nestjs/common';
 import { AgentExecutor, createToolCallingAgent } from 'langchain/agents';
+import { DynamicStructuredTool } from 'langchain/tools';
+import z from 'zod';
 import { RagTool } from '../tools/rag.tool';
 import { SqlTool } from '../tools/sql.tool';
 import { RagService } from './rag.service';
 import { SqlService } from './sql.service';
-import { DynamicStructuredTool } from 'langchain/tools';
-import z from 'zod';
 
 @Injectable()
 export class LandingConsultantService {
