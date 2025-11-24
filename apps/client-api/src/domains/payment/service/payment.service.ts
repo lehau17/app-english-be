@@ -55,7 +55,7 @@ export class PaymentService {
           'Bạn không có quyền thanh toán cho học sinh này',
         );
       }
-      
+
       this.logger.log(
         `Parent ${requesterId} is paying for student ${studentId}`,
       );
