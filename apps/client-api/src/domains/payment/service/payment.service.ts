@@ -231,13 +231,13 @@ export class PaymentService {
 
         // Parse studentIds from transaction description (for multi-student enrollment)
         const studentIds = this.parseStudentIdsFromDescription(transaction.description);
-        
+
         if (studentIds.length > 0) {
           // Enroll all students (multi-student support)
           this.logger.log(
             `Enrolling ${studentIds.length} students for transaction ${transaction.id}`,
           );
-          
+
           for (const studentId of studentIds) {
             await this.paymentRepository.updateStudentPurchaseStatus(
               studentId,
@@ -309,10 +309,10 @@ export class PaymentService {
    */
   private parseStudentIdsFromDescription(description: string | null): string[] {
     if (!description) return [];
-    
+
     const match = description.match(/StudentIDs:\s*([a-f0-9,-]+)/i);
     if (!match || !match[1]) return [];
-    
+
     return match[1].split(',').map(id => id.trim()).filter(id => id.length > 0);
   }
 
