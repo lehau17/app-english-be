@@ -1,16 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsArray,
-  IsBoolean,
-  IsEnum,
-  IsOptional,
-  IsString,
-  IsUUID,
-  Length,
-  ValidateIf,
-  ValidateNested,
-} from 'class-validator';
 import { Type } from 'class-transformer';
+import {
+    IsArray,
+    IsBoolean,
+    IsEnum,
+    IsOptional,
+    IsString,
+    IsUUID,
+    Length,
+    ValidateIf,
+    ValidateNested,
+} from 'class-validator';
 
 export enum GuestEnrollmentRole {
   student = 'student',

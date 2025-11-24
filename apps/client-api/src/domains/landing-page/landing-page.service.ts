@@ -1,27 +1,27 @@
 import { PrismaRepository } from '@app/database';
 import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  Logger,
-  NotFoundException,
+    BadRequestException,
+    ConflictException,
+    Injectable,
+    Logger,
+    NotFoundException,
 } from '@nestjs/common';
 import {
-  Classroom,
-  ClassroomStatus,
-  Course,
-  DifficultyLevel,
-  Prisma,
-  Status,
-  User,
-  UserRole,
-  Weekday,
+    Classroom,
+    ClassroomStatus,
+    Course,
+    DifficultyLevel,
+    Prisma,
+    Status,
+    User,
+    UserRole,
+    Weekday,
 } from '@prisma/client';
 import { PaymentService } from '../payment/service/payment.service';
 import {
-  GuestEnrollmentDto,
-  GuestEnrollmentRole,
-  GuestPersonDto,
+    GuestEnrollmentDto,
+    GuestEnrollmentRole,
+    GuestPersonDto,
 } from './dto/guest-enrollment.dto';
 
 export interface LandingPageFeature {
@@ -447,7 +447,7 @@ export class LandingPageService {
   ): Promise<GuestEnrollmentResponse> {
     const role = payload.role;
     const studentsCount = payload.students?.length || 0;
-    
+
     if (studentsCount === 0) {
       throw new BadRequestException('Vui lòng cung cấp ít nhất một học sinh');
     }
@@ -544,7 +544,7 @@ export class LandingPageService {
           payload.source,
           supportNotes,
         );
-        
+
         // Link parent to all students
         for (const studentUser of studentUsers) {
           await this.ensureParentChildLink(tx, parentUser.id, studentUser.id);
