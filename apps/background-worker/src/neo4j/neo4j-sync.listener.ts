@@ -314,7 +314,6 @@ export class Neo4jSyncListener implements OnModuleInit, OnModuleDestroy {
       activityType: activity.type,
       difficulty: activity.difficulty,
       orderNo: activity.orderNo,
-      timeLimit: activity.timeLimit,
       points: activity.points,
       lessonId: activity.lessonId,
     });
