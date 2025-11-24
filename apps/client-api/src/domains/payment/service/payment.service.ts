@@ -36,15 +36,16 @@ export class PaymentService {
       `Creating payment for student ${studentId}, course ${dto.courseId}`,
     );
 
-    // Nếu có studentId trong DTO, nghĩa là phụ huynh đang thanh toán cho con
-    if (dto.studentId && requesterId) {
-      // Kiểm tra quyền: requesterId phải là phụ huynh của studentId
+    // Kiểm tra quyền thanh toán
+    if (requesterId && requesterId !== studentId) {
+      // Người thanh toán khác với học sinh → phụ huynh thanh toán cho con
+      // Cần kiểm tra quan hệ parent-child
       const parentChildRelation =
         await this.paymentRepository.parentChild.findUnique({
           where: {
             parentId_childId: {
               parentId: requesterId,
-              childId: dto.studentId,
+              childId: studentId,
             },
           },
         });
@@ -54,6 +55,14 @@ export class PaymentService {
           'Bạn không có quyền thanh toán cho học sinh này',
         );
       }
+      
+      this.logger.log(
+        `Parent ${requesterId} is paying for student ${studentId}`,
+      );
+    } else {
+      // requesterId === studentId hoặc không có requesterId
+      // → Học sinh tự thanh toán
+      this.logger.log(`Student ${studentId} is paying for themselves`);
     }
 
     // Kiểm tra khóa học có giá > 0
