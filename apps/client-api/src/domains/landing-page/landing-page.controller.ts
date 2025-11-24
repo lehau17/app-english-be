@@ -125,17 +125,44 @@ export class LandingPageController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Kiểm tra thành công',
+    description: 'Thông tin hợp lệ',
     schema: {
       type: 'object',
       properties: {
-        valid: { type: 'boolean' },
-        message: { type: 'string' },
+        valid: { type: 'boolean', example: true },
+        message: { type: 'string', example: 'Thông tin hợp lệ' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email hoặc số điện thoại đã được sử dụng',
+    schema: {
+      type: 'object',
+      properties: {
+        statusCode: { type: 'number', example: 400 },
+        message: { type: 'string', example: 'Email hoặc số điện thoại đã được sử dụng' },
         conflicts: {
           type: 'object',
           properties: {
-            email: { type: 'boolean' },
-            phone: { type: 'boolean' },
+            students: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  index: { type: 'number' },
+                  email: { type: 'boolean' },
+                  phone: { type: 'boolean' },
+                },
+              },
+            },
+            parent: {
+              type: 'object',
+              properties: {
+                email: { type: 'boolean' },
+                phone: { type: 'boolean' },
+              },
+            },
           },
         },
       },

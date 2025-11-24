@@ -447,10 +447,6 @@ export class LandingPageService {
   async validateGuestUser(payload: GuestEnrollmentDto): Promise<{
     valid: boolean;
     message: string;
-    conflicts?: {
-      students?: Array<{ index: number; email?: boolean; phone?: boolean }>;
-      parent?: { email?: boolean; phone?: boolean };
-    };
   }> {
     const { role, students, parent } = payload;
     const conflicts: any = {};
@@ -517,13 +513,12 @@ export class LandingPageService {
       }
     }
 
-    // Build response
+    // Throw BadRequestException if conflicts found
     if (Object.keys(conflicts).length > 0) {
-      return {
-        valid: false,
+      throw new BadRequestException({
         message: 'Email hoặc số điện thoại đã được sử dụng',
         conflicts,
-      };
+      });
     }
 
     return {
