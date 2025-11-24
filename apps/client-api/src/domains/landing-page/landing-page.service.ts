@@ -608,6 +608,7 @@ export class LandingPageService {
     const studentUsers: User[] = [];
     let parentUser: User | null = null;
 
+    // Transaction: CHỈ tạo users, KHÔNG tạo ClassroomStudent (chưa chiếm slot)
     await this.prisma.$transaction(async (tx) => {
       if (role === GuestEnrollmentRole.student) {
         // Role = student: Chỉ tạo students, không tạo parent
@@ -622,15 +623,8 @@ export class LandingPageService {
           studentUsers.push(studentUser);
         }
 
-        // Enroll tất cả students vào classroom
-        for (const studentUser of studentUsers) {
-          await this.ensureClassroomMembership(
-            tx,
-            classroom,
-            studentUser.id,
-            supportNotes,
-          );
-        }
+        // KHÔNG enroll vào classroom ở đây
+        // Sẽ enroll sau khi thanh toán thành công (VNPay callback)
       } else if (role === GuestEnrollmentRole.parent) {
         // Role = parent: Tạo parent trước, sau đó tạo students và link
         parentUser = await this.ensureGuestUser(
@@ -656,15 +650,8 @@ export class LandingPageService {
           await this.ensureParentChildLink(tx, parentUser.id, studentUser.id);
         }
 
-        // Enroll tất cả students vào classroom
-        for (const studentUser of studentUsers) {
-          await this.ensureClassroomMembership(
-            tx,
-            classroom,
-            studentUser.id,
-            supportNotes,
-          );
-        }
+        // KHÔNG enroll vào classroom ở đây
+        // Sẽ enroll sau khi thanh toán thành công (VNPay callback)
       }
     });    // Calculate total amount: price * number of students
     const baseAmount = course.price;
@@ -683,6 +670,10 @@ export class LandingPageService {
     // Use first student as primary for payment
     const primaryStudent = studentUsers[0];
 
+    // Prepare metadata with all studentIds for multi-student enrollment
+    const allStudentIds = studentUsers.map(s => s.id);
+    const enhancedDescription = `${description} | StudentIDs: ${allStudentIds.join(',')}`;
+
     const payment = await this.paymentService.createPayment(
       primaryStudent.id,
       {
@@ -690,7 +681,7 @@ export class LandingPageService {
         classroomId: payload.classroomId,
         amount: totalAmount,
         currency: course.currency || 'VND',
-        description,
+        description: enhancedDescription,
         returnUrl,
         studentId: primaryStudent.id,
       },

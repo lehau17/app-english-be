@@ -137,14 +137,25 @@ export class PaymentRepository extends PrismaRepository {
     classroomId: string,
     isPurchased: boolean,
   ): Promise<void> {
-    await this.classroomStudent.update({
+    // Sử dụng upsert: tạo mới hoặc update
+    // Khi thanh toán thành công, tự động enroll student vào classroom
+    await this.classroomStudent.upsert({
       where: {
         classroomId_studentId: {
           classroomId,
           studentId,
         },
       },
-      data: { isPurchased },
+      create: {
+        classroomId,
+        studentId,
+        isPurchased,
+        isActive: true,
+      },
+      update: {
+        isPurchased,
+        isActive: true, // Kích hoạt lại nếu bị inactive
+      },
     });
   }
 
