@@ -535,7 +535,7 @@ export class LandingPageService {
           );
           studentUsers.push(studentUser);
         }
-        
+
         // Enroll tất cả students vào classroom
         for (const studentUser of studentUsers) {
           await this.ensureClassroomMembership(
@@ -565,7 +565,7 @@ export class LandingPageService {
             supportNotes,
           );
           studentUsers.push(studentUser);
-          
+
           // Link parent với student
           await this.ensureParentChildLink(tx, parentUser.id, studentUser.id);
         }
