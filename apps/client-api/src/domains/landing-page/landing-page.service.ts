@@ -441,6 +441,97 @@ export class LandingPageService {
     };
   }
 
+  /**
+   * Validate guest user email/phone before enrollment
+   */
+  async validateGuestUser(payload: GuestEnrollmentDto): Promise<{
+    valid: boolean;
+    message: string;
+    conflicts?: {
+      students?: Array<{ index: number; email?: boolean; phone?: boolean }>;
+      parent?: { email?: boolean; phone?: boolean };
+    };
+  }> {
+    const { role, students, parent } = payload;
+    const conflicts: any = {};
+
+    // Check students
+    const studentConflicts: Array<{ index: number; email?: boolean; phone?: boolean }> = [];
+    for (let i = 0; i < students.length; i++) {
+      const student = students[i];
+      const conflict: any = { index: i };
+      let hasConflict = false;
+
+      // Check email
+      const emailExists = await this.prisma.user.findFirst({
+        where: { email: student.email },
+      });
+      if (emailExists) {
+        conflict.email = true;
+        hasConflict = true;
+      }
+
+      // Check phone
+      const phoneExists = await this.prisma.user.findFirst({
+        where: { phone: student.phone },
+      });
+      if (phoneExists) {
+        conflict.phone = true;
+        hasConflict = true;
+      }
+
+      if (hasConflict) {
+        studentConflicts.push(conflict);
+      }
+    }
+
+    if (studentConflicts.length > 0) {
+      conflicts.students = studentConflicts;
+    }
+
+    // Check parent (only if role is parent)
+    if (role === GuestEnrollmentRole.parent && parent) {
+      const parentConflict: any = {};
+      let hasParentConflict = false;
+
+      // Check email
+      const emailExists = await this.prisma.user.findFirst({
+        where: { email: parent.email },
+      });
+      if (emailExists) {
+        parentConflict.email = true;
+        hasParentConflict = true;
+      }
+
+      // Check phone
+      const phoneExists = await this.prisma.user.findFirst({
+        where: { phone: parent.phone },
+      });
+      if (phoneExists) {
+        parentConflict.phone = true;
+        hasParentConflict = true;
+      }
+
+      if (hasParentConflict) {
+        conflicts.parent = parentConflict;
+      }
+    }
+
+    // Build response
+    if (Object.keys(conflicts).length > 0) {
+      return {
+        valid: false,
+        message: 'Email hoặc số điện thoại đã được sử dụng',
+        conflicts,
+      };
+    }
+
+    return {
+      valid: true,
+      message: 'Thông tin hợp lệ',
+    };
+  }
+
   async createGuestEnrollment(
     payload: GuestEnrollmentDto,
     ipAddress?: string,

@@ -118,6 +118,33 @@ export class LandingPageController {
     return await this.landingPageService.submitContactForm(contactFormDto);
   }
 
+  @Post('validate-guest-user')
+  @ApiOperation({
+    summary: 'Kiểm tra email/phone đã tồn tại trước khi đăng ký',
+    description: 'Validate email và phone của học sinh/phụ huynh có bị trùng không',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Kiểm tra thành công',
+    schema: {
+      type: 'object',
+      properties: {
+        valid: { type: 'boolean' },
+        message: { type: 'string' },
+        conflicts: {
+          type: 'object',
+          properties: {
+            email: { type: 'boolean' },
+            phone: { type: 'boolean' },
+          },
+        },
+      },
+    },
+  })
+  async validateGuestUser(@Body() payload: GuestEnrollmentDto) {
+    return this.landingPageService.validateGuestUser(payload);
+  }
+
   @Post('guest-enrollment')
   @ApiOperation({
     summary: 'Đăng ký khóa học từ landing page (khách vãng lai)',
