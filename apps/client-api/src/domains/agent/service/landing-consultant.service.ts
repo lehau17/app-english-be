@@ -273,7 +273,10 @@ LƯU Ý QUAN TRỌNG:
         });
     }
 
-    async processQuery(question: string): Promise<{
+    async processQuery(
+        question: string,
+        chatHistory?: Array<{ role: string; content: string }>,
+    ): Promise<{
         answer: string;
         toolsUsed: string[];
         processingTime: number;
@@ -284,6 +287,7 @@ LƯU Ý QUAN TRỌNG:
 
             const result = await this.agent.invoke({
                 input: question,
+                chat_history: chatHistory || [],
             });
 
             const processingTime = Date.now() - startTime;
@@ -303,10 +307,14 @@ LƯU Ý QUAN TRỌNG:
         }
     }
 
-    async *streamQuery(question: string): AsyncGenerator<any> {
+    async *streamQuery(
+        question: string,
+        chatHistory?: Array<{ role: string; content: string }>,
+    ): AsyncGenerator<any> {
         try {
             const stream = await this.agent.stream({
                 input: question,
+                chat_history: chatHistory || [],
             });
 
             for await (const chunk of stream) {

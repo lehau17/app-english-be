@@ -14,10 +14,12 @@ import {
 import { Response } from 'express';
 import { createReadStream } from 'fs';
 import { join } from 'path';
+import { ContinueGuestChatDto, CreateGuestChatDto, GetGuestChatHistoryDto } from './dto/guest-chat.dto';
 import { AddDocumentDto, QueryDto } from './dto/query.dto';
 import { GraphEntityService } from './service/graph-entity.service';
 import { GraphRelationshipService } from './service/graph-relationship.service';
 import { GraphTraversalService } from './service/graph-traversal.service';
+import { GuestChatService } from './service/guest-chat.service';
 import { LandingConsultantService } from './service/landing-consultant.service';
 import { LangChainAgentService } from './service/langchain-agent.service';
 import { RagService } from './service/rag.service';
@@ -44,6 +46,7 @@ export class IntelligentController {
         private graphRelationshipService: GraphRelationshipService,
         private graphTraversalService: GraphTraversalService,
         private landingConsultant: LandingConsultantService,
+        private guestChatService: GuestChatService,
         private prisma: PrismaRepository,
     ) { }
 
@@ -201,6 +204,120 @@ export class IntelligentController {
             );
             res.end();
         }
+    }
+
+    // ==================== Guest Chat Endpoints ====================
+
+    @Post('guest-chat/create')
+    @UsePipes(new ValidationPipe())
+    @ApiOperation({
+        summary: 'Tạo hoặc tiếp tục chat cho guest user',
+        description: 'Guest user gửi tin nhắn đầu tiên hoặc tiếp tục chat. Backend tự động tạo conversation và trả về ID.',
+    })
+    @ApiBody({
+        type: CreateGuestChatDto,
+        examples: {
+            first: {
+                value: {
+                    question: 'Khóa học nào phù hợp với người mới bắt đầu?',
+                },
+                summary: 'Tin nhắn đầu tiên (không có guestSessionId)',
+            },
+            continue: {
+                value: {
+                    question: 'Học phí là bao nhiêu?',
+                    guestSessionId: '550e8400-e29b-41d4-a716-446655440000',
+                },
+                summary: 'Tiếp tục chat với guestSessionId từ localStorage',
+            },
+        },
+    })
+    async createGuestChat(@Body() createDto: CreateGuestChatDto) {
+        this.logger.log(`💬 Guest chat: ${createDto.question} | session: ${createDto.guestSessionId || 'new'}`);
+        return await this.guestChatService.createOrContinueChat(
+            createDto.question,
+            createDto.guestSessionId,
+        );
+    }
+
+    @Post('guest-chat/:conversationId/stream')
+    @ApiOperation({
+        summary: 'Stream chat tiếp theo cho guest user (SSE)',
+        description: 'Guest tiếp tục chat với conversationId đã có, sử dụng SSE streaming.',
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'SSE stream of AI response',
+    })
+    async streamGuestChat(
+        @Param('conversationId') conversationId: string,
+        @Body() continueDto: ContinueGuestChatDto,
+        @Res() res: Response,
+    ): Promise<void> {
+        this.logger.log(`🌊 Guest stream: ${conversationId} | question: ${continueDto.question}`);
+
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+
+        try {
+            let chunkCount = 0;
+            for await (const chunk of this.guestChatService.streamGuestChat(
+                conversationId,
+                continueDto.question,
+            )) {
+                chunkCount++;
+                const data = JSON.stringify(chunk);
+                res.write(`data: ${data}\n\n`);
+
+                if ((res as any).flush) {
+                    (res as any).flush();
+                }
+            }
+
+            this.logger.log(`✅ Guest stream completed: ${chunkCount} chunks sent`);
+            res.write('data: [DONE]\n\n');
+            res.end();
+        } catch (error) {
+            this.logger.error(`❌ Guest stream error: ${(error as Error).message}`);
+            res.write(
+                `data: ${JSON.stringify({
+                    type: 'error',
+                    content: 'Xin lỗi, đã xảy ra lỗi. Vui lòng thử lại sau.',
+                })}\n\n`,
+            );
+            res.end();
+        }
+    }
+
+    @Post('guest-chat/history')
+    @UsePipes(new ValidationPipe())
+    @ApiOperation({
+        summary: 'Lấy lịch sử chat của guest user',
+        description: 'Dùng guestSessionId từ localStorage để lấy toàn bộ conversations và messages.',
+    })
+    @ApiBody({
+        type: GetGuestChatHistoryDto,
+        examples: {
+            default: {
+                value: { guestSessionId: '550e8400-e29b-41d4-a716-446655440000' },
+            },
+        },
+    })
+    async getGuestChatHistory(@Body() historyDto: GetGuestChatHistoryDto) {
+        this.logger.log(`📜 Get guest chat history: ${historyDto.guestSessionId}`);
+        return await this.guestChatService.getChatHistory(historyDto.guestSessionId);
+    }
+
+    @Get('guest-chat/:conversationId')
+    @ApiOperation({
+        summary: 'Lấy chi tiết một conversation',
+        description: 'Lấy conversation và tất cả messages của nó.',
+    })
+    async getGuestConversation(@Param('conversationId') conversationId: string) {
+        this.logger.log(`📖 Get conversation: ${conversationId}`);
+        return await this.guestChatService.getConversationById(conversationId);
     }
 
     @Get('health')

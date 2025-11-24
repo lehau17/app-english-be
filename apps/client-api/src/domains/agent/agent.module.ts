@@ -10,14 +10,15 @@ import { AutoReindexService } from './service/auto-reindex.service';
 import { GraphEntityService } from './service/graph-entity.service';
 import { GraphRelationshipService } from './service/graph-relationship.service';
 import { GraphTraversalService } from './service/graph-traversal.service';
+import { GuestChatService } from './service/guest-chat.service';
 import { LandingConsultantService } from './service/landing-consultant.service';
 import { LangChainAgentService } from './service/langchain-agent.service';
+import { ParentAgentService } from './service/parent-agent.service';
 import { RagCacheService } from './service/rag-cache.service';
 import { RagService } from './service/rag.service';
 import { ReportGeneratorService } from './service/report-generator.service';
 import { RerankerService } from './service/reranker.service';
 import { SqlService } from './service/sql.service';
-import { ParentAgentService } from './service/parent-agent.service';
 import { StudentAgentService } from './service/student-agent.service';
 import { TextChunkerService } from './service/text-chunker.service';
 import { ChartGeneratorTool } from './tools/chart-generator.tool';
@@ -39,6 +40,7 @@ import { WordExportTool } from './tools/word-export.tool';
     AutoReindexService,
     LangChainAgentService,
     LandingConsultantService,
+    GuestChatService,
     RagCacheService,
     TextChunkerService,
     RagService,

@@ -3143,9 +3143,12 @@ model Transaction {
 // ===================== AGENT CHAT =====================
 
 model AgentConversation {
-    id     String @id @default(uuid())
-    userId String
-    role   String @default("student") // 'student' | 'parent' | 'teacher' | 'admin'
+    id     String  @id @default(uuid())
+    userId String? // Optional for guest users
+
+    role String @default("guest") // 'guest' | 'student' | 'parent' | 'teacher' | 'admin'
+
+    guestSessionId String? // UUID from localStorage for guest tracking
 
     title    String?
     metadata Json?
@@ -3153,10 +3156,11 @@ model AgentConversation {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    user     User           @relation("AgentConversations", fields: [userId], references: [id], onDelete: Cascade)
+    user     User?          @relation("AgentConversations", fields: [userId], references: [id], onDelete: Cascade)
     messages AgentMessage[]
 
     @@index([userId])
+    @@index([guestSessionId])
     @@index([createdAt])
     @@index([role])
     @@index([userId, role])
