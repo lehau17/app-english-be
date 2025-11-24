@@ -2,8 +2,8 @@ import { Body, Controller, Get, Post, Req } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request } from 'express';
 import {
-  GuestEnrollmentDto,
-  GuestEnrollmentRole,
+    GuestEnrollmentDto,
+    GuestEnrollmentRole,
 } from './dto/guest-enrollment.dto';
 import { ContactFormPayload, LandingPageService } from './landing-page.service';
 
