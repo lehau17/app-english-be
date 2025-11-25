@@ -5,6 +5,7 @@ import {
   CreateProgressDto,
   FilterProgressRequestDto,
   UpdateProgressDto,
+  UpdateProgressTimeSpentDto,
 } from '../dto/progress.dto';
 import { ProgressRepository } from '../repository/progress.repository';
 
@@ -38,6 +39,16 @@ export class ProgressService {
     params: FilterProgressRequestDto,
   ): Promise<PageResponseDto<Progress>> {
     return this.progressRepository.list(params);
+  }
+
+  async updateTimeSpent(
+    dto: UpdateProgressTimeSpentDto,
+  ): Promise<Progress> {
+    return this.progressRepository.updateTimeSpent(
+      dto.userId,
+      dto.activityId,
+      dto.timeSpentSec,
+    );
   }
 
   private async ensureExists(id: string): Promise<void> {

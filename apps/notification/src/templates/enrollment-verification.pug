@@ -74,26 +74,26 @@ html
   body
     .container
       .header
-        .logo 📚 EngliMaster
+        .logo EngliMaster
 
-      h1 🔐 Xác thực đăng ký khóa học
+      h1 Xác thực đăng ký khóa học
 
       p Xin chào <strong>#{studentName}</strong>,
 
       p Cảm ơn bạn đã đăng ký khóa học tại EngliMaster. Vui lòng xác thực email của bạn để tiếp tục thanh toán.
 
       .info-box
-        p <strong>📖 Khóa học:</strong> #{courseName}
-        p <strong>🏫 Lớp học:</strong> #{classroomName}
-        p <strong>💰 Học phí:</strong> #{price} #{currency}
+        p <strong>Khóa học:</strong> #{courseName}
+        p <strong>Lớp học:</strong> #{classroomName}
+        p <strong>Học phí:</strong> #{price} #{currency}
         if studentCount > 1
-          p <strong>👥 Số học viên:</strong> #{studentCount}
+          p <strong>Số học viên:</strong> #{studentCount}
 
       div(style='text-align: center; margin: 30px 0;')
         a.button(href=verificationLink) Xác thực và Thanh toán
 
       .warning
-        p <strong>⏰ Lưu ý quan trọng:</strong>
+        p <strong>Lưu ý quan trọng:</strong>
         ul
           li Link xác thực này chỉ có hiệu lực trong <strong>#{expiresIn}</strong>
           li Sau khi xác thực, bạn sẽ được chuyển đến trang thanh toán

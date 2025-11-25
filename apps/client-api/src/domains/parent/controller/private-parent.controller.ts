@@ -133,6 +133,8 @@ export class PrivateParentController {
     @Query('childId') childId?: string,
     @Query('type') type?: string,
     @Query('status') status?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
   ) {
     const user = RequestContext.getValue('user');
     if (!user || !user.sub) {
@@ -145,6 +147,8 @@ export class PrivateParentController {
       childId,
       type,
       status,
+      from,
+      to,
     });
   }
 

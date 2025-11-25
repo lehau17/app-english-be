@@ -8,654 +8,698 @@ type SortOrder = 'asc' | 'desc';
 
 @Injectable()
 export class LessonRepository {
-  constructor(private readonly prisma: PrismaRepository) {}
+    constructor(private readonly prisma: PrismaRepository) { }
 
-  // ============ CRUD cơ bản ============
+    // ============ CRUD cơ bản ============
 
-  async create(data: CreateLessonDto): Promise<Lesson> {
-    return this.prisma.lesson.create({ data: data as any });
-  }
-
-  async findById(id: string): Promise<Lesson | null> {
-    return this.prisma.lesson.findUnique({ where: { id } });
-  }
-
-  async update(id: string, data: Prisma.LessonUpdateInput): Promise<Lesson> {
-    return this.prisma.lesson.update({ where: { id }, data });
-  }
-
-  async delete(id: string): Promise<Lesson> {
-    return this.prisma.lesson.delete({ where: { id } });
-  }
-
-  async list(params: FilterLessonRequestDto): Promise<PageResponseDto<Lesson>> {
-    const {
-      page = 1,
-      limit = 10,
-      search,
-      sortBy = 'orderNo',
-      sortOrder = 'asc',
-      courseId,
-    } = params;
-
-    const where: Prisma.LessonWhereInput = {
-      courseId,
-      OR: search
-        ? [
-            { title: { contains: search, mode: 'insensitive' } },
-            { description: { contains: search, mode: 'insensitive' } },
-          ]
-        : undefined,
-    };
-
-    const totalItems = await this.prisma.lesson.count({ where });
-    const totalPages = Math.max(1, Math.ceil(totalItems / limit));
-    const safePage = Math.min(Math.max(page, 1), totalPages);
-
-    const data = await this.prisma.lesson.findMany({
-      where,
-      skip: (safePage - 1) * limit,
-      take: limit,
-      orderBy: { [sortBy]: sortOrder as SortOrder },
-    });
-
-    return PageResponseDto.of(data, safePage, limit, totalItems);
-  }
-
-  // ============ BỔ SUNG CHO FLOW HỌC TẬP ============
-
-  /**
-   * Lấy lesson + activities (có _count.questions) + lessonDetails, sắp theo orderNo.
-   */
-  async getLessonFull(lessonId: string) {
-    return this.prisma.lesson.findUnique({
-      where: { id: lessonId },
-      include: {
-        activities: {
-          orderBy: { orderNo: 'asc' },
-          include: {
-            _count: { select: { attempts: true } }, // Sử dụng attempts thay vì questions
-          },
-        },
-        lessonDetails: {
-          orderBy: { orderNo: 'asc' },
-        },
-      },
-    });
-  }
-
-  /**
-   * Lấy toàn bộ activities của 1 lesson, kèm progress của user (nếu truyền userId)
-   * và tổng số câu hỏi (để FE biết bài có bao nhiêu items).
-   */
-  async getActivitiesWithProgress(lessonId: string, userId?: string) {
-    const activities = await this.prisma.activity.findMany({
-      where: { lessonId },
-      orderBy: { orderNo: 'asc' },
-      include: {
-        ...(userId
-          ? {
-              progress: {
-                where: { userId },
-                select: {
-                  userId: true,
-                  activityId: true,
-                  state: true,
-                  score: true,
-                  bestScore: true,
-                  attemptsCount: true,
-                  updatedAt: true,
-                },
-              },
-            }
-          : {}),
-      },
-    });
-
-    // Thêm question count cho mỗi activity
-    if (userId) {
-      return await Promise.all(
-        activities.map(async (activity) => {
-          const questionCount = await this.prisma.question.count({
-            where: { activityId: activity.id },
-          });
-          return {
-            ...activity,
-            _count: { questions: questionCount },
-          };
-        }),
-      );
+    async create(data: CreateLessonDto): Promise<Lesson> {
+        return this.prisma.lesson.create({ data: data as any });
     }
 
-    return activities;
-  }
-
-  /**
-   * Nhóm activities thành 3 hub cho Kids UI: games / exercises / speaking + media lessonDetails.
-   */
-  async getLessonHubs(lessonId: string, userId?: string) {
-    const [acts, media] = await Promise.all([
-      this.getActivitiesWithProgress(lessonId, userId),
-      this.prisma.lessonDetail.findMany({
-        where: {
-          lessonId,
-          OR: [
-            { type: { equals: 'media', mode: 'insensitive' } },
-            { type: { equals: 'video', mode: 'insensitive' } },
-            { type: { equals: 'audio', mode: 'insensitive' } },
-          ],
-        },
-        orderBy: { orderNo: 'asc' },
-      }),
-    ]);
-
-    const games = [];
-    const exercises = [];
-    const speaking = [];
-
-    for (const a of acts) {
-      switch (a.type) {
-        case 'mini_game':
-        case 'vocab':
-        case 'flashcard':
-          games.push(a);
-          break;
-        case 'quiz':
-        case 'grammar':
-        case 'listening':
-        case 'reading':
-        case 'writing':
-          exercises.push(a);
-          break;
-        case 'pronunciation':
-        case 'speaking':
-        case 'conversation':
-          speaking.push(a);
-          break;
-        default:
-          exercises.push(a);
-      }
+    async findById(id: string): Promise<Lesson | null> {
+        return this.prisma.lesson.findUnique({ where: { id } });
     }
 
-    return { games, exercises, speaking, media };
-  }
-
-  /**
-   * Tính overview tiến độ lesson của 1 user (bao nhiêu activity done/mastered..., % hoàn thành).
-   */
-  async getLessonProgressSummary(lessonId: string, userId: string) {
-    const acts = await this.getActivitiesWithProgress(lessonId, userId);
-    const total = acts.length;
-
-    let done = 0;
-    let mastered = 0;
-    let inProgress = 0;
-    let reviewNeeded = 0;
-
-    for (const a of acts) {
-      const p = (a as any).progress?.[0]; // Type assertion
-      if (!p) continue;
-      if (p.state === 'mastered') mastered++;
-      if (p.state === 'done') done++;
-      if (p.state === 'review_needed') reviewNeeded++;
-      if (p.state === 'in_progress') inProgress++;
+    async update(id: string, data: Prisma.LessonUpdateInput): Promise<Lesson> {
+        return this.prisma.lesson.update({ where: { id }, data });
     }
 
-    const passedCount = done + mastered + reviewNeeded;
-    const completion = total > 0 ? Math.round((passedCount * 100) / total) : 0;
-
-    return {
-      totalActivities: total,
-      done,
-      mastered,
-      reviewNeeded,
-      inProgress,
-      completion, // %
-    };
-  }
-
-  /**
-   * Tìm activity kế tiếp cho user trong lesson (linear flow).
-   * Quy tắc: activity đầu tiên chưa "pass" là next.
-   * "Pass" = state ∈ {done, mastered} VÀ (nếu có passingScore) bestScore/score ≥ passingScore.
-   */
-  async getNextActivityForUser(
-    lessonId: string,
-    userId: string,
-  ): Promise<Activity | null> {
-    const acts = await this.prisma.activity.findMany({
-      where: { lessonId },
-      orderBy: { orderNo: 'asc' },
-      include: {
-        progress: {
-          where: { userId },
-          select: { state: true, score: true, bestScore: true },
-        },
-      },
-    });
-
-    for (const a of acts) {
-      const p = (a as any).progress?.[0]; // Type assertion để tránh lỗi TypeScript
-      const passed = this.isPassed(a, p);
-      if (!passed) {
-        return a;
-      }
+    async delete(id: string): Promise<Lesson> {
+        return this.prisma.lesson.delete({ where: { id } });
     }
-    return null;
-  }
 
-  /**
-   * Kiểm tra user có được phép start 1 activity không, dựa trên:
-   * - Phải vượt qua activity trước đó (nếu có) theo orderNo và passingScore.
-   * - (Tuỳ chọn) Kiểm tra prereqs trong Activity.content.prereqs (nếu bạn có cấu hình).
-   */
-  async canStartActivity(
-    userId: string,
-    activityId: string,
-  ): Promise<{ allowed: boolean; reason?: string; unmet?: any[] }> {
-    const act = await this.prisma.activity.findUnique({
-      where: { id: activityId },
-      select: {
-        id: true,
-        lessonId: true,
-        orderNo: true,
-        passingScore: true,
-        content: true,
-      },
-    });
-    if (!act) return { allowed: false, reason: 'activity_not_found' };
+    async list(params: FilterLessonRequestDto): Promise<PageResponseDto<Lesson>> {
+        const {
+            page = 1,
+            limit = 10,
+            search,
+            sortBy = 'orderNo',
+            sortOrder = 'asc',
+            courseId,
+        } = params;
 
-    // Check previous activity pass (linear gating)
-    if (act.orderNo > 1) {
-      const prev = await this.prisma.activity.findFirst({
-        where: {
-          lessonId: act.lessonId,
-          orderNo: act.orderNo - 1,
-        },
-        select: { id: true, passingScore: true },
-      });
-      if (prev) {
-        const prevProg = await this.prisma.progress.findUnique({
-          where: {
-            userId_activityId: { userId, activityId: prev.id },
-          },
-          select: { state: true, score: true, bestScore: true },
+        const where: Prisma.LessonWhereInput = {
+            courseId,
+            OR: search
+                ? [
+                    { title: { contains: search, mode: 'insensitive' } },
+                    { description: { contains: search, mode: 'insensitive' } },
+                ]
+                : undefined,
+        };
+
+        const totalItems = await this.prisma.lesson.count({ where });
+        const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+        const safePage = Math.min(Math.max(page, 1), totalPages);
+
+        const data = await this.prisma.lesson.findMany({
+            where,
+            skip: (safePage - 1) * limit,
+            take: limit,
+            orderBy: { [sortBy]: sortOrder as SortOrder },
         });
-        const prevPassed = this.isPassed(
-          { passingScore: prev.passingScore } as any,
-          prevProg,
-        );
-        if (!prevPassed)
-          return { allowed: false, reason: 'previous_activity_not_passed' };
-      }
+
+        return PageResponseDto.of(data, safePage, limit, totalItems);
     }
 
-    // Optional: check custom prereqs in content JSON
-    const unmet: any[] = [];
-    const content = (act.content as any) || {};
-    const prereqs: any[] = Array.isArray(content?.prereqs)
-      ? content.prereqs
-      : [];
-    if (prereqs.length) {
-      // gom sẵn progress của user cho các activity liên quan để tránh N+1
-      const depActIds = prereqs
-        .filter(
-          (p) =>
-            p?.type === 'activity_done' && typeof p.activityId === 'string',
-        )
-        .map((p) => p.activityId);
+    // ============ BỔ SUNG CHO FLOW HỌC TẬP ============
 
-      const depProgress = depActIds.length
-        ? await this.prisma.progress.findMany({
-            where: { userId, activityId: { in: depActIds } },
-            select: {
-              activityId: true,
-              state: true,
-              score: true,
-              bestScore: true,
-            },
-          })
-        : [];
-
-      const byAct = new Map(depProgress.map((d) => [d.activityId, d]));
-
-      for (const pr of prereqs) {
-        if (pr?.type === 'activity_done' && pr.activityId) {
-          const prog = byAct.get(pr.activityId);
-          const ok =
-            prog &&
-            (prog.state === 'done' || prog.state === 'mastered') &&
-            (typeof pr.minScore === 'number'
-              ? (prog.bestScore ?? prog.score ?? 0) >= pr.minScore
-              : true);
-
-          if (!ok) unmet.push(pr);
-        }
-        // Bạn có thể bổ sung thêm rule khác ở đây (watched_media, etc.)
-      }
-    }
-
-    if (unmet.length)
-      return { allowed: false, reason: 'unmet_prerequisites', unmet };
-    return { allowed: true };
-  }
-
-  /**
-   * Khởi động/đánh dấu user "bắt đầu" activity (tạo Progress nếu chưa có).
-   */
-  async startActivity(userId: string, activityId: string) {
-    // Check if progress already exists and is completed
-    const existing = await this.prisma.progress.findUnique({
-      where: { userId_activityId: { userId, activityId } },
-      select: { state: true },
-    });
-
-    // If already mastered, review_needed, or done - don't reset to in_progress
-    if (
-      existing &&
-      ['mastered', 'review_needed', 'done'].includes(existing.state)
-    ) {
-      return this.prisma.progress.findUnique({
-        where: { userId_activityId: { userId, activityId } },
-      });
-    }
-
-    // Otherwise, create or update to in_progress
-    return this.prisma.progress.upsert({
-      where: { userId_activityId: { userId, activityId } },
-      create: { userId, activityId, state: 'in_progress' },
-      update: { state: 'in_progress', updatedAt: new Date() },
-    });
-  }
-
-  /**
-   * Đánh dấu "hoàn thành" activity dựa trên điểm (để dùng sau khi chấm).
-   * Không tạo Attempt ở đây (nên để service khác tạo Attempt), chỉ cập nhật Progress.
-   * Logic mới:
-   * - score >= 85: mastered
-   * - 70 <= score < 85: review_needed
-   * - score < 70: không đổi state, chỉ tăng attemptsCount và cập nhật score.
-   */
-  async completeActivity(userId: string, activityId: string, score?: number) {
-    const MASTERY_SCORE = 85;
-    const PASSING_SCORE = 70;
-
-    let newState: ProgressState | undefined;
-    if (score != null) {
-      if (score >= MASTERY_SCORE) {
-        newState = 'mastered';
-      } else if (score >= PASSING_SCORE) {
-        newState = 'review_needed';
-      }
-    }
-
-    return this.prisma.progress.upsert({
-      where: { userId_activityId: { userId, activityId } },
-      create: {
-        userId,
-        activityId,
-        state: newState ?? 'in_progress', // Nếu lần đầu làm mà fail thì state là in_progress
-        score: score ?? null,
-        bestScore: score ?? null,
-        attemptsCount: 1,
-      },
-      update: {
-        state: newState, // Nếu newState là undefined (do score < 70), state sẽ không được cập nhật.
-        score: score ?? undefined,
-        bestScore: {
-          set:
-            score == null
-              ? undefined
-              : await this.computeBestScore(userId, activityId, score),
-        },
-        attemptsCount: { increment: 1 },
-        updatedAt: new Date(),
-      },
-    });
-  }
-
-  /**
-   * Tính bestScore mới (giữa bestScore cũ và score lần này).
-   */
-  private async computeBestScore(
-    userId: string,
-    activityId: string,
-    newScore: number,
-  ) {
-    const prev = await this.prisma.progress.findUnique({
-      where: { userId_activityId: { userId, activityId } },
-      select: { bestScore: true },
-    });
-    const prevBest = prev?.bestScore ?? 0;
-    return Math.max(prevBest, newScore);
-  }
-
-  /**
-   * Helper: xác định 1 activity đã "pass" hay chưa theo Progress + passingScore.
-   */
-  private isPassed(
-    activity: { passingScore?: number | null },
-    progress?: {
-      state?: ProgressState | null;
-      score?: number | null;
-      bestScore?: number | null;
-    },
-  ): boolean {
-    if (!progress) return false;
-    // An activity is considered "passed" if its state is mastered, done, or review_needed.
-    const passedStates: ProgressState[] = ['mastered', 'done', 'review_needed'];
-    if (!passedStates.includes(progress.state)) {
-      return false;
-    }
-
-    // If a passing score is defined for the activity, the user's best score must meet it.
-    // This check is maintained for 'done' and 'review_needed' states if they have associated scores.
-    // For 'mastered', we can assume the score condition is already met.
-    if (
-      typeof activity.passingScore === 'number' &&
-      activity.passingScore > 0
-    ) {
-      const best = progress.bestScore ?? progress.score ?? 0;
-      return best >= activity.passingScore;
-    }
-
-    // If no passing score is defined, simply being in a "passed" state is sufficient.
-    return true;
-  }
-
-  /**
-   * Lấy danh sách khoá học mà user đang học (qua bảng ClassroomStudent)
-   */
-  async listCoursesOfUser(userId: string) {
-    const enrollments = await this.prisma.classroomStudent.findMany({
-      where: { studentId: userId, isActive: true },
-      include: {
-        classroom: {
-          include: {
-            course: true,
-          },
-        },
-      },
-    });
-
-    // Lọc ra những course duy nhất và loại bỏ null
-    const courses = enrollments
-      .map((e) => e.classroom?.course)
-      .filter((course) => course != null);
-
-    // Loại bỏ duplicate courses
-    const uniqueCourses = courses.filter(
-      (course, index, self) =>
-        index === self.findIndex((c) => c.id === course.id),
-    );
-
-    return uniqueCourses;
-  }
-
-  /**
-   * Lấy thống kê tổng quan của một lesson
-   */
-  async getLessonStats(lessonId: string) {
-    const [lesson, activitiesCount, questionsCount] = await Promise.all([
-      this.prisma.lesson.findUnique({
-        where: { id: lessonId },
-        select: {
-          id: true,
-          title: true,
-          difficulty: true,
-          estimatedTime: true,
-          createdAt: true,
-        },
-      }),
-      this.prisma.activity.count({ where: { lessonId } }),
-      this.prisma.question.count({
-        where: {
-          activityId: {
-            in: await this.prisma.activity
-              .findMany({
-                where: { lessonId },
-                select: { id: true },
-              })
-              .then((acts) => acts.map((a) => a.id)),
-          },
-        },
-      }),
-    ]);
-
-    if (!lesson) return null;
-
-    return {
-      ...lesson,
-      totalActivities: activitiesCount,
-      totalQuestions: questionsCount,
-    };
-  }
-
-  /**
-   * Lấy danh sách lesson thuộc một khoá học kèm progress của user
-   * Bao gồm logic unlock lessons dựa trên completion của lesson trước
-   */
-  async listLessonsOfCourseWithProgress(courseId: string, userId?: string) {
-    const lessons = await this.prisma.lesson.findMany({
-      where: { courseId },
-      orderBy: { orderNo: 'asc' },
-      include: {
-        activities: {
-          select: {
-            id: true,
-            type: true,
-            passingScore: true,
-            ...(userId
-              ? {
-                  progress: {
-                    where: { userId },
-                    select: {
-                      state: true,
-                      score: true,
-                      bestScore: true,
+    /**
+     * Lấy lesson + activities (có _count.questions) + lessonDetails, sắp theo orderNo.
+     */
+    async getLessonFull(lessonId: string) {
+        return this.prisma.lesson.findUnique({
+            where: { id: lessonId },
+            include: {
+                activities: {
+                    orderBy: { orderNo: 'asc' },
+                    include: {
+                        _count: { select: { attempts: true } }, // Sử dụng attempts thay vì questions
                     },
-                  },
-                }
-              : {}),
-          },
-        },
-        _count: {
-          select: { activities: true },
-        },
-      },
-    });
+                },
+                lessonDetails: {
+                    orderBy: { orderNo: 'asc' },
+                },
+            },
+        });
+    }
 
-    // Tính progress cho từng lesson nếu có userId
-    if (userId) {
-      return lessons.map((lesson, index) => {
-        const activities = lesson.activities;
-        const totalActivities = activities.length;
-        let completedActivities = 0;
+    /**
+     * Lấy toàn bộ activities của 1 lesson, kèm progress của user (nếu truyền userId)
+     * và tổng số câu hỏi (để FE biết bài có bao nhiêu items).
+     */
+    async getActivitiesWithProgress(lessonId: string, userId?: string) {
+        const activities = await this.prisma.activity.findMany({
+            where: { lessonId },
+            orderBy: { orderNo: 'asc' },
+            include: {
+                ...(userId
+                    ? {
+                        progress: {
+                            where: { userId },
+                            select: {
+                                userId: true,
+                                activityId: true,
+                                state: true,
+                                score: true,
+                                bestScore: true,
+                                attemptsCount: true,
+                                updatedAt: true,
+                            },
+                        },
+                    }
+                    : {}),
+            },
+        });
 
-        for (const activity of activities) {
-          const progress = (activity as any).progress?.[0];
-          if (
-            progress &&
-            (progress.state === 'done' || progress.state === 'mastered')
-          ) {
-            completedActivities++;
-          }
+        // Thêm question count cho mỗi activity
+        if (userId) {
+            return await Promise.all(
+                activities.map(async (activity) => {
+                    const questionCount = await this.prisma.question.count({
+                        where: { activityId: activity.id },
+                    });
+                    return {
+                        ...activity,
+                        _count: { questions: questionCount },
+                    };
+                }),
+            );
         }
 
-        const completion =
-          totalActivities > 0
-            ? Math.round((completedActivities * 100) / totalActivities)
-            : 0;
+        return activities;
+    }
 
-        // LESSON UNLOCKING LOGIC:
-        // Lesson đầu tiên luôn được unlock
-        // Lesson tiếp theo chỉ unlock khi lesson trước đó hoàn thành 100%
-        let dynamicIsLocked = lesson.isLocked;
-        if (index === 0) {
-          // Lesson đầu tiên luôn unlock
-          dynamicIsLocked = false;
-        } else if (index > 0 && lessons[index - 1]) {
-          // Kiểm tra lesson trước đã hoàn thành chưa
-          const prevLesson = lessons[index - 1];
-          const prevActivities = prevLesson.activities;
-          const prevTotalActivities = prevActivities.length;
-          let prevCompletedActivities = 0;
+    /**
+     * Nhóm activities thành 3 hub cho Kids UI: games / exercises / speaking + media lessonDetails.
+     */
+    async getLessonHubs(lessonId: string, userId?: string) {
+        const [acts, media] = await Promise.all([
+            this.getActivitiesWithProgress(lessonId, userId),
+            this.prisma.lessonDetail.findMany({
+                where: {
+                    lessonId,
+                    OR: [
+                        { type: { equals: 'media', mode: 'insensitive' } },
+                        { type: { equals: 'video', mode: 'insensitive' } },
+                        { type: { equals: 'audio', mode: 'insensitive' } },
+                    ],
+                },
+                orderBy: { orderNo: 'asc' },
+            }),
+        ]);
 
-          for (const activity of prevActivities) {
-            const progress = (activity as any).progress?.[0];
-            if (
-              progress &&
-              (progress.state === 'done' || progress.state === 'mastered')
-            ) {
-              prevCompletedActivities++;
+        const games = [];
+        const exercises = [];
+        const speaking = [];
+
+        for (const a of acts) {
+            switch (a.type) {
+                case 'mini_game':
+                case 'vocab':
+                case 'flashcard':
+                    games.push(a);
+                    break;
+                case 'quiz':
+                case 'grammar':
+                case 'listening':
+                case 'reading':
+                case 'writing':
+                    exercises.push(a);
+                    break;
+                case 'pronunciation':
+                case 'speaking':
+                case 'conversation':
+                    speaking.push(a);
+                    break;
+                default:
+                    exercises.push(a);
             }
-          }
-
-          const prevCompletion =
-            prevTotalActivities > 0
-              ? Math.round(
-                  (prevCompletedActivities * 100) / prevTotalActivities,
-                )
-              : 0;
-
-          // Unlock nếu lesson trước hoàn thành 100%
-          if (prevCompletion >= 100) {
-            dynamicIsLocked = false;
-          }
         }
+
+        return { games, exercises, speaking, media };
+    }
+
+    /**
+     * Tính overview tiến độ lesson của 1 user (bao nhiêu activity done/mastered..., % hoàn thành).
+     */
+    async getLessonProgressSummary(lessonId: string, userId: string) {
+        const acts = await this.getActivitiesWithProgress(lessonId, userId);
+        const total = acts.length;
+
+        let done = 0;
+        let mastered = 0;
+        let inProgress = 0;
+        let reviewNeeded = 0;
+
+        for (const a of acts) {
+            const p = (a as any).progress?.[0]; // Type assertion
+            if (!p) continue;
+            if (p.state === 'mastered') mastered++;
+            if (p.state === 'done') done++;
+            if (p.state === 'review_needed') reviewNeeded++;
+            if (p.state === 'in_progress') inProgress++;
+        }
+
+        const passedCount = done + mastered + reviewNeeded;
+        const completion = total > 0 ? Math.round((passedCount * 100) / total) : 0;
 
         return {
-          ...lesson,
-          isLocked: dynamicIsLocked, // Override với dynamic logic
-          progress: {
-            totalActivities,
-            completedActivities,
-            completion,
-          },
+            totalActivities: total,
+            done,
+            mastered,
+            reviewNeeded,
+            inProgress,
+            completion, // %
         };
-      });
     }
 
-    // Nếu không có userId, vẫn áp dụng unlock logic cơ bản (chỉ lesson đầu tiên unlock)
-    return lessons.map((lesson, index) => ({
-      ...lesson,
-      isLocked: index === 0 ? false : lesson.isLocked,
-    }));
-  }
+    /**
+     * Tìm activity kế tiếp cho user trong lesson (linear flow).
+     * Quy tắc: activity đầu tiên chưa "pass" là next.
+     * "Pass" = state ∈ {done, mastered} VÀ (nếu có passingScore) bestScore/score ≥ passingScore.
+     */
+    async getNextActivityForUser(
+        lessonId: string,
+        userId: string,
+    ): Promise<Activity | null> {
+        const acts = await this.prisma.activity.findMany({
+            where: { lessonId },
+            orderBy: { orderNo: 'asc' },
+            include: {
+                progress: {
+                    where: { userId },
+                    select: { state: true, score: true, bestScore: true },
+                },
+            },
+        });
 
-  /**
-   * Lấy danh sách lesson thuộc một khoá học
-   */
-  async listLessonsOfCourse(courseId: string) {
-    return this.prisma.lesson.findMany({
-      where: { courseId },
-      orderBy: { orderNo: 'asc' },
-    });
-  }
+        for (const a of acts) {
+            const p = (a as any).progress?.[0]; // Type assertion để tránh lỗi TypeScript
+            const passed = this.isPassed(a, p);
+            if (!passed) {
+                return a;
+            }
+        }
+        return null;
+    }
 
-  async getProgressByUserIdAndActivityId(userId: string, activityId: string) {
-    return this.prisma.progress.findUnique({
-      where: { userId_activityId: { userId, activityId } },
-    });
-  }
+    /**
+     * Kiểm tra user có được phép start 1 activity không, dựa trên:
+     * - Phải vượt qua activity trước đó (nếu có) theo orderNo và passingScore.
+     * - (Tuỳ chọn) Kiểm tra prereqs trong Activity.content.prereqs (nếu bạn có cấu hình).
+     */
+    async canStartActivity(
+        userId: string,
+        activityId: string,
+    ): Promise<{ allowed: boolean; reason?: string; unmet?: any[] }> {
+        const act = await this.prisma.activity.findUnique({
+            where: { id: activityId },
+            select: {
+                id: true,
+                lessonId: true,
+                orderNo: true,
+                passingScore: true,
+                content: true,
+            },
+        });
+        if (!act) return { allowed: false, reason: 'activity_not_found' };
+
+        // Check previous activity pass (linear gating)
+        if (act.orderNo > 1) {
+            const prev = await this.prisma.activity.findFirst({
+                where: {
+                    lessonId: act.lessonId,
+                    orderNo: act.orderNo - 1,
+                },
+                select: { id: true, passingScore: true },
+            });
+            if (prev) {
+                const prevProg = await this.prisma.progress.findUnique({
+                    where: {
+                        userId_activityId: { userId, activityId: prev.id },
+                    },
+                    select: { state: true, score: true, bestScore: true },
+                });
+                const prevPassed = this.isPassed(
+                    { passingScore: prev.passingScore } as any,
+                    prevProg,
+                );
+                if (!prevPassed)
+                    return { allowed: false, reason: 'previous_activity_not_passed' };
+            }
+        }
+
+        // Optional: check custom prereqs in content JSON
+        const unmet: any[] = [];
+        const content = (act.content as any) || {};
+        const prereqs: any[] = Array.isArray(content?.prereqs)
+            ? content.prereqs
+            : [];
+        if (prereqs.length) {
+            // gom sẵn progress của user cho các activity liên quan để tránh N+1
+            const depActIds = prereqs
+                .filter(
+                    (p) =>
+                        p?.type === 'activity_done' && typeof p.activityId === 'string',
+                )
+                .map((p) => p.activityId);
+
+            const depProgress = depActIds.length
+                ? await this.prisma.progress.findMany({
+                    where: { userId, activityId: { in: depActIds } },
+                    select: {
+                        activityId: true,
+                        state: true,
+                        score: true,
+                        bestScore: true,
+                    },
+                })
+                : [];
+
+            const byAct = new Map(depProgress.map((d) => [d.activityId, d]));
+
+            for (const pr of prereqs) {
+                if (pr?.type === 'activity_done' && pr.activityId) {
+                    const prog = byAct.get(pr.activityId);
+                    const ok =
+                        prog &&
+                        (prog.state === 'done' || prog.state === 'mastered') &&
+                        (typeof pr.minScore === 'number'
+                            ? (prog.bestScore ?? prog.score ?? 0) >= pr.minScore
+                            : true);
+
+                    if (!ok) unmet.push(pr);
+                }
+                // Bạn có thể bổ sung thêm rule khác ở đây (watched_media, etc.)
+            }
+        }
+
+        if (unmet.length)
+            return { allowed: false, reason: 'unmet_prerequisites', unmet };
+        return { allowed: true };
+    }
+
+    /**
+     * Khởi động/đánh dấu user "bắt đầu" activity (tạo Progress nếu chưa có).
+     */
+    async startActivity(userId: string, activityId: string) {
+        // Check if progress already exists and is completed
+        const existing = await this.prisma.progress.findUnique({
+            where: { userId_activityId: { userId, activityId } },
+            select: { state: true },
+        });
+
+        // If already mastered, review_needed, or done - don't reset to in_progress
+        if (
+            existing &&
+            ['mastered', 'review_needed', 'done'].includes(existing.state)
+        ) {
+            return this.prisma.progress.findUnique({
+                where: { userId_activityId: { userId, activityId } },
+            });
+        }
+
+        // Otherwise, create or update to in_progress
+        return this.prisma.progress.upsert({
+            where: { userId_activityId: { userId, activityId } },
+            create: { userId, activityId, state: 'in_progress' },
+            update: { state: 'in_progress', updatedAt: new Date() },
+        });
+    }
+
+    /**
+     * Đánh dấu "hoàn thành" activity dựa trên điểm (để dùng sau khi chấm).
+     * Tạo Attempt nếu chưa có (cho các activity không qua evaluation service).
+     * Logic mới:
+     * - score >= 85: mastered
+     * - 70 <= score < 85: review_needed
+     * - score < 70: không đổi state, chỉ tăng attemptsCount và cập nhật score.
+     */
+    async completeActivity(
+        userId: string,
+        activityId: string,
+        score?: number,
+        timeSpentSec?: number,
+    ) {
+        const MASTERY_SCORE = 85;
+        const PASSING_SCORE = 70;
+
+        let newState: ProgressState | undefined;
+        if (score != null) {
+            if (score >= MASTERY_SCORE) {
+                newState = 'mastered';
+            } else if (score >= PASSING_SCORE) {
+                newState = 'review_needed';
+            }
+        }
+
+        // Get existing progress to preserve timeSpentSec
+        const existing = await this.prisma.progress.findUnique({
+            where: { userId_activityId: { userId, activityId } },
+            select: { timeSpentSec: true },
+        });
+
+        const currentTimeSpent = existing?.timeSpentSec || 0;
+        const newTimeSpent = timeSpentSec != null ? currentTimeSpent + timeSpentSec : currentTimeSpent;
+
+        // Create Attempt if score is provided (for activities that don't go through evaluation service)
+        // Only create if no attempt was created in the last few seconds (to avoid duplicates from evaluation service)
+        if (score != null) {
+            const recentAttempt = await this.prisma.attempt.findFirst({
+                where: {
+                    userId,
+                    activityId,
+                    createdAt: {
+                        gte: new Date(Date.now() - 5000), // Within last 5 seconds
+                    },
+                },
+                orderBy: { createdAt: 'desc' },
+            });
+
+            if (!recentAttempt) {
+                // No recent attempt found, create one
+                await this.prisma.attempt.create({
+                    data: {
+                        userId,
+                        activityId,
+                        score,
+                        maxScore: 100,
+                        timeSpent: newTimeSpent
+                    },
+                });
+            }
+        }
+
+        return this.prisma.progress.upsert({
+            where: { userId_activityId: { userId, activityId } },
+            create: {
+                userId,
+                activityId,
+                state: newState ?? 'in_progress', // Nếu lần đầu làm mà fail thì state là in_progress
+                score: score ?? null,
+                bestScore: score ?? null,
+                attemptsCount: 1,
+                timeSpentSec: newTimeSpent
+            },
+            update: {
+                state: newState, // Nếu newState là undefined (do score < 70), state sẽ không được cập nhật.
+                score: score ?? undefined,
+                bestScore: {
+                    set:
+                        score == null
+                            ? undefined
+                            : await this.computeBestScore(userId, activityId, score),
+                },
+                attemptsCount: { increment: 1 },
+                timeSpentSec: newTimeSpent,
+                updatedAt: new Date(),
+            },
+        });
+    }
+
+    /**
+     * Tính bestScore mới (giữa bestScore cũ và score lần này).
+     */
+    private async computeBestScore(
+        userId: string,
+        activityId: string,
+        newScore: number,
+    ) {
+        const prev = await this.prisma.progress.findUnique({
+            where: { userId_activityId: { userId, activityId } },
+            select: { bestScore: true },
+        });
+        const prevBest = prev?.bestScore ?? 0;
+        return Math.max(prevBest, newScore);
+    }
+
+    /**
+     * Helper: xác định 1 activity đã "pass" hay chưa theo Progress + passingScore.
+     */
+    private isPassed(
+        activity: { passingScore?: number | null },
+        progress?: {
+            state?: ProgressState | null;
+            score?: number | null;
+            bestScore?: number | null;
+        },
+    ): boolean {
+        if (!progress) return false;
+        // An activity is considered "passed" if its state is mastered, done, or review_needed.
+        const passedStates: ProgressState[] = ['mastered', 'done', 'review_needed'];
+        if (!passedStates.includes(progress.state)) {
+            return false;
+        }
+
+        // If a passing score is defined for the activity, the user's best score must meet it.
+        // This check is maintained for 'done' and 'review_needed' states if they have associated scores.
+        // For 'mastered', we can assume the score condition is already met.
+        if (
+            typeof activity.passingScore === 'number' &&
+            activity.passingScore > 0
+        ) {
+            const best = progress.bestScore ?? progress.score ?? 0;
+            return best >= activity.passingScore;
+        }
+
+        // If no passing score is defined, simply being in a "passed" state is sufficient.
+        return true;
+    }
+
+    /**
+     * Lấy danh sách khoá học mà user đang học (qua bảng ClassroomStudent)
+     */
+    async listCoursesOfUser(userId: string) {
+        const enrollments = await this.prisma.classroomStudent.findMany({
+            where: { studentId: userId, isActive: true },
+            include: {
+                classroom: {
+                    include: {
+                        course: true,
+                    },
+                },
+            },
+        });
+
+        // Lọc ra những course duy nhất và loại bỏ null
+        const courses = enrollments
+            .map((e) => e.classroom?.course)
+            .filter((course) => course != null);
+
+        // Loại bỏ duplicate courses
+        const uniqueCourses = courses.filter(
+            (course, index, self) =>
+                index === self.findIndex((c) => c.id === course.id),
+        );
+
+        return uniqueCourses;
+    }
+
+    /**
+     * Lấy thống kê tổng quan của một lesson
+     */
+    async getLessonStats(lessonId: string) {
+        const [lesson, activitiesCount, questionsCount] = await Promise.all([
+            this.prisma.lesson.findUnique({
+                where: { id: lessonId },
+                select: {
+                    id: true,
+                    title: true,
+                    difficulty: true,
+                    estimatedTime: true,
+                    createdAt: true,
+                },
+            }),
+            this.prisma.activity.count({ where: { lessonId } }),
+            this.prisma.question.count({
+                where: {
+                    activityId: {
+                        in: await this.prisma.activity
+                            .findMany({
+                                where: { lessonId },
+                                select: { id: true },
+                            })
+                            .then((acts) => acts.map((a) => a.id)),
+                    },
+                },
+            }),
+        ]);
+
+        if (!lesson) return null;
+
+        return {
+            ...lesson,
+            totalActivities: activitiesCount,
+            totalQuestions: questionsCount,
+        };
+    }
+
+    /**
+     * Lấy danh sách lesson thuộc một khoá học kèm progress của user
+     * Bao gồm logic unlock lessons dựa trên completion của lesson trước
+     */
+    async listLessonsOfCourseWithProgress(courseId: string, userId?: string) {
+        const lessons = await this.prisma.lesson.findMany({
+            where: { courseId },
+            orderBy: { orderNo: 'asc' },
+            include: {
+                activities: {
+                    select: {
+                        id: true,
+                        type: true,
+                        passingScore: true,
+                        ...(userId
+                            ? {
+                                progress: {
+                                    where: { userId },
+                                    select: {
+                                        state: true,
+                                        score: true,
+                                        bestScore: true,
+                                    },
+                                },
+                            }
+                            : {}),
+                    },
+                },
+                _count: {
+                    select: { activities: true },
+                },
+            },
+        });
+
+        // Tính progress cho từng lesson nếu có userId
+        if (userId) {
+            return lessons.map((lesson, index) => {
+                const activities = lesson.activities;
+                const totalActivities = activities.length;
+                let completedActivities = 0;
+
+                for (const activity of activities) {
+                    const progress = (activity as any).progress?.[0];
+                    if (
+                        progress &&
+                        (progress.state === 'done' || progress.state === 'mastered')
+                    ) {
+                        completedActivities++;
+                    }
+                }
+
+                const completion =
+                    totalActivities > 0
+                        ? Math.round((completedActivities * 100) / totalActivities)
+                        : 0;
+
+                // LESSON UNLOCKING LOGIC:
+                // Lesson đầu tiên luôn được unlock
+                // Lesson tiếp theo chỉ unlock khi lesson trước đó hoàn thành 100%
+                let dynamicIsLocked = lesson.isLocked;
+                if (index === 0) {
+                    // Lesson đầu tiên luôn unlock
+                    dynamicIsLocked = false;
+                } else if (index > 0 && lessons[index - 1]) {
+                    // Kiểm tra lesson trước đã hoàn thành chưa
+                    const prevLesson = lessons[index - 1];
+                    const prevActivities = prevLesson.activities;
+                    const prevTotalActivities = prevActivities.length;
+                    let prevCompletedActivities = 0;
+
+                    for (const activity of prevActivities) {
+                        const progress = (activity as any).progress?.[0];
+                        if (
+                            progress &&
+                            (progress.state === 'done' || progress.state === 'mastered')
+                        ) {
+                            prevCompletedActivities++;
+                        }
+                    }
+
+                    const prevCompletion =
+                        prevTotalActivities > 0
+                            ? Math.round(
+                                (prevCompletedActivities * 100) / prevTotalActivities,
+                            )
+                            : 0;
+
+                    // Unlock nếu lesson trước hoàn thành 100%
+                    if (prevCompletion >= 100) {
+                        dynamicIsLocked = false;
+                    }
+                }
+
+                return {
+                    ...lesson,
+                    isLocked: dynamicIsLocked, // Override với dynamic logic
+                    progress: {
+                        totalActivities,
+                        completedActivities,
+                        completion,
+                    },
+                };
+            });
+        }
+
+        // Nếu không có userId, vẫn áp dụng unlock logic cơ bản (chỉ lesson đầu tiên unlock)
+        return lessons.map((lesson, index) => ({
+            ...lesson,
+            isLocked: index === 0 ? false : lesson.isLocked,
+        }));
+    }
+
+    /**
+     * Lấy danh sách lesson thuộc một khoá học
+     */
+    async listLessonsOfCourse(courseId: string) {
+        return this.prisma.lesson.findMany({
+            where: { courseId },
+            orderBy: { orderNo: 'asc' },
+        });
+    }
+
+    async getProgressByUserIdAndActivityId(userId: string, activityId: string) {
+        return this.prisma.progress.findUnique({
+            where: { userId_activityId: { userId, activityId } },
+        });
+    }
 }

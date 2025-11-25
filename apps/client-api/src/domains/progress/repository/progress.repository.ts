@@ -62,4 +62,44 @@ export class ProgressRepository {
 
     return PageResponseDto.of(data, safePage, limit, totalItems);
   }
+
+  async findByUserIdAndActivityId(
+    userId: string,
+    activityId: string,
+  ): Promise<Progress | null> {
+    return this.prisma.progress.findUnique({
+      where: { userId_activityId: { userId, activityId } },
+    });
+  }
+
+  async updateTimeSpent(
+    userId: string,
+    activityId: string,
+    timeSpentSec: number,
+  ): Promise<Progress> {
+    // Find existing progress
+    const existing = await this.findByUserIdAndActivityId(userId, activityId);
+
+    if (!existing) {
+      // Create new progress if doesn't exist
+      return this.prisma.progress.create({
+        data: {
+          userId,
+          activityId,
+          state: 'in_progress',
+          timeSpentSec,
+        },
+      });
+    }
+
+    // Update by incrementing timeSpentSec
+    return this.prisma.progress.update({
+      where: { userId_activityId: { userId, activityId } },
+      data: {
+        timeSpentSec: {
+          increment: timeSpentSec,
+        },
+      },
+    });
+  }
 }

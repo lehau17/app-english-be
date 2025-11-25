@@ -220,6 +220,11 @@ export class CompleteActivityRequestDto {
   @IsNumber()
   @Type(() => Number)
   score?: number;
+  @ApiPropertyOptional({ description: 'Time spent in seconds' })
+  @IsOptional()
+  @IsNumber()
+  @Type(() => Number)
+  timeSpentSec?: number;
 }
 
 export class CompleteActivityResponseDto {
