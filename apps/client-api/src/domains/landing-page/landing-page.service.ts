@@ -1,4 +1,5 @@
 import { PrismaRepository } from '@app/database';
+import { KafkaProducerService, KafkaTopic } from '@app/shared';
 import {
     BadRequestException,
     ConflictException,
@@ -6,6 +7,8 @@ import {
     Logger,
     NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import {
     Classroom,
     ClassroomStatus,
@@ -23,6 +26,7 @@ import {
     GuestEnrollmentRole,
     GuestPersonDto,
 } from './dto/guest-enrollment.dto';
+import { VerifyEnrollmentEmailDto } from './dto/verify-enrollment-email.dto';
 
 export interface LandingPageFeature {
   icon: string;
@@ -395,6 +399,9 @@ export class LandingPageService {
   constructor(
     private readonly prisma: PrismaRepository,
     private readonly paymentService: PaymentService,
+    private readonly jwtService: JwtService,
+    private readonly kafkaProducer: KafkaProducerService,
+    private readonly configService: ConfigService,
   ) {}
 
   async getLandingPageData(): Promise<LandingPageData> {
@@ -442,7 +449,278 @@ export class LandingPageService {
   }
 
   /**
-   * Validate guest user email/phone before enrollment
+   * FLOW MỚI - Step 1: Verify email và gửi verification link
+   * Check email conflicts và gửi email với JWT token
+   */
+  async verifyEnrollmentEmail(payload: VerifyEnrollmentEmailDto): Promise<{
+    message: string;
+    email: string;
+    expiresIn: number;
+  }> {
+    const { role, students, parent, courseId, classroomId } = payload;
+
+    // 1. CHECK CONFLICTS - Không cho phép nếu email đã tồn tại
+    for (const student of students) {
+      const existingUser = await this.prisma.user.findFirst({
+        where: {
+          OR: [{ email: student.email }, { phone: student.phone }],
+        },
+      });
+
+      if (existingUser) {
+        throw new BadRequestException({
+          code: 'ACCOUNT_EXISTS',
+          message: 'Email hoặc số điện thoại đã có tài khoản trong hệ thống.',
+          action: 'LOGIN_REQUIRED',
+          loginUrl: `${this.configService.get('APP_URL')}/login?redirect=/classrooms/${classroomId}/enroll`,
+          hint: 'Vui lòng đăng nhập để đăng ký lớp học này.',
+          conflicts: {
+            email: existingUser.email === student.email,
+            phone: existingUser.phone === student.phone,
+          },
+        });
+      }
+    }
+
+    // Check parent (if role = parent)
+    if (role === GuestEnrollmentRole.parent && parent) {
+      const existingParent = await this.prisma.user.findFirst({
+        where: {
+          OR: [{ email: parent.email }, { phone: parent.phone }],
+        },
+      });
+
+      if (existingParent) {
+        throw new BadRequestException({
+          code: 'ACCOUNT_EXISTS',
+          message: 'Thông tin phụ huynh đã có tài khoản trong hệ thống.',
+          action: 'LOGIN_REQUIRED',
+          loginUrl: `${this.configService.get('APP_URL')}/login`,
+          hint: 'Vui lòng đăng nhập để đăng ký.',
+        });
+      }
+    }
+
+    // 2. VALIDATE COURSE & CLASSROOM
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        currency: true,
+        isPublished: true,
+      },
+    });
+
+    if (!course || !course.isPublished) {
+      throw new NotFoundException(
+        'Khóa học không tồn tại hoặc chưa được công bố',
+      );
+    }
+
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      select: {
+        id: true,
+        name: true,
+        courseId: true,
+        isActive: true,
+        status: true,
+      },
+    });
+
+    if (!classroom || classroom.courseId !== course.id) {
+      throw new NotFoundException('Lớp học không hợp lệ');
+    }
+
+    if (
+      !classroom.isActive ||
+      (classroom.status !== ClassroomStatus.ongoing &&
+        classroom.status !== ClassroomStatus.upcoming)
+    ) {
+      throw new BadRequestException(
+        'Lớp học này hiện không mở để đăng ký mới. Vui lòng chọn lớp khác.',
+      );
+    }
+
+    // 3. TẠO JWT TOKEN (30 phút)
+    const enrollmentData = {
+      role,
+      students,
+      parent,
+      courseId,
+      classroomId,
+      courseName: course.title,
+      classroomName: classroom.name,
+      price: course.price,
+      currency: course.currency,
+      source: payload.source,
+      note: payload.note,
+      timestamp: Date.now(),
+    };
+
+    const token = this.jwtService.sign(enrollmentData, {
+      secret:
+        this.configService.get('ENROLLMENT_VERIFICATION_SECRET') ||
+        this.configService.get('JWT_SECRET') || "KLTN",
+      expiresIn: '30m',
+    });
+
+    // 4. GỬI EMAIL VERIFICATION VIA KAFKA
+    const verificationLink = `${this.configService.get('LANDING_PAGE_URL')}/enroll/payment?token=${token}`;
+    const primaryStudent = students[0];
+
+    // Determine recipient: parent if role=parent, else primary student
+    const recipientEmail = (role === GuestEnrollmentRole.parent && parent)
+      ? parent.email
+      : primaryStudent.email;
+    const recipientName = (role === GuestEnrollmentRole.parent && parent)
+      ? `${parent.firstName} ${parent.lastName}`
+      : `${primaryStudent.firstName} ${primaryStudent.lastName}`;
+
+    try {
+      await this.kafkaProducer.send(
+        KafkaTopic.EMAIL_ENROLLMENT_VERIFICATION,
+        {
+          type: 'enrollment-verification',
+          data: {
+            email: recipientEmail,
+            studentName: recipientName,
+            courseName: course.title,
+            classroomName: classroom.name,
+            price: course.price.toLocaleString('vi-VN'),
+            currency: course.currency,
+            studentCount: students.length,
+            verificationLink,
+            expiresIn: '30 phút',
+          },
+        },
+      );
+
+      this.logger.log({
+        message: 'Enrollment verification email event sent to Kafka',
+        email: recipientEmail,
+        role,
+        courseId,
+        classroomId,
+      });
+    } catch (error) {
+      this.logger.error('Failed to send verification email event', error);
+      throw new BadRequestException(
+        'Không thể gửi email xác thực. Vui lòng thử lại.',
+      );
+    }
+
+    return {
+      message:
+        'Email xác thực đã được gửi. Vui lòng kiểm tra hộp thư và click vào link để tiếp tục thanh toán.',
+      email: recipientEmail,
+      expiresIn: 1800, // 30 minutes in seconds
+    };
+  }
+
+  /**
+   * FLOW MỚI - Verify JWT token từ email link
+   */
+  async verifyEnrollmentToken(token: string): Promise<{
+    valid: boolean;
+    data?: any;
+  }> {
+    try {
+      const enrollmentData = this.jwtService.verify(token, {
+        secret:
+          this.configService.get('ENROLLMENT_VERIFICATION_SECRET') ||
+          this.configService.get('JWT_SECRET') || "KLTN"
+      });
+
+      return {
+        valid: true,
+        data: enrollmentData,
+      };
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        throw new BadRequestException({
+          code: 'TOKEN_EXPIRED',
+          message: 'Link xác thực đã hết hạn. Vui lòng đăng ký lại.',
+        });
+      }
+      throw new BadRequestException({
+        code: 'INVALID_TOKEN',
+        message: 'Link xác thực không hợp lệ.',
+      });
+    }
+  }
+
+  /**
+   * FLOW MỚI - Step 2: Tạo payment với verified token
+   */
+  async createPaymentWithToken(
+    token: string,
+    returnUrl?: string,
+    ipAddress?: string,
+  ): Promise<{ paymentUrl: string; transactionId: string }> {
+    // Verify token
+    const { data: enrollmentData } = await this.verifyEnrollmentToken(token);
+    const { role, students, parent, courseId, classroomId, courseName, price, currency } =
+      enrollmentData;
+
+    // Calculate amount
+    const studentsCount = students.length;
+    const totalAmount = price * studentsCount;
+
+    const description = `Thanh toán khóa học ${courseName} cho ${studentsCount} học sinh`;
+
+    // Lưu enrollment data vào Transaction metadata
+    const enrollmentMetadata = {
+      role,
+      students,
+      parent,
+      courseId,
+      classroomId,
+      courseName,
+      classroomName: enrollmentData.classroomName,
+      emailVerified: true, // 🔥 Email đã verify qua link
+      source: enrollmentData.source,
+      note: enrollmentData.note,
+    };
+
+    // Tạo Transaction với studentId = NULL (User chưa tồn tại)
+    const payment = await this.paymentService.createPayment(
+      null, // studentId = null vì chưa tạo User
+      {
+        courseId,
+        classroomId,
+        amount: totalAmount,
+        currency: currency || 'VND',
+        description,
+        returnUrl:
+          returnUrl ||
+          this.configService.get('LANDING_PAGE_PAYMENT_RETURN_URL'),
+        enrollmentMetadata,
+      },
+      ipAddress,
+      null, // requesterId = null
+    );
+
+    this.logger.log({
+      message:
+        'Payment created with verified email - Users will be created after payment success',
+      transactionId: payment.transactionId,
+      studentsCount,
+      totalAmount,
+      role,
+    });
+
+    return {
+      paymentUrl: payment.paymentUrl,
+      transactionId: payment.transactionId,
+    };
+  }
+
+  /**
+   * DEPRECATED - Giữ lại để backward compatibility
+   * Nên dùng verifyEnrollmentEmail thay thế
    */
   async validateGuestUser(payload: GuestEnrollmentDto): Promise<{
     valid: boolean;
@@ -605,55 +883,19 @@ export class LandingPageService {
 
     const supportNotes = this.buildSupportNote(payload);
 
-    const studentUsers: User[] = [];
-    let parentUser: User | null = null;
+    // KHÔNG tạo User ở đây nữa
+    // Sẽ tạo User SAU khi nhận callback thanh toán thành công từ VNPay
+    // Lưu toàn bộ enrollment data vào Transaction metadata
 
-    // Transaction: CHỈ tạo users, KHÔNG tạo ClassroomStudent (chưa chiếm slot)
-    await this.prisma.$transaction(async (tx) => {
-      if (role === GuestEnrollmentRole.student) {
-        // Role = student: Chỉ tạo students, không tạo parent
-        for (const studentData of payload.students) {
-          const studentUser = await this.ensureGuestUser(
-            tx,
-            studentData,
-            UserRole.student,
-            payload.source,
-            supportNotes,
-          );
-          studentUsers.push(studentUser);
-        }
-
-        // KHÔNG enroll vào classroom ở đây
-        // Sẽ enroll sau khi thanh toán thành công (VNPay callback)
-      } else if (role === GuestEnrollmentRole.parent) {
-        // Role = parent: Tạo parent trước, sau đó tạo students và link
-        parentUser = await this.ensureGuestUser(
-          tx,
-          payload.parent!,
-          UserRole.parent,
-          payload.source,
-          supportNotes,
-        );
-
-        // Tạo tất cả students
-        for (const studentData of payload.students) {
-          const studentUser = await this.ensureGuestUser(
-            tx,
-            studentData,
-            UserRole.student,
-            payload.source,
-            supportNotes,
-          );
-          studentUsers.push(studentUser);
-
-          // Link parent với student
-          await this.ensureParentChildLink(tx, parentUser.id, studentUser.id);
-        }
-
-        // KHÔNG enroll vào classroom ở đây
-        // Sẽ enroll sau khi thanh toán thành công (VNPay callback)
-      }
-    });    // Calculate total amount: price * number of students
+    const enrollmentMetadata = {
+      role,
+      students: payload.students,
+      parent: payload.parent,
+      source: payload.source,
+      supportNotes,
+      courseId: payload.courseId,
+      classroomId: payload.classroomId,
+    };    // Calculate total amount: price * number of students
     const baseAmount = course.price;
     if (!baseAmount || baseAmount <= 0) {
       throw new BadRequestException(
@@ -667,42 +909,35 @@ export class LandingPageService {
       ? `Thanh toán khóa học ${course.title} cho ${studentsCount} học sinh (${payload.note})`
       : `Thanh toán khóa học: ${course.title} (${studentsCount} học sinh)`;
 
-    // Use first student as primary for payment
-    const primaryStudent = studentUsers[0];
-
-    // Prepare metadata with all studentIds for multi-student enrollment
-    const allStudentIds = studentUsers.map(s => s.id);
-    const enhancedDescription = `${description} | StudentIDs: ${allStudentIds.join(',')}`;
-
+    // KHÔNG truyền studentId - User sẽ được tạo sau khi thanh toán thành công
     const payment = await this.paymentService.createPayment(
-      primaryStudent.id,
+      null, // Không có User yet
       {
         courseId: payload.courseId,
         classroomId: payload.classroomId,
         amount: totalAmount,
         currency: course.currency || 'VND',
-        description: enhancedDescription,
+        description,
         returnUrl,
-        studentId: primaryStudent.id,
+        enrollmentMetadata, // Lưu toàn bộ thông tin enrollment
       },
       ipAddress,
-      parentUser?.id ?? primaryStudent.id,
+      null, // Không có requesterId
     );
 
     this.logger.log({
-      message: 'Guest enrollment created successfully',
+      message: 'Guest enrollment payment created (Users will be created after payment success)',
       transactionId: payment.transactionId,
       studentsCount,
       totalAmount,
-      studentIds: studentUsers.map(s => s.id),
-      parentId: parentUser?.id,
+      role,
     });
 
     return {
       paymentUrl: payment.paymentUrl,
       transactionId: payment.transactionId,
-      studentId: primaryStudent.id,
-      parentId: parentUser?.id ?? null,
+      studentId: null, // User chưa được tạo
+      parentId: null,  // User chưa được tạo
       role,
     };
   }
@@ -1226,7 +1461,7 @@ export class LandingPageService {
       popular: markPopular || undefined,
       paymentEligible: true,
       courseId: course.id,
-      courseTitle: course.title ?? course.name ?? labels.vi,
+      courseTitle: course.title ?? course.title ?? labels.vi,
       classroomId: classroom.id,
     };
   }

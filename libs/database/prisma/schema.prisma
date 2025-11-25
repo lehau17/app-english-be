@@ -8,7 +8,6 @@ generator client {
 
 datasource db {
     provider = "postgresql"
-
     url = env("DATABASE_URL")
 }
 
@@ -3110,7 +3109,7 @@ model Transaction {
     vnpaySecureHash    String? // vnp_SecureHash
 
     // Relations
-    studentId   String
+    studentId   String? // Optional cho guest enrollment (User ch\u01b0a t\u1ed3n t\u1ea1i)
     courseId    String?
     classroomId String?
 
@@ -3120,7 +3119,7 @@ model Transaction {
     ipAddress   String?
 
     // Response data from VNPay
-    responseData Json? // Full response từ VNPay
+    responseData Json? // Full response từ VNPay (+ enrollmentMetadata cho guest)
 
     // Timestamps
     createdAt   DateTime  @default(now())
@@ -3128,7 +3127,7 @@ model Transaction {
     completedAt DateTime? // Khi thanh toán thành công
 
     // Relations
-    student   User       @relation("StudentTransactions", fields: [studentId], references: [id], onDelete: Cascade)
+    student   User?      @relation("StudentTransactions", fields: [studentId], references: [id], onDelete: Cascade)
     course    Course?    @relation("CourseTransactions", fields: [courseId], references: [id], onDelete: SetNull)
     classroom Classroom? @relation("ClassroomTransactions", fields: [classroomId], references: [id], onDelete: SetNull)
 

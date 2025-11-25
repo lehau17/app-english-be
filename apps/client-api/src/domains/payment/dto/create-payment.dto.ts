@@ -60,4 +60,11 @@ export class CreatePaymentDto {
   @IsOptional()
   @IsUUID()
   studentId?: string;
+
+  @ApiProperty({
+    description: 'Metadata cho guest enrollment (chứa thông tin students/parent chưa tạo User)',
+    required: false,
+  })
+  @IsOptional()
+  enrollmentMetadata?: any;
 }

@@ -19,15 +19,19 @@ import { NotificationService } from './notification.service';
           host: process.env.SMTP_HOST,
           port: +process.env.SMTP_PORT,
           secure: false,
+          auth: {
+        user: process.env.SMTP_USERNAME,   // username / email gửi
+        pass: process.env.SMTP_PASSWORD,   // mật khẩu / app password
+      },
           tls: {
             rejectUnauthorized: false,
           },
         },
         defaults: {
-          from: process.env.FROM,
+          from: "english@eduliagua.com",
         },
         template: {
-          dir: __dirname + '/../../templates',
+          dir: __dirname + '/templates',
           adapter: new PugAdapter(),
           options: {
             strict: true,

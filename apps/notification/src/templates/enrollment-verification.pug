@@ -1,0 +1,108 @@
+doctype html
+html
+  head
+    meta(charset='UTF-8')
+    meta(name='viewport' content='width=device-width, initial-scale=1.0')
+    title Xác thực đăng ký khóa học
+    style.
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        background-color: #ffffff;
+        border-radius: 10px;
+        padding: 40px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo {
+        font-size: 32px;
+        font-weight: bold;
+        color: #1976d2;
+        margin-bottom: 10px;
+      }
+      h1 {
+        color: #1976d2;
+        font-size: 24px;
+        margin-bottom: 20px;
+      }
+      .info-box {
+        background-color: #f0f7ff;
+        border-left: 4px solid #1976d2;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+      .button {
+        display: inline-block;
+        padding: 15px 40px;
+        background-color: #1976d2;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 20px 0;
+        font-weight: bold;
+        font-size: 16px;
+      }
+      .button:hover {
+        background-color: #1565c0;
+      }
+      .warning {
+        background-color: #fff3cd;
+        border: 1px solid #ffc107;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+      .footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #e0e0e0;
+        font-size: 14px;
+        color: #666;
+        text-align: center;
+      }
+  body
+    .container
+      .header
+        .logo 📚 EngliMaster
+
+      h1 🔐 Xác thực đăng ký khóa học
+
+      p Xin chào <strong>#{studentName}</strong>,
+
+      p Cảm ơn bạn đã đăng ký khóa học tại EngliMaster. Vui lòng xác thực email của bạn để tiếp tục thanh toán.
+
+      .info-box
+        p <strong>📖 Khóa học:</strong> #{courseName}
+        p <strong>🏫 Lớp học:</strong> #{classroomName}
+        p <strong>💰 Học phí:</strong> #{price} #{currency}
+        if studentCount > 1
+          p <strong>👥 Số học viên:</strong> #{studentCount}
+
+      div(style='text-align: center; margin: 30px 0;')
+        a.button(href=verificationLink) Xác thực và Thanh toán
+
+      .warning
+        p <strong>⏰ Lưu ý quan trọng:</strong>
+        ul
+          li Link xác thực này chỉ có hiệu lực trong <strong>#{expiresIn}</strong>
+          li Sau khi xác thực, bạn sẽ được chuyển đến trang thanh toán
+          li Vui lòng không chia sẻ link này với người khác
+
+      p Nếu bạn không thực hiện đăng ký này, vui lòng bỏ qua email này.
+
+      .footer
+        p Trân trọng,<br><strong>Đội ngũ EngliMaster</strong>
+        p(style='font-size: 12px; color: #999; margin-top: 20px;')
+          | Email này được gửi tự động. Vui lòng không trả lời email này.<br>
+          | Nếu bạn có thắc mắc, vui lòng liên hệ: support@englimaster.com

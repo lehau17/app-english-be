@@ -2,42 +2,45 @@ import { PrismaRepository } from '@app/database';
 import { JwtPayload } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
 } from '@nestjs/common';
 import {
-  Classroom,
-  ClassroomStatus,
-  Prisma,
-  SessionStatus,
-  TimezoneCode,
-  UserRole,
+    Classroom,
+    ClassroomStatus,
+    Prisma,
+    SessionStatus,
+    TimezoneCode,
+    UserRole,
 } from '@prisma/client';
 import { EventsGateway } from 'apps/client-api/src/events/events.gateway';
 import * as bcrypt from 'bcrypt';
 import { Readable } from 'stream';
 import * as XLSX from 'xlsx';
+import { PaymentService } from '../../payment/service/payment.service';
 import {
-  AddStudentToClassroomDto,
-  AssignTeacherToClassroomDto,
-  ClassroomAnnouncementQueryDto,
-  CreateClassroomDto,
-  FilterClassroomRequestDto,
-  ImportStudentsResultDto,
-  StudentDailyScheduleQueryDto,
-  StudentWeeklyScheduleQueryDto,
-  UpdateClassroomDto,
+    AddStudentToClassroomDto,
+    AssignTeacherToClassroomDto,
+    ClassroomAnnouncementQueryDto,
+    CreateClassroomDto,
+    FilterClassroomRequestDto,
+    ImportStudentsResultDto,
+    StudentDailyScheduleQueryDto,
+    StudentWeeklyScheduleQueryDto,
+    UpdateClassroomDto,
 } from '../dto/classroom.dto';
+import { EnrollClassroomDto } from '../dto/enroll-classroom.dto';
 import { ClassroomRepository } from '../repository/classroom.repository';
 import { AutoExamCreationService } from '../services/auto-exam-creation.service';
 import {
-  calculateClassroomSchedule,
-  generateClassroomSessions,
+    calculateClassroomSchedule,
+    generateClassroomSessions,
 } from '../utils/classroom-schedule.util';
 import {
-  generateClassCode,
-  getCsvTransformStream,
+    generateClassCode,
+    getCsvTransformStream,
 } from '../utils/classroom.util';
 
 const TIMEZONE_OFFSETS: Record<TimezoneCode, number> = {
@@ -57,6 +60,7 @@ export class ClassroomService {
     private readonly gateway: EventsGateway,
     private readonly prisma: PrismaRepository,
     private readonly autoExamCreationService: AutoExamCreationService,
+    private readonly paymentService: PaymentService,
   ) {}
 
   async create(dto: CreateClassroomDto): Promise<Classroom> {
@@ -2033,5 +2037,114 @@ export class ClassroomService {
         message: `Student successfully transferred from ${currentClassroom.name} to ${newClassroom.name}`,
       };
     });
+  }
+
+  /**
+   * LUỒNG 2: User đã login muốn enroll vào classroom mới
+   * API này yêu cầu authentication (AccessTokenGuard)
+   */
+  async enrollInClassroom(
+    userId: string,
+    dto: EnrollClassroomDto,
+    ipAddress?: string,
+  ): Promise<{ paymentUrl: string; transactionId: string }> {
+    const { classroomId, courseId, returnUrl } = dto;
+
+    // Validate user
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        classroomsStudying: {
+          where: { classroomId },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User không tồn tại');
+    }
+
+    // Check đã enroll chưa
+    if (user.classroomsStudying.length > 0) {
+      const enrollment = user.classroomsStudying[0];
+      if (enrollment.isPurchased) {
+        throw new BadRequestException('Bạn đã đăng ký lớp học này rồi');
+      }
+    }
+
+    // Validate course & classroom
+    const course = await this.prisma.course.findUnique({
+      where: { id: courseId },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        currency: true,
+        isPublished: true,
+      },
+    });
+
+    if (!course || !course.isPublished) {
+      throw new NotFoundException(
+        'Khóa học không tồn tại hoặc chưa được công bố',
+      );
+    }
+
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id: classroomId },
+      select: {
+        id: true,
+        name: true,
+        courseId: true,
+        isActive: true,
+        status: true,
+      },
+    });
+
+    if (!classroom || classroom.courseId !== course.id) {
+      throw new NotFoundException('Lớp học không hợp lệ');
+    }
+
+    if (
+      !classroom.isActive ||
+      (classroom.status !== ClassroomStatus.ongoing &&
+        classroom.status !== ClassroomStatus.upcoming)
+    ) {
+      throw new BadRequestException(
+        'Lớp học này hiện không mở để đăng ký mới',
+      );
+    }
+
+    // Tạo payment với existing user
+    const description = `Thanh toán khóa học ${course.title}`;
+
+    const enrollmentMetadata = {
+      existingUser: true, // 🔥 Flag: User đã tồn tại, chỉ cần enroll
+      userId,
+      courseId,
+      classroomId,
+      courseName: course.title,
+      classroomName: classroom.name,
+    };
+
+    const payment = await this.paymentService.createPayment(
+      userId, // 🔥 Có studentId vì user đã tồn tại
+      {
+        courseId,
+        classroomId,
+        amount: course.price,
+        currency: course.currency || 'VND',
+        description,
+        returnUrl: returnUrl || process.env.APP_PAYMENT_RETURN_URL,
+        enrollmentMetadata,
+      },
+      ipAddress,
+      userId, // requesterId = userId
+    );
+
+    return {
+      paymentUrl: payment.paymentUrl,
+      transactionId: payment.transactionId,
+    };
   }
 }

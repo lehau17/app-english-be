@@ -4,8 +4,7 @@
   "sourceRoot": "apps/english-learning/src",
   "compilerOptions": {
     "deleteOutDir": true,
-    "webpack": true,
-    "tsConfigPath": "apps/english-learning/tsconfig.app.json"
+    "webpack": true
   },
   "monorepo": true,
   "root": "apps/english-learning",
@@ -16,7 +15,10 @@
       "entryFile": "main",
       "sourceRoot": "apps/english-learning/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/english-learning/tsconfig.app.json"
+        "tsConfigPath": "apps/english-learning/tsconfig.app.json",
+        "assets": [
+        "templates/**/*", "src/templates/**/*", "apps/client-api/src/templates/**/*", "apps/notification/src/templates/**/*"
+    ]
       }
     },
     "client-api": {
@@ -52,7 +54,10 @@
       "entryFile": "main",
       "sourceRoot": "apps/notification/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/notification/tsconfig.app.json"
+        "tsConfigPath": "apps/notification/tsconfig.app.json",
+        "assets": [
+        "templates/**/*", "src/templates/**/*", "apps/client-api/src/templates/**/*", "apps/notification/src/templates/**/*"
+    ]
       }
     },
     "background-worker": {

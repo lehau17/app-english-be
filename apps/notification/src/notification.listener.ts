@@ -1,10 +1,10 @@
 import { PrismaRepository } from '@app/database';
 import { KafkaConfigService, KafkaTopic } from '@app/shared';
 import {
-  Injectable,
-  Logger,
-  OnModuleDestroy,
-  OnModuleInit,
+    Injectable,
+    Logger,
+    OnModuleDestroy,
+    OnModuleInit,
 } from '@nestjs/common';
 import { Consumer, Kafka } from 'kafkajs';
 import { NotificationService } from './notification.service';
@@ -49,11 +49,17 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
       this.logger.log('✅ Notification listener connected to Kafka');
 
       await this.consumer.subscribe({
-        topics: [KafkaTopic.NOTIFICATION_SEND_OTP_CREATED, 'notifications'],
+        topics: [
+          KafkaTopic.NOTIFICATION_SEND_OTP_CREATED,
+          KafkaTopic.EMAIL_ENROLLMENT_VERIFICATION,
+          KafkaTopic.EMAIL_WELCOME_NEW_USER,
+          KafkaTopic.EMAIL_ENROLLMENT_CONFIRMATION,
+          'notifications',
+        ],
         fromBeginning: false,
       });
       this.logger.log(
-        `✅ Subscribed to topics: ${KafkaTopic.NOTIFICATION_SEND_OTP_CREATED}, notifications`,
+        `✅ Subscribed to topics: ${KafkaTopic.NOTIFICATION_SEND_OTP_CREATED}, ${KafkaTopic.EMAIL_ENROLLMENT_VERIFICATION}, ${KafkaTopic.EMAIL_WELCOME_NEW_USER}, ${KafkaTopic.EMAIL_ENROLLMENT_CONFIRMATION}, notifications`,
       );
 
       // Event listeners
@@ -112,6 +118,12 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
         notification.data?.action === 'password_reset'
       ) {
         await this.handlePasswordReset(notification);
+      } else if (topic === KafkaTopic.EMAIL_ENROLLMENT_VERIFICATION) {
+        await this.handleEnrollmentVerification(notification);
+      } else if (topic === KafkaTopic.EMAIL_WELCOME_NEW_USER) {
+        await this.handleWelcomeNewUser(notification);
+      } else if (topic === KafkaTopic.EMAIL_ENROLLMENT_CONFIRMATION) {
+        await this.handleEnrollmentConfirmation(notification);
       } else {
         this.logger.log(
           `Notification type "${notification.type}" - no email action needed`,
@@ -205,6 +217,96 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.error(
         `Failed to send password reset email: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  private async handleEnrollmentVerification(notification: NotificationMessage) {
+    try {
+      const { email, studentName, courseName, classroomName, price, currency, studentCount, verificationLink, expiresIn } = notification.data;
+
+      await this.notificationService.sendEmail({
+        to: [email],
+        subject: 'Xác thực đăng ký khóa học EngliMaster',
+        template: './enrollment-verification',
+        context: {
+          studentName,
+          courseName,
+          classroomName,
+          price,
+          currency,
+          studentCount,
+          verificationLink,
+          expiresIn,
+        },
+      });
+
+      this.logger.log(`✅ Sent enrollment verification email to ${email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send enrollment verification email: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  private async handleWelcomeNewUser(notification: NotificationMessage) {
+    try {
+      const { email, userName, role, courseName, classroomName, price, currency, loginUrl } = notification.data;
+
+      await this.notificationService.sendEmail({
+        to: [email],
+        subject: role === 'Phụ huynh'
+          ? 'Chào mừng phụ huynh đến với EngliMaster'
+          : 'Chào mừng bạn đến với EngliMaster',
+        template: './welcome-new-user',
+        context: {
+          userName,
+          role,
+          courseName,
+          classroomName,
+          price,
+          currency,
+          loginUrl,
+          email,
+        },
+      });
+
+      this.logger.log(`✅ Sent welcome email to ${email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send welcome email: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  private async handleEnrollmentConfirmation(notification: NotificationMessage) {
+    try {
+      const { email, userName, courseName, classroomName, price, currency, startDate, endDate, dashboardUrl, classroomUrl } = notification.data;
+
+      await this.notificationService.sendEmail({
+        to: [email],
+        subject: `Xác nhận đăng ký thành công - ${courseName}`,
+        template: './enrollment-confirmation',
+        context: {
+          userName,
+          courseName,
+          classroomName,
+          price,
+          currency,
+          startDate,
+          endDate,
+          dashboardUrl,
+          classroomUrl,
+        },
+      });
+
+      this.logger.log(`✅ Sent enrollment confirmation email to ${email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send enrollment confirmation email: ${error.message}`,
         error.stack,
       );
     }

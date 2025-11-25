@@ -1,0 +1,163 @@
+doctype html
+html
+  head
+    meta(charset='UTF-8')
+    meta(name='viewport' content='width=device-width, initial-scale=1.0')
+    title Xác nhận đăng ký thành công
+    style.
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        background-color: #ffffff;
+        border-radius: 10px;
+        padding: 40px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo {
+        font-size: 32px;
+        font-weight: bold;
+        color: #1976d2;
+        margin-bottom: 10px;
+      }
+      .success-icon {
+        font-size: 60px;
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      h1 {
+        color: #1976d2;
+        font-size: 24px;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+      .info-box {
+        background-color: #f0f7ff;
+        border-left: 4px solid #1976d2;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin: 10px 0;
+        padding: 8px 0;
+        border-bottom: 1px solid #e0e0e0;
+      }
+      .info-row:last-child {
+        border-bottom: none;
+      }
+      .highlight-box {
+        background-color: #e8f5e9;
+        border: 2px solid #4caf50;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        text-align: center;
+      }
+      .price {
+        font-size: 28px;
+        color: #4caf50;
+        font-weight: bold;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 30px;
+        background-color: #1976d2;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 10px 5px;
+        font-weight: bold;
+      }
+      .button:hover {
+        background-color: #1565c0;
+      }
+      .button-secondary {
+        background-color: #4caf50;
+      }
+      .button-secondary:hover {
+        background-color: #45a049;
+      }
+      .footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #e0e0e0;
+        font-size: 14px;
+        color: #666;
+        text-align: center;
+      }
+  body
+    .container
+      .header
+        .logo 📚 EngliMaster
+
+      .success-icon ✅
+
+      h1 Đăng ký thành công!
+
+      .greeting
+        p Xin chào <strong>#{userName}</strong>,
+        p Chúc mừng bạn đã đăng ký thành công khóa học tại EngliMaster. Thanh toán của bạn đã được xác nhận!
+
+      .highlight-box
+        p(style='margin: 0; font-size: 16px; color: #666;') Tổng thanh toán
+        p.price #{price} #{currency}
+
+      .info-box
+        h3(style='margin-top: 0; color: #1976d2;') 📋 Thông tin khóa học
+
+        .info-row
+          span <strong>📖 Khóa học:</strong>
+          span #{courseName}
+
+        .info-row
+          span <strong>🏫 Lớp học:</strong>
+          span #{classroomName}
+
+        .info-row
+          span <strong>📅 Ngày bắt đầu:</strong>
+          span #{startDate}
+
+        .info-row
+          span <strong>📅 Ngày kết thúc:</strong>
+          span #{endDate}
+
+      div(style='text-align: center; margin: 30px 0;')
+        p <strong>Bắt đầu học ngay hôm nay!</strong>
+        a.button.button-secondary(href=classroomUrl) Vào lớp học
+        a.button(href=dashboardUrl) Xem Dashboard
+
+      div(style='background-color: #fff3e0; padding: 20px; border-radius: 5px; margin-top: 30px;')
+        p <strong>📌 Lưu ý quan trọng:</strong>
+        ul(style='margin: 10px 0; padding-left: 20px;')
+          li Bạn có thể truy cập lớp học bất cứ lúc nào thông qua Dashboard
+          li Kiểm tra lịch học và thông báo từ giảng viên thường xuyên
+          li Tham gia các buổi học trực tuyến đúng giờ
+          li Hoàn thành bài tập và kiểm tra để đạt kết quả tốt nhất
+
+      div(style='background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px;')
+        p(style='margin: 0;') <strong>💬 Cần hỗ trợ?</strong>
+        p(style='margin: 5px 0 0 0;') Đội ngũ của chúng tôi luôn sẵn sàng hỗ trợ bạn:
+        ul(style='margin: 10px 0; padding-left: 20px;')
+          li Email: support@englimaster.com
+          li Hotline: 1900-xxxx
+          li Live Chat: Truy cập website và click vào biểu tượng chat
+
+      .footer
+        p Chúc bạn học tập hiệu quả và đạt kết quả cao!
+        p Trân trọng,<br><strong>Đội ngũ EngliMaster</strong>
+        p(style='font-size: 12px; color: #999; margin-top: 20px;')
+          | Email này được gửi tự động. Vui lòng không trả lời email này.<br>
+          | Nếu bạn có thắc mắc, vui lòng liên hệ: support@englimaster.com

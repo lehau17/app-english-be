@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chào mừng đến với EngliMaster</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      background-color: #ffffff;
+      border-radius: 10px;
+      padding: 40px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .logo {
+      font-size: 32px;
+      font-weight: bold;
+      color: #1976d2;
+      margin-bottom: 10px;
+    }
+    h1 {
+      color: #1976d2;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    .greeting {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    .info-box {
+      background-color: #f0f7ff;
+      border-left: 4px solid #1976d2;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+    .info-box strong {
+      color: #1976d2;
+    }
+    .button {
+      display: inline-block;
+      padding: 12px 30px;
+      background-color: #1976d2;
+      color: #ffffff !important;
+      text-decoration: none;
+      border-radius: 5px;
+      margin: 20px 0;
+      font-weight: bold;
+    }
+    .button:hover {
+      background-color: #1565c0;
+    }
+    .footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+      font-size: 14px;
+      color: #666;
+      text-align: center;
+    }
+    .credentials {
+      background-color: #fff9e6;
+      border: 1px solid #ffc107;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">📚 EngliMaster</div>
+    </div>
+
+    <h1>🎉 Chào mừng bạn đến với EngliMaster!</h1>
+
+    <div class="greeting">
+      <p>Xin chào <strong>{{userName}}</strong>,</p>
+      <p>Cảm ơn bạn đã đăng ký và thanh toán thành công khóa học tại EngliMaster!</p>
+    </div>
+
+    <div class="info-box">
+      <p><strong>🎓 Vai trò:</strong> {{role}}</p>
+      <p><strong>📖 Khóa học:</strong> {{courseName}}</p>
+      <p><strong>🏫 Lớp học:</strong> {{classroomName}}</p>
+      <p><strong>💰 Học phí:</strong> {{price}} {{currency}}</p>
+    </div>
+
+    <div class="credentials">
+      <p><strong>🔐 Thông tin đăng nhập:</strong></p>
+      <p><strong>Email:</strong> {{email}}</p>
+      {{#if password}}
+      <p><strong>Mật khẩu:</strong> <code style="background-color: #f0f0f0; padding: 5px 10px; border-radius: 3px; font-size: 16px; font-weight: bold;">{{password}}</code></p>
+      <p style="color: #f57c00; font-size: 14px;">⚠️ Vui lòng đổi mật khẩu ngay sau khi đăng nhập lần đầu</p>
+      {{else}}
+      <p><strong>Mật khẩu:</strong> Bạn cần đặt mật khẩu lần đầu tiên khi đăng nhập</p>
+      {{/if}}
+    </div>
+
+    <p>Để bắt đầu học tập, vui lòng đăng nhập vào hệ thống:</p>
+
+    <div style="text-align: center;">
+      <a href="{{loginUrl}}" class="button">Đăng nhập ngay</a>
+    </div>
+
+    <div style="margin-top: 30px;">
+      <p><strong>Bước tiếp theo:</strong></p>
+      <ol>
+        <li>Nhấn vào nút "Đăng nhập ngay" bên trên</li>
+        <li>Sử dụng email <strong>{{email}}</strong>{{#if password}} và mật khẩu phía trên{{/if}} để đăng nhập</li>
+        {{#if password}}
+        <li>Sau khi đăng nhập, vui lòng đổi mật khẩu trong phần Cài đặt</li>
+        {{else}}
+        <li>Tạo mật khẩu mới cho tài khoản của bạn</li>
+        {{/if}}
+        <li>Truy cập lớp học và bắt đầu hành trình học tập!</li>
+      </ol>
+    </div>
+
+    <div style="background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin-top: 20px;">
+      <p><strong>💡 Lưu ý quan trọng:</strong></p>
+      <ul>
+        <li>Kiểm tra email thường xuyên để nhận thông báo từ giảng viên</li>
+        <li>Tham gia lớp học đúng giờ để không bỏ lỡ nội dung quan trọng</li>
+        <li>Liên hệ với chúng tôi nếu cần hỗ trợ</li>
+      </ul>
+    </div>
+
+    <div class="footer">
+      <p>Trân trọng,<br><strong>Đội ngũ EngliMaster</strong></p>
+      <p style="font-size: 12px; color: #999; margin-top: 20px;">
+        Email này được gửi tự động. Vui lòng không trả lời email này.<br>
+        Nếu bạn có thắc mắc, vui lòng liên hệ: support@englimaster.com
+      </p>
+    </div>
+  </div>
+</body>
+</html>

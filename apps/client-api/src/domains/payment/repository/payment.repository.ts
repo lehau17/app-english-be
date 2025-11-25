@@ -109,7 +109,6 @@ export class PaymentRepository extends PrismaRepository {
       include: {
         course: true,
         classroom: true,
-        classroomSession: true,
       },
       orderBy: { createdAt: 'desc' },
       take: limit,
@@ -137,9 +136,15 @@ export class PaymentRepository extends PrismaRepository {
     classroomId: string,
     isPurchased: boolean,
   ): Promise<void> {
+    console.log(`[PaymentRepository] updateStudentPurchaseStatus called with:`, {
+      studentId,
+      classroomId,
+      isPurchased,
+    });
+
     // Sử dụng upsert: tạo mới hoặc update
     // Khi thanh toán thành công, tự động enroll student vào classroom
-    await this.classroomStudent.upsert({
+    const result = await this.classroomStudent.upsert({
       where: {
         classroomId_studentId: {
           classroomId,
@@ -157,6 +162,8 @@ export class PaymentRepository extends PrismaRepository {
         isActive: true, // Kích hoạt lại nếu bị inactive
       },
     });
+
+    console.log(`[PaymentRepository] Upsert result:`, result);
   }
 
   async getStudentPurchaseStatus(

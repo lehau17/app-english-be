@@ -1,0 +1,128 @@
+doctype html
+html
+  head
+    meta(charset='UTF-8')
+    meta(name='viewport' content='width=device-width, initial-scale=1.0')
+    title Chào mừng đến với EngliMaster
+    style.
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        background-color: #ffffff;
+        border-radius: 10px;
+        padding: 40px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo {
+        font-size: 32px;
+        font-weight: bold;
+        color: #1976d2;
+        margin-bottom: 10px;
+      }
+      h1 {
+        color: #1976d2;
+        font-size: 24px;
+        margin-bottom: 20px;
+      }
+      .info-box {
+        background-color: #f0f7ff;
+        border-left: 4px solid #1976d2;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+      .credentials {
+        background-color: #fff9e6;
+        border: 1px solid #ffc107;
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 30px;
+        background-color: #1976d2;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 20px 0;
+        font-weight: bold;
+      }
+      .button:hover {
+        background-color: #1565c0;
+      }
+      .footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #e0e0e0;
+        font-size: 14px;
+        color: #666;
+        text-align: center;
+      }
+  body
+    .container
+      .header
+        .logo 📚 EngliMaster
+
+      h1 🎉 Chào mừng bạn đến với EngliMaster!
+
+      .greeting
+        p Xin chào <strong>#{userName}</strong>,
+        p Cảm ơn bạn đã đăng ký và thanh toán thành công khóa học tại EngliMaster!
+
+      .info-box
+        p <strong>🎓 Vai trò:</strong> #{role}
+        p <strong>📖 Khóa học:</strong> #{courseName}
+        p <strong>🏫 Lớp học:</strong> #{classroomName}
+        p <strong>💰 Học phí:</strong> #{price} #{currency}
+
+      .credentials
+        p <strong>🔐 Thông tin đăng nhập:</strong>
+        p <strong>Email:</strong> #{email}
+        if password
+          p <strong>Mật khẩu:</strong> <code style="background-color: #f5f5f5; padding: 2px 8px; border-radius: 3px; font-size: 16px; color: #d32f2f;">#{password}</code>
+          p(style='color: #d32f2f; font-size: 13px;') ⚠️ Vui lòng đổi mật khẩu sau lần đăng nhập đầu tiên để bảo mật tài khoản!
+        else
+          p <strong>Mật khẩu:</strong> Bạn cần đặt mật khẩu lần đầu tiên khi đăng nhập
+
+      p Để bắt đầu học tập, vui lòng đăng nhập vào hệ thống:
+
+      div(style='text-align: center;')
+        a.button(href=loginUrl) Đăng nhập ngay
+
+      div(style='margin-top: 30px;')
+        p <strong>Bước tiếp theo:</strong>
+        ol
+          li Nhấn vào nút "Đăng nhập ngay" bên trên
+          li Sử dụng email <strong>#{email}</strong>
+            if password
+              | và mật khẩu đã được cung cấp bên trên
+            else
+              | để đăng nhập và tạo mật khẩu mới
+          li Truy cập lớp học và bắt đầu hành trình học tập!
+          if password
+            li <strong style="color: #d32f2f;">Đổi mật khẩu ngay sau khi đăng nhập để bảo mật!</strong>
+
+      div(style='background-color: #e8f5e9; padding: 15px; border-radius: 5px; margin-top: 20px;')
+        p <strong>💡 Lưu ý quan trọng:</strong>
+        ul
+          li Kiểm tra email thường xuyên để nhận thông báo từ giảng viên
+          li Tham gia lớp học đúng giờ để không bỏ lỡ nội dung quan trọng
+          li Liên hệ với chúng tôi nếu cần hỗ trợ
+
+      .footer
+        p Trân trọng,<br><strong>Đội ngũ EngliMaster</strong>
+        p(style='font-size: 12px; color: #999; margin-top: 20px;')
+          | Email này được gửi tự động. Vui lòng không trả lời email này.<br>
+          | Nếu bạn có thắc mắc, vui lòng liên hệ: support@englimaster.com
