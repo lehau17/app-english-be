@@ -2,14 +2,28 @@ import { ChatPromptTemplate } from '@langchain/core/prompts';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { Injectable, Logger } from '@nestjs/common';
 import { AgentExecutor, createToolCallingAgent } from 'langchain/agents';
+import { AssignmentAnalyticsTool } from '../tools/assignment-analytics.tool';
 import { ChartGeneratorTool } from '../tools/chart-generator.tool';
+import { ClassPerformanceTool } from '../tools/class-performance.tool';
+import { ClassroomAnalyticsTool } from '../tools/classroom-analytics.tool';
+import { ContentStatsTool } from '../tools/content-stats.tool';
+import { CourseAnalyticsTool } from '../tools/course-analytics.tool';
 import { ExcelExportTool } from '../tools/excel-export.tool';
 import { GraphQueryTool } from '../tools/graph-query.tool';
+import { NotificationSenderTool } from '../tools/notification-sender.tool';
 import { PdfExportTool } from '../tools/pdf-export.tool';
+import { PodcastHistoryTool } from '../tools/podcast-history.tool';
+import { ProgressTrackerTool } from '../tools/progress-tracker.tool';
 import { RagTool } from '../tools/rag.tool';
 import { ReportAdvisorTool } from '../tools/report-advisor.tool';
+import { RevenueAnalyticsTool } from '../tools/revenue-analytics.tool';
 import { SqlTool } from '../tools/sql.tool';
 import { StudentAgentTools } from '../tools/student-agent.tools';
+import { StudentAlertTool } from '../tools/student-alert.tool';
+import { StudentAnalyticsTool } from '../tools/student-analytics.tool';
+import { SystemOverviewTool } from '../tools/system-overview.tool';
+import { TeacherAnalyticsTool } from '../tools/teacher-analytics.tool';
+import { UserManagementTool } from '../tools/user-management.tool';
 import { WordExportTool } from '../tools/word-export.tool';
 import { RagService } from './rag.service';
 import { SqlService } from './sql.service';
@@ -29,6 +43,20 @@ export class LangChainAgentService {
     private reportAdvisor: ReportAdvisorTool,
     private graphQuery: GraphQueryTool,
     private studentTools: StudentAgentTools,
+    private studentAnalytics: StudentAnalyticsTool,
+    private teacherAnalytics: TeacherAnalyticsTool,
+    private courseAnalytics: CourseAnalyticsTool,
+    private classroomAnalytics: ClassroomAnalyticsTool,
+    private classPerformance: ClassPerformanceTool,
+    private revenueAnalytics: RevenueAnalyticsTool,
+    private systemOverview: SystemOverviewTool,
+    private notificationSender: NotificationSenderTool,
+    private assignmentAnalytics: AssignmentAnalyticsTool,
+    private progressTracker: ProgressTrackerTool,
+    private podcastHistory: PodcastHistoryTool,
+    private studentAlert: StudentAlertTool,
+    private userManagement: UserManagementTool,
+    private contentStats: ContentStatsTool,
   ) {
     // không await trong ctor: gọi initialize() ở nơi thích hợp nếu cần
     void this.initializeAgent();
@@ -56,6 +84,20 @@ export class LangChainAgentService {
         this.pdfExport,
         this.wordExport,
         this.reportAdvisor,
+        this.studentAnalytics,
+        this.teacherAnalytics,
+        this.courseAnalytics,
+        this.classroomAnalytics,
+        this.classPerformance,
+        this.revenueAnalytics,
+        this.systemOverview,
+        this.notificationSender,
+        this.assignmentAnalytics,
+        this.progressTracker,
+        this.podcastHistory,
+        this.studentAlert,
+        this.userManagement,
+        this.contentStats,
       ];
 
       const prompt = ChatPromptTemplate.fromMessages([
@@ -64,10 +106,10 @@ export class LangChainAgentService {
           `
 Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {user_role}
 
-👤 THÔNG TIN NGƯỜI DÙNG HIỆN TẠI:
+THÔNG TIN NGƯỜI DÙNG HIỆN TẠI:
 {user_info}
 
-🎯 NHIỆM VỤ THEO VAI TRÒ:
+NHIỆM VỤ THEO VAI TRÒ:
 
 **Nếu {user_role} = "student" (Học sinh):**
 - Hỗ trợ học tập và tiến độ cá nhân
@@ -99,7 +141,7 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
 - Quản lý dữ liệu cấp cao
 - Export báo cáo tổng hợp
 
-🛠️ CÔNG CỤ CÓ SẴN:
+CÔNG CỤ CÓ SẴN:
 
 1. **knowledge_search**: Tra cứu knowledge base (quy định/FAQ/khóa học/bài học/từ vựng/hoạt động/nội dung học tập)
 2. **database_query**: Truy vấn cơ sở dữ liệu (SELECT only) để lấy thống kê, danh sách học viên, điểm số, v.v.
@@ -108,6 +150,15 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
 5. **pdf_export**: Xuất báo cáo ra file PDF (.pdf) chính thức, dễ in ấn
 6. **word_export**: Xuất báo cáo ra file Word (.docx) chi tiết, dễ chỉnh sửa
 7. **report_advisor**: Phân tích dữ liệu và gợi ý format báo cáo phù hợp nhất (PDF/Word/Excel)
+8. **analyze_student**: Phân tích chi tiết học viên với AI - điểm số, kỹ năng, xu hướng, gợi ý cải thiện + TẠO NHIỀU BIỂU ĐỒ
+9. **analyze_teacher**: Phân tích hiệu suất giảng dạy của giáo viên - lớp học, học viên, điểm TB + TẠO NHIỀU BIỂU ĐỒ
+10. **analyze_course**: Phân tích khóa học - enrollment, completion rate, điểm TB, so sánh các khóa + TẠO NHIỀU BIỂU ĐỒ
+11. **analyze_classroom**: Phân tích lớp học - học viên, attendance, điểm TB, cảnh báo lớp cần can thiệp + TẠO NHIỀU BIỂU ĐỒ
+12. **analyze_revenue**: Phân tích doanh thu - theo tháng, theo khóa, tỷ lệ thanh toán, dự báo + TẠO NHIỀU BIỂU ĐỒ
+13. **system_overview**: Tổng quan hệ thống - users, courses, classrooms, hoạt động gần đây + TẠO NHIỀU BIỂU ĐỒ
+14. **send_notification**: Gửi thông báo cho user/role/lớp/khóa học
+15. **analyze_assignment**: Phân tích bài tập - tỷ lệ nộp bài, điểm TB, bài khó, học sinh chưa nộp + TẠO NHIỀU BIỂU ĐỒ
+16. **track_progress**: Theo dõi tiến độ học tập cá nhân - khóa học, từ vựng, podcast, speaking, bài tập + TẠO NHIỀU BIỂU ĐỒ (dành cho student)
 
 **QUY TẮC SỬ DỤNG:**
 
@@ -115,7 +166,7 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
    → Dùng knowledge_search để tìm thông tin về khóa học, bài học, từ vựng, hoạt động
    → Ví dụ: "Khóa học IELTS có gì?", "Bài học về thì hiện tại", "Từ vựng chủ đề du lịch"
 
-📊 **Khi người dùng hỏi về dữ liệu/thống kê:**
+**Khi người dùng hỏi về dữ liệu/thống kê:**
    → Dùng database_query để lấy dữ liệu từ DB
    → Ví dụ: "10 học viên điểm cao nhất", "Số lượng học viên mới", "Thống kê điểm danh"
    → **HỖ TRỢ ĐẦY ĐỦ:**
@@ -126,7 +177,21 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
      • Lọc theo khoảng thời gian bất kỳ: ngày, tuần, tháng, năm
    → **VÍ DỤ:** "4 tuần gần nhất" = WHERE "createdAt" >= NOW() - INTERVAL '4 weeks'
 
-📈 **Khi người dùng yêu cầu biểu đồ:**
+**Khi người dùng yêu cầu phân tích chi tiết:**
+   → "phân tích học sinh X" → analyze_student (tự động tạo nhiều biểu đồ)
+   → "phân tích giáo viên Y" → analyze_teacher (tự động tạo nhiều biểu đồ)
+   → "phân tích khóa học Z" → analyze_course (tự động tạo nhiều biểu đồ)
+   → "phân tích lớp học W" → analyze_classroom (tự động tạo nhiều biểu đồ)
+   → "báo cáo doanh thu" → analyze_revenue (tự động tạo nhiều biểu đồ)
+   → "tổng quan hệ thống / dashboard" → system_overview (tự động tạo nhiều biểu đồ)
+   → "phân tích bài tập / assignment" → analyze_assignment (tự động tạo nhiều biểu đồ)
+   → "tiến độ học tập của tôi / progress" → track_progress (tự động tạo nhiều biểu đồ, dành cho student)
+
+🔔 **Khi người dùng muốn gửi thông báo:**
+   → Dùng send_notification với targetType phù hợp
+   → Ví dụ: "gửi thông báo cho tất cả học viên", "thông báo cho lớp IELTS 1"
+
+**Khi người dùng yêu cầu biểu đồ:**
    1. Lấy dữ liệu bằng database_query
    2. GỌI chart_generator với dữ liệu đã có
    3. **QUAN TRỌNG:** KHÔNG viết lại chart JSON trong response!
@@ -182,9 +247,9 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
         returnIntermediateSteps: true,
       });
 
-      this.logger.log('✅ LangChain Agent sẵn sàng');
+      this.logger.log('LangChain Agent sẵn sàng');
     } catch (e) {
-      this.logger.error('❌ Lỗi init Agent:', e as any);
+      this.logger.error('Lỗi init Agent:', e as any);
       throw e;
     }
   }
@@ -314,17 +379,17 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
                   Array.isArray(value.intermediateSteps)
                 ) {
                   this.logger.log(
-                    `🎯 Found ${value.intermediateSteps.length} intermediate steps in final output!`,
+                    `Found ${value.intermediateSteps.length} intermediate steps in final output!`,
                   );
                   finalIntermediateSteps = value.intermediateSteps;
                 }
 
                 if (output && typeof output === 'string') {
                   this.logger.debug(
-                    `📝 Final output: "${output.substring(0, 100)}..."`,
+                    `Final output: "${output.substring(0, 100)}..."`,
                   );
                   this.logger.debug(
-                    `📊 Has streamed tokens: ${hasStreamedTokens}`,
+                    `Has streamed tokens: ${hasStreamedTokens}`,
                   );
 
                   // Only manual tokenize if we DIDN'T get streaming tokens (avoid duplicate)
@@ -342,7 +407,7 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
 
                     if (output) {
                       this.logger.log(
-                        '🔄 Manual tokenization (no streaming tokens received)',
+                        'Manual tokenization (no streaming tokens received)',
                       );
                       // Manual tokenization: split by words and stream word-by-word
                       const words = output.split(/(\s+)/); // Keep whitespace
@@ -358,7 +423,7 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
                     }
                   } else {
                     this.logger.log(
-                      '✅ Skipping manual tokenization (already streamed)',
+                      'Skipping manual tokenization (already streamed)',
                     );
                     // Just update fullAnswer to match what was streamed
                     fullAnswer = output;
@@ -395,18 +460,54 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
                   try {
                     const chartResult = JSON.parse(logValue.output || '{}');
                     this.logger.debug(
-                      `📊 Parsed chart result: ${JSON.stringify(chartResult).substring(0, 300)}`,
+                      `Parsed chart result: ${JSON.stringify(chartResult).substring(0, 300)}`,
                     );
 
                     if (chartResult.success && chartResult.chart) {
-                      this.logger.log('✅ Chart detected, sending chart chunk');
+                      this.logger.log('Chart detected, sending chart chunk');
                       yield {
                         type: 'chart',
                         chart: chartResult.chart,
                       };
                     }
                   } catch (e) {
-                    this.logger.warn('⚠️ Failed to parse chart result:', e);
+                    this.logger.warn('Failed to parse chart result:', e);
+                  }
+                }
+
+                // Check if this is analytics tool result (multiple charts)
+                const analyticsTools = [
+                  'analyze_student',
+                  'analyze_teacher',
+                  'analyze_course',
+                  'analyze_classroom',
+                  'analyze_revenue',
+                  'system_overview',
+                  'analyze_assignment',
+                  'track_progress',
+                ];
+                if (
+                  analyticsTools.includes(logValue.name) &&
+                  logValue.type === 'tool_end'
+                ) {
+                  try {
+                    const analyticsResult = JSON.parse(logValue.output || '{}');
+                    this.logger.debug(
+                      `Parsed analytics result: ${JSON.stringify(analyticsResult).substring(0, 500)}`,
+                    );
+
+                    // Send multiple charts from analytics tools
+                    if (analyticsResult.success && analyticsResult.charts && Array.isArray(analyticsResult.charts)) {
+                      this.logger.log(`Analytics detected with ${analyticsResult.charts.length} charts`);
+                      for (const chart of analyticsResult.charts) {
+                        yield {
+                          type: 'chart',
+                          chart: chart,
+                        };
+                      }
+                    }
+                  } catch (e) {
+                    this.logger.warn('Failed to parse analytics result:', e);
                   }
                 }
 
@@ -423,7 +524,7 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
 
                     if (fileResult.success && fileResult.downloadUrl) {
                       this.logger.log(
-                        '✅ Excel file detected, sending file chunk',
+                        'Excel file detected, sending file chunk',
                       );
                       yield {
                         type: 'file',
@@ -435,7 +536,7 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
                       };
                     }
                   } catch (e) {
-                    this.logger.warn('⚠️ Failed to parse file result:', e);
+                    this.logger.warn('Failed to parse file result:', e);
                   }
                 }
               }
@@ -449,7 +550,7 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
                       : op.value.output;
 
                   if (toolResult.success && toolResult.chart) {
-                    this.logger.log('📊 Chart found in action result!');
+                    this.logger.log('Chart found in action result!');
                     yield {
                       type: 'chart',
                       chart: toolResult.chart,
@@ -470,14 +571,14 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
       }
 
       this.logger.log(
-        `✅ Streaming complete. Total length: ${fullAnswer.length}`,
+        `Streaming complete. Total length: ${fullAnswer.length}`,
       );
-      this.logger.log(`📝 Full answer content: "${fullAnswer}"`);
+      this.logger.log(`Full answer content: "${fullAnswer}"`);
 
       // Use finalIntermediateSteps if steps is empty
       if (steps.length === 0 && finalIntermediateSteps.length > 0) {
         this.logger.log(
-          `🔄 Using finalIntermediateSteps: ${finalIntermediateSteps.length} steps`,
+          `Using finalIntermediateSteps: ${finalIntermediateSteps.length} steps`,
         );
         steps = finalIntermediateSteps;
       }
@@ -488,13 +589,13 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
       for (let i = 0; i < steps.length; i++) {
         const step = steps[i];
         this.logger.log(
-          `📋 Step ${i}: tool=${step.action?.tool}, has observation=${!!step.observation}`,
+          `Step ${i}: tool=${step.action?.tool}, has observation=${!!step.observation}`,
         );
 
         if (step.action?.tool === 'chart_generator') {
-          this.logger.log(`🎯 Found chart_generator step!`);
+          this.logger.log(`Found chart_generator step!`);
           this.logger.log(
-            `📊 Observation: ${JSON.stringify(step.observation).substring(0, 500)}`,
+            `Observation: ${JSON.stringify(step.observation).substring(0, 500)}`,
           );
 
           if (step.observation) {
@@ -505,26 +606,73 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
                   : step.observation;
 
               this.logger.log(
-                `✅ Parsed result:`,
+                `Parsed result:`,
                 JSON.stringify(chartResult).substring(0, 300),
               );
 
               if (chartResult.success && chartResult.chart) {
-                this.logger.log('� Sending chart chunk NOW!');
+                this.logger.log('Sending chart chunk NOW!');
                 yield {
                   type: 'chart',
                   chart: chartResult.chart,
                 };
               } else {
-                this.logger.warn('⚠️ Chart result missing success/chart field');
+                this.logger.warn('Chart result missing success/chart field');
               }
             } catch (e) {
-              this.logger.error('❌ Failed to parse chart from step:', e);
+              this.logger.error('Failed to parse chart from step:', e);
             }
           }
         }
 
-        // ✅ Detect all file export tools (Excel, PDF, Word)
+        // Detect analytics tools with multiple charts
+        const analyticsToolsList = [
+          'analyze_student',
+          'analyze_teacher',
+          'analyze_course',
+          'analyze_classroom',
+          'analyze_revenue',
+          'system_overview',
+          'analyze_assignment',
+          'track_progress',
+        ];
+        const isAnalyticsTool = analyticsToolsList.includes(step.action?.tool);
+
+        if (isAnalyticsTool) {
+          this.logger.log(`Found ${step.action?.tool} step!`);
+          this.logger.log(
+            `Observation: ${JSON.stringify(step.observation).substring(0, 500)}`,
+          );
+
+          if (step.observation) {
+            try {
+              const analyticsResult =
+                typeof step.observation === 'string'
+                  ? JSON.parse(step.observation)
+                  : step.observation;
+
+              this.logger.log(
+                `Parsed analytics result:`,
+                JSON.stringify(analyticsResult).substring(0, 300),
+              );
+
+              // Send multiple charts from analytics tools
+              if (analyticsResult.success && analyticsResult.charts && Array.isArray(analyticsResult.charts)) {
+                this.logger.log(`Sending ${analyticsResult.charts.length} charts from ${step.action?.tool}!`);
+                for (const chart of analyticsResult.charts) {
+                  yield {
+                    type: 'chart',
+                    chart: chart,
+                  };
+                }
+              }
+            } catch (e) {
+              this.logger.error('Failed to parse analytics from step:', e);
+            }
+          }
+        }
+
+        // Detect all file export tools (Excel, PDF, Word)
         const isFileExportTool = [
           'excel_export',
           'pdf_export',
@@ -532,7 +680,7 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
         ].includes(step.action?.tool);
 
         if (isFileExportTool) {
-          this.logger.log(`🎯 Found ${step.action?.tool} step!`);
+          this.logger.log(`Found ${step.action?.tool} step!`);
           this.logger.log(
             `📄 Observation: ${JSON.stringify(step.observation).substring(0, 500)}`,
           );
@@ -545,7 +693,7 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
                   : step.observation;
 
               this.logger.log(
-                `✅ Parsed file result:`,
+                `Parsed file result:`,
                 JSON.stringify(fileResult).substring(0, 300),
               );
 
@@ -563,11 +711,11 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
                 };
               } else {
                 this.logger.warn(
-                  '⚠️ File result missing success/downloadUrl field',
+                  'File result missing success/downloadUrl field',
                 );
               }
             } catch (e) {
-              this.logger.error('❌ Failed to parse file from step:', e);
+              this.logger.error('Failed to parse file from step:', e);
             }
           }
         }
@@ -594,7 +742,7 @@ Bạn là trợ lý AI thông minh hỗ trợ người dùng với vai trò: {us
         },
       };
     } catch (error) {
-      this.logger.error('❌ Streaming error:', error);
+      this.logger.error('Streaming error:', error);
       yield {
         type: 'error',
         content: error.message || 'Unknown error occurred',

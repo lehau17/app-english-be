@@ -6,10 +6,13 @@ import { z } from 'zod';
 import { RagService } from '../service/rag.service';
 import { SqlService } from '../service/sql.service';
 import { ChartGeneratorTool } from './chart-generator.tool';
+import { FlashcardReviewTool } from './flashcard-review.tool';
 import { GrammarExplainerTool } from './grammar-explainer.tool';
+import { PodcastHistoryTool } from './podcast-history.tool';
 import { PronunciationCoachTool } from './pronunciation-coach.tool';
 import { RagTool } from './rag.tool';
 import { SqlTool } from './sql.tool';
+import { UpcomingDeadlinesTool } from './upcoming-deadlines.tool';
 import { VocabularyLookupTool } from './vocabulary-lookup.tool';
 
 @Injectable()
@@ -36,6 +39,9 @@ export class StudentAgentTools {
       this.ragService,
     );
     const pronunciationCoach = new PronunciationCoachTool(this.gemini);
+    const flashcardReview = new FlashcardReviewTool(this.prisma, this.gemini);
+    const upcomingDeadlines = new UpcomingDeadlinesTool(this.prisma);
+    const podcastHistory = new PodcastHistoryTool(this.prisma);
 
     return [
       // Core tools
@@ -47,6 +53,15 @@ export class StudentAgentTools {
       vocabularyLookup.getTool(),
       grammarExplainer.getTool(),
       pronunciationCoach.getTool(),
+
+      // Flashcard review tools (SRS)
+      ...flashcardReview.getTools(),
+
+      // Deadline tracker
+      upcomingDeadlines.getTool(),
+
+      // Podcast history
+      podcastHistory.getTool(),
 
       // Progress tools
       this.getScoreReportTool(),
@@ -468,15 +483,16 @@ export class StudentAgentTools {
           const podcastAttempts = await this.prisma.podcastAttempt.findMany({
             where: {
               userId,
-              completedAt: { gte: startDate, not: null },
+              status: 'submitted',
+              createdAt: { gte: startDate },
             },
             select: {
               id: true,
-              score: true,
-              completedAt: true,
+              scorePercent: true,
+              createdAt: true,
               timeSpent: true,
             },
-            orderBy: { completedAt: 'desc' },
+            orderBy: { createdAt: 'desc' },
           });
 
           // 4. AI Speaking Sessions
@@ -485,18 +501,16 @@ export class StudentAgentTools {
               where: {
                 userId,
                 createdAt: { gte: startDate },
-                state: 'completed',
+                state: 'finished',
               },
               include: {
                 turns: {
                   where: {
-                    status: 'completed',
+                    state: 'completed',
                   },
                   select: {
-                    pronunciationScore: true,
-                    grammarScore: true,
-                    vocabularyScore: true,
-                    fluencyScore: true,
+                    score: true,
+                    evaluation: true,
                   },
                 },
               },
@@ -804,8 +818,8 @@ export class StudentAgentTools {
       0,
     );
     const scores = podcastAttempts
-      .map((p) => p.score)
-      .filter((s) => s !== null);
+      .map((p) => p.scorePercent)
+      .filter((s) => s !== null && s !== undefined);
     const avgAccuracy =
       scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
 
@@ -830,7 +844,7 @@ export class StudentAgentTools {
 
     sessions.forEach((s) => {
       s.turns.forEach((t: any) => {
-        if (t.pronunciationScore) allScores.push(t.pronunciationScore);
+        if (t.score) allScores.push(t.score);
       });
     });
 
@@ -841,8 +855,8 @@ export class StudentAgentTools {
 
     return {
       minutesPracticed: totalMinutes,
-      masteryRate: Math.round(avgScore * 10), // Convert to percentage
-      avgPronunciationScore: Math.round(avgScore * 10) / 10,
+      masteryRate: Math.round(avgScore), // score is already 0-100
+      avgPronunciationScore: Math.round(avgScore),
     };
   }
 
@@ -896,8 +910,8 @@ export class StudentAgentTools {
     });
 
     podcastAttempts.forEach((p) => {
-      if (p.completedAt) {
-        const date = new Date(p.completedAt).toISOString().split('T')[0];
+      if (p.createdAt) {
+        const date = new Date(p.createdAt).toISOString().split('T')[0];
         dailyActivity.set(date, (dailyActivity.get(date) || 0) + 1);
       }
     });

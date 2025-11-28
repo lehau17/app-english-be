@@ -410,7 +410,7 @@ async function main() {
     })
   }
 
-  console.log('✅ Vocabulary data seeded successfully!')
+  console.log('Vocabulary data seeded successfully!')
   console.log(`Created lists:`)
   console.log(`  - ${ielts.title} (${envTerms.length + techTerms.length} terms)`)
   console.log(`  - ${toeic.title} (${businessTerms.length} terms)`)
@@ -419,7 +419,7 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error('❌ Error seeding vocabulary:', e)
+    console.error('Error seeding vocabulary:', e)
     process.exit(1)
   })
   .finally(async () => {

@@ -166,14 +166,14 @@ export class ClassroomService {
         course.sessionSchedules.length > 0
       ) {
         console.log(
-          `🔄 Mapping ${course.sessionSchedules.length} session schedules to classroom ${classroom.id}`,
+          `Mapping ${course.sessionSchedules.length} session schedules to classroom ${classroom.id}`,
         );
 
         // Lấy lại danh sách sessions vừa tạo để mapping
         const createdSessions =
           await this.classroomRepository.getClassroomSessions(classroom.id);
         console.log(
-          `📝 Found ${createdSessions.length} created sessions to map`,
+          `Found ${createdSessions.length} created sessions to map`,
         );
 
         await this.mapCourseSessionSchedulesToClassroom(
@@ -183,11 +183,11 @@ export class ClassroomService {
         );
 
         console.log(
-          `✅ Session schedule mapping completed for classroom ${classroom.id}`,
+          `Session schedule mapping completed for classroom ${classroom.id}`,
         );
       } else {
         console.log(
-          `⚠️ No session schedules found for course ${course.id} - skipping mapping`,
+          `No session schedules found for course ${course.id} - skipping mapping`,
         );
       }
     } catch (error) {
@@ -209,7 +209,7 @@ export class ClassroomService {
         slots: dto.slots, // Truyền thông tin slots để tính thời gian
       });
 
-      console.log(`🎯 Auto exams created for classroom ${classroom.id}`);
+      console.log(`Auto exams created for classroom ${classroom.id}`);
     } catch (error) {
       console.error('Failed to create auto exams:', error);
       // Don't fail the classroom creation if auto exam creation fails
@@ -1537,7 +1537,7 @@ export class ClassroomService {
     const weekEndLabel = this.formatDateInTimezone(endOfWeek, timezone);
 
     console.log(`   Week range: ${weekStartLabel} - ${weekEndLabel}`);
-    console.log(`   ✅ For 2025-09-28 (Sun) should now return: 29/09 - 05/10`);
+    console.log(`   For 2025-09-28 (Sun) should now return: 29/09 - 05/10`);
 
     const dayLabels = [];
     for (let i = 0; i < days; i++) {
@@ -1716,7 +1716,7 @@ export class ClassroomService {
     classroomSessions: any[],
   ): Promise<void> {
     try {
-      console.log(`🎯 Starting session mapping for classroom ${classroomId}`);
+      console.log(`Starting session mapping for classroom ${classroomId}`);
       console.log(
         `   Course session schedules: ${courseSessionSchedules.length}`,
       );
@@ -1766,15 +1766,15 @@ export class ClassroomService {
           },
         });
 
-        console.log(`✅ Updated session ${classroomSession.id} with metadata`);
+        console.log(`Updated session ${classroomSession.id} with metadata`);
       }
 
       console.log(
-        `🎉 Session mapping completed successfully for ${courseSessionSchedules.length} sessions`,
+        `Session mapping completed successfully for ${courseSessionSchedules.length} sessions`,
       );
     } catch (error) {
       console.error(
-        '❌ Failed to map course session schedules to classroom:',
+        'Failed to map course session schedules to classroom:',
         error,
       );
       console.error('Error details:', error.stack);
@@ -1851,7 +1851,7 @@ export class ClassroomService {
     });
 
     console.log(
-      `✅ Classroom ${classroomId} status updated: ${currentStatus} → ${newStatus} by ${adminUserId}`,
+      `Classroom ${classroomId} status updated: ${currentStatus} → ${newStatus} by ${adminUserId}`,
     );
 
     // TODO: Optional - Send notification to students/teacher about status change
@@ -1896,7 +1896,7 @@ export class ClassroomService {
     });
 
     console.log(
-      `🔄 Auto-updated classroom statuses: ${activatedResult.count} activated, ${completedResult.count} completed`,
+      `Auto-updated classroom statuses: ${activatedResult.count} activated, ${completedResult.count} completed`,
     );
 
     return {
@@ -2026,7 +2026,7 @@ export class ClassroomService {
       });
 
       console.log(
-        `✅ Student ${studentId} transferred from classroom ${currentClassroomId} to ${newClassroomId} by ${adminUserId}`,
+        `Student ${studentId} transferred from classroom ${currentClassroomId} to ${newClassroomId} by ${adminUserId}`,
       );
 
       // TODO: Optional - Gửi notification cho học sinh về việc chuyển lớp
@@ -2119,7 +2119,7 @@ export class ClassroomService {
     const description = `Thanh toán khóa học ${course.title}`;
 
     const enrollmentMetadata = {
-      existingUser: true, // 🔥 Flag: User đã tồn tại, chỉ cần enroll
+      existingUser: true, // Flag: User đã tồn tại, chỉ cần enroll
       userId,
       courseId,
       classroomId,
@@ -2128,7 +2128,7 @@ export class ClassroomService {
     };
 
     const payment = await this.paymentService.createPayment(
-      userId, // 🔥 Có studentId vì user đã tồn tại
+      userId, // Có studentId vì user đã tồn tại
       {
         courseId,
         classroomId,

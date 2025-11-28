@@ -36,7 +36,7 @@ export class AutoReindexService implements OnModuleInit {
     this.setupPrismaMiddleware();
 
     this.isInitialized = true;
-    this.logger.log('✅ Auto-Reindex Service initialized successfully');
+    this.logger.log('Auto-Reindex Service initialized successfully');
   }
 
   private setupPrismaMiddleware() {
@@ -71,7 +71,7 @@ export class AutoReindexService implements OnModuleInit {
       return result;
     });
 
-    this.logger.log('📝 Prisma middleware for auto-reindex set up');
+    this.logger.log('Prisma middleware for auto-reindex set up');
   }
 
   private extractId(result: any, params: any): string {
@@ -94,7 +94,7 @@ export class AutoReindexService implements OnModuleInit {
   async handleReindexEvent(event: ReindexEvent) {
     try {
       this.logger.log(
-        `📚 Auto-reindexing ${event.model} (${event.action}) - ID: ${event.id}`,
+        `Auto-reindexing ${event.model} (${event.action}) - ID: ${event.id}`,
       );
 
       switch (event.model) {
@@ -115,7 +115,7 @@ export class AutoReindexService implements OnModuleInit {
       }
     } catch (error) {
       this.logger.error(
-        `❌ Failed to auto-reindex ${event.model} ${event.id}:`,
+        `Failed to auto-reindex ${event.model} ${event.id}:`,
         error,
       );
     }
@@ -339,15 +339,15 @@ Ví dụ: ${examples}
 
         // Create new document using RagService
         await this.ragService.addDocument(doc);
-        this.logger.log(`✅ Updated knowledge document: ${doc.source}`);
+        this.logger.log(`Updated knowledge document: ${doc.source}`);
       } else {
         // Create new document using RagService
         await this.ragService.addDocument(doc);
-        this.logger.log(`✅ Created knowledge document: ${doc.source}`);
+        this.logger.log(`Created knowledge document: ${doc.source}`);
       }
     } catch (error) {
       this.logger.error(
-        `❌ Failed to upsert knowledge document ${doc.source}:`,
+        `Failed to upsert knowledge document ${doc.source}:`,
         error,
       );
       throw error;
@@ -361,7 +361,7 @@ Ví dụ: ${examples}
       });
 
       if (deleted.count > 0) {
-        this.logger.log(`✅ Removed knowledge document: ${source}`);
+        this.logger.log(`Removed knowledge document: ${source}`);
       } else {
         this.logger.warn(
           `Knowledge document not found for deletion: ${source}`,
@@ -369,7 +369,7 @@ Ví dụ: ${examples}
       }
     } catch (error) {
       this.logger.error(
-        `❌ Failed to remove knowledge document ${source}:`,
+        `Failed to remove knowledge document ${source}:`,
         error,
       );
       throw error;

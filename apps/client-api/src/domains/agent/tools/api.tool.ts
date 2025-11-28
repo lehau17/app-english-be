@@ -105,7 +105,7 @@ export class ApiTool extends StructuredTool {
       const { data } = await axios(cfg);
       return JSON.stringify({ success: true, method, path, url, data });
     } catch (e: any) {
-      this.logger.error(`❌ API call error: ${e?.message}`);
+      this.logger.error(`API call error: ${e?.message}`);
       return JSON.stringify({
         success: false,
         error: `API call error: ${e?.message}`,

@@ -206,7 +206,7 @@ async function seedVocabulary() {
         ],
     })
 
-    console.log(`✅ Created IELTS list with ${await prisma.vocabularyTerm.count({ where: { unit: { listId: ieltsList.id } } })} terms`)
+    console.log(`Created IELTS list with ${await prisma.vocabularyTerm.count({ where: { unit: { listId: ieltsList.id } } })} terms`)
 
     // TOEIC Business Vocabulary
     const toeicList = await prisma.vocabularyList.create({
@@ -292,7 +292,7 @@ async function seedVocabulary() {
         ],
     })
 
-    console.log(`✅ Created TOEIC list with ${await prisma.vocabularyTerm.count({ where: { unit: { listId: toeicList.id } } })} terms`)
+    console.log(`Created TOEIC list with ${await prisma.vocabularyTerm.count({ where: { unit: { listId: toeicList.id } } })} terms`)
 
     // Daily Conversation Vocabulary
     const dailyList = await prisma.vocabularyList.create({
@@ -359,17 +359,17 @@ async function seedVocabulary() {
         ],
     })
 
-    console.log(`✅ Created Daily Life list with ${await prisma.vocabularyTerm.count({ where: { unit: { listId: dailyList.id } } })} terms`)
+    console.log(`Created Daily Life list with ${await prisma.vocabularyTerm.count({ where: { unit: { listId: dailyList.id } } })} terms`)
 
-    console.log('🎉 Vocabulary seeding completed!')
-    console.log(`📚 Total lists: 3`)
+    console.log('Vocabulary seeding completed!')
+    console.log(`Total lists: 3`)
     console.log(`📖 Total units: 4`)
-    console.log(`📝 Total terms: ${await prisma.vocabularyTerm.count()}`)
+    console.log(`Total terms: ${await prisma.vocabularyTerm.count()}`)
 }
 
 seedVocabulary()
     .catch((e) => {
-        console.error('❌ Error seeding vocabulary:', e)
+        console.error('Error seeding vocabulary:', e)
         process.exit(1)
     })
     .finally(async () => {

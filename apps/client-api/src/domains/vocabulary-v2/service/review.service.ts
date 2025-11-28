@@ -244,7 +244,7 @@ export class ReviewService {
         await this.notificationService.create({
           userId,
           type: NotificationType.achievement,
-          title: '✅ Hoàn thành session!',
+          title: 'Hoàn thành session!',
           body: `Bạn đã review ${totalReviewed} từ vựng (${correct} đúng, ${wrong} sai)`,
           data: JSON.stringify({
             listId,
@@ -271,7 +271,7 @@ export class ReviewService {
         await this.notificationService.create({
           userId,
           type: NotificationType.achievement,
-          title: '🎉 Chúc mừng!',
+          title: 'Chúc mừng!',
           body: `Bạn đã master ${mastered.length} từ vựng mới!`,
           data: JSON.stringify({
             listId,
@@ -391,7 +391,7 @@ export class ReviewService {
         await this.notificationService.create({
           userId,
           type: NotificationType.achievement,
-          title: `🔥 Streak ${currentStreak} ngày!`,
+          title: `Streak ${currentStreak} ngày!`,
           body: 'Bạn đang làm rất tốt! Hãy tiếp tục duy trì học tập mỗi ngày!',
           data: JSON.stringify({
             currentStreak,

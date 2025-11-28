@@ -107,9 +107,9 @@ LƯU Ý QUAN TRỌNG:
                 maxIterations: 5,
                 returnIntermediateSteps: true,
             });
-            this.logger.log('✅ Landing Consultant Agent initialized successfully');
+            this.logger.log('Landing Consultant Agent initialized successfully');
         } catch (error) {
-            this.logger.error('❌ Failed to initialize Landing Consultant Agent:', error);
+            this.logger.error('Failed to initialize Landing Consultant Agent:', error);
             throw error;
         }
     }

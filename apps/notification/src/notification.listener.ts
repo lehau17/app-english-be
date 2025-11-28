@@ -46,7 +46,7 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     try {
       await this.consumer.connect();
-      this.logger.log('✅ Notification listener connected to Kafka');
+      this.logger.log('Notification listener connected to Kafka');
 
       await this.consumer.subscribe({
         topics: [
@@ -59,7 +59,7 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
         fromBeginning: false,
       });
       this.logger.log(
-        `✅ Subscribed to topics: ${KafkaTopic.NOTIFICATION_SEND_OTP_CREATED}, ${KafkaTopic.EMAIL_ENROLLMENT_VERIFICATION}, ${KafkaTopic.EMAIL_WELCOME_NEW_USER}, ${KafkaTopic.EMAIL_ENROLLMENT_CONFIRMATION}, notifications`,
+        `Subscribed to topics: ${KafkaTopic.NOTIFICATION_SEND_OTP_CREATED}, ${KafkaTopic.EMAIL_ENROLLMENT_VERIFICATION}, ${KafkaTopic.EMAIL_WELCOME_NEW_USER}, ${KafkaTopic.EMAIL_ENROLLMENT_CONFIRMATION}, notifications`,
       );
 
       // Event listeners
@@ -76,7 +76,7 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      this.logger.log('✅ Notification email consumer running');
+      this.logger.log('Notification email consumer running');
     } catch (error) {
       this.logger.error('Failed to initialize notification listener', error);
       throw error;
@@ -170,7 +170,7 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      this.logger.log(`✅ Sent OTP email to ${user.email}`);
+      this.logger.log(`Sent OTP email to ${user.email}`);
     } catch (error) {
       this.logger.error(
         `Failed to send OTP email: ${error.message}`,
@@ -213,7 +213,7 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      this.logger.log(`✅ Sent password reset email to ${user.email}`);
+      this.logger.log(`Sent password reset email to ${user.email}`);
     } catch (error) {
       this.logger.error(
         `Failed to send password reset email: ${error.message}`,
@@ -242,7 +242,7 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      this.logger.log(`✅ Sent enrollment verification email to ${email}`);
+      this.logger.log(`Sent enrollment verification email to ${email}`);
     } catch (error) {
       this.logger.error(
         `Failed to send enrollment verification email: ${error.message}`,
@@ -273,7 +273,7 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      this.logger.log(`✅ Sent welcome email to ${email}`);
+      this.logger.log(`Sent welcome email to ${email}`);
     } catch (error) {
       this.logger.error(
         `Failed to send welcome email: ${error.message}`,
@@ -303,7 +303,7 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      this.logger.log(`✅ Sent enrollment confirmation email to ${email}`);
+      this.logger.log(`Sent enrollment confirmation email to ${email}`);
     } catch (error) {
       this.logger.error(
         `Failed to send enrollment confirmation email: ${error.message}`,

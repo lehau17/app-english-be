@@ -6,12 +6,12 @@ const prisma = new PrismaClient();
  * Update cached stats for all vocabulary lists
  */
 async function updateVocabularyStats() {
-    console.log('🔄 Updating vocabulary statistics...\n');
+    console.log('Updating vocabulary statistics...\n');
 
     const lists = await prisma.vocabularyList.findMany();
 
     for (const list of lists) {
-        console.log(`📚 Processing: ${list.title}`);
+        console.log(`Processing: ${list.title}`);
 
         // Count total units
         const totalUnits = await prisma.vocabularyUnit.count({
@@ -36,10 +36,10 @@ async function updateVocabularyStats() {
             },
         });
 
-        console.log(`  ✅ Updated: ${totalUnits} units, ${totalTerms} terms\n`);
+        console.log(`  Updated: ${totalUnits} units, ${totalTerms} terms\n`);
     }
 
-    console.log('✅ All stats updated!');
+    console.log('All stats updated!');
 
     // Show final totals
     const allLists = await prisma.vocabularyList.findMany({
@@ -51,7 +51,7 @@ async function updateVocabularyStats() {
         },
     });
 
-    console.log('\n📊 Final Statistics:\n');
+    console.log('\nFinal Statistics:\n');
     allLists.forEach((list) => {
         console.log(`${list.title}:`);
         console.log(`  - Units: ${list.totalUnits}`);
@@ -62,7 +62,7 @@ async function updateVocabularyStats() {
 
 updateVocabularyStats()
     .catch((e) => {
-        console.error('❌ Error updating stats:', e);
+        console.error('Error updating stats:', e);
         process.exit(1);
     })
     .finally(async () => {

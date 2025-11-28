@@ -30,9 +30,9 @@ export class AssignmentReminderService {
       // Kiểm tra bài kiểm tra giữa kỳ và cuối kỳ ngày mai
       await this.checkExamsTomorrow();
 
-      this.logger.log('✅ Assignment reminder check completed successfully');
+      this.logger.log('Assignment reminder check completed successfully');
     } catch (error) {
-      this.logger.error('❌ Failed to check assignment reminders:', error);
+      this.logger.error('Failed to check assignment reminders:', error);
     }
   }
 
@@ -70,7 +70,7 @@ export class AssignmentReminderService {
     });
 
     this.logger.log(
-      `📋 Found ${upcomingAssignments.length} assignments due in 24 hours`,
+      `Found ${upcomingAssignments.length} assignments due in 24 hours`,
     );
 
     for (const assignment of upcomingAssignments) {
@@ -127,7 +127,7 @@ export class AssignmentReminderService {
       },
     });
 
-    this.logger.log(`📝 Found ${tomorrowExams.length} exams tomorrow`);
+    this.logger.log(`Found ${tomorrowExams.length} exams tomorrow`);
 
     for (const exam of tomorrowExams) {
       await this.sendAssignmentReminderEmails(exam, 'exam');
@@ -190,8 +190,8 @@ export class AssignmentReminderService {
     const timeInfo = this.getTimeInfo(assignment, isExam);
 
     const subject = isExam
-      ? `📝 Thông báo: ${assignmentTypeText} ngày mai - ${assignment.title}`
-      : `📋 Nhắc nhở: ${assignmentTypeText} sắp tới hạn - ${assignment.title}`;
+      ? `Thông báo: ${assignmentTypeText} ngày mai - ${assignment.title}`
+      : `Nhắc nhở: ${assignmentTypeText} sắp tới hạn - ${assignment.title}`;
 
     const template = isExam
       ? 'exam-reminder-student'
@@ -242,8 +242,8 @@ export class AssignmentReminderService {
     const timeInfo = this.getTimeInfo(assignment, isExam);
 
     const subject = isExam
-      ? `📝 Thông báo: ${assignmentTypeText} ngày mai - ${assignment.title}`
-      : `📋 Nhắc nhở: ${assignmentTypeText} sắp tới hạn - ${assignment.title}`;
+      ? `Thông báo: ${assignmentTypeText} ngày mai - ${assignment.title}`
+      : `Nhắc nhở: ${assignmentTypeText} sắp tới hạn - ${assignment.title}`;
 
     const template = isExam
       ? 'exam-reminder-teacher'

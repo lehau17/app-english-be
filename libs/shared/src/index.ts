@@ -9,6 +9,7 @@ export * from './services/tts.service';
 export * from './shared.module';
 export * from './types/neo4j-sync.interface';
 export * from './types/tts-task.interface';
+export * from './utils/hash.util';
 
 export * from './decorator';
 export * from './filters';
@@ -18,3 +19,4 @@ export * from './middleware';
 export * from './neo4j';
 export * from './repositories';
 export * from './request-context';
+

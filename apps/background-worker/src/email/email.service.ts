@@ -34,12 +34,12 @@ export class EmailService {
 
       const response = await this.mailerService.sendMail(sendMailParams);
       this.logger.log(
-        `✅ Password reset email sent successfully to ${params.to}`,
+        `Password reset email sent successfully to ${params.to}`,
       );
       return response;
     } catch (error) {
       this.logger.error(
-        `❌ Error sending password reset email to ${params.to}:`,
+        `Error sending password reset email to ${params.to}:`,
         error,
       );
       throw error;

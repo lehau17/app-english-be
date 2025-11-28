@@ -322,7 +322,7 @@ export class CourseService {
     try {
       await this.certificateTemplateService.createDefaultTemplate(result.id);
       this.logger.log(
-        `✅ Created default certificate template for course ${result.id}`,
+        `Created default certificate template for course ${result.id}`,
       );
     } catch (error) {
       // Log error but don't fail the course creation
@@ -421,7 +421,7 @@ export class CourseService {
         item.audioUrl = audioResult.url;
 
         this.logger.debug(
-          `✅ Generated audio for "${item.word}": ${audioResult.url}`,
+          `Generated audio for "${item.word}": ${audioResult.url}`,
         );
 
         return { index, audioUrl: audioResult.url };
@@ -443,7 +443,7 @@ export class CourseService {
     });
 
     this.logger.log(
-      `✅ Updated activity ${activityId} with ${successCount}/${itemsIndex.length} audio URLs`,
+      `Updated activity ${activityId} with ${successCount}/${itemsIndex.length} audio URLs`,
     );
   }
 

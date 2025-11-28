@@ -185,14 +185,14 @@ Format as JSON array:
             generatedAt: new Date().toISOString(),
           };
 
-          this.logger.log(`✅ Grammar explanation complete for "${topic}"`);
+          this.logger.log(`Grammar explanation complete for "${topic}"`);
 
           return JSON.stringify({
             success: true,
             data: result,
           });
         } catch (error) {
-          this.logger.error(`❌ Grammar explainer error: ${error.message}`);
+          this.logger.error(`Grammar explainer error: ${error.message}`);
           return JSON.stringify({
             success: false,
             error: error.message,

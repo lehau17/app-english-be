@@ -40,7 +40,7 @@ export class ParentAgentService {
           `
 Bạn là trợ lý AI dành riêng cho PHỤ HUYNH (Parent).
 
-🎯 NHIỆM VỤ:
+NHIỆM VỤ:
 - Theo dõi tiến độ học tập của con em
 - Xem lịch học và điểm danh
 - Kiểm tra thanh toán học phí
@@ -48,7 +48,7 @@ Bạn là trợ lý AI dành riêng cho PHỤ HUYNH (Parent).
 - Xem báo cáo tổng quan về con
 - Hỗ trợ phụ huynh hiểu rõ tình hình học tập của con
 
-🛠️ CÔNG CỤ:
+CÔNG CỤ:
 1. **knowledge_search**: Tra cứu kiến thức (quy định, FAQ, khóa học)
 2. **database_query**: Truy vấn dữ liệu (thống kê, điểm số)
 3. **get_my_children**: Lấy danh sách con em
@@ -60,14 +60,14 @@ Bạn là trợ lý AI dành riêng cho PHỤ HUYNH (Parent).
 9. **get_child_report**: Báo cáo tổng quan về con
 10. **chart_generator**: Tạo biểu đồ trực quan
 
-📋 QUY TẮC:
+QUY TẮC:
 - Luôn thân thiện, tôn trọng
 - Trả lời bằng tiếng Việt (trừ khi phụ huynh yêu cầu tiếng Anh)
 - Giải thích rõ ràng về tình hình học tập của con
 - Đưa ra gợi ý cụ thể để hỗ trợ con học tập
 - KHÔNG thực hiện các tác vụ của học sinh, giáo viên hoặc admin
 
-💡 CÁCH TRẢ LỜI:
+CÁCH TRẢ LỜI:
 - Ngắn gọn, rõ ràng
 - Sử dụng emoji phù hợp
 - Cung cấp thông tin chi tiết về con em
@@ -92,9 +92,9 @@ Bạn là trợ lý AI dành riêng cho PHỤ HUYNH (Parent).
         maxIterations: 5,
         returnIntermediateSteps: true,
       });
-      this.logger.log('✅ Parent Agent initialized successfully');
+      this.logger.log('Parent Agent initialized successfully');
     } catch (error) {
-      this.logger.error('❌ Failed to initialize Parent Agent:', error);
+      this.logger.error('Failed to initialize Parent Agent:', error);
       throw error;
     }
   }
@@ -136,7 +136,7 @@ Bạn là trợ lý AI dành riêng cho PHỤ HUYNH (Parent).
       });
 
       if (!parent) {
-        return '📝 Không tìm thấy thông tin phụ huynh.';
+        return 'Không tìm thấy thông tin phụ huynh.';
       }
 
       const parentName =
@@ -145,7 +145,7 @@ Bạn là trợ lý AI dành riêng cho PHỤ HUYNH (Parent).
         'Phụ huynh';
 
       if (!parent.childRelations || parent.childRelations.length === 0) {
-        return `📝 Phụ huynh: ${parentName}\nChưa có con em nào được liên kết trong hệ thống.`;
+        return `Phụ huynh: ${parentName}\nChưa có con em nào được liên kết trong hệ thống.`;
       }
 
       let context = `
@@ -153,7 +153,7 @@ Bạn là trợ lý AI dành riêng cho PHỤ HUYNH (Parent).
 👨‍👩‍👧 THÔNG TIN PHỤ HUYNH: ${parentName}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-📚 CON EM:
+CON EM:
 `;
 
       for (const relation of parent.childRelations) {
@@ -176,7 +176,7 @@ Bạn là trợ lý AI dành riêng cho PHỤ HUYNH (Parent).
       return context;
     } catch (error) {
       this.logger.error('Error getting parent context:', error);
-      return '📝 Không thể tải thông tin phụ huynh.';
+      return 'Không thể tải thông tin phụ huynh.';
     }
   }
 
@@ -340,7 +340,14 @@ Hãy trả lời dựa trên thông tin con em ở trên. Nếu phụ huynh hỏ
     message: string,
     userId: string,
     conversationId?: string,
-  ): AsyncGenerator<any> {
+  ): AsyncGenerator<{
+    type: 'token' | 'tool' | 'complete' | 'error' | 'metadata' | 'chart';
+    content?: string;
+    tool?: string;
+    toolInput?: any;
+    data?: any;
+    chart?: any;
+  }> {
     try {
       // Get personalized parent context
       const parentContext = await this.getParentContext(userId);
@@ -371,19 +378,133 @@ Hãy trả lời dựa trên thông tin con em ở trên. Nếu phụ huynh hỏ
       };
 
       let fullResponse = '';
+      let hasStreamedTokens = false;
+      const toolsUsed = new Set<string>();
 
-      const stream = await this.agent.stream({
+      // Use streamLog for better token-by-token streaming (same as admin agent)
+      const stream = await this.agent.streamLog({
         input: enhancedInput,
         chat_history: conversation.messages,
         userId,
       });
 
       for await (const chunk of stream) {
-        if (chunk?.output) {
-          fullResponse += chunk.output;
+        // Handle LLM token streaming
+        if (chunk.ops) {
+          for (const op of chunk.ops) {
+            if (op.op === 'add') {
+              const path = op.path || '';
+
+              // LLM streaming tokens
+              if (path.includes('/streamed_output_str/-')) {
+                const token = op.value;
+                if (token && typeof token === 'string') {
+                  fullResponse += token;
+                  hasStreamedTokens = true;
+                  yield { type: 'token', content: token };
+                }
+              }
+
+              // Final output (after tool execution)
+              if (path === '/streamed_output/-') {
+                const value = op.value;
+                let output = value?.output;
+
+                if (output && typeof output === 'string') {
+                  // Only manual tokenize if we DIDN'T get streaming tokens
+                  if (!hasStreamedTokens) {
+                    // Remove chart JSON blocks from text
+                    output = output.replace(
+                      /```json\s*\n?\{[^}]*"type":\s*"chart"[^}]*\}[^`]*```/gs,
+                      '',
+                    );
+                    output = output.replace(
+                      /\{[^}]*"type":\s*"chart"[^}]*"chartType":[^}]*\}/gs,
+                      '',
+                    );
+                    output = output.trim();
+
+                    if (output) {
+                      // Manual tokenization: split by words
+                      const words = output.split(/(\s+)/);
+                      for (const word of words) {
+                        if (word) {
+                          fullResponse += word;
+                          yield { type: 'token', content: word };
+                          await new Promise((resolve) =>
+                            setTimeout(resolve, 10),
+                          );
+                        }
+                      }
+                    }
+                  } else {
+                    fullResponse = output;
+                  }
+                }
+              }
+
+              // Tool calls
+              if (path.includes('/actions/-')) {
+                const action = op.value;
+                if (action?.tool) {
+                  toolsUsed.add(action.tool);
+                  yield {
+                    type: 'tool',
+                    tool: action.tool,
+                    toolInput: action.toolInput,
+                  };
+                }
+              }
+
+              // Check for chart_generator result
+              if (path.includes('/logs/') && op.value) {
+                const logValue = op.value;
+                if (
+                  logValue.name === 'chart_generator' &&
+                  logValue.type === 'tool_end'
+                ) {
+                  try {
+                    const chartResult = JSON.parse(logValue.output || '{}');
+                    if (chartResult.success && chartResult.chart) {
+                      yield { type: 'chart', chart: chartResult.chart };
+                    }
+                  } catch (e) {
+                    this.logger.warn('Failed to parse chart result:', e);
+                  }
+                }
+
+                // Check for analytics tools (multiple charts)
+                const analyticsTools = ['get_child_progress', 'compare_children', 'get_children_summary'];
+                if (
+                  analyticsTools.includes(logValue.name) &&
+                  logValue.type === 'tool_end'
+                ) {
+                  try {
+                    const result = JSON.parse(logValue.output || '{}');
+                    if (result.charts && Array.isArray(result.charts)) {
+                      for (const chart of result.charts) {
+                        yield { type: 'chart', chart };
+                      }
+                    }
+                  } catch (e) {
+                    this.logger.warn('Failed to parse analytics result:', e);
+                  }
+                }
+              }
+            }
+          }
         }
-        yield { ...chunk, conversationId: conversation.id };
       }
+
+      // Send complete event with final answer
+      yield {
+        type: 'complete',
+        data: {
+          answer: fullResponse,
+          toolsUsed: Array.from(toolsUsed),
+          conversationId: conversation.id,
+        },
+      };
 
       // Save assistant response after streaming completes
       if (fullResponse) {
@@ -391,8 +512,10 @@ Hãy trả lời dựa trên thông tin con em ở trên. Nếu phụ huynh hỏ
       }
     } catch (error) {
       this.logger.error('Error streaming parent query:', error);
-      throw error;
+      yield {
+        type: 'error',
+        content: (error as Error).message || 'Đã xảy ra lỗi khi xử lý yêu cầu',
+      };
     }
   }
 }
-

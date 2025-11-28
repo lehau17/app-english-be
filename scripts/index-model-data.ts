@@ -38,7 +38,7 @@ async function generateEmbedding(
 }
 
 async function indexCourses(prisma: PrismaClient, genAI: GoogleGenerativeAI) {
-  console.log('📚 Indexing courses...');
+  console.log('Indexing courses...');
   let indexed = 0;
   let errors = 0;
 
@@ -121,9 +121,9 @@ Trạng thái: ${course.isPublished ? 'Đã xuất bản' : 'Chưa xuất bản'
       }
 
       indexed++;
-      console.log(`✅ Indexed course: ${course.title}`);
+      console.log(`Indexed course: ${course.title}`);
     } catch (e) {
-      console.error(`❌ Error indexing course ${course.id}:`, e);
+      console.error(`Error indexing course ${course.id}:`, e);
       errors++;
     }
   }
@@ -208,9 +208,9 @@ Trạng thái: ${lesson.isLocked ? 'Đã khóa' : 'Mở'}
       }
 
       indexed++;
-      console.log(`✅ Indexed lesson: ${lesson.title}`);
+      console.log(`Indexed lesson: ${lesson.title}`);
     } catch (e) {
-      console.error(`❌ Error indexing lesson ${lesson.id}:`, e);
+      console.error(`Error indexing lesson ${lesson.id}:`, e);
       errors++;
     }
   }
@@ -219,7 +219,7 @@ Trạng thái: ${lesson.isLocked ? 'Đã khóa' : 'Mở'}
 }
 
 async function indexVocabulary(prisma: PrismaClient, genAI: GoogleGenerativeAI) {
-  console.log('📝 Indexing vocabulary...');
+  console.log('Indexing vocabulary...');
   let indexed = 0;
   let errors = 0;
 
@@ -293,9 +293,9 @@ Ví dụ: ${examples}
       }
 
       indexed++;
-      console.log(`✅ Indexed vocab: ${vocab.word}`);
+      console.log(`Indexed vocab: ${vocab.word}`);
     } catch (e) {
-      console.error(`❌ Error indexing vocab ${vocab.word}:`, e);
+      console.error(`Error indexing vocab ${vocab.word}:`, e);
       errors++;
     }
   }
@@ -394,9 +394,9 @@ Nội dung: ${contentSummary}...
       }
 
       indexed++;
-      console.log(`✅ Indexed activity: ${activity.title}`);
+      console.log(`Indexed activity: ${activity.title}`);
     } catch (e) {
-      console.error(`❌ Error indexing activity ${activity.id}:`, e);
+      console.error(`Error indexing activity ${activity.id}:`, e);
       errors++;
     }
   }
@@ -408,14 +408,14 @@ async function main() {
   const prisma = new PrismaClient();
   const GEMINI_KEY = process.env.GEMINI_API_KEY;
   if (!GEMINI_KEY) {
-    console.error('❌ GEMINI_API_KEY not set');
+    console.error('GEMINI_API_KEY not set');
     process.exit(1);
   }
 
   const genAI = new GoogleGenerativeAI(GEMINI_KEY);
   const modelType = process.env.MODEL || 'all';
 
-  console.log('🔄 Starting model data indexing...');
+  console.log('Starting model data indexing...');
   console.log(`Model type: ${modelType}`);
 
   const results: any = {};
@@ -423,7 +423,7 @@ async function main() {
   try {
     if (modelType === 'all' || modelType === 'courses') {
       results.courses = await indexCourses(prisma, genAI);
-      console.log(`\n📚 Courses: ${results.courses.indexed} indexed, ${results.courses.errors} errors`);
+      console.log(`\nCourses: ${results.courses.indexed} indexed, ${results.courses.errors} errors`);
     }
 
     if (modelType === 'all' || modelType === 'lessons') {
@@ -433,7 +433,7 @@ async function main() {
 
     if (modelType === 'all' || modelType === 'vocabulary') {
       results.vocabulary = await indexVocabulary(prisma, genAI);
-      console.log(`\n📝 Vocabulary: ${results.vocabulary.indexed} indexed, ${results.vocabulary.errors} errors`);
+      console.log(`\nVocabulary: ${results.vocabulary.indexed} indexed, ${results.vocabulary.errors} errors`);
     }
 
     if (modelType === 'all' || modelType === 'activities') {
@@ -450,11 +450,11 @@ async function main() {
       0,
     );
 
-    console.log('\n✅ Indexing complete!');
+    console.log('\nIndexing complete!');
     console.log(`Total indexed: ${totalIndexed}`);
     console.log(`Total errors: ${totalErrors}`);
   } catch (e) {
-    console.error('❌ Fatal error during indexing:', e);
+    console.error('Fatal error during indexing:', e);
     process.exit(1);
   } finally {
     await prisma.$disconnect();

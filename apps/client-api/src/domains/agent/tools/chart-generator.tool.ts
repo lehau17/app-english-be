@@ -30,7 +30,7 @@ Returns a JSON object with chart configuration for Recharts rendering.
 
   async _call(input: string): Promise<string> {
     try {
-      this.logger.log(`📊 Chart Generator input: ${input}`);
+      this.logger.log(`Chart Generator input: ${input}`);
 
       const parsedInput = JSON.parse(input);
       const {
@@ -72,7 +72,7 @@ Returns a JSON object with chart configuration for Recharts rendering.
       };
 
       this.logger.log(
-        `✅ Chart config generated: ${JSON.stringify(chartConfig)}`,
+        `Chart config generated: ${JSON.stringify(chartConfig)}`,
       );
 
       return JSON.stringify({
@@ -81,7 +81,7 @@ Returns a JSON object with chart configuration for Recharts rendering.
         message: `Generated ${chartType} chart with ${data.length} data points`,
       });
     } catch (error) {
-      this.logger.error('❌ Chart generation error:', error);
+      this.logger.error('Chart generation error:', error);
       return JSON.stringify({
         error: error.message || 'Failed to generate chart',
       });

@@ -123,7 +123,7 @@ export class GraphTraversalService {
     }));
 
     this.logger.log(
-      `✅ Found ${entityMap.size} entities, ${relationships.length} relationships`,
+      `Found ${entityMap.size} entities, ${relationships.length} relationships`,
     );
 
     return {
@@ -159,7 +159,7 @@ export class GraphTraversalService {
     const result = await this.neo4jService.runQuery(cypher, { fromId, toId });
 
     if (result.length === 0) {
-      this.logger.log('❌ No path found');
+      this.logger.log('No path found');
       return null;
     }
 
@@ -173,7 +173,7 @@ export class GraphTraversalService {
       weight: r.properties?.weight || 1.0,
     }));
 
-    this.logger.log(`✅ Found path with ${row.length} hops`);
+    this.logger.log(`Found path with ${row.length} hops`);
 
     return {
       entities,
@@ -253,7 +253,7 @@ export class GraphTraversalService {
     toConceptId: string,
   ): Promise<TraversalResult | null> {
     this.logger.log(
-      `📚 Finding learning path from ${fromConceptId} to ${toConceptId}`,
+      `Finding learning path from ${fromConceptId} to ${toConceptId}`,
     );
 
     // Follow REQUIRES and TEACHES relationships
@@ -273,7 +273,7 @@ export class GraphTraversalService {
     });
 
     if (result.length === 0) {
-      this.logger.log('❌ No learning path found');
+      this.logger.log('No learning path found');
       return null;
     }
 
@@ -287,7 +287,7 @@ export class GraphTraversalService {
       weight: r.properties?.weight || 1.0,
     }));
 
-    this.logger.log(`✅ Found learning path with ${row.length} steps`);
+    this.logger.log(`Found learning path with ${row.length} steps`);
 
     return {
       entities,

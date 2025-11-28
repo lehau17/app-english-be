@@ -208,14 +208,14 @@ Format as JSON array:
             generatedAt: new Date().toISOString(),
           };
 
-          this.logger.log(`✅ Pronunciation analysis complete for "${text}"`);
+          this.logger.log(`Pronunciation analysis complete for "${text}"`);
 
           return JSON.stringify({
             success: true,
             data: result,
           });
         } catch (error) {
-          this.logger.error(`❌ Pronunciation coach error: ${error.message}`);
+          this.logger.error(`Pronunciation coach error: ${error.message}`);
           return JSON.stringify({
             success: false,
             error: error.message,

@@ -213,7 +213,7 @@ export class NotificationService {
     }
 
     console.log(
-      `✅ Classroom announcement sent: ${notifications.length} notifications created for classroom ${dto.classroomId}`,
+      `Classroom announcement sent: ${notifications.length} notifications created for classroom ${dto.classroomId}`,
     );
 
     return {

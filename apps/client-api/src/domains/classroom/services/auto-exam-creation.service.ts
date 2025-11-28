@@ -39,7 +39,7 @@ export class AutoExamCreationService {
     } = options;
 
     console.log(
-      `🎯 Creating auto exams for classroom ${classroomId} with ${totalSessions} sessions`,
+      `Creating auto exams for classroom ${classroomId} with ${totalSessions} sessions`,
     );
 
     // Tính toán thời gian cho các bài thi
@@ -80,7 +80,7 @@ export class AutoExamCreationService {
     });
 
     console.log(
-      `✅ Auto exams created successfully for classroom ${classroomId}`,
+      `Auto exams created successfully for classroom ${classroomId}`,
     );
   }
 
@@ -301,7 +301,7 @@ The future of our planet depends on the choices we make today. If we act now, we
     });
 
     console.log(
-      `📝 Created midterm exam: ${midtermExam.id} for session ${sessionNumber}`,
+      `Created midterm exam: ${midtermExam.id} for session ${sessionNumber}`,
     );
   }
 
@@ -486,7 +486,7 @@ As AI continues to evolve, it is crucial to ensure that its development is guide
     });
 
     console.log(
-      `📝 Created final exam: ${finalExam.id} for session ${sessionNumber}`,
+      `Created final exam: ${finalExam.id} for session ${sessionNumber}`,
     );
   }
 }

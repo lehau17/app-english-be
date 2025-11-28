@@ -380,7 +380,7 @@ export class AgentService {
     try {
       const startTime = Date.now();
 
-      // ✅ Validate userId exists in database
+      // Validate userId exists in database
       if (!userId) {
         throw new Error('User ID is required');
       }
@@ -480,7 +480,7 @@ export class AgentService {
         updatedAt: new Date(),
       });
     } catch (error) {
-      console.error('❌ Error in streaming chat:', error);
+      console.error('Error in streaming chat:', error);
       yield {
         type: 'error',
         content:

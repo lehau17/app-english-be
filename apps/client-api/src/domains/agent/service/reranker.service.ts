@@ -74,7 +74,7 @@ export class RerankerService {
     const selectedStrategy = this.selectStrategy(strategy);
 
     this.logger.log(
-      `🔄 Re-ranking ${documents.length} documents using ${selectedStrategy} strategy (topK: ${topK})`,
+      `Re-ranking ${documents.length} documents using ${selectedStrategy} strategy (topK: ${topK})`,
     );
 
     try {
@@ -90,13 +90,13 @@ export class RerankerService {
       const filtered = results.filter((r) => r.score >= minScore);
 
       this.logger.log(
-        `✅ Re-ranked to ${filtered.length} documents (min score: ${minScore})`,
+        `Re-ranked to ${filtered.length} documents (min score: ${minScore})`,
       );
 
       return filtered;
     } catch (error) {
       this.logger.error(
-        `❌ Re-ranking failed: ${(error as any)?.message}`,
+        `Re-ranking failed: ${(error as any)?.message}`,
         error,
       );
 

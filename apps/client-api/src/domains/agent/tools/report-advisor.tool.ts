@@ -78,7 +78,7 @@ Returns:
       const statistics = this.reportGenerator.generateStatistics(data);
 
       this.logger.log(
-        `✅ Report format suggested: ${suggestion.format} (confidence: ${suggestion.confidence})`,
+        `Report format suggested: ${suggestion.format} (confidence: ${suggestion.confidence})`,
       );
 
       return JSON.stringify({
@@ -94,7 +94,7 @@ Returns:
         context: context || 'general',
       });
     } catch (error) {
-      this.logger.error('❌ Report advisor error:', error);
+      this.logger.error('Report advisor error:', error);
       return JSON.stringify({
         error: (error as any).message || 'Failed to analyze data',
       });

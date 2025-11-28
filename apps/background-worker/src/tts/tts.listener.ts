@@ -43,14 +43,14 @@ export class TtsListener implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     try {
       await this.consumer.connect();
-      this.logger.log('✅ TTS listener connected to Kafka');
+      this.logger.log('TTS listener connected to Kafka');
 
       await this.consumer.subscribe({
         topics: [KafkaTopic.TTS_AUDIO_GENERATION],
         fromBeginning: false,
       });
       this.logger.log(
-        `✅ Subscribed to topic: ${KafkaTopic.TTS_AUDIO_GENERATION}`,
+        `Subscribed to topic: ${KafkaTopic.TTS_AUDIO_GENERATION}`,
       );
 
       // Event listeners
@@ -67,7 +67,7 @@ export class TtsListener implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      this.logger.log('✅ TTS consumer running');
+      this.logger.log('TTS consumer running');
     } catch (error) {
       this.logger.error('Failed to initialize TTS listener', error);
       throw error;
@@ -181,7 +181,7 @@ export class TtsListener implements OnModuleInit, OnModuleDestroy {
 
       const duration = Date.now() - startTime;
       this.logger.log(
-        `✅ TTS task ${payload.taskId} completed: ${processedItems}/${payload.itemsIndex.length} items processed in ${duration}ms`,
+        `TTS task ${payload.taskId} completed: ${processedItems}/${payload.itemsIndex.length} items processed in ${duration}ms`,
       );
     } catch (err) {
       const duration = Date.now() - startTime;

@@ -50,11 +50,11 @@ export class AttemptService {
             // Gán feedback vào dto
             dto.feedback = feedback;
             this.logger.log(
-              `✅ Đã tạo feedback AI cho attempt ${id}: ${dto.score}/${currentAttempt.maxScore}`,
+              `Đã tạo feedback AI cho attempt ${id}: ${dto.score}/${currentAttempt.maxScore}`,
             );
           } catch (error) {
             this.logger.error(
-              `❌ Lỗi tạo feedback AI cho attempt ${id}:`,
+              `Lỗi tạo feedback AI cho attempt ${id}:`,
               error,
             );
             // Vẫn tiếp tục update mà không có feedback AI

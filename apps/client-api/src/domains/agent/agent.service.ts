@@ -47,7 +47,7 @@ export class AgentService {
 
   async getRecommendations(): Promise<AgentRecommendationDto[]> {
     try {
-      this.logger.log('📊 Generating AI recommendations');
+      this.logger.log('Generating AI recommendations');
 
       // Sample intelligent recommendations based on system usage patterns
       const recommendations: AgentRecommendationDto[] = [

@@ -33,7 +33,7 @@ export class WordsApiService {
 
     if (!this.apiKey) {
       this.logger.warn(
-        '⚠️  WORDS_API_KEY not configured. Dictionary feature will use fallback data.',
+        ' WORDS_API_KEY not configured. Dictionary feature will use fallback data.',
       );
     }
 
@@ -72,7 +72,7 @@ export class WordsApiService {
         `/${encodeURIComponent(word.toLowerCase())}`,
       );
 
-      this.logger.log(`✅ Fetched word data for: ${word}`);
+      this.logger.log(`Fetched word data for: ${word}`);
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 404) {

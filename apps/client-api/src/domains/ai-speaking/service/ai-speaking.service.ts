@@ -38,7 +38,7 @@ export class AiSpeakingService {
   ) {}
 
   async startSession(userId: string, dto: StartAiSpeakingSessionDto) {
-    // ✅ Check if user is banned for profanity
+    // Check if user is banned for profanity
     const banStatus = await this.profanityBan.checkBanStatus(userId);
     if (banStatus.isBanned) {
       const remainingTime = this.profanityBan.formatRemainingTime(

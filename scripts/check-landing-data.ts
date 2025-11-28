@@ -14,7 +14,7 @@ async function checkLandingData() {
 
   try {
     // 1. Check Teachers
-    console.log('\n📚 TEACHERS:');
+    console.log('\nTEACHERS:');
     const teachers = await prisma.user.findMany({
       where: { role: UserRole.teacher },
       select: {
@@ -31,10 +31,10 @@ async function checkLandingData() {
     });
 
     if (teachers.length === 0) {
-      console.log('❌ NO TEACHERS FOUND IN DATABASE');
+      console.log('NO TEACHERS FOUND IN DATABASE');
       console.log('   → Backend will use FALLBACK_TEACHERS (fake data)');
     } else {
-      console.log(`✅ Found ${teachers.length} teachers:`);
+      console.log(`Found ${teachers.length} teachers:`);
       teachers.forEach((t, i) => {
         const name = t.displayName || `${t.firstName} ${t.lastName}`.trim() || 'N/A';
         console.log(`   ${i + 1}. ${name} (${t.nationality || 'No nationality'}) - ${t.experience || 0} years`);
@@ -56,11 +56,11 @@ async function checkLandingData() {
     });
 
     if (publishedCourses.length === 0) {
-      console.log('❌ NO PUBLISHED COURSES FOUND');
+      console.log('NO PUBLISHED COURSES FOUND');
       console.log('   → Backend will use FALLBACK_CLASSES (fake data)');
       console.log('   → Fix: Update courses to set isPublished = true');
     } else {
-      console.log(`✅ Found ${publishedCourses.length} published courses:`);
+      console.log(`Found ${publishedCourses.length} published courses:`);
       publishedCourses.forEach((c, i) => {
         console.log(`   ${i + 1}. ${c.title} (${c.difficulty}) - ${c.price || 0} VND`);
       });
@@ -105,13 +105,13 @@ async function checkLandingData() {
     });
 
     if (classrooms.length === 0) {
-      console.log('❌ NO ACTIVE CLASSROOMS FOUND');
+      console.log('NO ACTIVE CLASSROOMS FOUND');
       console.log('   → Need classrooms with:');
       console.log('      - isActive = true');
       console.log('      - status = upcoming OR ongoing');
       console.log('      - linked to published courses');
     } else {
-      console.log(`✅ Found ${classrooms.length} active classrooms:`);
+      console.log(`Found ${classrooms.length} active classrooms:`);
       classrooms.forEach((cl, i) => {
         const teacherName = cl.teacher
           ? cl.teacher.displayName || `${cl.teacher.firstName} ${cl.teacher.lastName}`.trim()
@@ -149,10 +149,10 @@ async function checkLandingData() {
     });
 
     if (ratings.length === 0) {
-      console.log('❌ NO RATINGS WITH COMMENTS FOUND');
+      console.log('NO RATINGS WITH COMMENTS FOUND');
       console.log('   → Backend will use FALLBACK_TESTIMONIALS (fake data)');
     } else {
-      console.log(`✅ Found ${ratings.length} ratings with comments:`);
+      console.log(`Found ${ratings.length} ratings with comments:`);
       const userIds = ratings.map(r => r.userId);
       const users = await prisma.user.findMany({
         where: { id: { in: userIds } },
@@ -178,32 +178,32 @@ async function checkLandingData() {
 
     // 5. Summary
     console.log('\n' + '='.repeat(60));
-    console.log('📊 SUMMARY:');
+    console.log('SUMMARY:');
     console.log('='.repeat(60));
 
     const issues: string[] = [];
     if (teachers.length === 0) {
-      issues.push('❌ No teachers → Using FALLBACK_TEACHERS');
+      issues.push('No teachers → Using FALLBACK_TEACHERS');
     }
     if (publishedCourses.length === 0) {
-      issues.push('❌ No published courses → Using FALLBACK_CLASSES');
+      issues.push('No published courses → Using FALLBACK_CLASSES');
     }
     if (classrooms.length === 0) {
-      issues.push('❌ No active classrooms → Using FALLBACK_SCHEDULE');
+      issues.push('No active classrooms → Using FALLBACK_SCHEDULE');
     } else {
       const classroomsWithoutSlots = classrooms.filter(cl => !cl.slots || cl.slots.length === 0);
       if (classroomsWithoutSlots.length > 0) {
-        issues.push(`⚠️  ${classroomsWithoutSlots.length}/${classrooms.length} classrooms have NO SCHEDULE SLOTS → Will use FALLBACK_SCHEDULE`);
+        issues.push(` ${classroomsWithoutSlots.length}/${classrooms.length} classrooms have NO SCHEDULE SLOTS → Will use FALLBACK_SCHEDULE`);
       }
     }
     if (ratings.length === 0) {
-      issues.push('❌ No ratings → Using FALLBACK_TESTIMONIALS');
+      issues.push('No ratings → Using FALLBACK_TESTIMONIALS');
     }
 
     if (issues.length > 0) {
       console.log('\n🔴 ISSUES FOUND:');
       issues.forEach((issue) => console.log(`   ${issue}`));
-      console.log('\n💡 TO FIX:');
+      console.log('\nTO FIX:');
       console.log('   1. Create teacher accounts (role = teacher)');
       console.log('   2. Set courses isPublished = true');
       console.log('   3. Create classrooms with status = upcoming/ongoing');
@@ -212,12 +212,12 @@ async function checkLandingData() {
       console.log('      Example: mon/wed/fri 19:00-21:00 (1140-1260 minutes)');
       console.log('   6. Add course ratings with comments');
     } else {
-      console.log('\n✅ ALL DATA LOOKS GOOD! Landing page should show real data.');
+      console.log('\nALL DATA LOOKS GOOD! Landing page should show real data.');
     }
 
     console.log('\n' + '='.repeat(60));
   } catch (error) {
-    console.error('❌ Error checking data:', error);
+    console.error('Error checking data:', error);
   } finally {
     await prisma.$disconnect();
   }

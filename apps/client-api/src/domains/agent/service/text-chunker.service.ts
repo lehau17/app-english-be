@@ -115,7 +115,7 @@ export class TextChunkerService {
     }
 
     this.logger.log(
-      `✅ Created ${chunks.length} chunks (sentence-aware splitting)`,
+      `Created ${chunks.length} chunks (sentence-aware splitting)`,
     );
     return chunks;
   }
@@ -142,7 +142,7 @@ export class TextChunkerService {
     }
 
     this.logger.log(
-      `✅ Created ${chunks.length} chunks (word-based splitting)`,
+      `Created ${chunks.length} chunks (word-based splitting)`,
     );
     return chunks;
   }

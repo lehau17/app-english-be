@@ -436,9 +436,9 @@ Return ONLY valid JSON:
         const audioResult =
           await this.googleTranslateService.createAudioWithUrl(word, 'en');
         audioUrl = audioResult.url; // This is the MinIO S3 URL
-        console.log(`✅ Generated and uploaded audio for "${word}": ${audioUrl}`);
+        console.log(`Generated and uploaded audio for "${word}": ${audioUrl}`);
       } catch (audioError) {
-        console.error(`⚠️  Failed to generate audio for "${word}":`, audioError);
+        console.error(` Failed to generate audio for "${word}":`, audioError);
         // Continue without audio
       }
 
@@ -576,11 +576,11 @@ Return ONLY valid JSON:
             );
           audioUrl = audioResult.url;
           console.log(
-            `✅ Generated audio ${i + 1}/${validTerms.length} for "${termData.word}"`,
+            `Generated audio ${i + 1}/${validTerms.length} for "${termData.word}"`,
           );
         } catch (audioError) {
           console.error(
-            `⚠️  Failed to generate audio for "${termData.word}":`,
+            ` Failed to generate audio for "${termData.word}":`,
             audioError,
           );
         }

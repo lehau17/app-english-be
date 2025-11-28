@@ -47,7 +47,7 @@ export class RagCacheService implements OnModuleInit {
         password: redisPassword,
         retryStrategy: (times) => {
           if (times > 3) {
-            this.logger.error('❌ Redis connection failed after 3 retries');
+            this.logger.error('Redis connection failed after 3 retries');
             return null; // Stop retrying
           }
           const delay = Math.min(times * 200, 2000);
@@ -72,22 +72,22 @@ export class RagCacheService implements OnModuleInit {
       });
 
       this.redis.on('connect', () => {
-        this.logger.log('✅ Redis connected successfully');
+        this.logger.log('Redis connected successfully');
       });
 
       this.redis.on('error', (error) => {
-        this.logger.error(`❌ Redis error: ${error.message}`);
+        this.logger.error(`Redis error: ${error.message}`);
       });
 
       // Test connection
       await this.redis.ping();
-      this.logger.log('✅ Redis cache service initialized');
+      this.logger.log('Redis cache service initialized');
     } catch (error) {
       this.logger.error(
-        `❌ Failed to connect to Redis: ${(error as any)?.message}`,
+        `Failed to connect to Redis: ${(error as any)?.message}`,
       );
       this.logger.warn(
-        '⚠️ Falling back to in-memory cache (not recommended for production)',
+        'Falling back to in-memory cache (not recommended for production)',
       );
       // Don't throw error - allow app to start without Redis
     }

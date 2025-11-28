@@ -14,21 +14,21 @@ async function cleanEmptyLists() {
     console.log(`Found ${emptyLists.length} empty lists to delete:\n`);
 
     for (const list of emptyLists) {
-        console.log(`  ❌ Deleting: ${list.title} (${list.totalTerms} terms)`);
+        console.log(`  Deleting: ${list.title} (${list.totalTerms} terms)`);
         await prisma.vocabularyList.delete({
             where: { id: list.id },
         });
     }
 
-    console.log(`\n✅ Cleaned ${emptyLists.length} empty lists!`);
+    console.log(`\nCleaned ${emptyLists.length} empty lists!`);
 
     const remaining = await prisma.vocabularyList.count();
-    console.log(`📚 Remaining lists: ${remaining}`);
+    console.log(`Remaining lists: ${remaining}`);
 }
 
 cleanEmptyLists()
     .catch((e) => {
-        console.error('❌ Error:', e);
+        console.error('Error:', e);
         process.exit(1);
     })
     .finally(async () => {

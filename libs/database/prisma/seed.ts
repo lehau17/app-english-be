@@ -100,18 +100,18 @@ async function seedUsers() {
 async function main() {
   console.log('🌱 Seeding database...');
   const { admin, student, parent, teacher2 } = await seedUsers();
-  console.log('✅ Created users:');
+  console.log('Created users:');
   console.log('   - admin@gmail.com (Admin)');
   console.log('   - student@gmail.com (Student)');
   console.log('   - parent@gmail.com (Parent)');
   console.log('   - teacher2@gmail.com (Teacher)');
   console.log('   - Password for all: 123456aA@');
-  console.log('✅ Seed completed successfully!');
+  console.log('Seed completed successfully!');
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Seed failed:', e);
+    console.error('Seed failed:', e);
     process.exit(1);
   })
   .finally(async () => {

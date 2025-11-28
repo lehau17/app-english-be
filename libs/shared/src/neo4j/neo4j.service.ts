@@ -33,9 +33,9 @@ export class Neo4jService implements OnModuleInit {
       const session = this.driver.session();
       await session.run('RETURN 1');
       await session.close();
-      this.logger.log('✅ Neo4j connected successfully');
+      this.logger.log('Neo4j connected successfully');
     } catch (error) {
-      this.logger.error('❌ Failed to connect to Neo4j', error);
+      this.logger.error('Failed to connect to Neo4j', error);
       throw error;
     }
   }
@@ -55,7 +55,7 @@ export class Neo4jService implements OnModuleInit {
     if (this.driver) {
       this.logger.log('🔌 Closing Neo4j connection...');
       await this.driver.close();
-      this.logger.log('✅ Neo4j connection closed');
+      this.logger.log('Neo4j connection closed');
     }
   }
 

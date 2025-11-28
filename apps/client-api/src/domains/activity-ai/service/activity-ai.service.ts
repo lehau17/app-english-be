@@ -40,7 +40,7 @@ export class ActivityAIService {
     difficulty: DifficultyLevel | undefined,
   ): Promise<GeneratedActivity[]> {
     this.logger.log(
-      `🎯 Generating ${count} activities for lesson: "${lessonTitle}"`,
+      `Generating ${count} activities for lesson: "${lessonTitle}"`,
     );
 
     // Default activity types if not provided
@@ -71,10 +71,10 @@ export class ActivityAIService {
           activities.push(activity);
           orderNo++;
           this.logger.log(
-            `✅ Generated activity ${orderNo - 1}/${count}: ${type}`,
+            `Generated activity ${orderNo - 1}/${count}: ${type}`,
           );
         } catch (error) {
-          this.logger.error(`❌ Failed to generate ${type} activity:`, error);
+          this.logger.error(`Failed to generate ${type} activity:`, error);
           // Continue generating other activities
         }
       }
@@ -364,7 +364,7 @@ Generate the vocabulary list now:`;
           this.logger.log(`🎵 Generated audio for word: ${word.word}`);
         } catch (error) {
           this.logger.warn(
-            `⚠️ Failed to generate audio for word: ${word.word}`,
+            `Failed to generate audio for word: ${word.word}`,
             error,
           );
           word.audioUrl = '';
@@ -506,7 +506,7 @@ Generate the listening activity now:`;
         audioUrl = result.url
         this.logger.log('🎵 Generated audio for listening dialogue');
       } catch (error) {
-        this.logger.warn('⚠️ Failed to generate dialogue audio', error);
+        this.logger.warn('Failed to generate dialogue audio', error);
       }
 
       return {
@@ -768,7 +768,7 @@ Generate the pronunciation activity now:`;
         sampleUrl = result.url;
         this.logger.log('🎵 Generated sample audio for pronunciation');
       } catch (error) {
-        this.logger.warn('⚠️ Failed to generate sample audio', error);
+        this.logger.warn('Failed to generate sample audio', error);
       }
 
       return {
@@ -890,7 +890,7 @@ Generate the dictation activity now:`;
         audioUrl = result.url;
         this.logger.log('🎵 Generated dictation audio');
       } catch (error) {
-        this.logger.warn('⚠️ Failed to generate dictation audio', error);
+        this.logger.warn('Failed to generate dictation audio', error);
       }
 
       return {

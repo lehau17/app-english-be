@@ -61,7 +61,7 @@ interface ParrotoCard {
  */
 async function fetchDecks(page = 1, limit = 20): Promise<ParrotoDeck[]> {
     try {
-        console.log(`📚 Fetching decks (page ${page})...`);
+        console.log(`Fetching decks (page ${page})...`);
         const response = await axios.get(`${BASE_URL}/vocabulary/public`, {
             params: { page, limit, search: '' },
             headers: {
@@ -72,12 +72,12 @@ async function fetchDecks(page = 1, limit = 20): Promise<ParrotoDeck[]> {
 
         if (response.data.status === 'success') {
             const decks = response.data.data.categories || [];
-            console.log(`✅ Found ${decks.length} decks`);
+            console.log(`Found ${decks.length} decks`);
             return decks;
         }
         return [];
     } catch (error: any) {
-        console.error('❌ Error fetching decks:', error.message);
+        console.error('Error fetching decks:', error.message);
         return [];
     }
 }
@@ -98,12 +98,12 @@ async function fetchGroups(deckId: string): Promise<ParrotoGroup[]> {
 
         if (response.data.status === 'success') {
             const groups = response.data.data || [];
-            console.log(`  ✅ Found ${groups.length} groups`);
+            console.log(`  Found ${groups.length} groups`);
             return groups;
         }
         return [];
     } catch (error: any) {
-        console.error(`  ❌ Error fetching groups for ${deckId}:`, error.message);
+        console.error(`  Error fetching groups for ${deckId}:`, error.message);
         return [];
     }
 }
@@ -114,7 +114,7 @@ async function fetchGroups(deckId: string): Promise<ParrotoGroup[]> {
 async function fetchCards(deckId: string, groupId: string, limit = 1000): Promise<ParrotoCard[]> {
     try {
         await sleep(DELAY_MS);
-        console.log(`    📝 Fetching cards for group ${groupId}...`);
+        console.log(`    Fetching cards for group ${groupId}...`);
 
         const headers: any = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
@@ -131,12 +131,12 @@ async function fetchCards(deckId: string, groupId: string, limit = 1000): Promis
 
         if (response.data.status === 'success') {
             const cards = response.data.data.cards || [];
-            console.log(`    ✅ Found ${cards.length} cards`);
+            console.log(`    Found ${cards.length} cards`);
             return cards;
         }
         return [];
     } catch (error: any) {
-        console.error(`    ❌ Error fetching cards for ${groupId}:`, error.message);
+        console.error(`    Error fetching cards for ${groupId}:`, error.message);
         return [];
     }
 }
@@ -156,7 +156,7 @@ function mapDifficulty(parrotoLevel: string): DifficultyLevel {
  * Import a deck with all its groups and cards
  */
 async function importDeck(deck: ParrotoDeck, groups: ParrotoGroup[], allCards: Map<string, ParrotoCard[]>) {
-    console.log(`\n🎯 Importing deck: ${deck.name}`);
+    console.log(`\nImporting deck: ${deck.name}`);
 
     // Check if vocabulary list already exists
     let vocabularyList = await prisma.vocabularyList.findFirst({
@@ -164,7 +164,7 @@ async function importDeck(deck: ParrotoDeck, groups: ParrotoGroup[], allCards: M
     });
 
     if (vocabularyList) {
-        console.log(`📝 List already exists, updating: ${vocabularyList.id}`);
+        console.log(`List already exists, updating: ${vocabularyList.id}`);
 
         // Delete existing units and terms
         await prisma.vocabularyTerm.deleteMany({
@@ -190,7 +190,7 @@ async function importDeck(deck: ParrotoDeck, groups: ParrotoGroup[], allCards: M
                 language: 'en',
             }
         });
-        console.log(`✅ Updated list: ${vocabularyList.id}`);
+        console.log(`Updated list: ${vocabularyList.id}`);
     } else {
         // Create new vocabulary list
         vocabularyList = await prisma.vocabularyList.create({
@@ -205,7 +205,7 @@ async function importDeck(deck: ParrotoDeck, groups: ParrotoGroup[], allCards: M
                 language: 'en',
             }
         });
-        console.log(`✅ Created new list: ${vocabularyList.id}`);
+        console.log(`Created new list: ${vocabularyList.id}`);
     }
 
     // Import each group
@@ -213,7 +213,7 @@ async function importDeck(deck: ParrotoDeck, groups: ParrotoGroup[], allCards: M
         const cards = allCards.get(group._id) || [];
 
         if (cards.length === 0) {
-            console.log(`  ⏭️  Skipping empty group: ${group.name}`);
+            console.log(`   Skipping empty group: ${group.name}`);
             continue;
         }
 
@@ -260,7 +260,7 @@ async function importDeck(deck: ParrotoDeck, groups: ParrotoGroup[], allCards: M
             data: termsData,
         });
 
-        console.log(`  ✅ Imported ${termsData.length} terms for ${group.name}`);
+        console.log(`  Imported ${termsData.length} terms for ${group.name}`);
     }
 
     return vocabularyList;
@@ -274,7 +274,7 @@ async function main() {
 
     // Check if token is provided
     if (!BEARER_TOKEN) {
-        console.error('❌ Bearer token required!');
+        console.error('Bearer token required!');
         console.log('\nUsage:');
         console.log('  npx ts-node scripts/crawl-parroto.ts YOUR_BEARER_TOKEN');
         console.log('  OR');
@@ -282,18 +282,18 @@ async function main() {
         process.exit(1);
     }
 
-    console.log('✅ Bearer token found\n');
+    console.log('Bearer token found\n');
 
     try {
         // Step 1: Fetch all decks (increase limit if needed)
         const decks = await fetchDecks(1, 50);
         console.log("check desk", decks)
         if (decks.length === 0) {
-            console.log('❌ No decks found. Exiting...');
+            console.log('No decks found. Exiting...');
             return;
         }
 
-        console.log(`\n📊 Total decks to process: ${decks.length}\n`);
+        console.log(`\nTotal decks to process: ${decks.length}\n`);
 
         let totalImported = 0;
 
@@ -306,7 +306,7 @@ async function main() {
             const groups = await fetchGroups(deck._id);
 
             if (groups.length === 0) {
-                console.log(`  ⏭️  No groups found, skipping...`);
+                console.log(`   No groups found, skipping...`);
                 continue;
             }
 
@@ -322,9 +322,9 @@ async function main() {
             try {
                 await importDeck(deck, groups, allCards);
                 totalImported++;
-                console.log(`✅ Successfully imported: ${deck.name}`);
+                console.log(`Successfully imported: ${deck.name}`);
             } catch (error: any) {
-                console.error(`❌ Failed to import ${deck.name}:`, error.message);
+                console.error(`Failed to import ${deck.name}:`, error.message);
             }
           }
 
@@ -332,8 +332,8 @@ async function main() {
             await sleep(DELAY_MS * 2);
         }
 
-        console.log('\n\n🎉 Crawling complete!');
-        console.log(`📊 Statistics:`);
+        console.log('\n\nCrawling complete!');
+        console.log(`Statistics:`);
         console.log(`  - Total decks processed: ${decks.length}`);
         console.log(`  - Successfully imported: ${totalImported}`);
 
@@ -342,13 +342,13 @@ async function main() {
         const unitCount = await prisma.vocabularyUnit.count();
         const termCount = await prisma.vocabularyTerm.count();
 
-        console.log(`\n📚 Database totals:`);
+        console.log(`\nDatabase totals:`);
         console.log(`  - Lists: ${listCount}`);
         console.log(`  - Units: ${unitCount}`);
         console.log(`  - Terms: ${termCount}`);
 
     } catch (error: any) {
-        console.error('❌ Fatal error:', error.message);
+        console.error('Fatal error:', error.message);
         throw error;
     }
 }

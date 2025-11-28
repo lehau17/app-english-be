@@ -86,7 +86,7 @@ export class AiSpeakingTurnManager {
       ? (evaluation.detail?.suggestedPhrases as string[])
       : [];
 
-    // ✅ Pronunciation assessment với Google Cloud Speech-to-Text
+    // Pronunciation assessment với Google Cloud Speech-to-Text
     let pronunciationFeedback: Awaited<
       ReturnType<typeof this.pronunciationService.assessPronunciation>
     > | null = null;

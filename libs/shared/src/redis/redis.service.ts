@@ -59,21 +59,21 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     });
 
     this.client.on('connect', () => {
-      this.logger.log('✅ Redis connected');
+      this.logger.log('Redis connected');
       this.isConnected = true;
     });
 
     this.client.on('disconnect', () => {
-      this.logger.warn('⚠️  Redis disconnected');
+      this.logger.warn(' Redis disconnected');
       this.isConnected = false;
     });
 
     this.client.on('reconnecting', () => {
-      this.logger.log('🔄 Redis reconnecting...');
+      this.logger.log('Redis reconnecting...');
     });
 
     this.client.on('ready', () => {
-      this.logger.log('✅ Redis ready');
+      this.logger.log('Redis ready');
       this.isConnected = true;
     });
   }

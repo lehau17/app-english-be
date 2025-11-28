@@ -50,7 +50,7 @@ Returns a JSON object with public download URL (no auth required):
 
   async _call(input: string): Promise<string> {
     try {
-      this.logger.log(`📊 Excel Export input: ${input}`);
+      this.logger.log(`Excel Export input: ${input}`);
 
       const parsedInput = JSON.parse(input);
       const {
@@ -145,7 +145,7 @@ Returns a JSON object with public download URL (no auth required):
 
       await workbook.xlsx.writeFile(filePath);
 
-      this.logger.log(`✅ Excel file created: ${fullFilename}`);
+      this.logger.log(`Excel file created: ${fullFilename}`);
 
       // Get API base URL from environment or use relative path
       const apiPort = process.env.CLIENT_API_PORT || '3000';
@@ -160,7 +160,7 @@ Returns a JSON object with public download URL (no auth required):
         recordCount: data.length,
       });
     } catch (error) {
-      this.logger.error('❌ Excel export error:', error);
+      this.logger.error('Excel export error:', error);
       return JSON.stringify({
         success: false,
         error: error.message || 'Failed to generate Excel file',

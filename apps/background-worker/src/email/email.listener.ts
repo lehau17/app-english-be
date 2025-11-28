@@ -48,13 +48,13 @@ export class EmailListener implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     try {
       await this.consumer.connect();
-      this.logger.log('✅ Email listener connected to Kafka');
+      this.logger.log('Email listener connected to Kafka');
 
       await this.consumer.subscribe({
         topics: ['notifications'],
         fromBeginning: false,
       });
-      this.logger.log('✅ Subscribed to topic: notifications');
+      this.logger.log('Subscribed to topic: notifications');
 
       // Event listeners
       this.consumer.on(this.consumer.events.GROUP_JOIN, (e) =>
@@ -70,7 +70,7 @@ export class EmailListener implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      this.logger.log('✅ Email consumer running');
+      this.logger.log('Email consumer running');
     } catch (error) {
       this.logger.error('Failed to initialize email listener', error);
       throw error;
@@ -162,7 +162,7 @@ export class EmailListener implements OnModuleInit, OnModuleDestroy {
         expiresAt: expiresAt,
       });
 
-      this.logger.log(`✅ Sent password reset email to ${user.email}`);
+      this.logger.log(`Sent password reset email to ${user.email}`);
     } catch (error) {
       this.logger.error(
         `Failed to send password reset email: ${error.message}`,

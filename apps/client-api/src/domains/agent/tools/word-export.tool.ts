@@ -56,7 +56,7 @@ Returns:
 
   async _call(input: string): Promise<string> {
     try {
-      this.logger.log(`📝 Word Export input: ${input.substring(0, 200)}...`);
+      this.logger.log(`Word Export input: ${input.substring(0, 200)}...`);
 
       const parsedInput = JSON.parse(input);
       const {
@@ -212,7 +212,7 @@ Returns:
       const buffer = await Packer.toBuffer(doc);
       await fs.writeFile(filePath, buffer);
 
-      this.logger.log(`✅ Word file created: ${fullFilename}`);
+      this.logger.log(`Word file created: ${fullFilename}`);
 
       const apiPort = process.env.CLIENT_API_PORT || '3000';
       const apiBaseUrl = `http://localhost:${apiPort}`;
@@ -226,7 +226,7 @@ Returns:
         recordCount: data.length,
       });
     } catch (error) {
-      this.logger.error('❌ Word export error:', error);
+      this.logger.error('Word export error:', error);
       return JSON.stringify({
         success: false,
         error: (error as any).message || 'Failed to generate Word file',

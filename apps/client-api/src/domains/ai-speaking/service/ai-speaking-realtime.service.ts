@@ -125,7 +125,7 @@ export class AiSpeakingRealtimeService {
       this.gateway.emitToSession(sessionId, 'ai-speaking:tts-end', {
         turnId,
         audioUrl: result?.audioUrl ?? null,
-        text, // ✅ Gửi prompt text để FE hiển thị transcript
+        text, // Gửi prompt text để FE hiển thị transcript
       });
     } catch (error) {
       this.logger.error(
@@ -425,7 +425,7 @@ export class AiSpeakingRealtimeService {
             words: payload.words ?? null,
           });
 
-          // ✅ Profanity check
+          // Profanity check
           await this.checkAndHandleProfanity(sessionId, turnId, payload.text);
         },
         onError: (error) => {

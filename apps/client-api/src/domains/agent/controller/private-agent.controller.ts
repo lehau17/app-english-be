@@ -77,7 +77,7 @@ export class PrivateAgentController {
       `🌊 Stream request: message="${message}" conversationId=${conversationId}`,
     );
     this.logger.log(`🔐 Payload object:`, JSON.stringify(payload));
-    this.logger.log(`👤 userId=${payload?.sub || 'UNDEFINED'}`);
+    this.logger.log(`userId=${payload?.sub || 'UNDEFINED'}`);
 
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
@@ -110,11 +110,11 @@ export class PrivateAgentController {
         }
       }
 
-      this.logger.log(`✅ Stream completed: ${chunkCount} chunks sent`);
+      this.logger.log(`Stream completed: ${chunkCount} chunks sent`);
       res.write('data: [DONE]\n\n');
       res.end();
     } catch (error) {
-      this.logger.error(`❌ Stream error: ${error.message}`, error.stack);
+      this.logger.error(`Stream error: ${error.message}`, error.stack);
       res.write(
         `data: ${JSON.stringify({ type: 'error', content: error.message })}\n\n`,
       );
@@ -169,13 +169,13 @@ export class PrivateAgentController {
       }
 
       this.logger.log(
-        `✅ Student stream completed: ${chunkCount} chunks sent (student tools)`,
+        `Student stream completed: ${chunkCount} chunks sent (student tools)`,
       );
       res.write('data: [DONE]\n\n');
       res.end();
     } catch (error) {
       this.logger.error(
-        `❌ Student stream error: ${(error as Error).message}`,
+        `Student stream error: ${(error as Error).message}`,
         (error as Error).stack,
       );
       res.write(
@@ -237,13 +237,13 @@ export class PrivateAgentController {
       }
 
       this.logger.log(
-        `✅ Parent stream completed: ${chunkCount} chunks sent (parent tools)`,
+        `Parent stream completed: ${chunkCount} chunks sent (parent tools)`,
       );
       res.write('data: [DONE]\n\n');
       res.end();
     } catch (error) {
       this.logger.error(
-        `❌ Parent stream error: ${(error as Error).message}`,
+        `Parent stream error: ${(error as Error).message}`,
         (error as Error).stack,
       );
       res.write(
@@ -499,7 +499,7 @@ export class PrivateAgentController {
     try {
       await fs.access(filePath);
     } catch (error) {
-      this.logger.error(`❌ File not found: ${filePath}`);
+      this.logger.error(`File not found: ${filePath}`);
       throw new NotFoundException('File not found');
     }
 

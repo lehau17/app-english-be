@@ -122,7 +122,7 @@ const FEATURE_CARDS: LandingPageFeature[] = [
       'Chương trình học được cá nhân hóa theo mục tiêu và trình độ của từng học viên, giúp tối ưu hóa quá trình học tập.',
   },
   {
-    icon: '🗣️',
+    icon: '',
     title: 'Thực hành giao tiếp',
     description:
       'Môi trường thực hành tiếng Anh với giáo viên bản ngữ và AI thông minh, giúp cải thiện khả năng giao tiếp tự nhiên.',
@@ -170,9 +170,9 @@ const FOOTER_SECTIONS: LandingPageFooterSection[] = [
   {
     title: 'Liên hệ',
     links: [
-      '📞 1900-1234',
-      '✉️ support@englimaster.com',
-      '📍 Hà Nội, Việt Nam',
+      '1900-1234',
+      'support@englimaster.com',
+      'Hà Nội, Việt Nam',
     ],
   },
 ];
@@ -680,7 +680,7 @@ export class LandingPageService {
       classroomId,
       courseName,
       classroomName: enrollmentData.classroomName,
-      emailVerified: true, // 🔥 Email đã verify qua link
+      emailVerified: true, // Email đã verify qua link
       source: enrollmentData.source,
       note: enrollmentData.note,
     };

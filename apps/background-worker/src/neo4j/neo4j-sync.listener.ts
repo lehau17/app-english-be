@@ -42,13 +42,13 @@ export class Neo4jSyncListener implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     try {
       await this.consumer.connect();
-      this.logger.log('✅ Neo4j sync listener connected to Kafka');
+      this.logger.log('Neo4j sync listener connected to Kafka');
 
       await this.consumer.subscribe({
         topics: [KafkaTopic.NEO4J_SYNC],
         fromBeginning: false,
       });
-      this.logger.log(`✅ Subscribed to topic: ${KafkaTopic.NEO4J_SYNC}`);
+      this.logger.log(`Subscribed to topic: ${KafkaTopic.NEO4J_SYNC}`);
 
       // Event listeners
       this.consumer.on(this.consumer.events.GROUP_JOIN, (e) =>
@@ -67,7 +67,7 @@ export class Neo4jSyncListener implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      this.logger.log('✅ Neo4j sync consumer running');
+      this.logger.log('Neo4j sync consumer running');
     } catch (error) {
       this.logger.error('Failed to initialize Neo4j sync listener', error);
       throw error;
@@ -111,7 +111,7 @@ export class Neo4jSyncListener implements OnModuleInit, OnModuleDestroy {
 
       const processingTime = Date.now() - startTime;
       this.logger.log(
-        `✅ Neo4j sync completed for ${payload.entityType} ${payload.entityId} in ${processingTime}ms`,
+        `Neo4j sync completed for ${payload.entityType} ${payload.entityId} in ${processingTime}ms`,
       );
     } catch (err) {
       this.logger.error('Message processing failed:', {

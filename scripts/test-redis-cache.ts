@@ -22,7 +22,7 @@ async function testRedisConnection() {
         port: REDIS_PORT,
         retryStrategy: (times) => {
             if (times > 3) {
-                console.log('❌ Redis connection failed after 3 retries');
+                console.log('Redis connection failed after 3 retries');
                 return null;
             }
             return Math.min(times * 200, 2000);
@@ -34,14 +34,14 @@ async function testRedisConnection() {
         console.log('\n1️⃣ Test Connection');
         console.log('-'.repeat(60));
         const pong = await redis.ping();
-        console.log(`✅ Redis responds: ${pong}`);
+        console.log(`Redis responds: ${pong}`);
 
         // Test 2: Basic SET/GET
         console.log('\n2️⃣ Test Basic SET/GET');
         console.log('-'.repeat(60));
         await redis.set('test:key', 'Hello Redis!', 'EX', 10);
         const value = await redis.get('test:key');
-        console.log(`✅ SET/GET works: ${value}`);
+        console.log(`SET/GET works: ${value}`);
 
         // Test 3: JSON Serialization
         console.log('\n3️⃣ Test JSON Serialization');
@@ -54,7 +54,7 @@ async function testRedisConnection() {
         await redis.setex('test:json', 10, JSON.stringify(testData));
         const jsonValue = await redis.get('test:json');
         const parsed = jsonValue ? JSON.parse(jsonValue) : null;
-        console.log(`✅ JSON works: ${JSON.stringify(parsed, null, 2)}`);
+        console.log(`JSON works: ${JSON.stringify(parsed, null, 2)}`);
 
         // Test 4: RAG Cache Pattern
         console.log('\n4️⃣ Test RAG Cache Pattern');
@@ -83,16 +83,16 @@ async function testRedisConnection() {
 
         // Set with 5 min TTL
         await redis.setex(cacheKey, 300, JSON.stringify(searchResult));
-        console.log('✅ Cached search result (TTL: 300s)');
+        console.log('Cached search result (TTL: 300s)');
 
         // Get from cache
         const cached = await redis.get(cacheKey);
         const cachedResult = cached ? JSON.parse(cached) : null;
-        console.log(`✅ Retrieved from cache: ${cachedResult?.answer}`);
+        console.log(`Retrieved from cache: ${cachedResult?.answer}`);
 
         // Check TTL
         const ttl = await redis.ttl(cacheKey);
-        console.log(`✅ TTL remaining: ${ttl}s`);
+        console.log(`TTL remaining: ${ttl}s`);
 
         // Test 5: Cache Statistics
         console.log('\n5️⃣ Test Cache Statistics');
@@ -105,7 +105,7 @@ async function testRedisConnection() {
 
         // Get all rag keys
         const keys = await redis.keys('rag:*');
-        console.log(`✅ Total RAG cache entries: ${keys.length}`);
+        console.log(`Total RAG cache entries: ${keys.length}`);
 
         // Count by type
         const byType = {
@@ -129,7 +129,7 @@ async function testRedisConnection() {
             const pipeline = redis.pipeline();
             searchKeys.forEach(key => pipeline.del(key));
             await pipeline.exec();
-            console.log(`✅ Invalidated ${searchKeys.length} entries`);
+            console.log(`Invalidated ${searchKeys.length} entries`);
         }
 
         // Test 7: Pub/Sub
@@ -142,10 +142,10 @@ async function testRedisConnection() {
         });
 
         await subscriber.subscribe('rag:cache:invalidate');
-        console.log('✅ Subscribed to invalidation channel');
+        console.log('Subscribed to invalidation channel');
 
         subscriber.on('message', (channel, message) => {
-            console.log(`✅ Received message on ${channel}:`);
+            console.log(`Received message on ${channel}:`);
             console.log(`   ${message}`);
         });
 
@@ -159,7 +159,7 @@ async function testRedisConnection() {
         await new Promise(resolve => setTimeout(resolve, 100));
 
         await subscriber.quit();
-        console.log('✅ Pub/sub works!');
+        console.log('Pub/sub works!');
 
         // Test 8: Performance
         console.log('\n8️⃣ Test Performance');
@@ -177,7 +177,7 @@ async function testRedisConnection() {
             await redis.setex(`${testKey}:${i}`, 60, testValue);
         }
         const writeTime = Date.now() - writeStart;
-        console.log(`✅ Write ${iterations} entries: ${writeTime}ms (${(writeTime / iterations).toFixed(2)}ms/op)`);
+        console.log(`Write ${iterations} entries: ${writeTime}ms (${(writeTime / iterations).toFixed(2)}ms/op)`);
 
         // Read performance
         const readStart = Date.now();
@@ -185,13 +185,13 @@ async function testRedisConnection() {
             await redis.get(`${testKey}:${i}`);
         }
         const readTime = Date.now() - readStart;
-        console.log(`✅ Read ${iterations} entries: ${readTime}ms (${(readTime / iterations).toFixed(2)}ms/op)`);
+        console.log(`Read ${iterations} entries: ${readTime}ms (${(readTime / iterations).toFixed(2)}ms/op)`);
 
         // Cleanup
         const perfKeys = await redis.keys(`${testKey}:*`);
         if (perfKeys.length > 0) {
             await redis.del(...perfKeys);
-            console.log(`✅ Cleaned up ${perfKeys.length} test entries`);
+            console.log(`Cleaned up ${perfKeys.length} test entries`);
         }
 
         // Final cleanup
@@ -203,12 +203,12 @@ async function testRedisConnection() {
 
         if (allKeys.length > 0) {
             await redis.del(...allKeys);
-            console.log(`✅ Deleted ${allKeys.length} test keys`);
+            console.log(`Deleted ${allKeys.length} test keys`);
         }
 
         // Summary
         console.log('\n' + '='.repeat(60));
-        console.log('📊 SUMMARY\n');
+        console.log('SUMMARY\n');
         console.log('All tests passed! ✅');
         console.log('\nRedis Cache is working correctly:');
         console.log('  - Connection: ✅');
@@ -228,14 +228,14 @@ async function testRedisConnection() {
         console.log('4. Monitor cache hit rate');
 
     } catch (error) {
-        console.error('\n❌ Test failed:', error);
+        console.error('\nTest failed:', error);
         console.error('\nTroubleshooting:');
         console.error('1. Check Redis is running: docker compose ps');
         console.error('2. Start Redis: docker compose up redis -d');
         console.error('3. Check logs: docker compose logs redis');
     } finally {
         await redis.quit();
-        console.log('\n✅ Test complete!');
+        console.log('\nTest complete!');
         process.exit(0);
     }
 }

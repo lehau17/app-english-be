@@ -39,14 +39,14 @@ export class SqlService {
 
         // Generate SQL with error context from previous attempt
         sqlResult = await this.generateSQL(naturalQuery, schema, errorContext);
-        this.logger.log(`📝 Generated SQL: ${sqlResult.sql}`);
+        this.logger.log(`Generated SQL: ${sqlResult.sql}`);
 
         if (!sqlResult.isValid) {
           throw new Error('SQL validation failed: contains forbidden keywords');
         }
 
         // Execute query
-        this.logger.log(`🗄️ Executing SQL...`);
+        this.logger.log(`Executing SQL...`);
         const data = await this.prisma.$queryRawUnsafe<any[]>(sqlResult.sql);
         const dataParsed = normalizeBigInt(data);
 
@@ -58,7 +58,7 @@ export class SqlService {
         );
 
         this.logger.log(
-          `✅ SQL executed successfully on attempt ${attempt + 1}`,
+          `SQL executed successfully on attempt ${attempt + 1}`,
         );
 
         return {
@@ -71,7 +71,7 @@ export class SqlService {
       } catch (error: any) {
         lastError = error;
         this.logger.warn(
-          `⚠️ SQL execution failed (attempt ${attempt + 1}/${maxRetries}): ${error.message}`,
+          `SQL execution failed (attempt ${attempt + 1}/${maxRetries}): ${error.message}`,
         );
 
         // Build error context for next attempt (include failed SQL)
@@ -81,7 +81,7 @@ export class SqlService {
         // If this is the last attempt, throw
         if (attempt === maxRetries - 1) {
           this.logger.error(
-            `❌ All ${maxRetries} SQL attempts failed for query: ${naturalQuery}`,
+            `All ${maxRetries} SQL attempts failed for query: ${naturalQuery}`,
           );
           throw new Error(
             `Không thể tạo truy vấn hợp lệ sau ${maxRetries} lần thử. Lỗi cuối: ${error.message}`,
@@ -112,7 +112,7 @@ export class SqlService {
     const sqlResult = await this.generateSQL(naturalQuery, schema);
     this.logger.log('Check sql:', sqlResult.sql);
 
-    this.logger.log(`🗄️ Executing SQL: ${sqlResult.sql}`);
+    this.logger.log(`Executing SQL: ${sqlResult.sql}`);
     const data = await this.prisma.$queryRawUnsafe<any[]>(sqlResult.sql);
     const dataParsed = normalizeBigInt(data);
     const answer = await this.formatSQLResponse(
@@ -140,7 +140,7 @@ export class SqlService {
     const errorMsg = error.message || String(error);
 
     // Parse common PostgreSQL errors
-    let context = `\n\n⚠️ LẦN THỬ TRƯỚC BỊ LỖI:\n`;
+    let context = `\n\nLẦN THỬ TRƯỚC BỊ LỖI:\n`;
     context += `Query SQL bị lỗi:\n${failedSQL}\n\n`;
     context += `Lỗi: ${errorMsg}\n`;
 
@@ -238,9 +238,9 @@ CHỈ TRẢ VỀ SQL (hoặc SCHEMA_MISMATCH), KHÔNG GIẢI THÍCH:
         return acc;
       }, {});
 
-      let s = '📊 CẤU TRÚC DATABASE:\n\n';
+      let s = 'CẤU TRÚC DATABASE:\n\n';
       for (const [table, cols] of Object.entries(grouped)) {
-        s += `🏷️ Table: ${table}\n`;
+        s += `Table: ${table}\n`;
         (cols as any[]).forEach((col) => {
           s += `   - ${col.column_name} (${col.data_type})\n`;
         });
@@ -248,7 +248,7 @@ CHỈ TRẢ VỀ SQL (hoặc SCHEMA_MISMATCH), KHÔNG GIẢI THÍCH:
       }
       return s;
     } catch (e) {
-      this.logger.error('❌ Lỗi lấy schema:', e as any);
+      this.logger.error('Lỗi lấy schema:', e as any);
       return 'Schema unavailable';
     }
   }

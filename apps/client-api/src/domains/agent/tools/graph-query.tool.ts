@@ -9,21 +9,21 @@ export class GraphQueryTool extends StructuredTool {
   name = 'graph_query';
   description = `🔍 GRAPH DATABASE QUERY TOOL - Query Neo4j knowledge graph for STRUCTURAL and RELATIONSHIP data.
 
-⚠️ USE THIS TOOL (not knowledge_search) when user asks about:
+USE THIS TOOL (not knowledge_search) when user asks about:
 1. COUNTS/STRUCTURE: "có bao nhiêu", "how many", "structure", "tổng số"
 2. RELATIONSHIPS: "liên quan", "related", "kết nối", "connected to"
 3. HIERARCHY: "cấu trúc", "hierarchy", "lessons trong course", "activities trong lesson"
 4. PATHS: "lộ trình", "learning path", "progression", "từ A đến B"
 5. ORDERING: "bài tiếp theo", "next lesson", "thứ tự", "order"
 
-✅ Good examples (USE graph_query):
+Good examples (USE graph_query):
 - "Khóa học Animals for Beginners có bao nhiêu bài học?" → STRUCTURAL
 - "Tìm khóa học liên quan đến Animals" → RELATIONSHIP
 - "Lộ trình học từ beginner đến advanced" → PATH
 - "Bài học tiếp theo sau Lesson 1 là gì?" → ORDERING
 - "Chi tiết cấu trúc khóa học X" → HIERARCHY
 
-❌ Bad examples (use knowledge_search instead):
+Bad examples (use knowledge_search instead):
 - "Quy chế tốt nghiệp là gì?" → CONTENT search, not structure
 - "Giải thích ngữ pháp hiện tại đơn" → KNOWLEDGE search
 - "Tìm tài liệu về IELTS" → DOCUMENT search`;
@@ -73,7 +73,7 @@ export class GraphQueryTool extends StructuredTool {
         entityId,
       });
 
-      this.logger.log(`✅ Query returned ${results.length} results`);
+      this.logger.log(`Query returned ${results.length} results`);
 
       return JSON.stringify({
         success: true,

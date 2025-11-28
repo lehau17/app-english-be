@@ -70,7 +70,7 @@ export class AutoCertificateIssuerService {
       });
 
       this.logger.log(
-        `✅ Certificate issued successfully for student ${studentId}, course ${courseId}`,
+        `Certificate issued successfully for student ${studentId}, course ${courseId}`,
       );
     } catch (error) {
       this.logger.error(

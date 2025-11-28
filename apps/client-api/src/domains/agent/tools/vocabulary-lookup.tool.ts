@@ -46,7 +46,7 @@ export class VocabularyLookupTool {
         includePractice,
       }) => {
         try {
-          this.logger.log(`📚 Looking up word: "${word}"`);
+          this.logger.log(`Looking up word: "${word}"`);
 
           // 1. Search in database first
           const dbResults = await this.prisma.vocabularyTerm.findMany({
@@ -254,14 +254,14 @@ Format as JSON array:
           result.inUserList = false;
           result.masteryLevel = null;
 
-          this.logger.log(`✅ Lookup complete for "${word}"`);
+          this.logger.log(`Lookup complete for "${word}"`);
 
           return JSON.stringify({
             success: true,
             data: result,
           });
         } catch (error) {
-          this.logger.error(`❌ Vocabulary lookup error: ${error.message}`);
+          this.logger.error(`Vocabulary lookup error: ${error.message}`);
           return JSON.stringify({
             success: false,
             error: error.message,

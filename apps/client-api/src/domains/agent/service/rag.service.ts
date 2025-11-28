@@ -74,9 +74,9 @@ export class RagService {
         `Không thể lưu embedding_vector (pgvector) cho doc ${doc.id}: ${(e as any)?.message}`,
       );
     }
-    this.logger.log(`✅ Đã lưu tài liệu ID: ${doc.id}`);
+    this.logger.log(`Đã lưu tài liệu ID: ${doc.id}`);
 
-    // 🔄 Invalidate search cache when new document is added
+    // Invalidate search cache when new document is added
     this.cacheService.invalidateSearchCache();
     this.logger.log('🗑️ Cache invalidated due to new document');
 
@@ -157,7 +157,7 @@ export class RagService {
       );
     }
 
-    this.logger.log(`✅ Created parent document: ${parent.id}`);
+    this.logger.log(`Created parent document: ${parent.id}`);
 
     // Create chunk documents
     const chunks = [];
@@ -194,7 +194,7 @@ export class RagService {
       }
 
       chunks.push(chunk);
-      this.logger.log(`✅ Created chunk ${i + 1}/${contentChunks.length}`);
+      this.logger.log(`Created chunk ${i + 1}/${contentChunks.length}`);
     }
 
     // Invalidate search cache
@@ -202,7 +202,7 @@ export class RagService {
     this.logger.log('🗑️ Cache invalidated due to new chunked document');
 
     this.logger.log(
-      `🎉 Successfully added document with ${chunks.length} chunks`,
+      `Successfully added document with ${chunks.length} chunks`,
     );
 
     return { parent, chunks, totalChunks: chunks.length };
@@ -239,7 +239,7 @@ export class RagService {
         options,
       );
       if (cached) {
-        this.logger.log(`✅ Cache HIT for search: "${query}"`);
+        this.logger.log(`Cache HIT for search: "${query}"`);
         return { ...cached, fromCache: true };
       }
     }
@@ -284,14 +284,14 @@ export class RagService {
     this.logger.log('📦 Aggregating chunk scores...');
     relevantDocs = await this.aggregateChunkScores(relevantDocs);
     this.logger.log(
-      `✅ After aggregation: ${relevantDocs.length} unique documents`,
+      `After aggregation: ${relevantDocs.length} unique documents`,
     );
 
-    // 🎯 Re-ranking (optional but recommended)
+    // Re-ranking (optional but recommended)
     let reranked = false;
     if (useReranking && relevantDocs.length > 0) {
       try {
-        this.logger.log('🎯 Re-ranking documents...');
+        this.logger.log('Re-ranking documents...');
 
         const rerankDocs = relevantDocs.map((doc) => ({
           id: doc.id,
@@ -329,12 +329,12 @@ export class RagService {
 
           reranked = true;
           this.logger.log(
-            `✅ Re-ranked to ${relevantDocs.length} documents (strategy: ${options?.rerankStrategy || 'auto'})`,
+            `Re-ranked to ${relevantDocs.length} documents (strategy: ${options?.rerankStrategy || 'auto'})`,
           );
         }
       } catch (error) {
         this.logger.warn(
-          `⚠️ Re-ranking failed, using original results: ${(error as any)?.message}`,
+          `Re-ranking failed, using original results: ${(error as any)?.message}`,
         );
         // Continue with original results
       }
@@ -356,7 +356,7 @@ export class RagService {
     const context = relevantDocs
       .map(
         (d) =>
-          `📋 ${d.title} (${d.documentType}) [Score: ${d.finalScore.toFixed(3)}]:\n${d.content}`,
+          `${d.title} (${d.documentType}) [Score: ${d.finalScore.toFixed(3)}]:\n${d.content}`,
       )
       .join('\n\n');
 
@@ -445,7 +445,7 @@ YÊU CẦU:
 
       if (normalized.length > 0) {
         this.logger.log(
-          `✅ Found ${normalized.length} documents using pgvector ANN query`,
+          `Found ${normalized.length} documents using pgvector ANN query`,
         );
         return normalized;
       }
@@ -513,7 +513,7 @@ YÊU CẦU:
       // 💾 Check cache first
       const cached = await this.cacheService.getCachedExpansion(originalQuery);
       if (cached) {
-        this.logger.log(`✅ Cache HIT for expansion: "${originalQuery}"`);
+        this.logger.log(`Cache HIT for expansion: "${originalQuery}"`);
         return cached;
       }
 
@@ -560,13 +560,13 @@ Chỉ trả về JSON array, không có text giải thích:`;
       await this.cacheService.setCachedExpansion(originalQuery, finalQueries);
 
       this.logger.log(
-        `✅ Query expanded to ${finalQueries.length} variations: ${finalQueries.join(' | ')}`,
+        `Query expanded to ${finalQueries.length} variations: ${finalQueries.join(' | ')}`,
       );
 
       return finalQueries;
     } catch (e) {
       this.logger.warn(
-        `⚠️ Query expansion failed: ${(e as any)?.message}. Using original query only.`,
+        `Query expansion failed: ${(e as any)?.message}. Using original query only.`,
       );
       return [originalQuery];
     }
@@ -632,7 +632,7 @@ Chỉ trả về JSON array, không có text giải thích:`;
         allResults.push(...results);
       } catch (e) {
         this.logger.warn(
-          `⚠️ Search failed for query "${query}": ${(e as any)?.message}`,
+          `Search failed for query "${query}": ${(e as any)?.message}`,
         );
       }
     }
@@ -644,7 +644,7 @@ Chỉ trả về JSON array, không có text giải thích:`;
     const finalResults = deduped.slice(0, finalK);
 
     this.logger.log(
-      `✅ Search with expansion: Found ${finalResults.length} unique results from ${allResults.length} total hits`,
+      `Search with expansion: Found ${finalResults.length} unique results from ${allResults.length} total hits`,
     );
 
     return finalResults;
@@ -686,7 +686,7 @@ Chỉ trả về JSON array, không có text giải thích:`;
   }
 
   /**
-   * 🔥 HYBRID SEARCH - Combines semantic (vector) + keyword (full-text) search
+   * HYBRID SEARCH - Combines semantic (vector) + keyword (full-text) search
    *
    * @param query - User query string
    * @param queryEmbedding - Pre-computed embedding vector
@@ -709,7 +709,7 @@ Chỉ trả về JSON array, không có text giải thích:`;
     const finalK = options?.finalK ?? 5;
 
     this.logger.log(
-      `🔥 Hybrid Search: "${query}" (semantic: ${semanticWeight * 100}%, keyword: ${keywordWeight * 100}%)`,
+      `Hybrid Search: "${query}" (semantic: ${semanticWeight * 100}%, keyword: ${keywordWeight * 100}%)`,
     );
 
     // 1️⃣ Semantic Search using pgvector
@@ -730,7 +730,7 @@ Chỉ trả về JSON array, không có text giải thích:`;
     const finalResults = mergedResults.slice(0, finalK);
 
     this.logger.log(
-      `✅ Hybrid Search: Found ${finalResults.length} results (${semanticResults.length} semantic + ${keywordResults.length} keyword)`,
+      `Hybrid Search: Found ${finalResults.length} results (${semanticResults.length} semantic + ${keywordResults.length} keyword)`,
     );
 
     return finalResults;
@@ -986,7 +986,7 @@ Chỉ trả về JSON array, không có text giải thích:`;
   private async loadSampleDocuments() {
     const count = await this.prisma.knowledgeDocument.count();
     if (count > 0) {
-      this.logger.log(`📚 Knowledge base đã có ${count} tài liệu`);
+      this.logger.log(`Knowledge base đã có ${count} tài liệu`);
       return;
     }
 
@@ -1030,9 +1030,9 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
     for (const s of samples) {
       try {
         await this.addDocument(s);
-        this.logger.log(`✅ Seed doc: ${s.title}`);
+        this.logger.log(`Seed doc: ${s.title}`);
       } catch (e) {
-        this.logger.error(`❌ Lỗi seed doc: ${s.title}`, e as any);
+        this.logger.error(`Lỗi seed doc: ${s.title}`, e as any);
       }
     }
   }
@@ -1042,7 +1042,7 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
    * Converts course data into searchable documents
    */
   async indexCourses(): Promise<{ indexed: number; errors: number }> {
-    this.logger.log('📚 Bắt đầu index courses...');
+    this.logger.log('Bắt đầu index courses...');
     let indexed = 0;
     let errors = 0;
 
@@ -1113,16 +1113,16 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
           indexed++;
         } catch (e) {
           this.logger.error(
-            `❌ Lỗi index course ${course.id}: ${(e as any)?.message}`,
+            `Lỗi index course ${course.id}: ${(e as any)?.message}`,
           );
           errors++;
         }
       }
 
-      this.logger.log(`✅ Indexed ${indexed} courses, ${errors} errors`);
+      this.logger.log(`Indexed ${indexed} courses, ${errors} errors`);
       return { indexed, errors };
     } catch (e) {
-      this.logger.error('❌ Lỗi index courses:', e as any);
+      this.logger.error('Lỗi index courses:', e as any);
       throw e;
     }
   }
@@ -1196,16 +1196,16 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
           indexed++;
         } catch (e) {
           this.logger.error(
-            `❌ Lỗi index lesson ${lesson.id}: ${(e as any)?.message}`,
+            `Lỗi index lesson ${lesson.id}: ${(e as any)?.message}`,
           );
           errors++;
         }
       }
 
-      this.logger.log(`✅ Indexed ${indexed} lessons, ${errors} errors`);
+      this.logger.log(`Indexed ${indexed} lessons, ${errors} errors`);
       return { indexed, errors };
     } catch (e) {
-      this.logger.error('❌ Lỗi index lessons:', e as any);
+      this.logger.error('Lỗi index lessons:', e as any);
       throw e;
     }
   }
@@ -1214,7 +1214,7 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
    * Index all vocabulary into knowledge base
    */
   async indexVocabulary(): Promise<{ indexed: number; errors: number }> {
-    this.logger.log('📝 Bắt đầu index vocabulary...');
+    this.logger.log('Bắt đầu index vocabulary...');
     let indexed = 0;
     let errors = 0;
 
@@ -1274,16 +1274,16 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
           indexed++;
         } catch (e) {
           this.logger.error(
-            `❌ Lỗi index vocab ${vocab.word}: ${(e as any)?.message}`,
+            `Lỗi index vocab ${vocab.word}: ${(e as any)?.message}`,
           );
           errors++;
         }
       }
 
-      this.logger.log(`✅ Indexed ${indexed} vocabulary, ${errors} errors`);
+      this.logger.log(`Indexed ${indexed} vocabulary, ${errors} errors`);
       return { indexed, errors };
     } catch (e) {
-      this.logger.error('❌ Lỗi index vocabulary:', e as any);
+      this.logger.error('Lỗi index vocabulary:', e as any);
       throw e;
     }
   }
@@ -1363,16 +1363,16 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
           indexed++;
         } catch (e) {
           this.logger.error(
-            `❌ Lỗi index activity ${activity.id}: ${(e as any)?.message}`,
+            `Lỗi index activity ${activity.id}: ${(e as any)?.message}`,
           );
           errors++;
         }
       }
 
-      this.logger.log(`✅ Indexed ${indexed} activities, ${errors} errors`);
+      this.logger.log(`Indexed ${indexed} activities, ${errors} errors`);
       return { indexed, errors };
     } catch (e) {
-      this.logger.error('❌ Lỗi index activities:', e as any);
+      this.logger.error('Lỗi index activities:', e as any);
       throw e;
     }
   }
@@ -1386,7 +1386,7 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
     vocabulary: { indexed: number; errors: number };
     activities: { indexed: number; errors: number };
   }> {
-    this.logger.log('🔄 Bắt đầu reindex tất cả model data...');
+    this.logger.log('Bắt đầu reindex tất cả model data...');
 
     const results = {
       courses: await this.indexCourses(),
@@ -1407,10 +1407,10 @@ Ví dụ: (8.5×3 + 7.0×2 + 9.0×2) / 7 = 8.21
       results.activities.errors;
 
     this.logger.log(
-      `✅ Hoàn thành reindex: ${totalIndexed} documents indexed, ${totalErrors} errors`,
+      `Hoàn thành reindex: ${totalIndexed} documents indexed, ${totalErrors} errors`,
     );
 
-    // 🔄 Invalidate search cache after reindexing
+    // Invalidate search cache after reindexing
     this.cacheService.invalidateSearchCache();
     this.logger.log('🗑️ Cache invalidated due to reindexing');
 

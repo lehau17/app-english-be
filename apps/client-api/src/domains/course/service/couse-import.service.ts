@@ -342,7 +342,7 @@ export class CoursesImportService {
                                 created.id,
                             );
                             this.logger.log(
-                                `✅ Created certificate template for imported course ${created.id}`,
+                                `Created certificate template for imported course ${created.id}`,
                             );
                         } catch (error) {
                             // Log error but don't fail the import

@@ -73,7 +73,7 @@ async function testReranking() {
     const results: any[] = [];
 
     for (const testCase of testQueries) {
-        console.log(`\n📝 Query: "${testCase.query}"`);
+        console.log(`\nQuery: "${testCase.query}"`);
         console.log('-'.repeat(60));
 
         try {
@@ -106,7 +106,7 @@ async function testReranking() {
                 const improved =
                     cohereTop.id !== noRerankTop.id ||
                     (cohereTop.rerankScore || 0) > noRerankTop.finalScore;
-                console.log(`   ${improved ? '✅ Improved' : '➖ Same'}`);
+                console.log(`   ${improved ? 'Improved' : '➖ Same'}`);
 
                 results.push({
                     query: testCase.query,
@@ -116,7 +116,7 @@ async function testReranking() {
                     cohereAvailable: true,
                 });
             } catch (error: any) {
-                console.log(`   ❌ Cohere not available: ${error.message}`);
+                console.log(`   Cohere not available: ${error.message}`);
                 results.push({
                     query: testCase.query,
                     noRerank: noRerankTop.title,
@@ -141,9 +141,9 @@ async function testReranking() {
             const geminiImproved =
                 geminiTop.id !== noRerankTop.id ||
                 (geminiTop.rerankScore || 0) > noRerankTop.finalScore;
-            console.log(`   ${geminiImproved ? '✅ Improved' : '➖ Same'}`);
+            console.log(`   ${geminiImproved ? 'Improved' : '➖ Same'}`);
         } catch (error: any) {
-            console.log(`\n   ❌ Error: ${error.message}`);
+            console.log(`\n   Error: ${error.message}`);
             results.push({
                 query: testCase.query,
                 error: error.message,
@@ -153,7 +153,7 @@ async function testReranking() {
 
     // Summary
     console.log('\n' + '='.repeat(60));
-    console.log('📊 SUMMARY\n');
+    console.log('SUMMARY\n');
 
     const improved = results.filter((r) => r.improved).length;
     const total = results.filter((r) => !r.error).length;
@@ -164,11 +164,11 @@ async function testReranking() {
     console.log(`Improved with Reranking: ${improved}/${total} (${accuracy}%)`);
     console.log(`Cohere Available: ${results.some((r) => r.cohereAvailable) ? '✅' : '❌'}`);
 
-    console.log('\n📋 Detailed Results:');
+    console.log('\nDetailed Results:');
     console.log('-'.repeat(60));
     results.forEach((r, i) => {
         if (r.error) {
-            console.log(`${i + 1}. ${r.query}: ❌ ${r.error}`);
+            console.log(`${i + 1}. ${r.query}: ${r.error}`);
         } else {
             console.log(`${i + 1}. ${r.query}`);
             console.log(`   No Rerank: ${r.noRerank}`);
@@ -179,7 +179,7 @@ async function testReranking() {
     });
 
     console.log('\n' + '='.repeat(60));
-    console.log('✅ Test Complete!\n');
+    console.log('Test Complete!\n');
 }
 
 async function testHealth() {
@@ -191,26 +191,26 @@ async function testHealth() {
         );
 
         if (!response.ok) {
-            console.log('❌ Health check endpoint not found');
-            console.log('💡 Add health check endpoint to controller\n');
+            console.log('Health check endpoint not found');
+            console.log('Add health check endpoint to controller\n');
             return;
         }
 
         const health = await response.json();
 
         console.log('Health Status:');
-        console.log(`  Cohere:      ${health.cohere ? '✅ Available' : '❌ Not configured'}`);
-        console.log(`  Gemini:      ${health.gemini ? '✅ Available' : '❌ Not available'}`);
+        console.log(`  Cohere:      ${health.cohere ? 'Available' : 'Not configured'}`);
+        console.log(`  Gemini:      ${health.gemini ? 'Available' : 'Not available'}`);
         console.log(`  Recommended: ${health.recommended}\n`);
 
         if (!health.cohere) {
-            console.log('💡 To enable Cohere:');
+            console.log('To enable Cohere:');
             console.log('   1. Get API key: https://cohere.com');
             console.log('   2. Add to .env: COHERE_API_KEY=your-key');
             console.log('   3. Restart server\n');
         }
     } catch (error: any) {
-        console.log(`❌ Health check failed: ${error.message}\n`);
+        console.log(`Health check failed: ${error.message}\n`);
     }
 }
 
@@ -221,8 +221,8 @@ async function main() {
     try {
         await fetch('http://localhost:3334/api/public/v1/ai/health');
     } catch (error) {
-        console.log('❌ Server is not running at http://localhost:3334');
-        console.log('💡 Start server: npm run start:client-api:dev\n');
+        console.log('Server is not running at http://localhost:3334');
+        console.log('Start server: npm run start:client-api:dev\n');
         process.exit(1);
     }
 

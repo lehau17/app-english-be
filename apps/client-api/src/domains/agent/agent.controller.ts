@@ -191,11 +191,11 @@ export class IntelligentController {
                 }
             }
 
-            this.logger.log(`✅ Consultant stream completed: ${chunkCount} chunks sent`);
+            this.logger.log(`Consultant stream completed: ${chunkCount} chunks sent`);
             res.write('data: [DONE]\n\n');
             res.end();
         } catch (error) {
-            this.logger.error(`❌ Consultant stream error: ${(error as Error).message}`);
+            this.logger.error(`Consultant stream error: ${(error as Error).message}`);
             res.write(
                 `data: ${JSON.stringify({
                     type: 'error',
@@ -276,11 +276,11 @@ export class IntelligentController {
                 }
             }
 
-            this.logger.log(`✅ Guest stream completed: ${chunkCount} chunks sent`);
+            this.logger.log(`Guest stream completed: ${chunkCount} chunks sent`);
             res.write('data: [DONE]\n\n');
             res.end();
         } catch (error) {
-            this.logger.error(`❌ Guest stream error: ${(error as Error).message}`);
+            this.logger.error(`Guest stream error: ${(error as Error).message}`);
             res.write(
                 `data: ${JSON.stringify({
                     type: 'error',
@@ -383,7 +383,7 @@ export class IntelligentController {
             contentType =
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
         } else {
-            this.logger.warn(`⚠️ Unsupported file type: ${filename}`);
+            this.logger.warn(`Unsupported file type: ${filename}`);
             res.status(400).json({ error: 'Unsupported file type' });
             return;
         }
@@ -395,7 +395,7 @@ export class IntelligentController {
         try {
             await fs.access(filePath);
         } catch (error) {
-            this.logger.error(`❌ File not found: ${filePath}`);
+            this.logger.error(`File not found: ${filePath}`);
             res.status(404).json({ error: 'File not found' });
             return;
         }
@@ -428,7 +428,7 @@ export class IntelligentController {
         description: 'Sync courses, lessons, activities from PostgreSQL to Neo4j',
     })
     async syncEntities() {
-        this.logger.log('📚 Syncing entities...');
+        this.logger.log('Syncing entities...');
         const count = await this.graphEntityService.syncCoursesFromDatabase(
             this.prisma,
         );

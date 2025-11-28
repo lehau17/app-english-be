@@ -55,13 +55,13 @@ export class GraphEntityService {
     for (const query of queries) {
       try {
         await this.neo4jService.runQuery(query);
-        this.logger.log(`✅ ${query.split(' ')[1]} created`);
+        this.logger.log(`${query.split(' ')[1]} created`);
       } catch (error) {
-        this.logger.warn(`⚠️ ${query.split(' ')[1]} may already exist`);
+        this.logger.warn(`${query.split(' ')[1]} may already exist`);
       }
     }
 
-    this.logger.log('✅ Neo4j schema initialized');
+    this.logger.log('Neo4j schema initialized');
   }
 
   /**
@@ -207,7 +207,7 @@ export class GraphEntityService {
    * Sync courses from database to Neo4j
    */
   async syncCoursesFromDatabase(prisma: any): Promise<number> {
-    this.logger.log('📚 Syncing courses to Neo4j...');
+    this.logger.log('Syncing courses to Neo4j...');
 
     const courses = await prisma.course.findMany({
       include: {
@@ -268,7 +268,7 @@ export class GraphEntityService {
       }
     }
 
-    this.logger.log(`✅ Synced ${count} entities from database`);
+    this.logger.log(`Synced ${count} entities from database`);
     return count;
   }
 
@@ -325,7 +325,7 @@ export class GraphEntityService {
         entities.push(entity);
       }
 
-      this.logger.log(`✅ Extracted ${entities.length} concepts`);
+      this.logger.log(`Extracted ${entities.length} concepts`);
       return entities;
     } catch (error) {
       this.logger.error('Failed to extract concepts', error);

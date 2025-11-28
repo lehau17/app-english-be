@@ -13,7 +13,7 @@ async function bootstrap() {
   logger.log('🎧 KafkaJS listener will auto-start via OnModuleInit');
 
   await app.listen(process.env.PORT ?? 3002);
-  logger.log(`✅ HTTP server listening on port ${process.env.PORT ?? 3002}`);
-  logger.log('✅ Notification service ready (Kafka consumer running)');
+  logger.log(`HTTP server listening on port ${process.env.PORT ?? 3002}`);
+  logger.log('Notification service ready (Kafka consumer running)');
 }
 bootstrap();

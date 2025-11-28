@@ -865,7 +865,7 @@ export class AssignmentService {
     // TODO: Optional - Update student progress/stats
 
     console.log(
-      `✅ Submission ${submissionId} graded by teacher ${teacherUserId}: ${grade}/${assignment.totalPoints}`,
+      `Submission ${submissionId} graded by teacher ${teacherUserId}: ${grade}/${assignment.totalPoints}`,
     );
 
     return gradedSubmission;

@@ -140,10 +140,10 @@ export class ParentNotificationService {
           data.streakDays &&
           data.streakDays >= (relation.streakNotificationDays || 3)
         ) {
-          title = `🔥 ${data.childName} đạt chuỗi học ${data.streakDays} ngày!`;
+          title = `${data.childName} đạt chuỗi học ${data.streakDays} ngày!`;
           body = `Thật tuyệt vời! ${data.childName} đã duy trì việc học liên tục ${data.streakDays} ngày.`;
         } else if (data.goalType) {
-          title = `🎯 ${data.childName} đã đạt mục tiêu!`;
+          title = `${data.childName} đã đạt mục tiêu!`;
           body = `${data.childName} vừa hoàn thành mục tiêu ${data.goalType}.`;
         } else if (data.achievement) {
           title = `🏆 ${data.childName} đạt thành tích mới!`;
@@ -234,7 +234,7 @@ export class ParentNotificationService {
       });
 
       for (const relation of parentChildRelations) {
-        const title = `📊 Báo cáo ${period === 'daily' ? 'hàng ngày' : 'tuần'} của ${childName}`;
+        const title = `Báo cáo ${period === 'daily' ? 'hàng ngày' : 'tuần'} của ${childName}`;
         const body = `${childName} đã hoàn thành ${completedCount} hoạt động trong ${Math.floor(totalTime / 60)} phút${avgScore > 0 ? `, điểm trung bình ${Math.round(avgScore)}` : ''}.`;
 
         await this.sendNotificationToParent({

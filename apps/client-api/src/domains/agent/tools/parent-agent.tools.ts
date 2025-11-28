@@ -1,12 +1,15 @@
 import { PrismaRepository } from '@app/database';
+import { GeminiService } from '@app/shared';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
 import { RagService } from '../service/rag.service';
 import { SqlService } from '../service/sql.service';
 import { ChartGeneratorTool } from './chart-generator.tool';
+import { CompareChildrenTool } from './compare-children.tool';
 import { RagTool } from './rag.tool';
 import { SqlTool } from './sql.tool';
+import { StudentAnalyticsTool } from './student-analytics.tool';
 
 @Injectable()
 export class ParentAgentTools {
@@ -17,9 +20,13 @@ export class ParentAgentTools {
     private sqlService: SqlService,
     private prisma: PrismaRepository,
     private chartTool: ChartGeneratorTool,
+    private studentAnalytics: StudentAnalyticsTool,
+    private gemini: GeminiService,
   ) {}
 
   getTools() {
+    const compareChildren = new CompareChildrenTool(this.prisma, this.gemini);
+
     return [
       // Core tools
       new RagTool(this.ragService),
@@ -34,6 +41,12 @@ export class ParentAgentTools {
       this.getChildScheduleTool(),
       this.getPaymentStatusTool(),
       this.getChildReportTool(),
+
+      // Compare children tool
+      compareChildren.getTool(),
+
+      // Student analytics (for child analysis with AI insights and charts)
+      this.studentAnalytics,
     ];
   }
 

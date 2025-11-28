@@ -34,14 +34,14 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
   async onModuleInit() {
     try {
       await this.consumer.connect();
-      this.logger.log('✅ Notification listener connected to Kafka');
+      this.logger.log('Notification listener connected to Kafka');
 
       await this.consumer.subscribe({
         topics: [KafkaTopic.NOTIFICATION_SEND_OTP_CREATED, 'notifications'],
         fromBeginning: false,
       });
       this.logger.log(
-        `✅ Subscribed to topics: ${KafkaTopic.NOTIFICATION_SEND_OTP_CREATED}, notifications`,
+        `Subscribed to topics: ${KafkaTopic.NOTIFICATION_SEND_OTP_CREATED}, notifications`,
       );
 
       // Event listeners
@@ -58,7 +58,7 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      this.logger.log('✅ Notification consumer running');
+      this.logger.log('Notification consumer running');
     } catch (error) {
       this.logger.error('Failed to initialize notification listener', error);
       throw error;

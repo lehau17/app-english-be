@@ -21,13 +21,27 @@ import { RerankerService } from './service/reranker.service';
 import { SqlService } from './service/sql.service';
 import { StudentAgentService } from './service/student-agent.service';
 import { TextChunkerService } from './service/text-chunker.service';
+import { AssignmentAnalyticsTool } from './tools/assignment-analytics.tool';
 import { ChartGeneratorTool } from './tools/chart-generator.tool';
+import { ClassPerformanceTool } from './tools/class-performance.tool';
+import { ClassroomAnalyticsTool } from './tools/classroom-analytics.tool';
+import { ContentStatsTool } from './tools/content-stats.tool';
+import { CourseAnalyticsTool } from './tools/course-analytics.tool';
 import { ExcelExportTool } from './tools/excel-export.tool';
 import { GraphQueryTool } from './tools/graph-query.tool';
+import { NotificationSenderTool } from './tools/notification-sender.tool';
 import { ParentAgentTools } from './tools/parent-agent.tools';
 import { PdfExportTool } from './tools/pdf-export.tool';
+import { PodcastHistoryTool } from './tools/podcast-history.tool';
+import { ProgressTrackerTool } from './tools/progress-tracker.tool';
 import { ReportAdvisorTool } from './tools/report-advisor.tool';
+import { RevenueAnalyticsTool } from './tools/revenue-analytics.tool';
 import { StudentAgentTools } from './tools/student-agent.tools';
+import { StudentAlertTool } from './tools/student-alert.tool';
+import { StudentAnalyticsTool } from './tools/student-analytics.tool';
+import { SystemOverviewTool } from './tools/system-overview.tool';
+import { TeacherAnalyticsTool } from './tools/teacher-analytics.tool';
+import { UserManagementTool } from './tools/user-management.tool';
 import { WordExportTool } from './tools/word-export.tool';
 
 @Module({
@@ -60,6 +74,20 @@ import { WordExportTool } from './tools/word-export.tool';
     GraphQueryTool,
     StudentAgentTools,
     ParentAgentTools,
+    StudentAnalyticsTool,
+    TeacherAnalyticsTool,
+    CourseAnalyticsTool,
+    ClassroomAnalyticsTool,
+    ClassPerformanceTool,
+    RevenueAnalyticsTool,
+    SystemOverviewTool,
+    NotificationSenderTool,
+    AssignmentAnalyticsTool,
+    ProgressTrackerTool,
+    PodcastHistoryTool,
+    StudentAlertTool,
+    UserManagementTool,
+    ContentStatsTool,
   ],
   exports: [
     AgentService,

@@ -198,7 +198,7 @@ export class GraphRelationshipService {
       }
     }
 
-    this.logger.log(`✅ Created ${count} structured relationships`);
+    this.logger.log(`Created ${count} structured relationships`);
     return count;
   }
 
@@ -235,7 +235,7 @@ export class GraphRelationshipService {
     });
 
     const created = result[0]?.created || 0;
-    this.logger.log(`✅ Discovered ${created} semantic relationships`);
+    this.logger.log(`Discovered ${created} semantic relationships`);
     return created;
   }
 
