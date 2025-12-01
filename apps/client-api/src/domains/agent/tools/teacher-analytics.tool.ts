@@ -1,43 +1,50 @@
 import { PrismaRepository } from '@app/database';
 import { GeminiService } from '@app/shared';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 
 @Injectable()
-export class TeacherAnalyticsTool extends Tool {
-  name = 'analyze_teacher';
-  description = `Phân tích hiệu suất giảng dạy của giáo viên với AI và tạo nhiều biểu đồ trực quan.
-
-Input: JSON string với một trong các trường sau:
-- {"teacherEmail": "teacher@gmail.com"} - tìm theo email
-- {"teacherName": "Trần Thị B"} - tìm theo tên
-- {"teacherId": "uuid-here"} - tìm theo ID
-- {"period": "week|month|quarter|all"} - khoảng thời gian (mặc định: month)
-
-Sử dụng tool này khi:
-- Người dùng hỏi "phân tích giáo viên X"
-- Người dùng hỏi "hiệu suất giảng dạy của giáo viên email abc@gmail.com"
-- Người dùng hỏi "điểm trung bình các lớp của giáo viên tên Trần Thị B"
-- Người dùng muốn xem thống kê lớp học, học viên của giáo viên
-
-Kết quả trả về:
-- Thông tin giáo viên (tên, email)
-- Metrics: số lớp, số học viên, điểm TB các lớp, tỷ lệ hoàn thành
-- Class performance: hiệu suất từng lớp học
-- AI Insights: phân tích hiệu quả giảng dạy
-- Recommendations: gợi ý cải thiện
-- 3-4 biểu đồ: bar (điểm lớp), pie (phân bố học viên), bar (completion), radar (tổng quan)`;
-
+export class TeacherAnalyticsTool {
   private readonly logger = new Logger(TeacherAnalyticsTool.name);
 
   constructor(
     private prisma: PrismaRepository,
     private gemini: GeminiService,
-  ) {
-    super();
+  ) {}
+
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'analyze_teacher',
+      description: `Phan tich hieu suat giang day cua giao vien voi AI va tao nhieu bieu do truc quan.
+
+Su dung tool nay khi:
+- Nguoi dung hoi "phan tich giao vien X"
+- Nguoi dung hoi "hieu suat giang day cua giao vien email abc@gmail.com"
+- Nguoi dung hoi "diem trung binh cac lop cua giao vien ten Tran Thi B"
+- Nguoi dung muon xem thong ke lop hoc, hoc vien cua giao vien
+
+Ket qua tra ve:
+- Thong tin giao vien (ten, email)
+- Metrics: so lop, so hoc vien, diem TB cac lop, ty le hoan thanh
+- Class performance: hieu suat tung lop hoc
+- AI Insights: phan tich hieu qua giang day
+- Recommendations: goi y cai thien
+- 3-4 bieu do: bar (diem lop), pie (phan bo hoc vien), bar (completion), radar (tong quan)`,
+      schema: z.object({
+        teacherId: z.string().optional().describe('UUID cua giao vien'),
+        teacherName: z.string().optional().describe('Ten giao vien de tim kiem'),
+        teacherEmail: z.string().optional().describe('Email giao vien de tim kiem'),
+        period: z.enum(['week', 'month', 'quarter', 'all']).optional().default('month').describe('Khoang thoi gian phan tich'),
+        includeCharts: z.boolean().optional().default(true).describe('Co tao bieu do khong'),
+      }),
+      func: async ({ teacherId, teacherName, teacherEmail, period = 'month', includeCharts = true }) => {
+        return this._call(JSON.stringify({ teacherId, teacherName, teacherEmail, period, includeCharts }));
+      },
+    });
   }
 
-  async _call(input: string): Promise<string> {
+  private async _call(input: string): Promise<string> {
     try {
       this.logger.log(`👨‍🏫 Teacher Analytics input: ${input}`);
 

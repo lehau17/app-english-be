@@ -1,39 +1,51 @@
 import { PrismaRepository } from '@app/database';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 
 /**
- * StudentAlertTool - Công cụ phát hiện và cảnh báo học sinh cần hỗ trợ
+ * StudentAlertTool - Cong cu phat hien va canh bao hoc sinh can ho tro
  *
  * Features:
- * - Phát hiện học sinh có điểm thấp
- * - Phát hiện học sinh vắng mặt nhiều
- * - Phát hiện học sinh không hoạt động
- * - Phát hiện học sinh nộp bài trễ
- * - AI recommendations cho từng trường hợp
+ * - Phat hien hoc sinh co diem thap
+ * - Phat hien hoc sinh vang mat nhieu
+ * - Phat hien hoc sinh khong hoat dong
+ * - Phat hien hoc sinh nop bai tre
+ * - AI recommendations cho tung truong hop
  */
 @Injectable()
-export class StudentAlertTool extends Tool {
-  name = 'detect_student_alerts';
-  description = `Phát hiện học sinh cần hỗ trợ hoặc can thiệp. Sử dụng khi:
-- "học sinh nào cần hỗ trợ", "ai cần giúp đỡ"
-- "cảnh báo học sinh", "student alerts"
-- "học sinh có vấn đề", "at-risk students"
-- "học sinh điểm thấp", "học sinh vắng nhiều"
-- "ai không hoạt động", "inactive students"
-INPUT: JSON với teacherId hoặc classroomId (optional), period ('7d', '30d', '90d'), alertTypes (array of 'low_score', 'low_attendance', 'inactive', 'late_submissions', 'all')
-OUTPUT: Danh sách cảnh báo theo mức độ ưu tiên với gợi ý hành động.`;
-
+export class StudentAlertTool {
   private readonly logger = new Logger(StudentAlertTool.name);
   private readonly genAI: GoogleGenerativeAI;
 
   constructor(private readonly prisma: PrismaRepository) {
-    super();
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
   }
 
-  async _call(input: string): Promise<string> {
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'detect_student_alerts',
+      description: `Phat hien hoc sinh can ho tro hoac can thiep. Su dung khi:
+- "hoc sinh nao can ho tro", "ai can giup do"
+- "canh bao hoc sinh", "student alerts"
+- "hoc sinh co van de", "at-risk students"
+- "hoc sinh diem thap", "hoc sinh vang nhieu"
+- "ai khong hoat dong", "inactive students"
+OUTPUT: Danh sach canh bao theo muc do uu tien voi goi y hanh dong.`,
+      schema: z.object({
+        teacherId: z.string().optional().describe('ID giao vien'),
+        classroomId: z.string().optional().describe('ID lop hoc'),
+        period: z.enum(['7d', '30d', '90d']).optional().default('30d').describe('Khoang thoi gian'),
+        alertTypes: z.array(z.enum(['low_score', 'low_attendance', 'inactive', 'late_submissions', 'all'])).optional().default(['all']).describe('Loai canh bao'),
+      }),
+      func: async ({ teacherId, classroomId, period = '30d', alertTypes = ['all'] }) => {
+        return this._call(JSON.stringify({ teacherId, classroomId, period, alertTypes }));
+      },
+    });
+  }
+
+  private async _call(input: string): Promise<string> {
     try {
       this.logger.log(`Student Alert Tool called: ${input}`);
 

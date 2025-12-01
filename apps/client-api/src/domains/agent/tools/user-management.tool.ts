@@ -1,36 +1,49 @@
 import { PrismaRepository } from '@app/database';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 
 /**
- * UserManagementTool - Công cụ quản lý và tìm kiếm user
+ * UserManagementTool - Cong cu quan ly va tim kiem user
  *
  * Features:
- * - Tìm kiếm user theo nhiều tiêu chí
- * - Xem thông tin chi tiết user
- * - Thống kê user theo role
- * - Xem hoạt động gần đây của user
+ * - Tim kiem user theo nhieu tieu chi
+ * - Xem thong tin chi tiet user
+ * - Thong ke user theo role
+ * - Xem hoat dong gan day cua user
  */
 @Injectable()
-export class UserManagementTool extends Tool {
-  name = 'manage_users';
-  description = `Quản lý và tìm kiếm người dùng trong hệ thống. Sử dụng khi:
-- "tìm user", "tìm học sinh/giáo viên"
-- "thông tin user", "xem profile"
-- "thống kê user", "có bao nhiêu học sinh"
-- "user mới đăng ký", "hoạt động user"
-- "danh sách giáo viên", "admin nào đang hoạt động"
-INPUT: JSON với action ('search', 'detail', 'stats', 'recent'), query (tên/email), role ('student', 'teacher', 'parent', 'admin', 'all'), userId (cho detail), limit
-OUTPUT: Danh sách user hoặc thông tin chi tiết.`;
-
+export class UserManagementTool {
   private readonly logger = new Logger(UserManagementTool.name);
 
-  constructor(private readonly prisma: PrismaRepository) {
-    super();
+  constructor(private readonly prisma: PrismaRepository) {}
+
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'manage_users',
+      description: `Quan ly va tim kiem nguoi dung trong he thong. Su dung khi:
+- "tim user", "tim hoc sinh/giao vien"
+- "thong tin user", "xem profile"
+- "thong ke user", "co bao nhieu hoc sinh"
+- "user moi dang ky", "hoat dong user"
+- "danh sach giao vien", "admin nao dang hoat dong"
+OUTPUT: Danh sach user hoac thong tin chi tiet.`,
+      schema: z.object({
+        action: z.enum(['search', 'detail', 'stats', 'recent']).optional().default('stats').describe('Hanh dong'),
+        query: z.string().optional().describe('Ten/email de tim'),
+        role: z.enum(['student', 'teacher', 'parent', 'admin', 'all']).optional().default('all').describe('Role'),
+        userId: z.string().optional().describe('ID user (cho action detail)'),
+        limit: z.number().optional().default(20).describe('So luong ket qua'),
+        period: z.string().optional().describe('Khoang thoi gian'),
+      }),
+      func: async ({ action = 'stats', query, role = 'all', userId, limit = 20, period }) => {
+        return this._call(JSON.stringify({ action, query, role, userId, limit, period }));
+      },
+    });
   }
 
-  async _call(input: string): Promise<string> {
+  private async _call(input: string): Promise<string> {
     try {
       this.logger.log(`User Management Tool called: ${input}`);
 

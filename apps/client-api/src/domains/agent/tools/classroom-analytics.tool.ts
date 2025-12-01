@@ -1,40 +1,47 @@
 import { PrismaRepository } from '@app/database';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 
 @Injectable()
-export class ClassroomAnalyticsTool extends Tool {
-  name = 'analyze_classroom';
-  description = `Phân tích chi tiết lớp học với AI insights và tạo nhiều biểu đồ.
-
-TRIGGER: Sử dụng khi admin muốn:
-- "phân tích lớp học [tên]"
-- "so sánh các lớp"
-- "lớp nào cần can thiệp"
-- "thống kê lớp học"
-- "attendance report"
-
-INPUT: JSON với các trường:
-- classroomId (optional): ID lớp học cụ thể
-- classroomName (optional): Tên lớp để tìm
-- teacherId (optional): ID giáo viên để lọc lớp
-- compareAll (optional): true để so sánh tất cả lớp
-
-OUTPUT: Trả về:
-- Thống kê học viên, attendance, điểm TB
-- 3-4 biểu đồ trực quan
-- AI insights và cảnh báo lớp cần can thiệp`;
-
+export class ClassroomAnalyticsTool {
   private readonly logger = new Logger(ClassroomAnalyticsTool.name);
   private genAI: GoogleGenerativeAI;
 
   constructor(private prisma: PrismaRepository) {
-    super();
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
   }
 
-  async _call(input: string): Promise<string> {
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'analyze_classroom',
+      description: `Phan tich chi tiet lop hoc voi AI insights va tao nhieu bieu do.
+
+TRIGGER: Su dung khi admin muon:
+- "phan tich lop hoc [ten]"
+- "so sanh cac lop"
+- "lop nao can can thiep"
+- "thong ke lop hoc"
+- "attendance report"
+
+OUTPUT: Tra ve:
+- Thong ke hoc vien, attendance, diem TB
+- 3-4 bieu do truc quan
+- AI insights va canh bao lop can can thiep`,
+      schema: z.object({
+        classroomId: z.string().optional().describe('ID lop hoc cu the'),
+        classroomName: z.string().optional().describe('Ten lop de tim'),
+        teacherId: z.string().optional().describe('ID giao vien de loc lop'),
+        compareAll: z.boolean().optional().default(true).describe('So sanh tat ca lop'),
+      }),
+      func: async ({ classroomId, classroomName, teacherId, compareAll = true }) => {
+        return this._call(JSON.stringify({ classroomId, classroomName, teacherId, compareAll }));
+      },
+    });
+  }
+
+  private async _call(input: string): Promise<string> {
     try {
       this.logger.log(`🏫 Classroom Analytics Tool called with: ${input}`);
 

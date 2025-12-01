@@ -7,6 +7,7 @@ import { RagService } from '../service/rag.service';
 import { SqlService } from '../service/sql.service';
 import { ChartGeneratorTool } from './chart-generator.tool';
 import { CompareChildrenTool } from './compare-children.tool';
+import { PaymentTrackerTool } from './payment-tracker.tool';
 import { RagTool } from './rag.tool';
 import { SqlTool } from './sql.tool';
 import { StudentAnalyticsTool } from './student-analytics.tool';
@@ -26,6 +27,7 @@ export class ParentAgentTools {
 
   getTools() {
     const compareChildren = new CompareChildrenTool(this.prisma, this.gemini);
+    const paymentTracker = new PaymentTrackerTool(this.prisma, this.gemini);
 
     return [
       // Core tools
@@ -44,6 +46,9 @@ export class ParentAgentTools {
 
       // Compare children tool
       compareChildren.getTool(),
+
+      // Payment tracker tools (for checking payment status)
+      ...paymentTracker.getTools(),
 
       // Student analytics (for child analysis with AI insights and charts)
       this.studentAnalytics,

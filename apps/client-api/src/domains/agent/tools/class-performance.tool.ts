@@ -1,55 +1,62 @@
 import { PrismaRepository } from '@app/database';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 
 /**
- * ClassPerformanceTool - So sánh và xếp hạng hiệu suất các lớp học
+ * ClassPerformanceTool - So sanh va xep hang hieu suat cac lop hoc
  *
  * Features:
- * - Ranking các lớp theo nhiều tiêu chí
- * - Trend analysis: tiến bộ/tụt lùi theo thời gian
- * - Benchmarking: so sánh với average toàn hệ thống
- * - Detailed breakdown: phân tích từng metric
+ * - Ranking cac lop theo nhieu tieu chi
+ * - Trend analysis: tien bo/tut lui theo thoi gian
+ * - Benchmarking: so sanh voi average toan he thong
+ * - Detailed breakdown: phan tich tung metric
  * - Teacher performance correlation
  * - Actionable recommendations
  */
 @Injectable()
-export class ClassPerformanceTool extends Tool {
-  name = 'compare_class_performance';
-  description = `So sánh và xếp hạng hiệu suất các lớp học chi tiết.
-
-TRIGGER: Sử dụng khi admin/teacher hỏi:
-- "so sánh hiệu suất các lớp", "ranking lớp học"
-- "lớp nào học tốt nhất/kém nhất"
-- "trend lớp học", "tiến bộ theo thời gian"
-- "benchmark lớp", "so với trung bình"
-- "giáo viên nào dạy hiệu quả nhất"
-- "lớp cần cải thiện gấp"
-
-INPUT: JSON với các trường:
-- teacherId (optional): Chỉ xem lớp của giáo viên này
-- courseId (optional): Chỉ xem lớp học khóa này
-- period (optional): '7d', '30d', '90d', 'all' (default: '30d')
-- sortBy (optional): 'score', 'attendance', 'completion', 'engagement', 'overall' (default: 'overall')
-- limit (optional): Số lớp muốn xem (default: 10)
-
-OUTPUT:
-- Bảng xếp hạng các lớp
-- Trend analysis (tiến bộ/tụt lùi)
-- Benchmark với system average
-- AI recommendations cho từng lớp
-- Nhiều biểu đồ so sánh`;
-
+export class ClassPerformanceTool {
   private readonly logger = new Logger(ClassPerformanceTool.name);
   private genAI: GoogleGenerativeAI;
 
   constructor(private prisma: PrismaRepository) {
-    super();
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
   }
 
-  async _call(input: string): Promise<string> {
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'compare_class_performance',
+      description: `So sanh va xep hang hieu suat cac lop hoc chi tiet.
+
+TRIGGER: Su dung khi admin/teacher hoi:
+- "so sanh hieu suat cac lop", "ranking lop hoc"
+- "lop nao hoc tot nhat/kem nhat"
+- "trend lop hoc", "tien bo theo thoi gian"
+- "benchmark lop", "so voi trung binh"
+- "giao vien nao day hieu qua nhat"
+- "lop can cai thien gap"
+
+OUTPUT:
+- Bang xep hang cac lop
+- Trend analysis (tien bo/tut lui)
+- Benchmark voi system average
+- AI recommendations cho tung lop
+- Nhieu bieu do so sanh`,
+      schema: z.object({
+        teacherId: z.string().optional().describe('Chi xem lop cua giao vien nay'),
+        courseId: z.string().optional().describe('Chi xem lop hoc khoa nay'),
+        period: z.enum(['7d', '30d', '90d', 'all']).optional().default('30d').describe('Khoang thoi gian'),
+        sortBy: z.enum(['score', 'attendance', 'completion', 'engagement', 'overall']).optional().default('overall').describe('Sap xep theo'),
+        limit: z.number().optional().default(10).describe('So lop muon xem'),
+      }),
+      func: async ({ teacherId, courseId, period = '30d', sortBy = 'overall', limit = 10 }) => {
+        return this._call(JSON.stringify({ teacherId, courseId, period, sortBy, limit }));
+      },
+    });
+  }
+
+  private async _call(input: string): Promise<string> {
     try {
       this.logger.log(`Class Performance Tool called: ${input}`);
 

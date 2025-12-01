@@ -379,7 +379,7 @@ export class IntelligentController {
             uploadsDir = join(process.cwd(), 'uploads', 'reports');
             contentType = 'application/pdf';
         } else if (filename.endsWith('.docx')) {
-            uploadsDir = join(process.cwd(), 'uploads', 'documents');
+            uploadsDir = join(process.cwd(), 'uploads', 'reports');
             contentType =
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
         } else {

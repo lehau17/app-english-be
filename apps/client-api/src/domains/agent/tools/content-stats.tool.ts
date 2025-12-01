@@ -1,39 +1,51 @@
 import { PrismaRepository } from '@app/database';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 import { ChartGeneratorTool } from './chart-generator.tool';
 
 /**
- * ContentStatsTool - Công cụ thống kê nội dung học tập
+ * ContentStatsTool - Cong cu thong ke noi dung hoc tap
  *
  * Features:
- * - Thống kê courses, lessons, activities
- * - Phân tích nội dung theo category, level
- * - Xem top nội dung phổ biến
- * - Biểu đồ phân bố nội dung
+ * - Thong ke courses, lessons, activities
+ * - Phan tich noi dung theo category, level
+ * - Xem top noi dung pho bien
+ * - Bieu do phan bo noi dung
  */
 @Injectable()
-export class ContentStatsTool extends Tool {
-  name = 'get_content_stats';
-  description = `Thống kê nội dung học tập trong hệ thống. Sử dụng khi:
-- "thống kê khóa học", "có bao nhiêu bài học"
-- "nội dung phổ biến nhất", "top courses"
-- "phân bố nội dung theo cấp độ", "activities theo loại"
-- "khóa học mới", "content overview"
-- "phân tích nội dung", "lesson stats"
-INPUT: JSON với action ('overview', 'courses', 'lessons', 'activities', 'popular'), category, level, limit
-OUTPUT: Thống kê chi tiết với biểu đồ.`;
-
+export class ContentStatsTool {
   private readonly logger = new Logger(ContentStatsTool.name);
 
   constructor(
     private readonly prisma: PrismaRepository,
     private readonly chartGenerator: ChartGeneratorTool,
-  ) {
-    super();
+  ) {}
+
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'get_content_stats',
+      description: `Thong ke noi dung hoc tap trong he thong. Su dung khi:
+- "thong ke khoa hoc", "co bao nhieu bai hoc"
+- "noi dung pho bien nhat", "top courses"
+- "phan bo noi dung theo cap do", "activities theo loai"
+- "khoa hoc moi", "content overview"
+- "phan tich noi dung", "lesson stats"
+OUTPUT: Thong ke chi tiet voi bieu do.`,
+      schema: z.object({
+        action: z.enum(['overview', 'courses', 'lessons', 'activities', 'popular']).optional().default('overview').describe('Hanh dong'),
+        category: z.string().optional().describe('Category de loc'),
+        level: z.string().optional().describe('Level de loc'),
+        limit: z.number().optional().default(10).describe('So luong ket qua'),
+        period: z.string().optional().describe('Khoang thoi gian'),
+      }),
+      func: async ({ action = 'overview', category, level, limit = 10, period }) => {
+        return this._call(JSON.stringify({ action, category, level, limit, period }));
+      },
+    });
   }
 
-  async _call(input: string): Promise<string> {
+  private async _call(input: string): Promise<string> {
     try {
       this.logger.log(`Content Stats Tool called: ${input}`);
 

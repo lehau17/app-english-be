@@ -1,18 +1,18 @@
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 import { ReportGeneratorService } from '../service/report-generator.service';
 
 @Injectable()
-export class ReportAdvisorTool extends Tool {
-  name = 'report_advisor';
-  description = `
-Analyze data and suggest the best report format (PDF, Word, Excel).
+export class ReportAdvisorTool {
+  private readonly logger = new Logger(ReportAdvisorTool.name);
 
-Input should be a JSON string with:
-{
-  "data": [...],
-  "context": "student performance"
-}
+  constructor(private reportGenerator: ReportGeneratorService) {}
+
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'report_advisor',
+      description: `Phan tich du lieu va goi y format bao cao phu hop nhat (PDF, Word, Excel).
 
 Returns:
 {
@@ -22,16 +22,18 @@ Returns:
   "alternatives": [
     {"format": "pdf", "reason": "...", "confidence": 0.7}
   ]
-}
-`;
-
-  private readonly logger = new Logger(ReportAdvisorTool.name);
-
-  constructor(private reportGenerator: ReportGeneratorService) {
-    super();
+}`,
+      schema: z.object({
+        data: z.array(z.record(z.string(), z.unknown())).describe('Array of data objects to analyze'),
+        context: z.string().optional().describe('Context of the report (e.g., student performance)'),
+      }),
+      func: async ({ data, context }) => {
+        return this._call(JSON.stringify({ data, context }));
+      },
+    });
   }
 
-  async _call(input: string): Promise<string> {
+  private async _call(input: string): Promise<string> {
     try {
       this.logger.log(`🧠 Report Advisor input: ${input.substring(0, 200)}...`);
 

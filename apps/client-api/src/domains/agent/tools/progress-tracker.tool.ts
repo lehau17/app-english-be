@@ -1,29 +1,39 @@
 import { PrismaRepository } from '@app/database';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 
 @Injectable()
-export class ProgressTrackerTool extends Tool {
-  name = 'track_progress';
-  description = `Theo dõi tiến độ học tập của học viên. Sử dụng khi người dùng hỏi về:
-- "tiến độ học tập của tôi", "tôi đã học được gì"
-- "tôi còn bao nhiêu bài chưa học"
-- "streak học tập", "thời gian học"
-- "điểm số của tôi", "kết quả bài tập"
-- "khóa học nào tôi đang học", "tiến độ khóa học"
-- "từ vựng đã học", "podcast đã nghe"
-Input: JSON với userId (required), period (optional: '7d', '30d', '90d', 'all')`;
-
+export class ProgressTrackerTool {
   private readonly logger = new Logger(ProgressTrackerTool.name);
   private readonly genAI: GoogleGenerativeAI;
 
   constructor(private readonly prisma: PrismaRepository) {
-    super();
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
   }
 
-  async _call(input: string): Promise<string> {
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'track_progress',
+      description: `Theo doi tien do hoc tap cua hoc vien. Su dung khi nguoi dung hoi ve:
+- "tien do hoc tap cua toi", "toi da hoc duoc gi"
+- "toi con bao nhieu bai chua hoc"
+- "streak hoc tap", "thoi gian hoc"
+- "diem so cua toi", "ket qua bai tap"
+- "khoa hoc nao toi dang hoc", "tien do khoa hoc"
+- "tu vung da hoc", "podcast da nghe"`,
+      schema: z.object({
+        userId: z.string().describe('ID cua hoc vien'),
+        period: z.enum(['7d', '30d', '90d', 'all']).optional().default('30d').describe('Khoang thoi gian'),
+      }),
+      func: async ({ userId, period = '30d' }) => {
+        return this._call(JSON.stringify({ userId, period }));
+      },
+    });
+  }
+
+  private async _call(input: string): Promise<string> {
     try {
       const params = this.parseInput(input);
 

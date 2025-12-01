@@ -63,6 +63,28 @@ class DashboardNotificationItem {
   createdAt: string;
 }
 
+class RevenueTrendPoint {
+  @ApiProperty()
+  date: string;
+
+  @ApiProperty()
+  amount: number;
+}
+
+class TopCourseItem {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  title: string;
+
+  @ApiProperty()
+  enrollments: number;
+
+  @ApiProperty()
+  revenue: number;
+}
+
 export class DashboardDto {
   @ApiProperty()
   totalStudents: number;
@@ -76,7 +98,32 @@ export class DashboardDto {
   @ApiProperty()
   totalActivities: number;
 
-  @ApiProperty({ type: () => 'User' }) // Use a string to avoid circular dependency issues if User DTO is complex
+  // NEW: Extended metrics
+  @ApiProperty({ description: 'Tổng số giáo viên' })
+  totalTeachers: number;
+
+  @ApiProperty({ description: 'Tổng số phụ huynh' })
+  totalParents: number;
+
+  @ApiProperty({ description: 'Tổng số lớp học' })
+  totalClassrooms: number;
+
+  @ApiProperty({ description: 'Số lớp học đang hoạt động' })
+  activeClassrooms: number;
+
+  @ApiProperty({ description: 'Tổng doanh thu (VND)' })
+  totalRevenue: number;
+
+  @ApiProperty({ description: 'Doanh thu tháng này (VND)' })
+  revenueThisMonth: number;
+
+  @ApiProperty({ description: 'Tỷ lệ hoàn thành khóa học trung bình (%)' })
+  averageCourseCompletionRate: number;
+
+  @ApiProperty({ description: 'Số bài tập chưa chấm' })
+  pendingSubmissions: number;
+
+  @ApiProperty({ type: () => 'User' })
   recentStudents: Partial<User>[];
 
   @ApiProperty({ type: [RegistrationTrendPoint] })
@@ -91,17 +138,34 @@ export class DashboardDto {
   @ApiProperty({ type: [DashboardNotificationItem] })
   notifications: DashboardNotificationItem[];
 
+  // NEW: Additional data
+  @ApiProperty({ type: [RevenueTrendPoint], description: 'Doanh thu 7 ngày gần đây' })
+  revenueTrend: RevenueTrendPoint[];
+
+  @ApiProperty({ type: [TopCourseItem], description: 'Top 5 khóa học nhiều học viên nhất' })
+  topCourses: TopCourseItem[];
+
   static defaultValueResponse(): DashboardDto {
     return {
       totalStudents: 0,
       totalCourses: 0,
       totalLessons: 0,
       totalActivities: 0,
+      totalTeachers: 0,
+      totalParents: 0,
+      totalClassrooms: 0,
+      activeClassrooms: 0,
+      totalRevenue: 0,
+      revenueThisMonth: 0,
+      averageCourseCompletionRate: 0,
+      pendingSubmissions: 0,
       recentStudents: [],
       registrationTrend: [],
       courseDistribution: [],
       upcomingClasses: [],
       notifications: [],
+      revenueTrend: [],
+      topCourses: [],
     } as DashboardDto;
   }
 }

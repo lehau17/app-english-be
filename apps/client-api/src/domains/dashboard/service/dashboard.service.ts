@@ -27,11 +27,19 @@ export class DashboardService {
             courseDistributionRaw,
             upcomingSessionsRaw,
             recentNotifications,
-        ] = await this.prisma.$transaction([
+            // NEW: Extended metrics queries
+            extendedMetrics,
+            revenueTrendRaw,
+            topCoursesRaw,
+        ] = await Promise.all([
             this.getLatestSnapshot(),
             this.getCourseDistribution(),
             this.getUpcomingSessions(now),
             this.getRecentNotifications(now),
+            // NEW
+            this.getExtendedMetrics(now),
+            this.getRevenueTrend(),
+            this.getTopCourses(),
         ]);
 
         // Use snapshot if available and recent (within 24 hours), otherwise use real-time
@@ -58,11 +66,21 @@ export class DashboardService {
                 totalCourses: realTimeStats.totalCourses,
                 totalLessons: realTimeStats.totalLessons,
                 totalActivities: realTimeStats.totalActivities,
+                totalTeachers: 0,
+                totalParents: 0,
+                totalClassrooms: 0,
+                activeClassrooms: 0,
+                totalRevenue: 0,
+                revenueThisMonth: 0,
+                averageCourseCompletionRate: 0,
+                pendingSubmissions: 0,
                 recentStudents: this.mapRecentStudents(recentStudentsRaw),
                 registrationTrend: registrationTrendRaw,
-                courseDistribution: [], // Will be set below
-                upcomingClasses: [], // Will be set below
-                notifications: [], // Will be set below
+                courseDistribution: [],
+                upcomingClasses: [],
+                notifications: [],
+                revenueTrend: [],
+                topCourses: [],
             };
         }
 
@@ -74,10 +92,180 @@ export class DashboardService {
 
         return {
             ...baseSnapshot,
+            // NEW: Extended metrics
+            totalTeachers: extendedMetrics.totalTeachers,
+            totalParents: extendedMetrics.totalParents,
+            totalClassrooms: extendedMetrics.totalClassrooms,
+            activeClassrooms: extendedMetrics.activeClassrooms,
+            totalRevenue: extendedMetrics.totalRevenue,
+            revenueThisMonth: extendedMetrics.revenueThisMonth,
+            averageCourseCompletionRate: extendedMetrics.averageCourseCompletionRate,
+            pendingSubmissions: extendedMetrics.pendingSubmissions,
             courseDistribution,
             upcomingClasses,
             notifications,
+            revenueTrend: revenueTrendRaw,
+            topCourses: topCoursesRaw,
         };
+    }
+
+    // ---------- NEW: Extended Metrics Queries ----------
+
+    private async getExtendedMetrics(now: Date) {
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const [
+            totalTeachers,
+            totalParents,
+            totalClassrooms,
+            activeClassrooms,
+            revenueData,
+            revenueThisMonthData,
+            completionRateData,
+            pendingSubmissions,
+        ] = await Promise.all([
+            // Total teachers
+            this.prisma.user.count({ where: { role: 'teacher' } }),
+            // Total parents
+            this.prisma.user.count({ where: { role: 'parent' } }),
+            // Total classrooms
+            this.prisma.classroom.count(),
+            // Active classrooms (ongoing status)
+            this.prisma.classroom.count({ where: { status: 'ongoing' } }),
+            // Total revenue (successful transactions)
+            this.prisma.transaction.aggregate({
+                where: { status: 'success' },
+                _sum: { amount: true },
+            }),
+            // Revenue this month
+            this.prisma.transaction.aggregate({
+                where: {
+                    status: 'success',
+                    createdAt: { gte: startOfMonth },
+                },
+                _sum: { amount: true },
+            }),
+            // Average course completion rate
+            this.calculateAverageCourseCompletionRate(),
+            // Pending submissions (submitted but not graded)
+            this.prisma.assignmentSubmission.count({
+                where: {
+                    status: 'submitted',
+                    score: null,
+                },
+            }),
+        ]);
+
+        return {
+            totalTeachers,
+            totalParents,
+            totalClassrooms,
+            activeClassrooms,
+            totalRevenue: revenueData._sum.amount || 0,
+            revenueThisMonth: revenueThisMonthData._sum.amount || 0,
+            averageCourseCompletionRate: completionRateData,
+            pendingSubmissions,
+        };
+    }
+
+    private async calculateAverageCourseCompletionRate(): Promise<number> {
+        // Calculate completion rate based on Progress records (done vs total)
+        const progressStats = await this.prisma.progress.groupBy({
+            by: ['userId'],
+            _count: { _all: true },
+        });
+
+        if (progressStats.length === 0) return 0;
+
+        const completedProgress = await this.prisma.progress.groupBy({
+            by: ['userId'],
+            where: { state: 'done' },
+            _count: { _all: true },
+        });
+
+        const completedMap = new Map(
+            completedProgress.map((p) => [p.userId, p._count._all]),
+        );
+
+        let totalCompletionRate = 0;
+        progressStats.forEach((stat) => {
+            const completed = completedMap.get(stat.userId) || 0;
+            const total = stat._count._all;
+            if (total > 0) {
+                totalCompletionRate += (completed / total) * 100;
+            }
+        });
+
+        return Math.round((totalCompletionRate / progressStats.length) * 100) / 100;
+    }
+
+    private async getRevenueTrend(): Promise<Array<{ date: string; amount: number }>> {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const transactions = await this.prisma.transaction.findMany({
+            where: {
+                status: 'success',
+                createdAt: { gte: sevenDaysAgo },
+            },
+            select: {
+                amount: true,
+                createdAt: true,
+            },
+        });
+
+        // Group by date
+        const trendMap = new Map<string, number>();
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(sevenDaysAgo);
+            date.setDate(date.getDate() + i);
+            const dateKey = date.toISOString().split('T')[0];
+            trendMap.set(dateKey, 0);
+        }
+
+        transactions.forEach((tx) => {
+            const dateKey = tx.createdAt.toISOString().split('T')[0];
+            const current = trendMap.get(dateKey) || 0;
+            trendMap.set(dateKey, current + (tx.amount || 0));
+        });
+
+        return Array.from(trendMap.entries()).map(([date, amount]) => ({
+            date,
+            amount,
+        }));
+    }
+
+    private async getTopCourses(): Promise<Array<{
+        id: string;
+        title: string;
+        enrollments: number;
+        revenue: number;
+    }>> {
+        const courses = await this.prisma.course.findMany({
+            where: { isPublished: true },
+            select: {
+                id: true,
+                title: true,
+                enrollmentCount: true,
+                transactions: {
+                    where: { status: 'success' },
+                    select: { amount: true },
+                },
+            },
+            orderBy: {
+                enrollmentCount: 'desc',
+            },
+            take: 5,
+        });
+
+        return courses.map((course) => ({
+            id: course.id,
+            title: course.title,
+            enrollments: course.enrollmentCount || 0,
+            revenue: course.transactions.reduce((sum, tx) => sum + (tx.amount || 0), 0),
+        }));
     }
 
     // ---------- Queries ----------

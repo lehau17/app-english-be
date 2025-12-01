@@ -11,6 +11,7 @@ import { GrammarExplainerTool } from './grammar-explainer.tool';
 import { PodcastHistoryTool } from './podcast-history.tool';
 import { PronunciationCoachTool } from './pronunciation-coach.tool';
 import { RagTool } from './rag.tool';
+import { SpeakingProgressTool } from './speaking-progress.tool';
 import { SqlTool } from './sql.tool';
 import { UpcomingDeadlinesTool } from './upcoming-deadlines.tool';
 import { VocabularyLookupTool } from './vocabulary-lookup.tool';
@@ -42,6 +43,7 @@ export class StudentAgentTools {
     const flashcardReview = new FlashcardReviewTool(this.prisma, this.gemini);
     const upcomingDeadlines = new UpcomingDeadlinesTool(this.prisma);
     const podcastHistory = new PodcastHistoryTool(this.prisma);
+    const speakingProgress = new SpeakingProgressTool(this.prisma, this.gemini);
 
     return [
       // Core tools
@@ -62,6 +64,9 @@ export class StudentAgentTools {
 
       // Podcast history
       podcastHistory.getTool(),
+
+      // Speaking progress tools (NEW!)
+      ...speakingProgress.getTools(),
 
       // Progress tools
       this.getScoreReportTool(),

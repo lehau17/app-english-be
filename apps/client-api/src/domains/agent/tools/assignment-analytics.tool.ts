@@ -1,28 +1,40 @@
 import { PrismaRepository } from '@app/database';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 
 @Injectable()
-export class AssignmentAnalyticsTool extends Tool {
-  name = 'analyze_assignment';
-  description = `Phân tích thống kê bài tập và kết quả làm bài. Sử dụng khi người dùng hỏi về:
-- "phân tích bài tập", "thống kê assignment"
-- "tỷ lệ nộp bài", "điểm trung bình bài tập"
-- "học sinh nào chưa nộp bài", "bài nào khó nhất"
-- "so sánh điểm các bài kiểm tra"
-- "phân tích homework/quiz/midterm/final"
-Input: JSON với classroomId (optional), assignmentId (optional), period (optional: '7d', '30d', '90d', 'all')`;
-
+export class AssignmentAnalyticsTool {
   private readonly logger = new Logger(AssignmentAnalyticsTool.name);
   private readonly genAI: GoogleGenerativeAI;
 
   constructor(private readonly prisma: PrismaRepository) {
-    super();
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
   }
 
-  async _call(input: string): Promise<string> {
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'analyze_assignment',
+      description: `Phan tich thong ke bai tap va ket qua lam bai. Su dung khi nguoi dung hoi ve:
+- "phan tich bai tap", "thong ke assignment"
+- "ty le nop bai", "diem trung binh bai tap"
+- "hoc sinh nao chua nop bai", "bai nao kho nhat"
+- "so sanh diem cac bai kiem tra"
+- "phan tich homework/quiz/midterm/final"`,
+      schema: z.object({
+        classroomId: z.string().optional().describe('ID lop hoc'),
+        assignmentId: z.string().optional().describe('ID bai tap cu the'),
+        period: z.enum(['7d', '30d', '90d', 'all']).optional().default('30d').describe('Khoang thoi gian'),
+        teacherId: z.string().optional().describe('ID giao vien'),
+      }),
+      func: async ({ classroomId, assignmentId, period = '30d', teacherId }) => {
+        return this._call(JSON.stringify({ classroomId, assignmentId, period, teacherId }));
+      },
+    });
+  }
+
+  private async _call(input: string): Promise<string> {
     try {
       const params = this.parseInput(input);
       const data = await this.gatherData(params);

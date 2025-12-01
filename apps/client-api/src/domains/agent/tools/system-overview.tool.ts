@@ -1,41 +1,48 @@
 import { PrismaRepository } from '@app/database';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 
 @Injectable()
-export class SystemOverviewTool extends Tool {
-  name = 'system_overview';
-  description = `Tổng quan hệ thống với AI insights và tạo nhiều biểu đồ dashboard.
-
-TRIGGER: Sử dụng khi admin muốn:
-- "tổng quan hệ thống"
-- "dashboard"
-- "thống kê toàn bộ"
-- "báo cáo tổng hợp"
-- "system status"
-- "overview"
-
-INPUT: JSON với các trường (tất cả optional):
-- period (optional): 'day' | 'week' | 'month' | 'year'
-- includeDetails (optional): true để lấy chi tiết
-
-OUTPUT: Trả về:
-- Tổng số users, courses, classrooms, lessons
-- Hoạt động theo ngày/tuần
-- Top performers
-- 3-4 biểu đồ trực quan
-- AI insights và alerts`;
-
+export class SystemOverviewTool {
   private readonly logger = new Logger(SystemOverviewTool.name);
   private genAI: GoogleGenerativeAI;
 
   constructor(private prisma: PrismaRepository) {
-    super();
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
   }
 
-  async _call(input: string): Promise<string> {
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'system_overview',
+      description: `Tong quan he thong voi AI insights va tao nhieu bieu do dashboard.
+
+TRIGGER: Su dung khi admin muon:
+- "tong quan he thong"
+- "dashboard"
+- "thong ke toan bo"
+- "bao cao tong hop"
+- "system status"
+- "overview"
+
+OUTPUT: Tra ve:
+- Tong so users, courses, classrooms, lessons
+- Hoat dong theo ngay/tuan
+- Top performers
+- 3-4 bieu do truc quan
+- AI insights va alerts`,
+      schema: z.object({
+        period: z.enum(['day', 'week', 'month', 'year']).optional().default('month').describe('Khoang thoi gian'),
+        includeDetails: z.boolean().optional().default(false).describe('Lay chi tiet'),
+      }),
+      func: async ({ period = 'month', includeDetails = false }) => {
+        return this._call(JSON.stringify({ period, includeDetails }));
+      },
+    });
+  }
+
+  private async _call(input: string): Promise<string> {
     try {
       this.logger.log(`System Overview Tool called with: ${input}`);
 

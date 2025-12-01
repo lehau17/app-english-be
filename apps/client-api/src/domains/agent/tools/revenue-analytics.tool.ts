@@ -1,42 +1,55 @@
 import { PrismaRepository } from '@app/database';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 
 @Injectable()
-export class RevenueAnalyticsTool extends Tool {
-  name = 'analyze_revenue';
-  description = `Phân tích doanh thu và tài chính với AI insights và tạo nhiều biểu đồ.
-
-TRIGGER: Sử dụng khi admin muốn:
-- "phân tích doanh thu"
-- "báo cáo tài chính"
-- "học phí tháng này"
-- "doanh thu theo khóa học"
-- "thống kê thanh toán"
-- "transaction report"
-
-INPUT: JSON với các trường:
-- startDate (optional): Ngày bắt đầu (ISO string)
-- endDate (optional): Ngày kết thúc (ISO string)
-- courseId (optional): ID khóa học cụ thể
-- period (optional): 'month' | 'quarter' | 'year'
-
-OUTPUT: Trả về:
-- Tổng doanh thu, doanh thu theo tháng/khóa
-- Tỷ lệ thanh toán (completed/pending/failed)
-- 4-5 biểu đồ trực quan
-- AI insights và dự báo`;
-
+export class RevenueAnalyticsTool {
   private readonly logger = new Logger(RevenueAnalyticsTool.name);
   private genAI: GoogleGenerativeAI;
 
   constructor(private prisma: PrismaRepository) {
-    super();
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
   }
 
-  async _call(input: string): Promise<string> {
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'analyze_revenue',
+      description: `Phan tich doanh thu va tai chinh voi AI insights va tao nhieu bieu do.
+
+TRIGGER: Su dung khi admin muon:
+- "phan tich doanh thu"
+- "bao cao tai chinh"
+- "hoc phi thang nay"
+- "doanh thu theo khoa hoc"
+- "doanh thu theo quy"
+- "doanh thu theo nam"
+- "so sanh doanh thu cac nam"
+- "tang truong YoY"
+- "thong ke thanh toan"
+- "transaction report"
+
+OUTPUT: Tra ve:
+- Tong doanh thu, doanh thu theo thang/quy/nam
+- So sanh tang truong Year-over-Year (YoY)
+- Ty le thanh toan (completed/pending/failed)
+- Doanh thu theo khoa hoc
+- 6-7 bieu do truc quan
+- AI insights va du bao`,
+      schema: z.object({
+        startDate: z.string().optional().describe('Ngay bat dau (ISO string)'),
+        endDate: z.string().optional().describe('Ngay ket thuc (ISO string)'),
+        courseId: z.string().optional().describe('ID khoa hoc cu the'),
+        period: z.enum(['month', 'quarter', 'year']).optional().default('year').describe('Khoang thoi gian'),
+      }),
+      func: async ({ startDate, endDate, courseId, period = 'year' }) => {
+        return this._call(JSON.stringify({ startDate, endDate, courseId, period }));
+      },
+    });
+  }
+
+  private async _call(input: string): Promise<string> {
     try {
       this.logger.log(`💰 Revenue Analytics Tool called with: ${input}`);
 
@@ -66,6 +79,9 @@ OUTPUT: Trả về:
           successRate: revenueData.successRate,
         },
         monthlyRevenue: revenueData.monthlyRevenue,
+        quarterlyRevenue: revenueData.quarterlyRevenue,
+        yearlyRevenue: revenueData.yearlyRevenue,
+        yoyComparison: revenueData.yoyComparison,
         courseRevenue: revenueData.courseRevenue,
         aiInsights,
         charts,
@@ -127,6 +143,64 @@ OUTPUT: Trả về:
       }
     });
 
+    // Quarterly revenue
+    const quarterlyRevenue: Record<string, { completed: number; pending: number; total: number; transactionCount: number }> = {};
+    transactions.forEach((t) => {
+      const quarter = Math.ceil((t.createdAt.getMonth() + 1) / 3);
+      const quarterKey = `${t.createdAt.getFullYear()}-Q${quarter}`;
+      if (!quarterlyRevenue[quarterKey]) {
+        quarterlyRevenue[quarterKey] = { completed: 0, pending: 0, total: 0, transactionCount: 0 };
+      }
+      quarterlyRevenue[quarterKey].total += t.amount || 0;
+      quarterlyRevenue[quarterKey].transactionCount++;
+      if (t.status === 'success') {
+        quarterlyRevenue[quarterKey].completed += t.amount || 0;
+      } else {
+        quarterlyRevenue[quarterKey].pending += t.amount || 0;
+      }
+    });
+
+    // Yearly revenue
+    const yearlyRevenue: Record<string, { completed: number; pending: number; total: number; transactionCount: number }> = {};
+    transactions.forEach((t) => {
+      const yearKey = `${t.createdAt.getFullYear()}`;
+      if (!yearlyRevenue[yearKey]) {
+        yearlyRevenue[yearKey] = { completed: 0, pending: 0, total: 0, transactionCount: 0 };
+      }
+      yearlyRevenue[yearKey].total += t.amount || 0;
+      yearlyRevenue[yearKey].transactionCount++;
+      if (t.status === 'success') {
+        yearlyRevenue[yearKey].completed += t.amount || 0;
+      } else {
+        yearlyRevenue[yearKey].pending += t.amount || 0;
+      }
+    });
+
+    // Year-over-Year comparison
+    const years = Object.keys(yearlyRevenue).sort();
+    const yoyComparison: Array<{ year: string; revenue: number; growth: number | null; growthPercent: string }> = [];
+    years.forEach((year, index) => {
+      const currentRevenue = yearlyRevenue[year].completed;
+      let growth: number | null = null;
+      let growthPercent = 'N/A';
+
+      if (index > 0) {
+        const prevYear = years[index - 1];
+        const prevRevenue = yearlyRevenue[prevYear].completed;
+        growth = currentRevenue - prevRevenue;
+        growthPercent = prevRevenue > 0
+          ? `${growth >= 0 ? '+' : ''}${((growth / prevRevenue) * 100).toFixed(1)}%`
+          : 'N/A';
+      }
+
+      yoyComparison.push({
+        year,
+        revenue: currentRevenue,
+        growth,
+        growthPercent,
+      });
+    });
+
     // Revenue by course
     const courseRevenueMap: Record<string, { name: string; revenue: number; count: number }> = {};
     transactions.forEach((t) => {
@@ -156,6 +230,15 @@ OUTPUT: Trả về:
         month,
         ...data,
       })),
+      quarterlyRevenue: Object.entries(quarterlyRevenue).map(([quarter, data]) => ({
+        quarter,
+        ...data,
+      })),
+      yearlyRevenue: Object.entries(yearlyRevenue).map(([year, data]) => ({
+        year,
+        ...data,
+      })),
+      yoyComparison,
       courseRevenue,
     };
   }
@@ -199,28 +282,89 @@ Trả về JSON với format:
       charts.push({
         type: 'chart',
         chartType: 'line',
-        title: 'Doanh thu theo tháng',
+        title: 'Doanh thu theo thang',
         data: data.monthlyRevenue.map((m: any) => ({
           name: m.month,
-          'Đã thu': m.completed,
-          'Chờ thanh toán': m.pending,
+          'Da thu': m.completed,
+          'Cho thanh toan': m.pending,
         })),
         config: {
           xAxisKey: 'name',
           lines: [
-            { dataKey: 'Đã thu', color: '#10B981', strokeWidth: 2 },
-            { dataKey: 'Chờ thanh toán', color: '#F59E0B', strokeWidth: 2 },
+            { dataKey: 'Da thu', color: '#10B981', strokeWidth: 2 },
+            { dataKey: 'Cho thanh toan', color: '#F59E0B', strokeWidth: 2 },
           ],
         },
       });
     }
 
-    // Chart 2: Bar - Revenue by course
+    // Chart 2: Bar - Quarterly revenue comparison
+    if (data.quarterlyRevenue.length > 0) {
+      charts.push({
+        type: 'chart',
+        chartType: 'bar',
+        title: 'Doanh thu theo quy',
+        data: data.quarterlyRevenue.map((q: any) => ({
+          name: q.quarter,
+          'Doanh thu': q.completed,
+          'Giao dich': q.transactionCount,
+        })),
+        config: {
+          xAxisKey: 'name',
+          bars: [
+            { dataKey: 'Doanh thu', color: '#8B5CF6' },
+          ],
+        },
+      });
+    }
+
+    // Chart 3: Bar - Yearly revenue with YoY comparison
+    if (data.yearlyRevenue.length > 0) {
+      charts.push({
+        type: 'chart',
+        chartType: 'bar',
+        title: 'Doanh thu theo nam',
+        data: data.yearlyRevenue.map((y: any) => ({
+          name: `Nam ${y.year}`,
+          'Doanh thu': y.completed,
+          'Cho xu ly': y.pending,
+        })),
+        config: {
+          xAxisKey: 'name',
+          bars: [
+            { dataKey: 'Doanh thu', color: '#3B82F6' },
+            { dataKey: 'Cho xu ly', color: '#F59E0B' },
+          ],
+        },
+      });
+    }
+
+    // Chart 4: Line - Year-over-Year growth comparison
+    if (data.yoyComparison && data.yoyComparison.length > 1) {
+      charts.push({
+        type: 'chart',
+        chartType: 'bar',
+        title: 'So sanh tang truong theo nam (YoY)',
+        data: data.yoyComparison.map((y: any) => ({
+          name: `Nam ${y.year}`,
+          'Doanh thu': y.revenue,
+          'Tang truong': y.growth || 0,
+        })),
+        config: {
+          xAxisKey: 'name',
+          bars: [
+            { dataKey: 'Doanh thu', color: '#10B981' },
+          ],
+        },
+      });
+    }
+
+    // Chart 5: Bar - Revenue by course
     if (data.courseRevenue.length > 0) {
       charts.push({
         type: 'chart',
         chartType: 'bar',
-        title: '💰 Doanh thu theo khóa học',
+        title: 'Doanh thu theo khoa hoc',
         data: data.courseRevenue.map((c: any) => ({
           name: c.name.substring(0, 20),
           'Doanh thu': c.revenue,
@@ -232,38 +376,38 @@ Trả về JSON với format:
       });
     }
 
-    // Chart 3: Pie - Payment status distribution
+    // Chart 6: Pie - Payment status distribution
     charts.push({
       type: 'chart',
       chartType: 'pie',
-      title: 'Tỷ lệ thanh toán',
+      title: 'Ty le thanh toan',
       data: [
-        { name: 'Thành công', value: data.completedAmount },
-        { name: 'Chờ xử lý', value: data.pendingAmount },
-        { name: 'Thất bại', value: data.failedAmount },
+        { name: 'Thanh cong', value: data.completedAmount },
+        { name: 'Cho xu ly', value: data.pendingAmount },
+        { name: 'That bai', value: data.failedAmount },
       ].filter((d) => d.value > 0),
       config: {
         colors: ['#10B981', '#F59E0B', '#EF4444'],
       },
     });
 
-    // Chart 4: Area - Cumulative revenue
+    // Chart 7: Area - Cumulative revenue
     if (data.monthlyRevenue.length > 0) {
       let cumulative = 0;
       charts.push({
         type: 'chart',
         chartType: 'area',
-        title: 'Doanh thu tích lũy',
+        title: 'Doanh thu tich luy',
         data: data.monthlyRevenue.map((m: any) => {
           cumulative += m.completed;
           return {
             name: m.month,
-            'Tích lũy': cumulative,
+            'Tich luy': cumulative,
           };
         }),
         config: {
           xAxisKey: 'name',
-          areas: [{ dataKey: 'Tích lũy', color: '#8B5CF6', fillOpacity: 0.3 }],
+          areas: [{ dataKey: 'Tich luy', color: '#8B5CF6', fillOpacity: 0.3 }],
         },
       });
     }

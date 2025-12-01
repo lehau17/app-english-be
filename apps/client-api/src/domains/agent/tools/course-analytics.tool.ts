@@ -1,39 +1,46 @@
 import { PrismaRepository } from '@app/database';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 
 @Injectable()
-export class CourseAnalyticsTool extends Tool {
-  name = 'analyze_course';
-  description = `Phân tích chi tiết khóa học với AI insights và tạo nhiều biểu đồ.
-
-TRIGGER: Sử dụng khi admin muốn:
-- "phân tích khóa học [tên]"
-- "so sánh các khóa học"
-- "khóa nào hiệu quả nhất"
-- "thống kê enrollment"
-- "báo cáo khóa học"
-
-INPUT: JSON với các trường:
-- courseId (optional): ID khóa học cụ thể
-- courseName (optional): Tên khóa học để tìm
-- compareAll (optional): true để so sánh tất cả khóa học
-
-OUTPUT: Trả về:
-- Thống kê enrollment, completion rate, điểm TB
-- 3-4 biểu đồ trực quan
-- AI insights và đề xuất cải thiện`;
-
+export class CourseAnalyticsTool {
   private readonly logger = new Logger(CourseAnalyticsTool.name);
   private genAI: GoogleGenerativeAI;
 
   constructor(private prisma: PrismaRepository) {
-    super();
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
   }
 
-  async _call(input: string): Promise<string> {
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'analyze_course',
+      description: `Phan tich chi tiet khoa hoc voi AI insights va tao nhieu bieu do.
+
+TRIGGER: Su dung khi admin muon:
+- "phan tich khoa hoc [ten]"
+- "so sanh cac khoa hoc"
+- "khoa nao hieu qua nhat"
+- "thong ke enrollment"
+- "bao cao khoa hoc"
+
+OUTPUT: Tra ve:
+- Thong ke enrollment, completion rate, diem TB
+- 3-4 bieu do truc quan
+- AI insights va de xuat cai thien`,
+      schema: z.object({
+        courseId: z.string().optional().describe('ID khoa hoc cu the'),
+        courseName: z.string().optional().describe('Ten khoa hoc de tim'),
+        compareAll: z.boolean().optional().default(true).describe('So sanh tat ca khoa hoc'),
+      }),
+      func: async ({ courseId, courseName, compareAll = true }) => {
+        return this._call(JSON.stringify({ courseId, courseName, compareAll }));
+      },
+    });
+  }
+
+  private async _call(input: string): Promise<string> {
     try {
       this.logger.log(`Course Analytics Tool called with: ${input}`);
 

@@ -1,39 +1,45 @@
 import { PrismaRepository } from '@app/database';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
 import { NotificationChannel, NotificationType, UserRole } from '@prisma/client';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 
 @Injectable()
-export class NotificationSenderTool extends Tool {
-  name = 'send_notification';
-  description = `Gửi thông báo cho người dùng hoặc nhóm người dùng.
-
-TRIGGER: Sử dụng khi admin muốn:
-- "gửi thông báo cho học viên"
-- "thông báo cho lớp [tên]"
-- "gửi email cho tất cả giáo viên"
-- "notify all students"
-- "gửi thông báo về [nội dung]"
-
-INPUT: JSON với các trường:
-- title: Tiêu đề thông báo (required)
-- body: Nội dung thông báo (required)
-- targetType: 'user' | 'role' | 'classroom' | 'course' | 'all' (required)
-- targetId (optional): ID của user/classroom/course cụ thể
-- targetRole (optional): 'student' | 'teacher' | 'parent' khi targetType = 'role'
-
-OUTPUT: Trả về:
-- Số lượng người nhận
-- Trạng thái gửi thông báo
-- Danh sách người nhận (nếu ít)`;
-
+export class NotificationSenderTool {
   private readonly logger = new Logger(NotificationSenderTool.name);
 
-  constructor(private prisma: PrismaRepository) {
-    super();
+  constructor(private prisma: PrismaRepository) {}
+
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'send_notification',
+      description: `Gui thong bao cho nguoi dung hoac nhom nguoi dung.
+
+TRIGGER: Su dung khi admin muon:
+- "gui thong bao cho hoc vien"
+- "thong bao cho lop [ten]"
+- "gui email cho tat ca giao vien"
+- "notify all students"
+- "gui thong bao ve [noi dung]"
+
+OUTPUT: Tra ve:
+- So luong nguoi nhan
+- Trang thai gui thong bao
+- Danh sach nguoi nhan (neu it)`,
+      schema: z.object({
+        title: z.string().describe('Tieu de thong bao'),
+        body: z.string().describe('Noi dung thong bao'),
+        targetType: z.enum(['user', 'role', 'classroom', 'course', 'all']).describe('Loai nguoi nhan'),
+        targetId: z.string().optional().describe('ID cua user/classroom/course cu the'),
+        targetRole: z.enum(['student', 'teacher', 'parent']).optional().describe('Role khi targetType = role'),
+      }),
+      func: async ({ title, body, targetType, targetId, targetRole }) => {
+        return this._call(JSON.stringify({ title, body, targetType, targetId, targetRole }));
+      },
+    });
   }
 
-  async _call(input: string): Promise<string> {
+  private async _call(input: string): Promise<string> {
     try {
       this.logger.log(`🔔 Notification Sender Tool called with: ${input}`);
 

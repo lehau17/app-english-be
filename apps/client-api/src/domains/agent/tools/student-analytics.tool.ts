@@ -1,44 +1,51 @@
 import { PrismaRepository } from '@app/database';
 import { GeminiService } from '@app/shared';
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
 import { AiSpeakingSessionState } from '@prisma/client';
-import { Tool } from 'langchain/tools';
+import { z } from 'zod';
 
 @Injectable()
-export class StudentAnalyticsTool extends Tool {
-  name = 'analyze_student';
-  description = `Phân tích chi tiết một học viên/học sinh cụ thể với AI và tạo nhiều biểu đồ trực quan.
-
-Input: JSON string với một trong các trường sau:
-- {"studentEmail": "student@gmail.com"} - tìm theo email
-- {"studentName": "Nguyễn Văn A"} - tìm theo tên
-- {"studentId": "uuid-here"} - tìm theo ID
-- {"period": "week|month|quarter|all"} - khoảng thời gian (mặc định: month)
-
-Sử dụng tool này khi:
-- Người dùng hỏi "phân tích học viên/học sinh X"
-- Người dùng hỏi "tiến độ của học sinh email abc@gmail.com"
-- Người dùng hỏi "điểm số học viên tên Nguyễn Văn A"
-- Người dùng muốn xem kỹ năng, điểm mạnh/yếu của học viên
-
-Kết quả trả về:
-- Thông tin học viên (tên, email)
-- Metrics: điểm TB, tỷ lệ hoàn thành, thời gian học, streak
-- Skill breakdown: 6 kỹ năng (Grammar, Vocabulary, Listening, Speaking, Reading, Writing)
-- AI Insights: phân tích điểm mạnh, điểm yếu, xu hướng
-- Recommendations: gợi ý cải thiện
-- 3-4 biểu đồ: line (xu hướng điểm), radar (kỹ năng), pie (hoạt động), bar (completion)`;
-
+export class StudentAnalyticsTool {
   private readonly logger = new Logger(StudentAnalyticsTool.name);
 
   constructor(
     private prisma: PrismaRepository,
     private gemini: GeminiService,
-  ) {
-    super();
+  ) {}
+
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'analyze_student',
+      description: `Phan tich chi tiet mot hoc vien/hoc sinh cu the voi AI va tao nhieu bieu do truc quan.
+
+Su dung tool nay khi:
+- Nguoi dung hoi "phan tich hoc vien/hoc sinh X"
+- Nguoi dung hoi "tien do cua hoc sinh email abc@gmail.com"
+- Nguoi dung hoi "diem so hoc vien ten Nguyen Van A"
+- Nguoi dung muon xem ky nang, diem manh/yeu cua hoc vien
+
+Ket qua tra ve:
+- Thong tin hoc vien (ten, email)
+- Metrics: diem TB, ty le hoan thanh, thoi gian hoc, streak
+- Skill breakdown: 6 ky nang (Grammar, Vocabulary, Listening, Speaking, Reading, Writing)
+- AI Insights: phan tich diem manh, diem yeu, xu huong
+- Recommendations: goi y cai thien
+- 3-4 bieu do: line (xu huong diem), radar (ky nang), pie (hoat dong), bar (completion)`,
+      schema: z.object({
+        studentId: z.string().optional().describe('UUID cua hoc sinh'),
+        studentName: z.string().optional().describe('Ten hoc sinh de tim kiem'),
+        studentEmail: z.string().optional().describe('Email hoc sinh de tim kiem'),
+        period: z.enum(['week', 'month', 'quarter', 'all']).optional().default('month').describe('Khoang thoi gian phan tich'),
+        includeCharts: z.boolean().optional().default(true).describe('Co tao bieu do khong'),
+      }),
+      func: async ({ studentId, studentName, studentEmail, period = 'month', includeCharts = true }) => {
+        return this._call(JSON.stringify({ studentId, studentName, studentEmail, period, includeCharts }));
+      },
+    });
   }
 
-  async _call(input: string): Promise<string> {
+  private async _call(input: string): Promise<string> {
     try {
       this.logger.log(`Student Analytics input: ${input}`);
 
