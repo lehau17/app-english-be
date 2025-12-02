@@ -381,6 +381,10 @@ export class ClassroomService {
     return this.classroomRepository.createAnnouncement(classroomId, payload);
   }
 
+  async getClassroomSessions(classroomId: string) {
+    return this.classroomRepository.getClassroomSessions(classroomId);
+  }
+
   async getClassroomDetail(
     classroomId: string,
     userId?: string,

@@ -262,6 +262,16 @@ export class PrivateClassroomController {
     );
   }
 
+  @Get(':id/sessions')
+  @ApiOperation({
+    summary: 'Get classroom sessions',
+    description: 'Get all sessions for a classroom (for teacher attendance)',
+  })
+  @ResponseMessage('Classroom sessions fetched successfully')
+  getClassroomSessions(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.classroomService.getClassroomSessions(id);
+  }
+
   @Get(':id/announcements')
   @ApiOperation({ summary: 'List classroom announcements' })
   @ResponseMessage('Classroom announcements fetched successfully')
