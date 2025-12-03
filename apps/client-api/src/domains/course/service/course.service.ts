@@ -746,6 +746,206 @@ export class CourseService {
     return this.courseRepository.update(id, { isPublished: false });
   }
 
+  async getStats(): Promise<{
+    total: number;
+    published: number;
+    unpublished: number;
+    avgPrice: number;
+  }> {
+    const [total, published, unpublished, coursesWithPrice] = await Promise.all([
+      this.prisma.course.count(),
+      this.prisma.course.count({
+        where: { isPublished: true },
+      }),
+      this.prisma.course.count({
+        where: { isPublished: false },
+      }),
+      this.prisma.course.findMany({
+        where: {
+          price: {
+            not: null,
+          },
+        },
+        select: {
+          price: true,
+        },
+      }),
+    ]);
+
+    const prices = coursesWithPrice
+      .map((c) => c.price)
+      .filter((p): p is number => p !== null && p !== undefined);
+
+    const avgPrice =
+      prices.length > 0
+        ? Number(
+            (prices.reduce((sum, p) => sum + p, 0) / prices.length).toFixed(2),
+          )
+        : 0;
+
+    return {
+      total,
+      published,
+      unpublished,
+      avgPrice,
+    };
+  }
+
+  async bulkDelete(ids: string[]): Promise<{ count: number }> {
+    if (!ids || ids.length === 0) {
+      throw new BadRequestException('Course IDs are required');
+    }
+
+    // Delete related session schedules first
+    await this.prisma.sessionSchedule.deleteMany({
+      where: { courseId: { in: ids } },
+    });
+
+    // Delete related lessons and activities (cascade should handle this, but explicit for safety)
+    const courses = await this.prisma.course.findMany({
+      where: { id: { in: ids } },
+      select: { id: true },
+    });
+
+    for (const course of courses) {
+      const lessons = await this.prisma.lesson.findMany({
+        where: { courseId: course.id },
+        select: { id: true },
+      });
+
+      const lessonIds = lessons.map((l) => l.id);
+
+      if (lessonIds.length > 0) {
+        await this.prisma.activity.deleteMany({
+          where: { lessonId: { in: lessonIds } },
+        });
+        await this.prisma.lesson.deleteMany({
+          where: { courseId: course.id },
+        });
+      }
+    }
+
+    // Delete the courses
+    const result = await this.prisma.course.deleteMany({
+      where: { id: { in: ids } },
+    });
+
+    return { count: result.count };
+  }
+
+  async bulkPublish(ids: string[]): Promise<{ count: number }> {
+    if (!ids || ids.length === 0) {
+      throw new BadRequestException('Course IDs are required');
+    }
+
+    const result = await this.prisma.course.updateMany({
+      where: { id: { in: ids } },
+      data: { isPublished: true },
+    });
+
+    return { count: result.count };
+  }
+
+  async bulkUnpublish(ids: string[]): Promise<{ count: number }> {
+    if (!ids || ids.length === 0) {
+      throw new BadRequestException('Course IDs are required');
+    }
+
+    const result = await this.prisma.course.updateMany({
+      where: { id: { in: ids } },
+      data: { isPublished: false },
+    });
+
+    return { count: result.count };
+  }
+
+  async exportCourses(query: FilterCourseRequestDto): Promise<string> {
+    const courses = await this.getCoursesForExport(query);
+    if (courses.length === 0) {
+      return '';
+    }
+
+    const header =
+      'id,title,description,difficulty,isPublished,price,currency,instructorId,instructorName,language,tags,totalLessons,totalDuration,createdAt,updatedAt\n';
+    const rows = courses
+      .map(
+        (c) =>
+          `${c.id || ''},${(c.title || '').replace(/,/g, ';')},${(c.description || '').replace(/,/g, ';')},${c.difficulty || ''},${c.isPublished ? 'true' : 'false'},${c.price || 0},${c.currency || 'VND'},${c.instructorId || ''},${(c.instructor?.displayName || c.instructor?.firstName + ' ' + c.instructor?.lastName || '').replace(/,/g, ';')},${c.language || ''},${(c.tags || []).join(';')},${c.totalLessons || 0},${c.totalDuration || 0},${c.createdAt ? new Date(c.createdAt).toISOString() : ''},${c.updatedAt ? new Date(c.updatedAt).toISOString() : ''}`,
+      )
+      .join('\n');
+
+    return header + rows;
+  }
+
+  private async getCoursesForExport(query: FilterCourseRequestDto) {
+    const {
+      search,
+      difficulty,
+      isPublished,
+      minPrice,
+      maxPrice,
+      language,
+      instructorId,
+      tag,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = query;
+
+    const ALLOWED_SORT_BY = new Set<keyof Prisma.CourseOrderByWithRelationInput>([
+      'orderNo',
+      'createdAt',
+      'price',
+      'rating',
+      'title',
+    ]);
+
+    const where: Prisma.CourseWhereInput = {
+      ...(search && {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+      ...(difficulty && { difficulty }),
+      ...(typeof isPublished === 'boolean' && { isPublished }),
+      ...(typeof minPrice === 'number' || typeof maxPrice === 'number'
+        ? {
+            price: {
+              gte: typeof minPrice === 'number' ? minPrice : undefined,
+              lte: typeof maxPrice === 'number' ? maxPrice : undefined,
+            },
+          }
+        : {}),
+      ...(language && { language }),
+      ...(instructorId && { instructorId }),
+      ...(tag && { tags: { has: tag } }),
+    };
+
+    const orderByKey = (
+      ALLOWED_SORT_BY.has(sortBy as any) ? sortBy : 'createdAt'
+    ) as any;
+    const orderBy: Prisma.CourseOrderByWithRelationInput = {
+      [orderByKey]: sortOrder,
+    };
+
+    const courses = await this.prisma.course.findMany({
+      where,
+      include: {
+        instructor: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            displayName: true,
+          },
+        },
+      },
+      orderBy,
+    });
+
+    return courses;
+  }
+
   async getPublicCourses(): Promise<{
     courses: Array<{
       id: string;
