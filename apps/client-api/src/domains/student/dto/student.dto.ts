@@ -1,6 +1,6 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Gender, LanguageCode, TimezoneCode } from '@prisma/client';
+import { Gender, LanguageCode, Status, TimezoneCode } from '@prisma/client';
 import {
   IsEmail,
   IsEnum,
@@ -19,6 +19,24 @@ export class FilterStudentRequestDto extends RequestPagingDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter theo status',
+    enum: Status,
+    example: Status.active,
+  })
+  @IsOptional()
+  @IsEnum(Status)
+  status?: Status;
+
+  @ApiPropertyOptional({
+    description: 'Filter theo gender',
+    enum: Gender,
+    example: Gender.male,
+  })
+  @IsOptional()
+  @IsEnum(Gender)
+  gender?: Gender;
 }
 
 export class UpdateStudentDto {

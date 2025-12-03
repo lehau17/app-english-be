@@ -78,15 +78,22 @@ export class StudentRepository {
       search,
       sortBy = 'createdAt', // default sort field
       sortOrder = 'desc', // default sort order
+      status,
+      gender,
+      phone,
     } = params;
 
     const where: Prisma.UserWhereInput = {
       role: 'student',
+      ...(status && { status }),
+      ...(gender && { gender }),
+      ...(phone && { phone: { contains: phone, mode: 'insensitive' } }),
       OR: search
         ? [
             { firstName: { contains: search, mode: 'insensitive' } },
             { lastName: { contains: search, mode: 'insensitive' } },
             { email: { contains: search, mode: 'insensitive' } },
+            { phone: { contains: search, mode: 'insensitive' } },
           ]
         : undefined,
     };
@@ -120,5 +127,93 @@ export class StudentRepository {
     });
 
     return PageResponseDto.of(data, safePage, limit, totalItems);
+  }
+
+  /**
+   * List all students (for export)
+   */
+  async listAll(params: FilterStudentRequestDto): Promise<User[]> {
+    const { search, sortBy = 'createdAt', sortOrder = 'desc', status, gender, phone } = params;
+
+    const where: Prisma.UserWhereInput = {
+      role: 'student',
+      ...(status && { status }),
+      ...(gender && { gender }),
+      ...(phone && { phone: { contains: phone, mode: 'insensitive' } }),
+      OR: search
+        ? [
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+            { phone: { contains: search, mode: 'insensitive' } },
+          ]
+        : undefined,
+    };
+
+    const allowedSortFields: (keyof User)[] = [
+      'id',
+      'createdAt',
+      'updatedAt',
+      'firstName',
+      'lastName',
+      'email',
+      'lastLoginAt',
+    ];
+    const sortField = allowedSortFields.includes(sortBy as keyof User)
+      ? sortBy
+      : 'createdAt';
+    const sortDirection: Prisma.SortOrder = sortOrder;
+
+    return this.prisma.user.findMany({
+      where,
+      orderBy: { [sortField]: sortDirection },
+    });
+  }
+
+  /**
+   * Bulk delete students (soft delete)
+   */
+  async bulkDelete(ids: string[]): Promise<{ count: number }> {
+    const result = await this.prisma.user.updateMany({
+      where: {
+        id: { in: ids },
+        role: 'student',
+      },
+      data: { status: 'inactive' },
+    });
+    return { count: result.count };
+  }
+
+  /**
+   * Get student statistics
+   */
+  async getStats(): Promise<{
+    total: number;
+    active: number;
+    inactive: number;
+    byGender: Record<string, number>;
+  }> {
+    const [total, active, inactive, byGender] = await Promise.all([
+      this.prisma.user.count({ where: { role: 'student' } }),
+      this.prisma.user.count({ where: { role: 'student', status: 'active' } }),
+      this.prisma.user.count({ where: { role: 'student', status: 'inactive' } }),
+      this.prisma.user.groupBy({
+        by: ['gender'],
+        where: { role: 'student' },
+        _count: true,
+      }),
+    ]);
+
+    const genderStats: Record<string, number> = {};
+    byGender.forEach((item) => {
+      genderStats[item.gender || 'unknown'] = item._count;
+    });
+
+    return {
+      total,
+      active,
+      inactive,
+      byGender: genderStats,
+    };
   }
 }

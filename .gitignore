@@ -2,7 +2,7 @@
 /dist
 /node_modules
 /build
-
+*.md
 # Logs
 logs
 *.log
@@ -67,4 +67,6 @@ gen-lang-client-0511056115-c9f394fb24a8.json
 
 
 # Google service account key
-uploads/*
+/uploads
+/temp-uploads
+/docs
