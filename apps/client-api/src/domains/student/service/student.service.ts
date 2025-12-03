@@ -100,6 +100,20 @@ export class StudentService {
     return header + rows;
   }
 
+  /**
+   * Get CSV template for importing students
+   * Returns a CSV with headers and example rows
+   */
+  getImportTemplate(): string {
+    const header = 'email,password,firstName,lastName,phone,displayName,gender\n';
+    const exampleRows = [
+      'student1@example.com,Password123!,Nguyen,Van A,0901234567,Nguyen Van A,male',
+      'student2@example.com,Password123!,Tran,Thi B,0912345678,Tran Thi B,female',
+    ].join('\n');
+
+    return header + exampleRows;
+  }
+
   async importStudents(
     fileBuffer: Buffer,
   ): Promise<{ created: number; errors: any[] }> {
