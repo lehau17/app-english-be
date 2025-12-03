@@ -46,56 +46,6 @@ export class StudentController {
     return this.studentService.create(dto);
   }
 
-  @Post(':id/avatar')
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Upload student avatar' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-        },
-      },
-    },
-  })
-  @ResponseMessage('Avatar uploaded successfully')
-  async uploadAvatar(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    if (!file) {
-      throw new BadRequestException('File is required');
-    }
-    return this.studentService.uploadAvatar(id, file);
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get student by id' })
-  @ResponseMessage('Student fetched successfully')
-  findById(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.studentService.findById(id);
-  }
-
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update student by id' })
-  @ResponseMessage('Student updated successfully')
-  update(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() dto: UpdateStudentDto,
-  ) {
-    return this.studentService.update(id, dto);
-  }
-
-  @Delete(':id')
-  @ApiOperation({ summary: 'Soft delete student by id' })
-  @ResponseMessage('Student deleted successfully')
-  delete(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.studentService.delete(id);
-  }
-
   @Get()
   @ApiOperation({ summary: 'List students (paginated)' })
   @ResponseMessage('Students listed successfully')
@@ -105,7 +55,7 @@ export class StudentController {
     return this.studentService.list(query);
   }
 
-  // Static routes must come before parameterized routes (:id)
+  // Static routes MUST come before parameterized routes (:id) to avoid route conflicts
   @Get('stats')
   @ApiOperation({ summary: 'Get student statistics' })
   @ResponseMessage('Student statistics fetched successfully')
@@ -157,6 +107,57 @@ export class StudentController {
   @ResponseMessage('Students deleted successfully')
   bulkDelete(@Body() body: { ids: string[] }) {
     return this.studentService.bulkDelete(body.ids);
+  }
+
+  // Parameterized routes MUST come after static routes
+  @Get(':id')
+  @ApiOperation({ summary: 'Get student by id' })
+  @ResponseMessage('Student fetched successfully')
+  findById(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.studentService.findById(id);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update student by id' })
+  @ResponseMessage('Student updated successfully')
+  update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdateStudentDto,
+  ) {
+    return this.studentService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Soft delete student by id' })
+  @ResponseMessage('Student deleted successfully')
+  delete(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.studentService.delete(id);
+  }
+
+  @Post(':id/avatar')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Upload student avatar' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  @ResponseMessage('Avatar uploaded successfully')
+  async uploadAvatar(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) {
+      throw new BadRequestException('File is required');
+    }
+    return this.studentService.uploadAvatar(id, file);
   }
 
   // Parameterized routes must come after static routes
