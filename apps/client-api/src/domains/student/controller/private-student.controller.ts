@@ -105,6 +105,30 @@ export class StudentController {
     return this.studentService.list(query);
   }
 
+  // Static routes must come before parameterized routes (:id)
+  @Get('stats')
+  @ApiOperation({ summary: 'Get student statistics' })
+  @ResponseMessage('Student statistics fetched successfully')
+  getStats() {
+    return this.studentService.getStats();
+  }
+
+  @Get('export')
+  @ApiOperation({ summary: 'Export students to a CSV file' })
+  @ResponseMessage('Students exported successfully')
+  async exportStudents(
+    @Query() query: FilterStudentRequestDto,
+    @Res() res: Response,
+  ) {
+    const csv = await this.studentService.exportStudents(query);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=students-${new Date().toISOString()}.csv`,
+    );
+    res.send(csv);
+  }
+
   @Post('import')
   @UseInterceptors(FileInterceptor('file'))
   @ApiConsumes('multipart/form-data')
@@ -128,22 +152,6 @@ export class StudentController {
     return this.studentService.importStudents(file.buffer);
   }
 
-  @Get('export')
-  @ApiOperation({ summary: 'Export students to a CSV file' })
-  @ResponseMessage('Students exported successfully')
-  async exportStudents(
-    @Query() query: FilterStudentRequestDto,
-    @Res() res: Response,
-  ) {
-    const csv = await this.studentService.exportStudents(query);
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename=students-${new Date().toISOString()}.csv`,
-    );
-    res.send(csv);
-  }
-
   @Post('bulk-delete')
   @ApiOperation({ summary: 'Bulk delete students' })
   @ResponseMessage('Students deleted successfully')
@@ -151,13 +159,7 @@ export class StudentController {
     return this.studentService.bulkDelete(body.ids);
   }
 
-  @Get('stats')
-  @ApiOperation({ summary: 'Get student statistics' })
-  @ResponseMessage('Student statistics fetched successfully')
-  getStats() {
-    return this.studentService.getStats();
-  }
-
+  // Parameterized routes must come after static routes
   @Post(':id/reset-password')
   @ApiOperation({ summary: 'Reset student password' })
   @ResponseMessage('Password reset successfully')
