@@ -163,6 +163,44 @@ export class ParentListQueryDto {
   isActive?: boolean;
 
   @ApiPropertyOptional({
+    description: 'Minimum number of children',
+    example: 1,
+    minimum: 0,
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value))
+  @IsInt()
+  @Min(0)
+  minChildren?: number;
+
+  @ApiPropertyOptional({
+    description: 'Maximum number of children',
+    example: 5,
+    minimum: 0,
+  })
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value))
+  @IsInt()
+  @Min(0)
+  maxChildren?: number;
+
+  @ApiPropertyOptional({
+    description: 'Filter by creation date from (ISO date string)',
+    example: '2024-01-01T00:00:00.000Z',
+  })
+  @IsOptional()
+  @IsString()
+  createdFrom?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by creation date to (ISO date string)',
+    example: '2024-12-31T23:59:59.999Z',
+  })
+  @IsOptional()
+  @IsString()
+  createdTo?: string;
+
+  @ApiPropertyOptional({
     description: 'Sort by field',
     enum: ['createdAt', 'firstName', 'lastName', 'email'],
   })
