@@ -1925,6 +1925,1109 @@ export class CoursesImportService {
     }
 
     /**
+     * Download TOEIC Basic course template Excel
+     */
+    async generateToeicBasicTemplate() {
+        const workbook = XLSX.utils.book_new();
+
+        const courseMeta = [
+            {
+                code: 'TOEIC_BASIC_001',
+                title: 'TOEIC Cơ Bản - Basic TOEIC Preparation',
+                description:
+                    'Khóa học TOEIC cơ bản giúp học viên làm quen với format bài thi TOEIC, từ vựng và ngữ pháp cơ bản trong môi trường công sở',
+                orderNo: 1,
+                difficulty: 'beginner',
+                language: 'en',
+                price: 0,
+                isPublished: false,
+                tags: 'toeic,english,business,beginner,test-preparation',
+                imageUrl: 'https://example.com/toeic-course.jpg',
+                plannedSessions: 10,
+            },
+        ];
+
+        const courseContent: CourseContentRow[] = [];
+
+        const toeicLessons = [
+            {
+                no: 1,
+                title: 'Introduction to TOEIC',
+                description: 'Learn about TOEIC test format, scoring system, and test-taking strategies',
+                objectives: 'Understand TOEIC format|Learn test strategies|Familiarize with question types',
+                vocab: ['test', 'score', 'section', 'question', 'answer', 'time', 'format', 'strategy'],
+            },
+            {
+                no: 2,
+                title: 'Listening Part 1: Photographs',
+                description: 'Practice describing photographs and identifying key details',
+                objectives: 'Identify people in photos|Describe actions|Recognize objects and locations',
+                vocab: ['photograph', 'person', 'action', 'object', 'location', 'describe', 'identify', 'detail'],
+            },
+            {
+                no: 3,
+                title: 'Listening Part 2: Question-Response',
+                description: 'Master short question-response conversations',
+                objectives: 'Understand questions|Choose appropriate responses|Recognize question types',
+                vocab: ['question', 'response', 'conversation', 'wh-question', 'yes-no', 'suggestion', 'request', 'offer'],
+            },
+            {
+                no: 4,
+                title: 'Listening Part 3: Conversations',
+                description: 'Comprehend longer dialogues between two or more people',
+                objectives: 'Follow conversations|Identify speakers|Understand context',
+                vocab: ['conversation', 'dialogue', 'speaker', 'context', 'topic', 'agreement', 'disagreement', 'opinion'],
+            },
+            {
+                no: 5,
+                title: 'Listening Part 4: Talks',
+                description: 'Understand monologues, announcements, and presentations',
+                objectives: 'Listen to announcements|Understand instructions|Follow presentations',
+                vocab: ['announcement', 'monologue', 'presentation', 'instruction', 'broadcast', 'message', 'notice', 'information'],
+            },
+            {
+                no: 6,
+                title: 'Reading Part 5: Incomplete Sentences',
+                description: 'Master grammar and vocabulary in sentence completion',
+                objectives: 'Apply grammar rules|Choose correct vocabulary|Complete sentences accurately',
+                vocab: ['sentence', 'grammar', 'vocabulary', 'complete', 'tense', 'preposition', 'conjunction', 'article'],
+            },
+            {
+                no: 7,
+                title: 'Reading Part 6: Text Completion',
+                description: 'Fill in blanks in business texts and emails',
+                objectives: 'Understand text context|Choose appropriate words|Maintain text coherence',
+                vocab: ['text', 'email', 'memo', 'letter', 'blank', 'coherence', 'context', 'appropriate'],
+            },
+            {
+                no: 8,
+                title: 'Reading Part 7: Reading Comprehension',
+                description: 'Read and understand business articles, advertisements, and documents',
+                objectives: 'Read for main ideas|Find specific information|Understand inference',
+                vocab: ['article', 'advertisement', 'document', 'comprehension', 'main idea', 'detail', 'inference', 'purpose'],
+            },
+            {
+                no: 9,
+                title: 'Speaking Practice',
+                description: 'Practice TOEIC Speaking test format and tasks',
+                objectives: 'Describe pictures|Express opinions|Respond to questions|Propose solutions',
+                vocab: ['speaking', 'pronunciation', 'fluency', 'opinion', 'describe', 'propose', 'solution', 'suggestion'],
+            },
+            {
+                no: 10,
+                title: 'Writing Practice',
+                description: 'Practice TOEIC Writing test format and tasks',
+                objectives: 'Write sentences|Compose emails|Express ideas clearly|Use correct grammar',
+                vocab: ['writing', 'sentence', 'email', 'composition', 'grammar', 'structure', 'coherence', 'clarity'],
+            },
+        ];
+
+        toeicLessons.forEach((lesson) => {
+            const baseRow: Partial<CourseContentRow> = {
+                lessonNo: lesson.no,
+                lessonTitle: lesson.title,
+                lessonDescription: lesson.description,
+                lessonDifficulty: 'beginner',
+                lessonEstimatedTime: 60,
+                lessonIsLocked: false,
+                lessonObjectives: lesson.objectives,
+            };
+
+            let activityNo = 1;
+
+            // Activity 1-3: Vocabulary (3 activities)
+            for (let i = 0; i < 3; i++) {
+                const vocabWords = lesson.vocab.slice(i * 2, (i + 1) * 2 + 1);
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'vocab',
+                    activityTitle: `${lesson.title} Vocabulary ${i + 1}`,
+                    timeLimit: 15,
+                    maxAttempts: 3,
+                    passingScore: 70,
+                    activityDifficulty: 'beginner',
+                    points: 15,
+                    instructions: `Learn business and workplace vocabulary related to ${lesson.title.toLowerCase()}`,
+                    hints: 'Read definitions carefully|Listen to pronunciation|Use words in sentences',
+                    items: vocabWords.join('|'),
+                    items_definitions: vocabWords
+                        .map((word) => {
+                            const defs: Record<string, string> = {
+                                test: 'An examination to assess knowledge or ability',
+                                score: 'A number representing performance on a test',
+                                photograph: 'A picture taken with a camera',
+                                question: 'A sentence that asks for information',
+                                conversation: 'A talk between two or more people',
+                                announcement: 'A public statement about something',
+                                sentence: 'A group of words expressing a complete thought',
+                                email: 'Electronic mail sent over the internet',
+                                article: 'A piece of writing in a newspaper or magazine',
+                                speaking: 'The action of expressing thoughts verbally',
+                            };
+                            return defs[word] || `A word related to ${lesson.title.toLowerCase()}`;
+                        })
+                        .join('|'),
+                    items_examples: vocabWords
+                        .map((word) => {
+                            const examples: Record<string, string> = {
+                                test: 'I need to study for the TOEIC test||The test will be next week',
+                                score: 'My TOEIC score was 850||She got a high score on the exam',
+                                photograph: 'Look at this photograph||The photograph shows a meeting',
+                                question: 'Can you answer this question?||What is your question?',
+                                conversation: 'We had a long conversation||The conversation was interesting',
+                                announcement: 'Listen to the announcement||The announcement was clear',
+                                sentence: 'Complete this sentence||The sentence is correct',
+                                email: 'I sent an email yesterday||Check your email',
+                                article: 'Read this article||The article is informative',
+                                speaking: 'Practice your speaking||Speaking English is important',
+                            };
+                            return examples[word] || `Use ${word} in a sentence||${word} is important`;
+                        })
+                        .join('|'),
+                });
+            }
+
+            // Activity 4-8: Listening (5 activities)
+            for (let i = 0; i < 5; i++) {
+                const scenarios = [
+                    'office meeting',
+                    'phone call',
+                    'announcement',
+                    'presentation',
+                    'conversation',
+                ];
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'listening',
+                    activityTitle: `${lesson.title} Listening ${i + 1}`,
+                    timeLimit: 20,
+                    maxAttempts: 2,
+                    passingScore: 75,
+                    activityDifficulty: 'beginner',
+                    points: 20,
+                    instructions: `Listen to the ${scenarios[i]} and answer the questions`,
+                    hints: 'Listen carefully|Focus on key words|You can replay the audio',
+                    listeningAudioUrl: `https://example.com/audio/toeic_${lesson.no}_${i + 1}.mp3`,
+                    listeningInstructions: `Listen to the ${scenarios[i]} about ${lesson.title.toLowerCase()} and answer the questions`,
+                    listeningQuestions: `What is the main topic?|options:${lesson.title},Business,Meeting,Travel|correctIndex:0|explanation:The main topic is ${lesson.title}||Who is speaking?|options:Manager,Teacher,Student,Doctor|correctIndex:0|explanation:The speaker is a manager`,
+                });
+            }
+
+            // Activity 9-12: Reading (4 activities)
+            for (let i = 0; i < 4; i++) {
+                const passages = [
+                    `Welcome to ${lesson.title}. This section will help you understand the key concepts and prepare for the TOEIC test. You will learn important vocabulary and practice various question types.`,
+                    `In ${lesson.title}, students practice different skills. The exercises are designed to improve your comprehension and test-taking abilities. Regular practice is essential for success.`,
+                    `The ${lesson.title} section covers important topics that frequently appear on the TOEIC exam. Understanding these topics will help you achieve a better score.`,
+                    `Practice makes perfect in ${lesson.title}. Complete all exercises and review your answers carefully. This will help you identify areas that need more practice.`,
+                ];
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'reading',
+                    activityTitle: `${lesson.title} Reading ${i + 1}`,
+                    timeLimit: 15,
+                    maxAttempts: 2,
+                    passingScore: 70,
+                    activityDifficulty: 'beginner',
+                    points: 20,
+                    instructions: 'Read the passage and answer the questions',
+                    hints: 'Read carefully|Look for key information|Check all options',
+                    passage: passages[i],
+                    question: `What is the main purpose of ${lesson.title}?`,
+                    options: 'To prepare for TOEIC|To learn grammar|To practice writing|To improve speaking',
+                    correctIndex: 0,
+                });
+            }
+
+            // Activity 13-15: Grammar (3 activities)
+            for (let i = 0; i < 3; i++) {
+                const grammarRules = [
+                    'Use present simple for routines and facts. Use present continuous for actions happening now.',
+                    'Use past simple for completed actions. Use past continuous for actions in progress in the past.',
+                    'Use present perfect for actions that started in the past and continue to the present.',
+                ];
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'grammar',
+                    activityTitle: `${lesson.title} Grammar ${i + 1}`,
+                    timeLimit: 10,
+                    maxAttempts: 3,
+                    passingScore: 75,
+                    activityDifficulty: 'beginner',
+                    points: 15,
+                    instructions: 'Complete the sentences with correct grammar',
+                    hints: 'Think about tenses|Check subject-verb agreement|Use correct forms',
+                    rule: grammarRules[i],
+                    question: `Complete: "I ___ ${lesson.vocab[0]} every day."`,
+                    options: 'practice,practices,practiced,practicing',
+                    correctIndex: 0,
+                });
+            }
+
+            // Activity 16-17: Quiz (2 activities)
+            for (let i = 0; i < 2; i++) {
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'quiz',
+                    activityTitle: `${lesson.title} Quiz ${i + 1}`,
+                    timeLimit: 10,
+                    maxAttempts: 2,
+                    passingScore: 75,
+                    activityDifficulty: 'beginner',
+                    points: 15,
+                    instructions: 'Answer the question about TOEIC',
+                    hints: 'Think carefully|Review the lesson|Choose the best answer',
+                    question: `Which is most important for ${lesson.title}?`,
+                    options: 'Practice regularly,Memorize words,Read quickly,Speak loudly',
+                    correctIndex: 0,
+                    explanation: 'Regular practice is essential for TOEIC success',
+                });
+            }
+
+            // Activity 18: Fill Blank
+            courseContent.push({
+                ...baseRow,
+                activityNo: activityNo++,
+                activityType: 'fill_blank',
+                activityTitle: `${lesson.title} Fill in the Blanks`,
+                timeLimit: 12,
+                maxAttempts: 2,
+                passingScore: 80,
+                activityDifficulty: 'beginner',
+                points: 15,
+                instructions: 'Complete the sentences with correct words',
+                hints: 'Think about context|Use vocabulary from this lesson',
+                passage: `In ${lesson.title}, you will learn about ${lesson.vocab[0]} and ${lesson.vocab[1]}. These are important for the TOEIC ___ . Practice ___ will help you improve.`,
+                blanks: `test|regularly`,
+            });
+
+            // Activity 19: Speaking
+            courseContent.push({
+                ...baseRow,
+                activityNo: activityNo++,
+                activityType: 'speaking',
+                activityTitle: `${lesson.title} Speaking Practice`,
+                timeLimit: 30,
+                maxAttempts: 3,
+                passingScore: 60,
+                activityDifficulty: 'beginner',
+                points: 20,
+                instructions: `Speak about ${lesson.title.toLowerCase()} for at least 30 seconds`,
+                hints: 'Speak clearly|Use vocabulary from the lesson|Organize your thoughts',
+                prompt: `Describe what you learned about ${lesson.title.toLowerCase()}. Talk about the key concepts and how they relate to the TOEIC test. Speak for at least 30 seconds.`,
+                minSeconds: 30,
+            });
+
+            // Activity 20: Writing
+            courseContent.push({
+                ...baseRow,
+                activityNo: activityNo++,
+                activityType: 'writing',
+                activityTitle: `${lesson.title} Writing Practice`,
+                timeLimit: 20,
+                maxAttempts: 1,
+                passingScore: 60,
+                activityDifficulty: 'beginner',
+                points: 25,
+                instructions: `Write about ${lesson.title.toLowerCase()}`,
+                hints: 'Use complete sentences|Check grammar|Organize your ideas',
+                prompt: `Write a short paragraph (at least 50 words) about ${lesson.title.toLowerCase()}. Explain what you learned and how it helps with TOEIC preparation.`,
+                minWords: 50,
+            });
+        });
+
+        const sessionSchedules = [];
+        const courseCode = courseMeta[0].code;
+
+        for (let session = 1; session <= 10; session++) {
+            const activities: string[] = [];
+            for (let activity = 1; activity <= 20; activity++) {
+                activities.push(`L${session}A${activity}`);
+            }
+            sessionSchedules.push({
+                courseCode: courseCode,
+                sessionNumber: session,
+                title: `Session ${session}: ${toeicLessons[session - 1].title}`,
+                description: `Complete all activities for ${toeicLessons[session - 1].title}`,
+                activityRefs: activities.join(','),
+            });
+        }
+
+        const metaSheet = XLSX.utils.json_to_sheet(courseMeta);
+        const contentSheet = XLSX.utils.json_to_sheet(courseContent);
+        const schedulesSheet = XLSX.utils.json_to_sheet(sessionSchedules);
+
+        XLSX.utils.sheet_add_aoa(
+            schedulesSheet,
+            [
+                [
+                    'NOTE: activityRefs format is "L<lessonNo>A<activityNo>" to reference activities in Course Content sheet.',
+                ],
+                [
+                    'Example: "L1A2,L1A3,L2A1" means Lesson 1 Activity 2, Lesson 1 Activity 3, and Lesson 2 Activity 1.',
+                ],
+                ['Multiple activities are separated by commas without spaces.'],
+            ],
+            { origin: { r: sessionSchedules.length + 2, c: 0 } },
+        );
+
+        XLSX.utils.book_append_sheet(workbook, metaSheet, 'Course Meta');
+        XLSX.utils.book_append_sheet(workbook, contentSheet, 'Course Content');
+        XLSX.utils.book_append_sheet(workbook, schedulesSheet, 'Session Schedules');
+
+        const buffer = XLSX.write(workbook, {
+            type: 'buffer',
+            bookType: 'xlsx',
+        });
+
+        return {
+            buffer,
+            filename: 'toeic-basic-course-template.xlsx',
+            contentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+    }
+
+    /**
+     * Download TOEIC Intermediate course template Excel
+     */
+    async generateToeicIntermediateTemplate() {
+        const workbook = XLSX.utils.book_new();
+
+        const courseMeta = [
+            {
+                code: 'TOEIC_INTERMEDIATE_001',
+                title: 'TOEIC Trung Cấp - Intermediate TOEIC Preparation',
+                description:
+                    'Khóa học TOEIC trung cấp giúp học viên nâng cao kỹ năng làm bài thi TOEIC với từ vựng và ngữ pháp ở mức trung cấp trong môi trường công sở chuyên nghiệp',
+                orderNo: 1,
+                difficulty: 'intermediate',
+                language: 'en',
+                price: 0,
+                isPublished: false,
+                tags: 'toeic,english,business,intermediate,test-preparation',
+                imageUrl: 'https://example.com/toeic-intermediate-course.jpg',
+                plannedSessions: 10,
+            },
+        ];
+
+        const courseContent: CourseContentRow[] = [];
+
+        const toeicLessons = [
+            {
+                no: 1,
+                title: 'Advanced TOEIC Strategies',
+                description: 'Master advanced test-taking strategies and time management for TOEIC',
+                objectives: 'Apply advanced strategies|Manage time effectively|Analyze question patterns',
+                vocab: ['strategy', 'technique', 'approach', 'methodology', 'analysis', 'efficiency', 'optimization', 'proficiency'],
+            },
+            {
+                no: 2,
+                title: 'Listening Part 1: Complex Photographs',
+                description: 'Analyze complex photographs with multiple elements and subtle details',
+                objectives: 'Identify complex scenes|Analyze relationships|Recognize subtle details',
+                vocab: ['complexity', 'analysis', 'relationship', 'interaction', 'environment', 'perspective', 'composition', 'context'],
+            },
+            {
+                no: 3,
+                title: 'Listening Part 2: Advanced Question-Response',
+                description: 'Master sophisticated question-response patterns and indirect answers',
+                objectives: 'Understand indirect responses|Recognize implications|Identify tone and intent',
+                vocab: ['implication', 'indirect', 'nuance', 'subtext', 'inference', 'interpretation', 'contextual', 'sophisticated'],
+            },
+            {
+                no: 4,
+                title: 'Listening Part 3: Complex Conversations',
+                description: 'Comprehend multi-speaker conversations with overlapping topics and opinions',
+                objectives: 'Follow multi-threaded discussions|Distinguish viewpoints|Track topic shifts',
+                vocab: ['discussion', 'viewpoint', 'perspective', 'argument', 'debate', 'consensus', 'disagreement', 'negotiation'],
+            },
+            {
+                no: 5,
+                title: 'Listening Part 4: Professional Talks',
+                description: 'Understand professional presentations, reports, and detailed announcements',
+                objectives: 'Comprehend technical content|Extract key information|Follow structured presentations',
+                vocab: ['presentation', 'report', 'analysis', 'evaluation', 'recommendation', 'proposal', 'executive', 'professional'],
+            },
+            {
+                no: 6,
+                title: 'Reading Part 5: Advanced Grammar',
+                description: 'Master complex grammatical structures and advanced vocabulary in context',
+                objectives: 'Apply complex grammar|Use advanced vocabulary|Understand subtle distinctions',
+                vocab: ['grammar', 'structure', 'syntax', 'morphology', 'semantics', 'distinction', 'precision', 'sophistication'],
+            },
+            {
+                no: 7,
+                title: 'Reading Part 6: Professional Text Completion',
+                description: 'Complete complex business documents with advanced vocabulary and structures',
+                objectives: 'Maintain coherence|Use appropriate register|Apply advanced vocabulary',
+                vocab: ['coherence', 'register', 'formality', 'professionalism', 'documentation', 'correspondence', 'communication', 'articulation'],
+            },
+            {
+                no: 8,
+                title: 'Reading Part 7: Complex Comprehension',
+                description: 'Analyze complex business texts, reports, and multi-part documents',
+                objectives: 'Analyze complex texts|Synthesize information|Make inferences|Evaluate arguments',
+                vocab: ['analysis', 'synthesis', 'evaluation', 'inference', 'argument', 'evidence', 'conclusion', 'interpretation'],
+            },
+            {
+                no: 9,
+                title: 'Advanced Speaking Practice',
+                description: 'Practice sophisticated speaking tasks with complex scenarios and opinions',
+                objectives: 'Express complex ideas|Articulate opinions|Present arguments|Propose solutions',
+                vocab: ['articulation', 'expression', 'presentation', 'persuasion', 'argumentation', 'eloquence', 'fluency', 'sophistication'],
+            },
+            {
+                no: 10,
+                title: 'Advanced Writing Practice',
+                description: 'Compose professional emails, reports, and business documents',
+                objectives: 'Write professionally|Structure complex texts|Use advanced vocabulary|Maintain coherence',
+                vocab: ['composition', 'structure', 'organization', 'coherence', 'sophistication', 'professionalism', 'articulation', 'precision'],
+            },
+        ];
+
+        toeicLessons.forEach((lesson) => {
+            const baseRow: Partial<CourseContentRow> = {
+                lessonNo: lesson.no,
+                lessonTitle: lesson.title,
+                lessonDescription: lesson.description,
+                lessonDifficulty: 'intermediate',
+                lessonEstimatedTime: 75,
+                lessonIsLocked: false,
+                lessonObjectives: lesson.objectives,
+            };
+
+            let activityNo = 1;
+
+            // Activity 1-3: Vocabulary (3 activities)
+            for (let i = 0; i < 3; i++) {
+                const vocabWords = lesson.vocab.slice(i * 2, (i + 1) * 2 + 1);
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'vocab',
+                    activityTitle: `${lesson.title} Vocabulary ${i + 1}`,
+                    timeLimit: 18,
+                    maxAttempts: 3,
+                    passingScore: 80,
+                    activityDifficulty: 'intermediate',
+                    points: 18,
+                    instructions: `Learn intermediate business and professional vocabulary related to ${lesson.title.toLowerCase()}`,
+                    hints: 'Study definitions carefully|Understand context|Use words in professional settings',
+                    items: vocabWords.join('|'),
+                    items_definitions: vocabWords
+                        .map((word) => {
+                            const defs: Record<string, string> = {
+                                strategy: 'A plan of action designed to achieve a long-term goal',
+                                technique: 'A way of carrying out a particular task',
+                                complexity: 'The state of being intricate or complicated',
+                                implication: 'A conclusion that can be drawn from something',
+                                discussion: 'The action or process of talking about something',
+                                presentation: 'A speech or talk in which a new product or idea is described',
+                                grammar: 'The whole system and structure of a language',
+                                coherence: 'The quality of being logical and consistent',
+                                analysis: 'Detailed examination of the elements or structure of something',
+                                articulation: 'The formation of clear and distinct sounds in speech',
+                            };
+                            return defs[word] || `An intermediate-level term related to ${lesson.title.toLowerCase()}`;
+                        })
+                        .join('|'),
+                    items_examples: vocabWords
+                        .map((word) => {
+                            const examples: Record<string, string> = {
+                                strategy: 'Our company developed a new marketing strategy||The strategy proved successful',
+                                technique: 'She mastered the technique of negotiation||This technique is widely used',
+                                complexity: 'The complexity of the issue requires careful analysis||We understand the complexity',
+                                implication: 'The implications are significant||Consider the implications carefully',
+                                discussion: 'We had a productive discussion||The discussion lasted two hours',
+                                presentation: 'The presentation was well-received||Prepare your presentation',
+                                grammar: 'Advanced grammar is essential||Study grammar rules',
+                                coherence: 'Maintain coherence in your writing||The text lacks coherence',
+                                analysis: 'Conduct a thorough analysis||The analysis revealed important findings',
+                                articulation: 'Work on your articulation||Clear articulation is important',
+                            };
+                            return examples[word] || `Use ${word} in a professional context||${word} is crucial for success`;
+                        })
+                        .join('|'),
+                });
+            }
+
+            // Activity 4-8: Listening (5 activities)
+            for (let i = 0; i < 5; i++) {
+                const scenarios = [
+                    'executive meeting',
+                    'client consultation',
+                    'board presentation',
+                    'strategic planning session',
+                    'professional conference',
+                ];
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'listening',
+                    activityTitle: `${lesson.title} Listening ${i + 1}`,
+                    timeLimit: 25,
+                    maxAttempts: 2,
+                    passingScore: 80,
+                    activityDifficulty: 'intermediate',
+                    points: 22,
+                    instructions: `Listen to the ${scenarios[i]} and answer the questions`,
+                    hints: 'Listen for key details|Focus on context|Identify main points and implications',
+                    listeningAudioUrl: `https://example.com/audio/toeic_intermediate_${lesson.no}_${i + 1}.mp3`,
+                    listeningInstructions: `Listen to the ${scenarios[i]} about ${lesson.title.toLowerCase()} and answer the questions`,
+                    listeningQuestions: `What is the primary concern?|options:Strategy,Budget,Timeline,Quality|correctIndex:0|explanation:The primary concern relates to strategic planning||What action will be taken?|options:Review,Implement,Postpone,Delegate|correctIndex:1|explanation:The action involves implementation`,
+                });
+            }
+
+            // Activity 9-12: Reading (4 activities)
+            for (let i = 0; i < 4; i++) {
+                const passages = [
+                    `Welcome to ${lesson.title}. This advanced section focuses on developing sophisticated skills necessary for achieving high TOEIC scores. You will engage with complex business scenarios and professional communication patterns that reflect real-world workplace situations.`,
+                    `In ${lesson.title}, students work with intermediate-level content that challenges their comprehension and analytical abilities. The exercises are designed to build confidence in handling professional English across various business contexts.`,
+                    `The ${lesson.title} module addresses critical competencies required for professional success. Through systematic practice, you will enhance your ability to understand nuanced communication and sophisticated business terminology.`,
+                    `Mastery of ${lesson.title} requires consistent practice and attention to detail. The activities in this section will help you develop the precision and sophistication needed to excel in professional English communication.`,
+                ];
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'reading',
+                    activityTitle: `${lesson.title} Reading ${i + 1}`,
+                    timeLimit: 20,
+                    maxAttempts: 2,
+                    passingScore: 80,
+                    activityDifficulty: 'intermediate',
+                    points: 22,
+                    instructions: 'Read the passage carefully and answer the questions',
+                    hints: 'Read for main ideas and details|Analyze the context|Consider implications',
+                    passage: passages[i],
+                    question: `What is the main focus of ${lesson.title}?`,
+                    options: 'Professional communication skills|Basic vocabulary|Simple grammar|Casual conversation',
+                    correctIndex: 0,
+                });
+            }
+
+            // Activity 13-15: Grammar (3 activities)
+            for (let i = 0; i < 3; i++) {
+                const grammarRules = [
+                    'Use complex conditional structures (third conditional, mixed conditionals) for hypothetical situations and past consequences.',
+                    'Master passive voice in various tenses and modal verbs for professional communication and formal writing.',
+                    'Apply advanced relative clauses, reduced relative clauses, and complex sentence structures for sophisticated expression.',
+                ];
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'grammar',
+                    activityTitle: `${lesson.title} Grammar ${i + 1}`,
+                    timeLimit: 12,
+                    maxAttempts: 3,
+                    passingScore: 80,
+                    activityDifficulty: 'intermediate',
+                    points: 18,
+                    instructions: 'Complete the sentences with correct advanced grammar',
+                    hints: 'Consider complex structures|Check verb forms|Apply advanced rules',
+                    rule: grammarRules[i],
+                    question: `Complete: "If we ___ ${lesson.vocab[0]} earlier, we would have achieved better results."`,
+                    options: 'had implemented,implemented,would implement,implement',
+                    correctIndex: 0,
+                });
+            }
+
+            // Activity 16-17: Quiz (2 activities)
+            for (let i = 0; i < 2; i++) {
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'quiz',
+                    activityTitle: `${lesson.title} Quiz ${i + 1}`,
+                    timeLimit: 12,
+                    maxAttempts: 2,
+                    passingScore: 80,
+                    activityDifficulty: 'intermediate',
+                    points: 18,
+                    instructions: 'Answer the question about TOEIC intermediate level',
+                    hints: 'Think critically|Apply advanced knowledge|Choose the best answer',
+                    question: `Which is most critical for ${lesson.title}?`,
+                    options: 'Advanced comprehension and analysis,Basic memorization,Simple repetition,Surface understanding',
+                    correctIndex: 0,
+                    explanation: 'Advanced comprehension and analysis are essential for intermediate TOEIC success',
+                });
+            }
+
+            // Activity 18: Fill Blank
+            courseContent.push({
+                ...baseRow,
+                activityNo: activityNo++,
+                activityType: 'fill_blank',
+                activityTitle: `${lesson.title} Fill in the Blanks`,
+                timeLimit: 15,
+                maxAttempts: 2,
+                passingScore: 85,
+                activityDifficulty: 'intermediate',
+                points: 18,
+                instructions: 'Complete the sentences with appropriate intermediate-level words',
+                hints: 'Consider context and register|Use professional vocabulary',
+                passage: `In ${lesson.title}, you will develop ${lesson.vocab[0]} and ${lesson.vocab[1]} skills. These competencies are essential for professional ___ and effective ___ in business environments.`,
+                blanks: `communication|interaction`,
+            });
+
+            // Activity 19: Speaking
+            courseContent.push({
+                ...baseRow,
+                activityNo: activityNo++,
+                activityType: 'speaking',
+                activityTitle: `${lesson.title} Speaking Practice`,
+                timeLimit: 45,
+                maxAttempts: 3,
+                passingScore: 70,
+                activityDifficulty: 'intermediate',
+                points: 25,
+                instructions: `Speak about ${lesson.title.toLowerCase()} for at least 45 seconds`,
+                hints: 'Speak clearly and professionally|Use advanced vocabulary|Structure your response',
+                prompt: `Discuss what you learned about ${lesson.title.toLowerCase()}. Explain the key concepts, their applications in professional settings, and how they contribute to TOEIC success. Speak for at least 45 seconds.`,
+                minSeconds: 45,
+            });
+
+            // Activity 20: Writing
+            courseContent.push({
+                ...baseRow,
+                activityNo: activityNo++,
+                activityType: 'writing',
+                activityTitle: `${lesson.title} Writing Practice`,
+                timeLimit: 25,
+                maxAttempts: 1,
+                passingScore: 70,
+                activityDifficulty: 'intermediate',
+                points: 30,
+                instructions: `Write professionally about ${lesson.title.toLowerCase()}`,
+                hints: 'Use advanced vocabulary|Maintain professional tone|Structure your writing clearly',
+                prompt: `Write a professional paragraph (at least 100 words) about ${lesson.title.toLowerCase()}. Discuss the importance of these skills in business communication and how they enhance TOEIC performance.`,
+                minWords: 100,
+            });
+        });
+
+        const sessionSchedules = [];
+        const courseCode = courseMeta[0].code;
+
+        for (let session = 1; session <= 10; session++) {
+            const activities: string[] = [];
+            for (let activity = 1; activity <= 20; activity++) {
+                activities.push(`L${session}A${activity}`);
+            }
+            sessionSchedules.push({
+                courseCode: courseCode,
+                sessionNumber: session,
+                title: `Session ${session}: ${toeicLessons[session - 1].title}`,
+                description: `Complete all activities for ${toeicLessons[session - 1].title}`,
+                activityRefs: activities.join(','),
+            });
+        }
+
+        const metaSheet = XLSX.utils.json_to_sheet(courseMeta);
+        const contentSheet = XLSX.utils.json_to_sheet(courseContent);
+        const schedulesSheet = XLSX.utils.json_to_sheet(sessionSchedules);
+
+        XLSX.utils.sheet_add_aoa(
+            schedulesSheet,
+            [
+                [
+                    'NOTE: activityRefs format is "L<lessonNo>A<activityNo>" to reference activities in Course Content sheet.',
+                ],
+                [
+                    'Example: "L1A2,L1A3,L2A1" means Lesson 1 Activity 2, Lesson 1 Activity 3, and Lesson 2 Activity 1.',
+                ],
+                ['Multiple activities are separated by commas without spaces.'],
+            ],
+            { origin: { r: sessionSchedules.length + 2, c: 0 } },
+        );
+
+        XLSX.utils.book_append_sheet(workbook, metaSheet, 'Course Meta');
+        XLSX.utils.book_append_sheet(workbook, contentSheet, 'Course Content');
+        XLSX.utils.book_append_sheet(workbook, schedulesSheet, 'Session Schedules');
+
+        const buffer = XLSX.write(workbook, {
+            type: 'buffer',
+            bookType: 'xlsx',
+        });
+
+        return {
+            buffer,
+            filename: 'toeic-intermediate-course-template.xlsx',
+            contentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+    }
+
+    /**
+     * Download TOEIC Advanced course template Excel
+     */
+    async generateToeicAdvancedTemplate() {
+        const workbook = XLSX.utils.book_new();
+
+        const courseMeta = [
+            {
+                code: 'TOEIC_ADVANCED_001',
+                title: 'TOEIC Nâng Cao - Advanced TOEIC Preparation',
+                description:
+                    'Khóa học TOEIC nâng cao giúp học viên đạt điểm số cao trong bài thi TOEIC với từ vựng chuyên sâu, ngữ pháp phức tạp và kỹ năng giao tiếp chuyên nghiệp ở mức độ cao cấp',
+                orderNo: 1,
+                difficulty: 'advanced',
+                language: 'en',
+                price: 0,
+                isPublished: false,
+                tags: 'toeic,english,business,advanced,test-preparation',
+                imageUrl: 'https://example.com/toeic-advanced-course.jpg',
+                plannedSessions: 10,
+            },
+        ];
+
+        const courseContent: CourseContentRow[] = [];
+
+        const toeicLessons = [
+            {
+                no: 1,
+                title: 'Expert TOEIC Mastery',
+                description: 'Achieve expert-level proficiency with advanced strategies and sophisticated techniques',
+                objectives: 'Master expert strategies|Achieve precision|Excel in all sections|Optimize performance',
+                vocab: ['mastery', 'proficiency', 'expertise', 'excellence', 'optimization', 'precision', 'sophistication', 'refinement'],
+            },
+            {
+                no: 2,
+                title: 'Listening Part 1: Expert Analysis',
+                description: 'Analyze intricate photographs with expert-level attention to detail and context',
+                objectives: 'Analyze intricate details|Interpret complex scenes|Understand subtle nuances|Make expert inferences',
+                vocab: ['intricate', 'nuance', 'subtlety', 'interpretation', 'expertise', 'discernment', 'sophistication', 'refinement'],
+            },
+            {
+                no: 3,
+                title: 'Listening Part 2: Sophisticated Responses',
+                description: 'Master highly sophisticated question-response patterns with idiomatic expressions',
+                objectives: 'Understand idiomatic expressions|Recognize sophisticated patterns|Interpret complex responses|Identify advanced implications',
+                vocab: ['idiomatic', 'sophistication', 'implication', 'interpretation', 'nuance', 'subtlety', 'expertise', 'refinement'],
+            },
+            {
+                no: 4,
+                title: 'Listening Part 3: Complex Multi-Speaker Dialogues',
+                description: 'Comprehend highly complex multi-speaker conversations with overlapping topics and sophisticated arguments',
+                objectives: 'Follow complex arguments|Distinguish subtle viewpoints|Track sophisticated topic shifts|Analyze expert-level discussions',
+                vocab: ['argument', 'viewpoint', 'sophistication', 'analysis', 'expertise', 'discernment', 'interpretation', 'refinement'],
+            },
+            {
+                no: 5,
+                title: 'Listening Part 4: Executive-Level Talks',
+                description: 'Understand executive presentations, strategic reports, and high-level professional communications',
+                objectives: 'Comprehend executive content|Extract strategic information|Follow sophisticated presentations|Analyze expert communications',
+                vocab: ['executive', 'strategic', 'sophistication', 'expertise', 'analysis', 'refinement', 'mastery', 'excellence'],
+            },
+            {
+                no: 6,
+                title: 'Reading Part 5: Expert Grammar',
+                description: 'Master highly sophisticated grammatical structures and advanced idiomatic vocabulary',
+                objectives: 'Apply expert grammar|Use idiomatic expressions|Understand subtle distinctions|Achieve precision',
+                vocab: ['grammar', 'idiomatic', 'sophistication', 'precision', 'expertise', 'refinement', 'mastery', 'excellence'],
+            },
+            {
+                no: 7,
+                title: 'Reading Part 6: Executive Text Completion',
+                description: 'Complete highly sophisticated business documents with expert-level vocabulary and complex structures',
+                objectives: 'Maintain sophisticated coherence|Use executive register|Apply expert vocabulary|Achieve professional excellence',
+                vocab: ['coherence', 'register', 'sophistication', 'expertise', 'refinement', 'mastery', 'excellence', 'precision'],
+            },
+            {
+                no: 8,
+                title: 'Reading Part 7: Expert-Level Comprehension',
+                description: 'Analyze highly complex business texts, strategic reports, and sophisticated multi-part documents',
+                objectives: 'Analyze expert-level texts|Synthesize complex information|Make sophisticated inferences|Evaluate expert arguments',
+                vocab: ['analysis', 'synthesis', 'evaluation', 'inference', 'sophistication', 'expertise', 'refinement', 'mastery'],
+            },
+            {
+                no: 9,
+                title: 'Expert Speaking Practice',
+                description: 'Practice expert-level speaking with highly sophisticated scenarios and complex professional opinions',
+                objectives: 'Express expert-level ideas|Articulate sophisticated opinions|Present complex arguments|Propose innovative solutions',
+                vocab: ['articulation', 'sophistication', 'expertise', 'innovation', 'refinement', 'mastery', 'excellence', 'precision'],
+            },
+            {
+                no: 10,
+                title: 'Expert Writing Practice',
+                description: 'Compose executive-level emails, strategic reports, and sophisticated business documents',
+                objectives: 'Write at expert level|Structure sophisticated texts|Use executive vocabulary|Achieve professional excellence',
+                vocab: ['composition', 'sophistication', 'expertise', 'refinement', 'mastery', 'excellence', 'precision', 'articulation'],
+            },
+        ];
+
+        toeicLessons.forEach((lesson) => {
+            const baseRow: Partial<CourseContentRow> = {
+                lessonNo: lesson.no,
+                lessonTitle: lesson.title,
+                lessonDescription: lesson.description,
+                lessonDifficulty: 'advanced',
+                lessonEstimatedTime: 90,
+                lessonIsLocked: false,
+                lessonObjectives: lesson.objectives,
+            };
+
+            let activityNo = 1;
+
+            // Activity 1-3: Vocabulary (3 activities)
+            for (let i = 0; i < 3; i++) {
+                const vocabWords = lesson.vocab.slice(i * 2, (i + 1) * 2 + 1);
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'vocab',
+                    activityTitle: `${lesson.title} Vocabulary ${i + 1}`,
+                    timeLimit: 20,
+                    maxAttempts: 3,
+                    passingScore: 85,
+                    activityDifficulty: 'advanced',
+                    points: 20,
+                    instructions: `Master advanced and idiomatic business vocabulary related to ${lesson.title.toLowerCase()}`,
+                    hints: 'Study sophisticated definitions|Understand nuanced contexts|Use words in executive settings',
+                    items: vocabWords.join('|'),
+                    items_definitions: vocabWords
+                        .map((word) => {
+                            const defs: Record<string, string> = {
+                                mastery: 'Comprehensive knowledge or skill in a subject or accomplishment',
+                                proficiency: 'A high degree of competence or skill; expertise',
+                                intricate: 'Very complicated or detailed',
+                                nuance: 'A subtle difference in or shade of meaning, expression, or sound',
+                                idiomatic: 'Using, containing, or denoting expressions that are natural to a native speaker',
+                                sophistication: 'The quality of being sophisticated; refinement',
+                                expertise: 'Expert skill or knowledge in a particular field',
+                                refinement: 'The process of removing impurities or unwanted elements',
+                            };
+                            return defs[word] || `An advanced-level term related to ${lesson.title.toLowerCase()}`;
+                        })
+                        .join('|'),
+                    items_examples: vocabWords
+                        .map((word) => {
+                            const examples: Record<string, string> = {
+                                mastery: 'She demonstrated complete mastery of the subject||Mastery requires dedication',
+                                proficiency: 'His proficiency in English is exceptional||Achieve high proficiency',
+                                intricate: 'The intricate details require careful analysis||An intricate problem',
+                                nuance: 'Understand the nuance of the expression||Subtle nuances matter',
+                                idiomatic: 'Use idiomatic expressions naturally||Idiomatic language is complex',
+                                sophistication: 'The sophistication of the approach||Demonstrate sophistication',
+                                expertise: 'Leverage your expertise||Share your expertise',
+                                refinement: 'The refinement of the process||Continuous refinement',
+                            };
+                            return examples[word] || `Use ${word} in an executive context||${word} demonstrates excellence`;
+                        })
+                        .join('|'),
+                });
+            }
+
+            // Activity 4-8: Listening (5 activities)
+            for (let i = 0; i < 5; i++) {
+                const scenarios = [
+                    'board of directors meeting',
+                    'strategic planning session',
+                    'executive briefing',
+                    'high-level negotiation',
+                    'international conference',
+                ];
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'listening',
+                    activityTitle: `${lesson.title} Listening ${i + 1}`,
+                    timeLimit: 30,
+                    maxAttempts: 2,
+                    passingScore: 85,
+                    activityDifficulty: 'advanced',
+                    points: 25,
+                    instructions: `Listen to the ${scenarios[i]} and answer sophisticated questions`,
+                    hints: 'Listen for subtle details|Analyze complex context|Identify sophisticated implications',
+                    listeningAudioUrl: `https://example.com/audio/toeic_advanced_${lesson.no}_${i + 1}.mp3`,
+                    listeningInstructions: `Listen to the ${scenarios[i]} about ${lesson.title.toLowerCase()} and answer the questions`,
+                    listeningQuestions: `What is the underlying strategic concern?|options:Strategic alignment,Operational efficiency,Market positioning,Resource allocation|correctIndex:0|explanation:The concern relates to strategic alignment||What sophisticated approach will be adopted?|options:Comprehensive analysis,Incremental change,Rapid implementation,Delegated responsibility|correctIndex:0|explanation:The approach involves comprehensive analysis`,
+                });
+            }
+
+            // Activity 9-12: Reading (4 activities)
+            for (let i = 0; i < 4; i++) {
+                const passages = [
+                    `Welcome to ${lesson.title}. This expert-level section is designed for professionals seeking to achieve the highest TOEIC scores. You will engage with highly sophisticated business scenarios, executive-level communication patterns, and complex professional contexts that reflect the most demanding workplace situations. Mastery of these advanced skills requires exceptional dedication and precision.`,
+                    `In ${lesson.title}, students work with advanced-level content that challenges even experienced professionals. The exercises are meticulously designed to build expertise in handling the most sophisticated professional English across diverse executive and strategic business contexts.`,
+                    `The ${lesson.title} module addresses the most critical competencies required for executive-level professional success. Through rigorous practice with complex materials, you will enhance your ability to understand highly nuanced communication, sophisticated business terminology, and subtle professional implications.`,
+                    `Achieving mastery in ${lesson.title} requires exceptional commitment, sophisticated analytical skills, and attention to the most subtle details. The activities in this section will help you develop the precision, sophistication, and expertise needed to excel at the highest levels of professional English communication.`,
+                ];
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'reading',
+                    activityTitle: `${lesson.title} Reading ${i + 1}`,
+                    timeLimit: 25,
+                    maxAttempts: 2,
+                    passingScore: 85,
+                    activityDifficulty: 'advanced',
+                    points: 25,
+                    instructions: 'Read the sophisticated passage carefully and answer expert-level questions',
+                    hints: 'Analyze complex ideas|Synthesize information|Evaluate sophisticated arguments|Make expert inferences',
+                    passage: passages[i],
+                    question: `What is the primary objective of ${lesson.title}?`,
+                    options: 'Achieve expert-level professional communication|Basic vocabulary acquisition|Simple grammar practice|Casual conversation skills',
+                    correctIndex: 0,
+                });
+            }
+
+            // Activity 13-15: Grammar (3 activities)
+            for (let i = 0; i < 3; i++) {
+                const grammarRules = [
+                    'Master highly sophisticated conditional structures including inverted conditionals, mixed conditionals with complex time relationships, and conditional perfect forms for expert-level expression.',
+                    'Excel in passive voice transformations across all tenses, advanced modal verb combinations, and sophisticated passive constructions for executive-level professional communication.',
+                    'Apply expert-level relative clauses, advanced reduced relative clauses, complex appositives, and sophisticated sentence structures including cleft sentences and advanced subordination.',
+                ];
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'grammar',
+                    activityTitle: `${lesson.title} Grammar ${i + 1}`,
+                    timeLimit: 15,
+                    maxAttempts: 3,
+                    passingScore: 85,
+                    activityDifficulty: 'advanced',
+                    points: 20,
+                    instructions: 'Complete sentences with expert-level grammar',
+                    hints: 'Apply sophisticated structures|Check complex verb forms|Use expert-level rules',
+                    rule: grammarRules[i],
+                    question: `Complete: "Had we ___ ${lesson.vocab[0]} more strategically, we would have achieved exceptional results."`,
+                    options: 'approached,approach,approaching,would approach',
+                    correctIndex: 0,
+                });
+            }
+
+            // Activity 16-17: Quiz (2 activities)
+            for (let i = 0; i < 2; i++) {
+                courseContent.push({
+                    ...baseRow,
+                    activityNo: activityNo++,
+                    activityType: 'quiz',
+                    activityTitle: `${lesson.title} Quiz ${i + 1}`,
+                    timeLimit: 15,
+                    maxAttempts: 2,
+                    passingScore: 85,
+                    activityDifficulty: 'advanced',
+                    points: 20,
+                    instructions: 'Answer expert-level questions about TOEIC',
+                    hints: 'Apply expert knowledge|Think critically and analytically|Choose the most sophisticated answer',
+                    question: `Which is most essential for ${lesson.title}?`,
+                    options: 'Expert-level comprehension and sophisticated analysis,Basic memorization techniques,Simple repetition methods,Surface-level understanding',
+                    correctIndex: 0,
+                    explanation: 'Expert-level comprehension and sophisticated analysis are fundamental for advanced TOEIC excellence',
+                });
+            }
+
+            // Activity 18: Fill Blank
+            courseContent.push({
+                ...baseRow,
+                activityNo: activityNo++,
+                activityType: 'fill_blank',
+                activityTitle: `${lesson.title} Fill in the Blanks`,
+                timeLimit: 18,
+                maxAttempts: 2,
+                passingScore: 90,
+                activityDifficulty: 'advanced',
+                points: 20,
+                instructions: 'Complete sentences with expert-level vocabulary and sophisticated expressions',
+                hints: 'Consider sophisticated context|Use executive register|Apply expert vocabulary',
+                passage: `In ${lesson.title}, you will develop ${lesson.vocab[0]} and ${lesson.vocab[1]} to an expert level. These sophisticated competencies are essential for executive ___ and highly effective ___ in complex business environments.`,
+                blanks: `communication|interaction`,
+            });
+
+            // Activity 19: Speaking
+            courseContent.push({
+                ...baseRow,
+                activityNo: activityNo++,
+                activityType: 'speaking',
+                activityTitle: `${lesson.title} Speaking Practice`,
+                timeLimit: 60,
+                maxAttempts: 3,
+                passingScore: 75,
+                activityDifficulty: 'advanced',
+                points: 30,
+                instructions: `Speak about ${lesson.title.toLowerCase()} for at least 60 seconds`,
+                hints: 'Speak with sophistication|Use expert vocabulary|Structure your response professionally',
+                prompt: `Provide an expert-level discussion about ${lesson.title.toLowerCase()}. Explain the sophisticated concepts, their strategic applications in executive settings, and how they contribute to achieving exceptional TOEIC performance. Speak for at least 60 seconds.`,
+                minSeconds: 60,
+            });
+
+            // Activity 20: Writing
+            courseContent.push({
+                ...baseRow,
+                activityNo: activityNo++,
+                activityType: 'writing',
+                activityTitle: `${lesson.title} Writing Practice`,
+                timeLimit: 30,
+                maxAttempts: 1,
+                passingScore: 75,
+                activityDifficulty: 'advanced',
+                points: 35,
+                instructions: `Write at expert level about ${lesson.title.toLowerCase()}`,
+                hints: 'Use executive vocabulary|Maintain sophisticated tone|Structure with precision',
+                prompt: `Write an expert-level professional paragraph (at least 150 words) about ${lesson.title.toLowerCase()}. Discuss the strategic importance of these sophisticated skills in executive communication and how they enable exceptional TOEIC performance.`,
+                minWords: 150,
+            });
+        });
+
+        const sessionSchedules = [];
+        const courseCode = courseMeta[0].code;
+
+        for (let session = 1; session <= 10; session++) {
+            const activities: string[] = [];
+            for (let activity = 1; activity <= 20; activity++) {
+                activities.push(`L${session}A${activity}`);
+            }
+            sessionSchedules.push({
+                courseCode: courseCode,
+                sessionNumber: session,
+                title: `Session ${session}: ${toeicLessons[session - 1].title}`,
+                description: `Complete all activities for ${toeicLessons[session - 1].title}`,
+                activityRefs: activities.join(','),
+            });
+        }
+
+        const metaSheet = XLSX.utils.json_to_sheet(courseMeta);
+        const contentSheet = XLSX.utils.json_to_sheet(courseContent);
+        const schedulesSheet = XLSX.utils.json_to_sheet(sessionSchedules);
+
+        XLSX.utils.sheet_add_aoa(
+            schedulesSheet,
+            [
+                [
+                    'NOTE: activityRefs format is "L<lessonNo>A<activityNo>" to reference activities in Course Content sheet.',
+                ],
+                [
+                    'Example: "L1A2,L1A3,L2A1" means Lesson 1 Activity 2, Lesson 1 Activity 3, and Lesson 2 Activity 1.',
+                ],
+                ['Multiple activities are separated by commas without spaces.'],
+            ],
+            { origin: { r: sessionSchedules.length + 2, c: 0 } },
+        );
+
+        XLSX.utils.book_append_sheet(workbook, metaSheet, 'Course Meta');
+        XLSX.utils.book_append_sheet(workbook, contentSheet, 'Course Content');
+        XLSX.utils.book_append_sheet(workbook, schedulesSheet, 'Session Schedules');
+
+        const buffer = XLSX.write(workbook, {
+            type: 'buffer',
+            bookType: 'xlsx',
+        });
+
+        return {
+            buffer,
+            filename: 'toeic-advanced-course-template.xlsx',
+            contentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        };
+    }
+
+    /**
      * Emit Neo4j sync event to Kafka
      */
     private emitNeo4jSyncEvent(

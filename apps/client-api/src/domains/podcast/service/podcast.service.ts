@@ -1,20 +1,21 @@
 import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
 } from '@nestjs/common';
 import {
-  CreatePodcastDto,
-  GetPodcastsQueryDto,
-  GetUserAttemptsQueryDto,
-  UpdatePodcastDto,
+    CreatePodcastDto,
+    GetPodcastsQueryDto,
+    GetUserAttemptsQueryDto,
+    UpdatePodcastDto,
+    UpdatePodcastGapDto,
 } from '../dto/podcast.dto';
 import {
-  CreateRatingDto,
-  GetRatingsQueryDto,
+    CreateRatingDto,
+    GetRatingsQueryDto,
 } from '../dto/user-interaction.dto';
 import { PodcastRepository } from '../repository/podcast.repository';
 
@@ -168,7 +169,129 @@ export class PodcastService {
       throw new ForbiddenException('You can only update your own podcasts');
     }
 
-    return this.podcastRepository.updatePodcast(id, updatePodcastDto);
+    // Process gaps if provided
+    if (updatePodcastDto.gaps !== undefined) {
+      await this.updateGaps(id, updatePodcastDto.gaps, podcast.transcript);
+    }
+
+    // Remove gaps from DTO before passing to repository (handled separately)
+    const { gaps, ...updateData } = updatePodcastDto;
+
+    return this.podcastRepository.updatePodcast(id, updateData);
+  }
+
+  private async updateGaps(
+    podcastId: string,
+    gaps: UpdatePodcastGapDto[],
+    transcript: string,
+  ): Promise<void> {
+    // Validate transcript exists
+    if (!transcript) {
+      throw new BadRequestException(
+        'Transcript is required to update gaps',
+      );
+    }
+
+    const transcriptLength = transcript.length;
+
+    // Validate all gaps before processing
+    for (const gap of gaps) {
+      if (gap.startIndex < 0 || gap.endIndex < 0) {
+        throw new BadRequestException(
+          `Gap indices must be non-negative: startIndex=${gap.startIndex}, endIndex=${gap.endIndex}`,
+        );
+      }
+
+      if (gap.startIndex >= gap.endIndex) {
+        throw new BadRequestException(
+          `startIndex must be less than endIndex: startIndex=${gap.startIndex}, endIndex=${gap.endIndex}`,
+        );
+      }
+
+      if (gap.endIndex > transcriptLength) {
+        throw new BadRequestException(
+          `Gap endIndex (${gap.endIndex}) exceeds transcript length (${transcriptLength})`,
+        );
+      }
+
+      if (!gap.answer || gap.answer.trim().length === 0) {
+        throw new BadRequestException('Gap answer cannot be empty');
+      }
+
+      // Validate answer matches transcript substring
+      const transcriptAnswer = transcript.substring(
+        gap.startIndex,
+        gap.endIndex,
+      );
+      if (transcriptAnswer.trim().toLowerCase() !== gap.answer.trim().toLowerCase()) {
+        throw new BadRequestException(
+          `Gap answer "${gap.answer}" does not match transcript at position ${gap.startIndex}-${gap.endIndex}: "${transcriptAnswer}"`,
+        );
+      }
+    }
+
+    // Fetch existing gaps
+    const existingGaps = await this.prisma.podcastGap.findMany({
+      where: { podcastId },
+    });
+
+    // Identify gaps to create, update, and delete
+    const gapsToCreate: UpdatePodcastGapDto[] = [];
+    const gapsToUpdate: UpdatePodcastGapDto[] = [];
+    const existingGapIds = new Set(existingGaps.map((g) => g.id));
+    const newGapIds = new Set(
+      gaps.filter((g) => g.id).map((g) => g.id as string),
+    );
+
+    for (const gap of gaps) {
+      if (gap.id && existingGapIds.has(gap.id)) {
+        gapsToUpdate.push(gap);
+      } else if (!gap.id) {
+        gapsToCreate.push(gap);
+      }
+    }
+
+    const gapsToDelete = existingGaps.filter(
+      (g) => !newGapIds.has(g.id),
+    );
+
+    // Execute in transaction
+    await this.prisma.$transaction(async (tx) => {
+      // Delete removed gaps
+      if (gapsToDelete.length > 0) {
+        await tx.podcastGap.deleteMany({
+          where: {
+            id: { in: gapsToDelete.map((g) => g.id) },
+          },
+        });
+      }
+
+      // Update existing gaps
+      for (const gap of gapsToUpdate) {
+        await tx.podcastGap.update({
+          where: { id: gap.id },
+          data: {
+            startIndex: gap.startIndex,
+            endIndex: gap.endIndex,
+            answer: gap.answer.trim(),
+            orderNo: gap.orderNo ?? 1,
+          },
+        });
+      }
+
+      // Create new gaps
+      if (gapsToCreate.length > 0) {
+        await tx.podcastGap.createMany({
+          data: gapsToCreate.map((gap) => ({
+            podcastId,
+            startIndex: gap.startIndex,
+            endIndex: gap.endIndex,
+            answer: gap.answer.trim(),
+            orderNo: gap.orderNo ?? gaps.length + 1,
+          })),
+        });
+      }
+    });
   }
 
   async remove(id: string, userId: string): Promise<void> {

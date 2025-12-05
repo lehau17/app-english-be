@@ -2,7 +2,7 @@ import { DatabaseModule } from '@app/database';
 import { AiModule, SharedModule, TtsService } from '@app/shared';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClassroomModule } from '../../client-api/src/domains/classroom/classroom.module';
@@ -19,17 +19,22 @@ import { PodcastGenerationService } from './podcast/podcast-generation.service';
 import { PodcastCron } from './podcast/podcast.cron';
 import { BackgroundWorkerUploadService } from './services/upload.service';
 import { TtsListener } from './tts/tts.listener';
+import { VocabularyModule } from './vocabulary/vocabulary.module';
 
+
+
+@Global()
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
     DatabaseModule,
+    ConfigModule.forRoot({ isGlobal: true }),
     SharedModule,
     AiModule,
     DashboardModule,
     ScheduleModule.forRoot(),
     LeaderboardWorkerModule,
     ClassroomModule,
+    VocabularyModule,
     MailerModule.forRootAsync({
       useFactory: () => ({
         transport: {

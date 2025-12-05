@@ -8,8 +8,9 @@ generator client {
 
 datasource db {
     provider = "postgresql"
-    url = env("DATABASE_URL")
+    url      = env("DATABASE_URL")
 }
+
 
 // ===================== ENUMS =====================
 
@@ -2788,6 +2789,8 @@ model Podcast {
     authorId String
 
     author User? @relation("PodcastAuthor", fields: [authorId], references: [id])
+
+    isPublic Boolean @default(true)
 
     playlistPodcasts PlaylistPodcast[]
 

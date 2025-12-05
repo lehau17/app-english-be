@@ -1,24 +1,24 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  PodcastCategory,
-  PodcastDifficulty,
-  PodcastSource,
-  PodcastStatus,
+    PodcastCategory,
+    PodcastDifficulty,
+    PodcastSource,
+    PodcastStatus,
 } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
-  IsArray,
-  IsBoolean,
-  IsEnum,
-  IsIn,
-  IsInt,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUrl,
-  Min,
-  ValidateNested,
+    IsArray,
+    IsBoolean,
+    IsEnum,
+    IsIn,
+    IsInt,
+    IsNumber,
+    IsOptional,
+    IsString,
+    IsUrl,
+    Min,
+    ValidateNested,
 } from 'class-validator';
 
 // Media type enum for podcast
@@ -70,11 +70,11 @@ export class GetPodcastsQueryDto extends RequestPagingDto {
 
   @ApiPropertyOptional({
     description: 'Filter by user tab',
-    enum: ['all', 'recommended', 'listening', 'completed'],
+    enum: ['all', 'recommended', 'listening', 'completed', 'my-podcasts'],
   })
   @IsOptional()
   @IsString()
-  tab?: 'all' | 'recommended' | 'listening' | 'completed';
+  tab?: 'all' | 'recommended' | 'listening' | 'completed' | 'my-podcasts';
 }
 
 export class CreatePodcastGapDto {
@@ -172,6 +172,30 @@ export class CreatePodcastDto {
   @ValidateNested({ each: true })
   @Type(() => CreatePodcastGapDto)
   gaps: CreatePodcastGapDto[];
+}
+
+export class UpdatePodcastGapDto {
+  @ApiPropertyOptional({ description: 'Gap ID (if present, update existing; if absent, create new)' })
+  @IsOptional()
+  @IsString()
+  id?: string;
+
+  @ApiProperty({ description: 'Vị trí ký tự bắt đầu trong transcript' })
+  @IsInt()
+  startIndex: number;
+
+  @ApiProperty({ description: 'Vị trí ký tự kết thúc trong transcript' })
+  @IsInt()
+  endIndex: number;
+
+  @ApiProperty({ description: 'Đáp án đúng' })
+  @IsString()
+  answer: string;
+
+  @ApiPropertyOptional({ description: 'Thứ tự câu hỏi' })
+  @IsOptional()
+  @IsInt()
+  orderNo?: number;
 }
 
 export class UpdatePodcastDto {
@@ -272,6 +296,11 @@ export class UpdatePodcastDto {
 
   @ApiPropertyOptional()
   @IsOptional()
+  @IsBoolean()
+  isPublic?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
   authorName?: string;
 
@@ -279,6 +308,16 @@ export class UpdatePodcastDto {
   @IsOptional()
   @IsEnum(PodcastStatus)
   status?: PodcastStatus;
+
+  @ApiPropertyOptional({
+    description: 'Gaps cho fill-in-the-blank (tùy chọn, để trống sẽ xóa tất cả gaps)',
+    type: [UpdatePodcastGapDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UpdatePodcastGapDto)
+  gaps?: UpdatePodcastGapDto[];
 }
 
 export class PodcastResponseDto {

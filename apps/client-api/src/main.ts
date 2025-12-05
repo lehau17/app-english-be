@@ -8,14 +8,21 @@ import { SocketIoAdapter } from '@app/shared/adapters/socket-io.adapter';
 import { GlobalInterceptor } from '@app/shared/interceptor/global-interceptor.interceptor';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as express from 'express';
 import 'reflect-metadata';
 import { ClientApiModule } from './client-api.module';
 import { SwaggerService } from './domains/swagger/swagger.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(ClientApiModule);
+  const app = await NestFactory.create(ClientApiModule, {
+    bodyParser: false, // Disable default body parser to configure custom limit
+  });
   const reflector = app.get(Reflector);
   const tokenRepository = app.get(TokenRepository);
+
+  // Configure body parser with 5MB limit for large course updates
+  app.use(express.json({ limit: '5mb' }));
+  app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
   // Global setup
   app.useGlobalPipes(new CustomValidationPipe());

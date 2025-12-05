@@ -1,0 +1,1281 @@
+@startuml
+hide circle
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+
+' ===================== USER & AUTH =====================
+package "User & Auth" {
+
+  class User {
+    id                : String
+    email             : String?
+    phone             : String?
+    passwordHash      : String?
+    role              : UserRole
+    status            : Status
+    provider          : AuthProvider
+    providerId        : String?
+    firstName         : String?
+    lastName          : String?
+    displayName       : String?
+    gender            : Gender?
+    dob               : DateTime?
+    nationality       : String?
+    nativeLanguage    : LanguageCode?
+    avatarUrl         : String?
+    bio               : String?
+    experience        : Int?
+    highlights        : String[]
+    language          : LanguageCode
+    timezone          : TimezoneCode?
+    lastLoginAt       : DateTime?
+    lastActiveAt      : DateTime?
+    emailVerified     : Boolean
+    phoneVerified     : Boolean
+    twoFactorEnabled  : Boolean
+    preferences       : Json?
+    privacySettings   : Json?
+    notificationSettings : Json?
+    parentalConsent   : Boolean?
+    profileCompleteness : Int
+    isOnline          : Boolean
+    createdAt         : DateTime
+    updatedAt         : DateTime
+  }
+
+  class Profile {
+    id              : String
+    userId          : String
+    displayName     : String?
+    avatarUrl       : String?
+    dob             : DateTime?
+    guardianId      : String?
+    currentLevel    : String?
+    learningGoals   : Json?
+    studyStreak     : Int
+    totalStudyTime  : Int
+    dailyGoalMinutes: Int?
+    reminderTimes   : Json?
+  }
+
+  class RefreshToken {
+    id         : String
+    userId     : String
+    deviceId   : String?
+    expiresAt  : DateTime
+    createdAt  : DateTime
+    revokedAt  : DateTime?
+    lastUsedAt : DateTime?
+  }
+
+  class LoginSession {
+    id          : String
+    userId      : String
+    deviceInfo  : Json?
+    ipAddress   : String?
+    location    : String?
+    userAgent   : String?
+    isActive    : Boolean
+    expiresAt   : DateTime
+    createdAt   : DateTime
+    lastActiveAt: DateTime
+  }
+
+  class SecurityLog {
+    id         : String
+    userId     : String
+    action     : String
+    ipAddress  : String?
+    userAgent  : String?
+    location   : String?
+    metadata   : Json?
+    createdAt  : DateTime
+  }
+
+  class PasswordResetToken {
+    id         : String
+    userId     : String
+    tokenHash  : String
+    expiresAt  : DateTime
+    usedAt     : DateTime?
+    createdAt  : DateTime
+  }
+
+  class DeviceToken {
+    id         : String
+    userId     : String
+    token      : String
+    platform   : DevicePlatform
+    deviceId   : String?
+    deviceName : String?
+    appVersion : String?
+    osVersion  : String?
+    lastSeenAt : DateTime?
+    isActive   : Boolean
+    createdAt  : DateTime
+  }
+
+  class Notification {
+    id           : String
+    userId       : String
+    type         : NotificationType
+    title        : String
+    body         : String?
+    data         : Json?
+    channel      : NotificationChannel
+    targetRole   : UserRole?
+    scheduledFor : DateTime?
+    readAt       : DateTime?
+    clickedAt    : DateTime?
+    delivered    : Boolean
+    priority     : String
+    actionUrl    : String?
+    imageUrl     : String?
+    createdAt    : DateTime
+    expiresAt    : DateTime?
+  }
+
+}
+
+' ===================== PARENT - CHILD & REWARD =====================
+package "Parent & Reward" {
+
+  class ParentChild {
+    parentId                 : String
+    childId                  : String
+    createdAt                : DateTime
+    canViewProgress          : Boolean
+    canSetGoals              : Boolean
+    canControlTime           : Boolean
+    dailyTimeLimit           : Int?
+    bedtimeStart             : String?
+    bedtimeEnd               : String?
+    allowedActivities        : String[]
+    blockedContent           : String[]
+    maxDifficulty            : DifficultyLevel?
+    notificationsEnabled     : Boolean
+    notificationTypes        : String[]
+    notificationSchedule     : String
+    quietHoursStart          : String?
+    quietHoursEnd            : String?
+    timezone                 : String
+    minProgressThreshold     : Int
+    streakNotificationDays   : Int
+    activityCompletionNotify : Boolean
+    goalReachedNotify        : Boolean
+  }
+
+  class ParentChildLinkRequest {
+    id           : String
+    parentId     : String
+    studentId    : String
+    status       : LinkRequestStatus
+    requestedAt  : DateTime
+    resolvedAt   : DateTime?
+    resolvedById : String?
+  }
+
+  class CustomReward {
+    id         : String
+    parentId   : String
+    childId    : String
+    title      : String
+    description: String?
+    type       : RewardType
+    cost       : Int
+    imageUrl   : String?
+    metadata   : Json?
+    isActive   : Boolean
+    createdAt  : DateTime
+  }
+
+  class RewardClaim {
+    id        : String
+    rewardId  : String
+    childId   : String
+    status    : String
+    claimedAt : DateTime
+  }
+
+}
+
+' ===================== SYSTEM / SETTINGS / ANALYTICS =====================
+package "System & Analytics" {
+
+  class FeatureFlag {
+    id          : String
+    name        : String
+    description : String?
+    isEnabled   : Boolean
+    userRoles   : UserRole[]
+    userIds     : String[]
+    percentage  : Int
+    variants    : Json?
+    createdAt   : DateTime
+    updatedAt   : DateTime
+  }
+
+  class SystemSetting {
+    key        : String
+    value      : Json
+    type       : String
+    description: String?
+    isPublic   : Boolean
+    updatedAt  : DateTime
+    updatedBy  : String?
+  }
+
+  class ErrorLog {
+    id           : String
+    userId       : String?
+    error        : String
+    stackTrace   : String?
+    context      : Json?
+    userAgent    : String?
+    url          : String?
+    severity     : String
+    resolved     : Boolean
+    resolvedAt   : DateTime?
+    createdAt    : DateTime
+  }
+
+  class Analytics {
+    id         : String
+    userId     : String?
+    event      : String
+    properties : Json?
+    sessionId  : String?
+    platform   : String?
+    appVersion : String?
+    osVersion  : String?
+    createdAt  : DateTime
+  }
+
+  class Feedback {
+    id          : String
+    userId      : String?
+    type        : String
+    subject     : String
+    description : String
+    rating      : Int?
+    appVersion  : String?
+    platform    : String?
+    deviceInfo  : Json?
+    status      : String
+    response    : String?
+    respondedAt : DateTime?
+    createdAt   : DateTime
+    updatedAt   : DateTime
+  }
+
+  class Dashboard {
+    id               : String
+    totalStudents    : Int
+    totalCourses     : Int
+    totalLessons     : Int
+    totalActivities  : Int
+    recentStudents   : Json
+    registrationTrend: Json
+    createdAt        : DateTime
+    updatedAt        : DateTime
+  }
+
+  class LeaderboardSnapshot {
+    id          : String
+    scope       : LeaderboardScope
+    classroomId : String?
+    year        : Int
+    month       : Int?
+    userId      : String
+    totalScore  : Int
+    rank        : Int?
+    payload     : Json?
+    calculatedAt: DateTime
+  }
+
+  class AIAnalysis {
+    id          : String
+    userId      : String
+    type        : String
+    inputData   : Json
+    analysis    : Json
+    score       : Float?
+    strengths   : String[]
+    weaknesses  : String[]
+    suggestions : String[]
+    createdAt   : DateTime
+  }
+
+  class LearningPath {
+    id            : String
+    userId        : String
+    name          : String
+    targetLevel   : DifficultyLevel
+    focusAreas    : String[]
+    timeframe     : Int?
+    courseIds     : String[]
+    customContent : Json?
+    currentStep   : Int
+    isCompleted   : Boolean
+    completedAt   : DateTime?
+    createdAt     : DateTime
+    updatedAt     : DateTime
+  }
+
+  class StudySession {
+    id              : String
+    userId          : String
+    startTime       : DateTime
+    endTime         : DateTime?
+    durationMinutes : Int?
+    activitiesCompleted : Int
+    xpEarned        : Int
+    averageScore    : Float?
+    streakMaintained: Boolean
+    devicePlatform  : DevicePlatform?
+    location        : String?
+  }
+
+  class Recommendation {
+    id         : String
+    userId     : String
+    type       : String
+    title      : String
+    description: String?
+    confidence : Float
+    reasoning  : String?
+    targetData : Json
+    viewed     : Boolean
+    clicked    : Boolean
+    dismissed  : Boolean
+    expiresAt  : DateTime
+    createdAt  : DateTime
+  }
+
+}
+
+' ===================== AGENT CHAT & VOCAB BOOK =====================
+package "Agent & VocabBook" {
+
+  class AgentConversation {
+    id            : String
+    userId        : String?
+    role          : String
+    guestSessionId: String?
+    title         : String?
+    metadata      : Json?
+    createdAt     : DateTime
+    updatedAt     : DateTime
+  }
+
+  class AgentMessage {
+    id             : String
+    conversationId : String
+    role           : String
+    content        : String
+    metadata       : Json?
+    createdAt      : DateTime
+  }
+
+  class SavedWord {
+    id        : String
+    word      : String
+    userId    : String
+    createdAt : DateTime
+  }
+
+}
+
+' ===================== COURSE / LESSON / ACTIVITY =====================
+package "Course & Activity" {
+
+  class Course {
+    id              : String
+    title           : String
+    description     : String?
+    orderNo         : Int?
+    difficulty      : DifficultyLevel
+    estimatedHours  : Float?
+    imageUrl        : String?
+    tags            : String[]
+    isPublished     : Boolean
+    prerequisites   : String[]
+    instructorId    : String
+    price           : Float?
+    currency        : String?
+    maxStudents     : Int?
+    language        : LanguageCode
+    plannedSessions : Int?
+    totalLessons    : Int?
+    totalDuration   : Int?
+    rating          : Float?
+    totalRatings    : Int
+    enrollmentCount : Int
+    createdAt       : DateTime
+    updatedAt       : DateTime
+  }
+
+  class Room {
+    id         : String
+    name       : String
+    code       : String
+    location   : String?
+    capacity   : Int
+    description: String?
+    equipment  : Json?
+    facilities : Json?
+    isActive   : Boolean
+    createdAt  : DateTime
+    updatedAt  : DateTime
+  }
+
+  class CourseRating {
+    id        : String
+    courseId  : String
+    userId    : String
+    rating    : Int
+    comment   : String?
+    createdAt : DateTime
+  }
+
+  class Lesson {
+    id            : String
+    courseId      : String
+    title         : String
+    description   : String?
+    orderNo       : Int
+    difficulty    : DifficultyLevel
+    estimatedTime : Int?
+    isLocked      : Boolean
+    objectives    : String[]
+    createdAt     : DateTime
+    updatedAt     : DateTime
+  }
+
+  class LessonDetail {
+    id       : String
+    lessonId : String
+    type     : String
+    content  : Json
+    orderNo  : Int
+  }
+
+  class Activity {
+    id           : String
+    lessonId     : String
+    type         : ActivityType
+    orderNo      : Int
+    title        : String
+    content      : Json
+    passingScore : Int?
+    difficulty   : DifficultyLevel
+    points       : Int
+    instructions : String?
+    hints        : String[]
+    mediaUrls    : String[]
+    createdAt    : DateTime
+    updatedAt    : DateTime
+  }
+
+  class Question {
+    id          : String
+    activityId  : String
+    type        : QuestionType
+    question    : String
+    options     : Json?
+    correctAnswer: String
+    explanation : String?
+    points      : Int
+    orderNo     : Int
+    mediaUrl    : String?
+  }
+
+  class Progress {
+    id              : String
+    userId          : String
+    activityId      : String
+    state           : ProgressState
+    score           : Int?
+    bestScore       : Int?
+    timeSpentSec    : Int
+    attemptsCount   : Int
+    lastQuestionIndex: Int?
+    strengths       : Json?
+    weaknesses      : Json?
+    createdAt       : DateTime
+    updatedAt       : DateTime
+  }
+
+  class Attempt {
+    id             : String
+    userId         : String
+    activityId     : String
+    score          : Int?
+    maxScore       : Int?
+    timeSpent      : Int?
+    detail         : Json?
+    feedback       : String?
+    correctAnswers : Int?
+    totalQuestions : Int?
+    averageTime    : Int?
+    createdAt      : DateTime
+    updatedAt      : DateTime
+  }
+
+  class SessionSchedule {
+    id           : String
+    courseId     : String
+    sessionNumber: Int
+    title        : String?
+    description  : String?
+    createdAt    : DateTime
+    updatedAt    : DateTime
+  }
+
+  class SessionActivity {
+    id                : String
+    sessionScheduleId : String
+    activityId        : String
+    orderNo           : Int
+  }
+
+}
+
+' ===================== CLASSROOM / COHORT / ASSIGNMENT =====================
+package "Classroom & Assignment" {
+
+  class Classroom {
+    id              : String
+    courseId        : String
+    teacherId       : String
+    name            : String
+    description     : String?
+    classCode       : String
+    isActive        : Boolean
+    maxStudents     : Int?
+    status          : ClassroomStatus
+    periodStart     : DateTime
+    periodEnd       : DateTime
+    timezone        : TimezoneCode
+    plannedHours    : Float?
+    plannedSessions : Int?
+    settings        : Json?
+    createdAt       : DateTime
+    updatedAt       : DateTime
+    expiresAt       : DateTime?
+  }
+
+  class ClassroomSlot {
+    id               : String
+    classroomId      : String
+    dayOfWeek        : Weekday
+    startMinuteOfDay : Int
+    endMinuteOfDay   : Int
+    isActive         : Boolean
+    createdAt        : DateTime
+    updatedAt        : DateTime
+  }
+
+  class ClassroomSession {
+    id            : String
+    classroomId   : String
+    instructorId  : String
+    title         : String
+    description   : String?
+    startTime     : DateTime
+    endTime       : DateTime
+    timezone      : TimezoneCode
+    durationHours : Float
+    type          : SessionType
+    status        : SessionStatus
+    meetingUrl    : String?
+    agenda        : Json?
+    materials     : Json?
+    notes         : String?
+    recordingUrl  : String?
+    metadata      : Json?
+    createdAt     : DateTime
+    updatedAt     : DateTime
+  }
+
+  class SessionAttendance {
+    id          : String
+    sessionId   : String
+    studentId   : String
+    status      : String
+    checkInTime : DateTime?
+    checkOutTime: DateTime?
+    notes       : String?
+    createdAt   : DateTime
+    updatedAt   : DateTime
+  }
+
+  class ClassroomStudent {
+    classroomId : String
+    studentId   : String
+    joinedAt    : DateTime
+    isActive    : Boolean
+    isPurchased : Boolean
+    notes       : String?
+    groupName   : String?
+  }
+
+  class Assignment {
+    id            : String
+    teacherId     : String
+    classroomId   : String
+    title         : String
+    description   : String?
+    instructions  : String?
+    startTime     : DateTime?
+    dueDate       : DateTime?
+    totalPoints   : Int
+    timeLimit     : Int?
+    maxAttempts   : Int
+    status        : AssignmentStatus
+    isPublished   : Boolean
+    assignedTo    : String[]
+    type          : AssignmentType
+    weight        : Float?
+    customContent : Json?
+    createdAt     : DateTime
+    updatedAt     : DateTime
+  }
+
+  class AssignmentActivity {
+    id           : String
+    assignmentId : String
+    type         : ActivityType
+    title        : String
+    instructions : String?
+    content      : Json
+    points       : Int
+    passingScore : Int?
+    difficulty   : DifficultyLevel?
+    hints        : String[]
+    createdAt    : DateTime
+    updatedAt    : DateTime
+  }
+
+  class AssignmentSubmission {
+    id            : String
+    assignmentId  : String
+    studentId     : String
+    submittedAt   : DateTime
+    score         : Int?
+    feedback      : String?
+    gradedAt      : DateTime?
+    gradedById    : String?
+    answers       : Json
+    timeSpent     : Int?
+    attemptCount  : Int
+    isLate        : Boolean
+    status        : String
+    createdAt     : DateTime
+    updatedAt     : DateTime
+  }
+
+  class Announcement {
+    id          : String
+    classroomId : String
+    title       : String
+    content     : String
+    priority    : String
+    targetAll   : Boolean
+    targetIds   : String[]
+    attachments : Json?
+    createdAt   : DateTime
+    updatedAt   : DateTime
+  }
+
+}
+
+' ===================== COMMUNICATION =====================
+package "Communication" {
+
+  class Conversation {
+    id                   : String
+    classroomId          : String
+    createdById          : String
+    scopeKey             : String
+    type                 : ConversationType
+    name                 : String?
+    lastMessageAt        : DateTime?
+    lastMessagePreview   : String?
+    lastMessageSenderId  : String?
+    metadata             : Json?
+    createdAt            : DateTime
+    updatedAt            : DateTime
+  }
+
+  class ConversationParticipant {
+    id             : String
+    conversationId : String
+    userId         : String
+    isPinned       : Boolean
+    isMuted        : Boolean
+    lastReadAt     : DateTime?
+    joinedAt       : DateTime
+  }
+
+  class Message {
+    id             : String
+    conversationId : String
+    senderId       : String
+    content        : String
+    type           : MessageType
+    metadata       : Json?
+    attachments    : Json?
+    isEdited       : Boolean
+    editedAt       : DateTime?
+    createdAt      : DateTime
+    updatedAt      : DateTime
+  }
+
+}
+
+' ===================== CONTENT / MEDIA =====================
+package "Content & Media" {
+
+  class Content {
+    id          : String
+    type        : String
+    title       : String
+    description : String?
+    data        : Json
+    mediaFiles  : Json?
+    metadata    : Json?
+    status      : ContentStatus
+    creatorId   : String
+    reviewerId  : String?
+    tags        : String[]
+    categories  : String[]
+    difficulty  : DifficultyLevel
+    language    : LanguageCode
+    usageCount  : Int
+    rating      : Float?
+    createdAt   : DateTime
+    updatedAt   : DateTime
+    publishedAt : DateTime?
+  }
+
+  class MediaFile {
+    id           : String
+    filename     : String
+    originalName : String
+    mimeType     : String
+    size         : Int
+    url          : String
+    thumbnail    : String?
+    isProcessed  : Boolean
+    duration     : Int?
+    usageCount   : Int
+    createdAt    : DateTime
+  }
+
+}
+
+' ===================== VOCABULARY (OLD + V2) =====================
+package "Vocabulary" {
+
+  class VocabularyOld {
+    id           : String
+    word         : String
+    definition   : String
+    pronunciation: String?
+    audioUrl     : String?
+    imageUrl     : String?
+    difficulty   : DifficultyLevel
+    frequency    : Int
+    category     : String?
+    tags         : String[]
+    examples     : Json?
+    language     : LanguageCode
+    createdAt    : DateTime
+    updatedAt    : DateTime
+  }
+
+  class UserVocabularyOld {
+    userId      : String
+    vocabularyId: String
+    status      : String
+    correctCount: Int
+    wrongCount  : Int
+    lastSeen    : DateTime
+    nextReview  : DateTime
+    easeFactor  : Float
+    interval    : Int
+    repetitions : Int
+    createdAt   : DateTime
+    updatedAt   : DateTime
+  }
+
+  class VocabularyList {
+    id          : String
+    title       : String
+    description : String?
+    difficulty  : DifficultyLevel
+    category    : String?
+    language    : LanguageCode
+    level       : String?
+    thumbnailUrl: String?
+    bannerUrl   : String?
+    isPublic    : Boolean
+    isOfficial  : Boolean
+    createdBy   : String?
+    totalTerms  : Int
+    totalUnits  : Int
+    userCount   : Int
+    orderIndex  : Int
+    createdAt   : DateTime
+    updatedAt   : DateTime
+  }
+
+  class VocabularyUnit {
+    id          : String
+    listId      : String
+    title       : String
+    description : String?
+    orderIndex  : Int
+    termCount   : Int
+    createdAt   : DateTime
+    updatedAt   : DateTime
+  }
+
+  class VocabularyTerm {
+    id            : String
+    unitId        : String
+    word          : String
+    definition    : String
+    pronunciation : String?
+    partOfSpeech  : String?
+    audioUrl      : String?
+    imageUrl      : String?
+    examples      : Json?
+    synonyms      : String[]
+    antonyms      : String[]
+    ipaUs         : String?
+    ipaUk         : String?
+    translationVi : String?
+    orderIndex    : Int
+    difficulty    : DifficultyLevel
+    createdAt     : DateTime
+    updatedAt     : DateTime
+  }
+
+  class UserVocabularyList {
+    userId          : String
+    listId          : String
+    completedTerms  : Int
+    totalTerms      : Int
+    lastStudiedAt   : DateTime?
+    addedAt         : DateTime
+  }
+
+  class UserVocabularyProgress {
+    userId       : String
+    termId       : String
+    easeFactor   : Float
+    interval     : Int
+    repetitions  : Int
+    correctCount : Int
+    wrongCount   : Int
+    status       : String
+    lastReviewAt : DateTime
+    nextReviewAt : DateTime
+    createdAt    : DateTime
+    updatedAt    : DateTime
+  }
+
+  class VocabularyReviewSession {
+    id          : String
+    userId      : String
+    listId      : String?
+    totalCards  : Int
+    correctCount: Int
+    wrongCount  : Int
+    duration    : Int?
+    mode        : String
+    createdAt   : DateTime
+  }
+
+}
+
+' ===================== AI SPEAKING =====================
+package "AI Speaking" {
+
+  class AiSpeakingSession {
+    id                : String
+    userId            : String
+    conversationId    : String
+    topic             : String?
+    goal              : String?
+    state             : AiSpeakingSessionState
+    maxTurns          : Int
+    turnCount         : Int
+    targetDifficulty  : DifficultyLevel
+    currentDifficulty : DifficultyLevel?
+    silenceWarnings   : Int
+    offTopicWarnings  : Int
+    config            : Json?
+    metadata          : Json?
+    analytics         : Json?
+    summary           : String?
+    summaryPayload    : Json?
+    startedAt         : DateTime
+    lastActivityAt    : DateTime
+    endedAt           : DateTime?
+    createdAt         : DateTime
+    updatedAt         : DateTime
+  }
+
+  class AiSpeakingTurn {
+    id                   : String
+    sessionId            : String
+    turnIndex            : Int
+    state                : AiSpeakingTurnStatus
+    aiPrompt             : String?
+    aiAudioUrl           : String?
+    userTranscript       : String?
+    userAudioUrl         : String?
+    userDurationSec      : Int?
+    metrics              : Json?
+    evaluation           : Json?
+    pronunciationFeedback: Json?
+    suggestions          : String[]
+    score                : Int?
+    relevanceScore       : Float?
+    silenceDetected      : Boolean
+    createdAt            : DateTime
+    updatedAt            : DateTime
+  }
+
+  class AiSpeakingTurnSegment {
+    id         : String
+    turnId     : String
+    role       : AiSpeakingTurnRole
+    orderNo    : Int
+    transcript : String?
+    audioUrl   : String?
+    durationSec: Int?
+    payload    : Json?
+    createdAt  : DateTime
+  }
+
+}
+
+' ===================== PODCAST & PLAYLIST =====================
+package "Podcast & Playlist" {
+
+  class Podcast {
+    id               : String
+    code             : String
+    title            : String
+    description      : String
+    audioUrl         : String?
+    videoUrl         : String?
+    mediaType        : String
+    thumbnailUrl     : String?
+    transcript       : String
+    averageRating    : Float?
+    difficultyRating : Float?
+    qualityRating    : Float?
+    totalRatings     : Int
+    category         : PodcastCategory
+    difficulty       : PodcastDifficulty
+    duration         : Int
+    viewCount        : Int
+    authorId         : String
+    createdAt        : DateTime
+    updatedAt        : DateTime
+  }
+
+  class PodcastGap {
+    id         : String
+    podcastId  : String
+    startIndex : Int
+    endIndex   : Int
+    answer     : String
+    orderNo    : Int
+  }
+
+  class PodcastAttempt {
+    id            : String
+    userId        : String
+    podcastId     : String
+    attemptNo     : Int
+    correctCount  : Int
+    totalQuestions: Int
+    scorePercent  : Float
+    timeSpent     : Int?
+    answers       : Json
+    status        : AttemptStatus
+    createdAt     : DateTime
+    updatedAt     : DateTime
+  }
+
+  class PodcastRating {
+    id               : String
+    userId           : String
+    podcastId        : String
+    overallRating    : Int
+    difficultyRating : Int
+    qualityRating    : Int
+    contentRating    : Int?
+    audioRating      : Int?
+    title            : String?
+    comment          : String?
+    pros             : String[]
+    cons             : String[]
+    isVerified       : Boolean
+    isModerated      : Boolean
+    helpfulCount     : Int
+    unhelpfulCount   : Int
+    createdAt        : DateTime
+    updatedAt        : DateTime
+  }
+
+  class PodcastComment {
+    id          : String
+    userId      : String
+    podcastId   : String
+    parentId    : String?
+    content     : String
+    isEdited    : Boolean
+    isReported  : Boolean
+    isModerated : Boolean
+    likeCount   : Int
+    replyCount  : Int
+    createdAt   : DateTime
+    updatedAt   : DateTime
+  }
+
+  class Playlist {
+    id           : String
+    userId       : String
+    name         : String
+    description  : String?
+    isPublic     : Boolean
+    isSystem     : Boolean
+    thumbnailUrl : String?
+    tags         : String[]
+    category     : String?
+    podcastCount : Int
+    totalDuration: Int
+    playCount    : Int
+    likeCount    : Int
+    createdAt    : DateTime
+    updatedAt    : DateTime
+  }
+
+  class PlaylistPodcast {
+    playlistId : String
+    podcastId  : String
+    orderNo    : Int
+    addedAt    : DateTime
+  }
+
+  class PodcastAnalytics {
+    id            : String
+    podcastId     : String
+    date          : DateTime
+    views         : Int
+    uniqueViews   : Int
+    completions   : Int
+    likes         : Int
+    saves         : Int
+    shares        : Int
+    comments      : Int
+    avgWatchTime  : Float?
+    bounceRate    : Float?
+    retentionRate : Float?
+    sourceData    : Json?
+    createdAt     : DateTime
+  }
+
+}
+
+' ===================== PAYMENT & CERTIFICATE =====================
+package "Payment & Certificate" {
+
+  class Transaction {
+    id                : String
+    amount            : Float
+    currency          : String
+    type              : TransactionType
+    provider          : PaymentProvider
+    status            : PaymentStatus
+    vnpayTransactionNo: String?
+    vnpayTxnRef       : String?
+    vnpayResponseCode : String?
+    vnpaySecureHash   : String?
+    studentId         : String?
+    courseId          : String?
+    classroomId       : String?
+    description       : String?
+    returnUrl         : String?
+    ipAddress         : String?
+    responseData      : Json?
+    createdAt         : DateTime
+    updatedAt         : DateTime
+    completedAt       : DateTime?
+  }
+
+  class CertificateTemplate {
+    id                : String
+    courseId          : String
+    title             : String
+    description       : String?
+    layout            : Json?
+    issuerName        : String
+    issuerTitle       : String?
+    issuerSignature   : String?
+    logoUrl           : String?
+    requirementType   : CertificateRequirementType
+    minScore          : Float?
+    minProgress       : Float
+    isActive          : Boolean
+    createdAt         : DateTime
+    updatedAt         : DateTime
+  }
+
+  class IssuedCertificate {
+    id                 : String
+    certificateNumber  : String
+    templateId         : String
+    studentId          : String
+    courseId           : String
+    classroomId        : String?
+    studentName        : String
+    studentEmail       : String
+    courseName         : String
+    courseDescription  : String?
+    completionDate     : DateTime
+    finalScore         : Float?
+    progress           : Float
+    totalHours         : Float?
+    issueDate          : DateTime
+    expiryDate         : DateTime?
+    verificationCode   : String
+    verifiedAt         : DateTime?
+    isRevoked          : Boolean
+    revokedAt          : DateTime?
+    revokedReason      : String?
+    metadata           : Json?
+    createdAt          : DateTime
+    updatedAt          : DateTime
+  }
+
+}
+
+' ===================== RELATIONSHIPS (User-centric + chính) =====================
+User "1" -- "0..1" Profile
+User "1" -- "0..*" RefreshToken
+User "1" -- "0..*" LoginSession
+User "1" -- "0..*" SecurityLog
+User "1" -- "0..*" PasswordResetToken
+User "1" -- "0..*" DeviceToken
+User "1" -- "0..*" Notification
+User "1" -- "0..*" ParentChild : parent
+User "1" -- "0..*" ParentChild : child
+User "1" -- "0..*" ParentChildLinkRequest : parent
+User "1" -- "0..*" ParentChildLinkRequest : student
+User "1" -- "0..*" ParentChildLinkRequest : resolvedBy
+User "1" -- "0..*" CustomReward : parent
+User "1" -- "0..*" RewardClaim : child
+User "1" -- "0..*" AIAnalysis
+User "1" -- "0..*" LearningPath
+User "1" -- "0..*" StudySession
+User "1" -- "0..*" Recommendation
+User "1" -- "0..*" AgentConversation
+AgentConversation "1" -- "0..*" AgentMessage
+User "1" -- "0..*" SavedWord
+User "1" -- "0..*" LeaderboardSnapshot
+User "1" -- "0..*" Analytics
+User "1" -- "0..*" Feedback
+User "1" -- "0..*" ErrorLog
+
+User "1" -- "0..*" Course : instructor
+Course "1" -- "0..*" Lesson
+Lesson "1" -- "0..*" LessonDetail
+Lesson "1" -- "0..*" Activity
+Activity "1" -- "0..*" Question
+User "1" -- "0..*" Progress
+User "1" -- "0..*" Attempt
+Activity "1" -- "0..*" Progress
+Activity "1" -- "0..*" Attempt
+Course "1" -- "0..*" CourseRating
+User "1" -- "0..*" CourseRating
+
+Course "1" -- "0..*" SessionSchedule
+SessionSchedule "1" -- "0..*" SessionActivity
+Activity "1" -- "0..*" SessionActivity
+
+Course "1" -- "0..*" Classroom
+User "1" -- "0..*" Classroom : teacher
+Classroom "1" -- "0..*" ClassroomSlot
+Classroom "1" -- "0..*" ClassroomSession
+ClassroomSession "1" -- "0..*" SessionAttendance
+User "1" -- "0..*" SessionAttendance : student
+Classroom "1" -- "0..*" ClassroomStudent
+User "1" -- "0..*" ClassroomStudent : student
+Classroom "1" -- "0..*" Announcement
+
+User "1" -- "0..*" Assignment : teacher
+Classroom "1" -- "0..*" Assignment
+Assignment "1" -- "0..*" AssignmentActivity
+Assignment "1" -- "0..*" AssignmentSubmission
+User "1" -- "0..*" AssignmentSubmission : student
+User "1" -- "0..*" AssignmentSubmission : gradedBy
+
+Classroom "1" -- "0..*" Conversation
+User "1" -- "0..*" Conversation : createdBy
+Conversation "1" -- "0..*" ConversationParticipant
+User "1" -- "0..*" ConversationParticipant
+Conversation "1" -- "0..*" Message
+User "1" -- "0..*" Message
+
+User "1" -- "0..*" Content : creator
+
+VocabularyOld "1" -- "0..*" UserVocabularyOld
+User "1" -- "0..*" UserVocabularyOld
+
+VocabularyList "1" -- "0..*" VocabularyUnit
+VocabularyUnit "1" -- "0..*" VocabularyTerm
+VocabularyList "1" -- "0..*" UserVocabularyList
+User "1" -- "0..*" UserVocabularyList
+VocabularyTerm "1" -- "0..*" UserVocabularyProgress
+User "1" -- "0..*" UserVocabularyProgress
+User "1" -- "0..*" VocabularyReviewSession
+
+User "1" -- "0..*" AiSpeakingSession
+AiSpeakingSession "1" -- "0..*" AiSpeakingTurn
+AiSpeakingTurn "1" -- "0..*" AiSpeakingTurnSegment
+
+User "1" -- "0..*" Podcast : author
+Podcast "1" -- "0..*" PodcastGap
+Podcast "1" -- "0..*" PodcastAttempt
+User "1" -- "0..*" PodcastAttempt
+Podcast "1" -- "0..*" PodcastRating
+User "1" -- "0..*" PodcastRating
+Podcast "1" -- "0..*" PodcastComment
+PodcastComment "1" -- "0..*" PodcastComment : replies
+User "1" -- "0..*" PodcastComment
+User "1" -- "0..*" Playlist
+Playlist "1" -- "0..*" PlaylistPodcast
+Podcast "1" -- "0..*" PlaylistPodcast
+Podcast "1" -- "0..*" PodcastAnalytics
+
+User "1" -- "0..*" Transaction : student
+Course "1" -- "0..*" Transaction
+Classroom "1" -- "0..*" Transaction
+
+Course "1" -- "0..1" CertificateTemplate
+CertificateTemplate "1" -- "0..*" IssuedCertificate
+User "1" -- "0..*" IssuedCertificate : student
+Course "1" -- "0..*" IssuedCertificate
+Classroom "1" -- "0..*" IssuedCertificate
+@enduml
+
+

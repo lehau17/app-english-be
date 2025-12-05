@@ -33,10 +33,11 @@ export class PodcastRepository {
 
     const skip = (page - 1) * limit;
 
-    const where: Prisma.PodcastWhereInput = {};
+    // Build base filter conditions
+    const baseConditions: Prisma.PodcastWhereInput = {};
 
     if (search) {
-      where.OR = [
+      baseConditions.OR = [
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
         { transcript: { contains: search, mode: 'insensitive' } },
@@ -44,49 +45,76 @@ export class PodcastRepository {
       ];
     }
 
-    if (category) where.category = category;
-    if (source) where.source = source;
-    if (difficulty) where.difficulty = difficulty;
-    if (recommended !== undefined) (where as any).isRecommended = recommended;
-    if (premium !== undefined) (where as any).isPremium = premium;
+    if (category) baseConditions.category = category;
+    // if (source) baseConditions.source = source;
+    if (difficulty) baseConditions.difficulty = difficulty;
+    if (recommended !== undefined) (baseConditions as any).isRecommended = recommended;
+    if (premium !== undefined) (baseConditions as any).isPremium = premium;
 
     if (duration) {
       switch (duration) {
         case 'short':
-          where.duration = { lt: 600 };
+          baseConditions.duration = { lt: 600 };
           break;
         case 'medium':
-          where.duration = { gte: 600, lte: 1200 };
+          baseConditions.duration = { gte: 600, lte: 1200 };
           break;
         case 'long':
-          where.duration = { gt: 1200 };
+          baseConditions.duration = { gt: 1200 };
           break;
       }
     }
 
+    // Handle visibility filter: show public podcasts OR user's own podcasts
+    const visibilityFilter: Prisma.PodcastWhereInput = {
+      OR: [
+        { isPublic: true },
+        { authorId: userId },
+      ],
+    };
+
+    // Initialize where clause
+    const where: Prisma.PodcastWhereInput = {};
+
+    // Apply tab-specific filters and combine with base conditions and visibility
     if (tab && userId) {
       switch (tab) {
+        case 'my-podcasts':
+          // Show only user's podcasts (no visibility filter needed)
+          baseConditions.authorId = userId;
+          Object.assign(where, baseConditions);
+          break;
         case 'listening':
-          where.userProgress = {
+          baseConditions.attempts = {
             some: {
               userId,
-              isCompleted: false,
-              completionRate: { gt: 0 },
+              status: 'in_progress',
             },
           };
+          where.AND = [baseConditions, visibilityFilter];
           break;
         case 'completed':
-          where.userProgress = {
+          baseConditions.attempts = {
             some: {
               userId,
-              isCompleted: true,
+              status: 'completed',
+
             },
           };
+          where.AND = [baseConditions, visibilityFilter];
           break;
         case 'recommended':
-          (where as any).isRecommended = true;
+          (baseConditions as any).isRecommended = true;
+          where.AND = [baseConditions, visibilityFilter];
+          break;
+        default:
+          // For 'all' or unknown tabs, apply visibility filter
+          where.AND = [baseConditions, visibilityFilter];
           break;
       }
+    } else {
+      // No tab specified, apply visibility filter
+      where.AND = [baseConditions, visibilityFilter];
     }
 
     let orderBy: Prisma.PodcastOrderByWithRelationInput;
@@ -137,7 +165,9 @@ export class PodcastRepository {
     return this.prisma.podcast.findUnique({
       where: { id },
       include: {
-        gaps: true,
+        gaps: {
+          orderBy: { orderNo: 'asc' },
+        },
         author: {
           select: {
             id: true,
