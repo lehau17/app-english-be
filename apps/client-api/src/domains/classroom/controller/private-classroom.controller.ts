@@ -1,51 +1,51 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-  BadRequestException,
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Put,
-  Query,
-  Res,
-  UploadedFile,
-  UseInterceptors,
+    BadRequestException,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    ParseUUIDPipe,
+    Patch,
+    Post,
+    Put,
+    Query,
+    Res,
+    UploadedFile,
+    UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
-  ApiOperation,
-  ApiTags,
+    ApiBearerAuth,
+    ApiBody,
+    ApiConsumes,
+    ApiOperation,
+    ApiTags,
 } from '@nestjs/swagger';
 import { Classroom } from '@prisma/client';
 import { Response } from 'express';
 import {
-  CreateAssignmentDto,
-  QueryAssignmentsDto,
-  UpdateAssignmentDto,
+    CreateAssignmentDto,
+    QueryAssignmentsDto,
+    UpdateAssignmentDto,
 } from '../../assignment/dto';
 import { AssignmentService } from '../../assignment/service/assignment.service';
 import {
-  AddStudentToClassroomDto,
-  AssignTeacherToClassroomDto,
-  ClassroomAnnouncementQueryDto,
-  CreateClassroomAnnouncementDto,
-  CreateClassroomDto,
-  FilterClassroomRequestDto,
-  ImportStudentsResultDto,
-  StudentDailyScheduleQueryDto,
-  StudentWeeklyScheduleQueryDto,
-  SystemScheduleQueryDto,
-  TransferStudentDto,
-  UpdateClassroomDto,
-  UpdateClassroomStatusDto,
+    AddStudentToClassroomDto,
+    AssignTeacherToClassroomDto,
+    ClassroomAnnouncementQueryDto,
+    CreateClassroomAnnouncementDto,
+    CreateClassroomDto,
+    FilterClassroomRequestDto,
+    ImportStudentsResultDto,
+    StudentDailyScheduleQueryDto,
+    StudentWeeklyScheduleQueryDto,
+    SystemScheduleQueryDto,
+    TransferStudentDto,
+    UpdateClassroomDto,
+    UpdateClassroomStatusDto,
 } from '../dto/classroom.dto';
 import { ClassroomService } from '../service/classroom.service';
 
@@ -120,30 +120,6 @@ export class PrivateClassroomController {
   @ResponseMessage('System schedule fetched successfully')
   getSystemSchedule(@Query() query: SystemScheduleQueryDto) {
     return this.classroomService.getSystemSchedule(query);
-  }
-
-  @Get(':id')
-  @ApiOperation({ summary: 'Get classroom by id' })
-  @ResponseMessage('Classroom fetched successfully')
-  findById(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.classroomService.findById(id);
-  }
-
-  @Put(':id')
-  @ApiOperation({ summary: 'Update classroom by id' })
-  @ResponseMessage('Classroom updated successfully')
-  update(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() dto: UpdateClassroomDto,
-  ) {
-    return this.classroomService.update(id, dto);
-  }
-
-  @Delete(':id')
-  @ApiOperation({ summary: 'Delete classroom by id' })
-  @ResponseMessage('Classroom deleted successfully')
-  delete(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.classroomService.delete(id);
   }
 
   @Get()
@@ -245,6 +221,7 @@ export class PrivateClassroomController {
     return this.classroomService.assignTeacherToClassroom(classroomId, dto);
   }
 
+  // Specific routes must come before generic :id route to avoid route conflicts
   @Get(':id/detail')
   @ApiOperation({
     summary:
@@ -260,6 +237,31 @@ export class PrivateClassroomController {
       payload.sub,
       payload.role,
     );
+  }
+
+  // Generic :id route must come after all specific routes
+  @Get(':id')
+  @ApiOperation({ summary: 'Get classroom by id' })
+  @ResponseMessage('Classroom fetched successfully')
+  findById(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.classroomService.findById(id);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Update classroom by id' })
+  @ResponseMessage('Classroom updated successfully')
+  update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdateClassroomDto,
+  ) {
+    return this.classroomService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete classroom by id' })
+  @ResponseMessage('Classroom deleted successfully')
+  delete(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.classroomService.delete(id);
   }
 
   @Get(':id/sessions')

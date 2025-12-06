@@ -1,5 +1,5 @@
 import { PrismaRepository } from '@app/database';
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, SessionAttendance } from '@prisma/client';
 
 /**
@@ -223,8 +223,8 @@ export class AttendanceRepository {
    * Get attendance summary for a session
    */
   async getSessionSummary(sessionId: string): Promise<SessionAttendanceSummary> {
-    // Get session with students
-    const session = await this.prisma.classroomSession.findUnique({
+    // First try to find by ClassroomSession.id
+    let session = await this.prisma.classroomSession.findUnique({
       where: { id: sessionId },
       include: {
         classroom: {
@@ -238,8 +238,62 @@ export class AttendanceRepository {
       },
     });
 
+    // If not found, try to find by metadata.courseSessionScheduleId
+    // (in case frontend passes SessionSchedule.id instead of ClassroomSession.id)
     if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
+      this.logger.warn(
+        `ClassroomSession not found by id: ${sessionId}. Trying to find by metadata.courseSessionScheduleId`,
+      );
+
+      // Try to find SessionSchedule first to get courseId
+      const sessionSchedule = await this.prisma.sessionSchedule.findUnique({
+        where: { id: sessionId },
+        select: { courseId: true, sessionNumber: true },
+      });
+
+      if (sessionSchedule) {
+        // Find classroom with this courseId
+        const classroom = await this.prisma.classroom.findFirst({
+          where: { courseId: sessionSchedule.courseId },
+          select: { id: true },
+        });
+
+        if (classroom) {
+          // Find ClassroomSession by classroomId and metadata
+          const sessions = await this.prisma.classroomSession.findMany({
+            where: { classroomId: classroom.id },
+            include: {
+              classroom: {
+                include: {
+                  students: {
+                    where: { isActive: true },
+                    select: { studentId: true },
+                  },
+                },
+              },
+            },
+          });
+
+          // Filter by metadata.courseSessionScheduleId
+          session = sessions.find((s) => {
+            if (s.metadata && typeof s.metadata === 'object') {
+              const metadata = s.metadata as any;
+              return metadata.courseSessionScheduleId === sessionId;
+            }
+            return false;
+          }) || null;
+        }
+      }
+    }
+
+    if (!session) {
+      this.logger.error(
+        `ClassroomSession not found for sessionId: ${sessionId}. This might be a SessionSchedule ID.`,
+      );
+      throw new NotFoundException(
+        `ClassroomSession not found for sessionId: ${sessionId}. ` +
+        `If this is a SessionSchedule ID, please ensure the corresponding ClassroomSession exists.`,
+      );
     }
 
     const totalStudents = session.classroom.students.length;
