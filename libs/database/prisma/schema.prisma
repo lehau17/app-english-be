@@ -60,6 +60,12 @@ enum SessionStatus {
     postponed
 }
 
+enum MakeupRequestStatus {
+    pending
+    approved
+    rejected
+}
+
 enum SessionType {
     online
 
@@ -557,6 +563,10 @@ model User {
     classroomsSessions ClassroomSession[]
 
     sessionAttendance SessionAttendance[]
+
+    // Makeup attendance requests
+    studentMakeupRequests  MakeupAttendanceRequest[] @relation("StudentMakeupRequests")
+    reviewedMakeupRequests MakeupAttendanceRequest[] @relation("ReviewedMakeupRequests")
 
     classroomsStudying ClassroomStudent[]
 
@@ -1308,6 +1318,8 @@ model ClassroomSession {
 
     attendance SessionAttendance[]
 
+    makeupRequests MakeupAttendanceRequest[]
+
     @@index([classroomId])
     @@index([instructorId])
     @@index([startTime])
@@ -1342,6 +1354,33 @@ model SessionAttendance {
     @@index([studentId])
     @@index([status])
 }
+
+model MakeupAttendanceRequest {
+    id           String              @id @default(uuid())
+    sessionId    String
+    studentId    String
+    reason       String              // Lý do xin điểm danh bù
+    evidenceUrls String[]            // URLs của minh chứng (ảnh, file...)
+    status       MakeupRequestStatus @default(pending)
+
+    // Review info
+    reviewedById String?
+    reviewedAt   DateTime?
+    reviewNote   String?             // Ghi chú của reviewer
+
+    createdAt    DateTime            @default(now())
+    updatedAt    DateTime            @updatedAt
+
+    session      ClassroomSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+    student      User                @relation("StudentMakeupRequests", fields: [studentId], references: [id], onDelete: Cascade)
+    reviewedBy   User?               @relation("ReviewedMakeupRequests", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+    @@unique([sessionId, studentId])
+    @@index([sessionId])
+    @@index([studentId])
+    @@index([status])
+}
+
 
 model ClassroomStudent {
     classroomId String

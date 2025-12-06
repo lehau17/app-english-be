@@ -7,13 +7,19 @@ import { LessonRepository } from '../lesson/repository';
 import { PaymentModule } from '../payment/payment.module';
 import { PrivateClassroomController } from './controller';
 import {
-    AttendanceController,
-    ClassroomAttendanceController,
+  AttendanceController,
+  ClassroomAttendanceController,
 } from './controller/attendance.controller';
+import {
+  MakeupRequestStudentController,
+  MakeupRequestAdminController,
+} from './controller/makeup-request.controller';
 import { ClassroomRepository } from './repository';
 import { AttendanceRepository } from './repository/attendance.repository';
+import { MakeupRequestRepository } from './repository/makeup-request.repository';
 import { ClassroomService } from './service';
 import { AttendanceService } from './services/attendance.service';
+import { MakeupRequestService } from './services/makeup-request.service';
 import { AutoExamCreationService } from './services/auto-exam-creation.service';
 
 @Module({
@@ -22,6 +28,9 @@ import { AutoExamCreationService } from './services/auto-exam-creation.service';
     PrivateClassroomController,
     AttendanceController,
     ClassroomAttendanceController,
+    // Makeup Request
+    MakeupRequestStudentController,
+    MakeupRequestAdminController,
   ],
   providers: [
     ClassroomService,
@@ -33,7 +42,11 @@ import { AutoExamCreationService } from './services/auto-exam-creation.service';
     AttendanceService,
     AttendanceRepository,
     RedisCacheService,
+    // Makeup Request
+    MakeupRequestService,
+    MakeupRequestRepository,
   ],
-  exports: [ClassroomService, ClassroomRepository, AttendanceService],
+  exports: [ClassroomService, ClassroomRepository, AttendanceService, MakeupRequestService],
 })
-export class ClassroomModule {}
+export class ClassroomModule { }
+
