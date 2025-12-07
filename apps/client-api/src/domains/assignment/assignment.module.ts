@@ -5,9 +5,10 @@ import { AssignmentRepository } from './repository';
 import { AssignmentService } from './service';
 import { AssignmentImportService } from './services/assignment-import.service';
 import { AssignmentPdfService } from './services/assignment-pdf.service';
+import { EvaluationModule } from '../evaluation/evaluation.module';
 
 @Module({
-  imports: [SharedModule],
+  imports: [SharedModule, EvaluationModule],
   controllers: [PrivateAssignmentController],
   providers: [
     AssignmentService,
@@ -22,4 +23,4 @@ import { AssignmentPdfService } from './services/assignment-pdf.service';
     AssignmentPdfService,
   ],
 })
-export class AssignmentModule {}
+export class AssignmentModule { }

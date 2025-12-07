@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { AssignmentStatus, AssignmentType } from '@prisma/client';
@@ -22,12 +23,17 @@ import {
   AssignmentSubmissionWithStudent,
   AssignmentWithDetails,
 } from '../repository';
+import { EvaluationService } from '../../evaluation/service/evaluation.service';
+import axios from 'axios';
 
 @Injectable()
 export class AssignmentService {
+  private readonly logger = new Logger(AssignmentService.name);
+
   constructor(
     private readonly assignmentRepository: AssignmentRepository,
     private readonly geminiService: GeminiService,
+    private readonly evaluationService: EvaluationService,
   ) { }
 
   async createAssignment(
@@ -483,17 +489,27 @@ export class AssignmentService {
 
         switch (activity.type) {
           case 'quiz':
-            // Quiz: single question with options
-            if (content?.options && typeof content.correctIndex === 'number') {
+            // Handle both single question and multiple questions formats
+            if (content?.questions && Array.isArray(content.questions)) {
+              // Multiple questions format (AI-generated)
+              let correctCount = 0;
+              content.questions.forEach((q: any, qIndex: number) => {
+                const userAnswer = activityAnswers?.[qIndex];
+                if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+                  correctCount++;
+                  console.log(`Quiz Q${qIndex} correct: user=${userAnswer}, correct=${q.correctIndex}`);
+                } else {
+                  console.log(`Quiz Q${qIndex} incorrect: user=${userAnswer}, correct=${q.correctIndex}`);
+                }
+              });
+              activityScore = Math.round((correctCount / content.questions.length) * activityPoints);
+            } else if (content?.options && typeof content.correctIndex === 'number') {
+              // Single question format (legacy)
               if (activityAnswers === content.correctIndex) {
                 activityScore = activityPoints;
-                console.log(
-                  `Quiz correct: user=${activityAnswers}, correct=${content.correctIndex}`,
-                );
+                console.log(`Quiz correct: user=${activityAnswers}, correct=${content.correctIndex}`);
               } else {
-                console.log(
-                  `Quiz incorrect: user=${activityAnswers}, correct=${content.correctIndex}`,
-                );
+                console.log(`Quiz incorrect: user=${activityAnswers}, correct=${content.correctIndex}`);
               }
             }
             break;
@@ -583,17 +599,37 @@ export class AssignmentService {
             break;
 
           case 'grammar':
-            // Grammar: single question with options
-            if (content?.options && typeof content.correctIndex === 'number') {
+            // Handle both single question and multiple questions formats
+            if (content?.questions && Array.isArray(content.questions)) {
+              // Multiple questions format (AI-generated)
+              let correctCount = 0;
+              content.questions.forEach((q: any, qIndex: number) => {
+                const userAnswer = activityAnswers?.[qIndex];
+                if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+                  correctCount++;
+                  console.log(`Grammar Q${qIndex} correct: user=${userAnswer}, correct=${q.correctIndex}`);
+                } else {
+                  console.log(`Grammar Q${qIndex} incorrect: user=${userAnswer}, correct=${q.correctIndex}`);
+                }
+              });
+              activityScore = Math.round((correctCount / content.questions.length) * activityPoints);
+            } else if (content?.exercises && Array.isArray(content.exercises)) {
+              // Exercises format with rule
+              let correctCount = 0;
+              content.exercises.forEach((ex: any, exIndex: number) => {
+                const userAnswer = activityAnswers?.[exIndex];
+                if (typeof userAnswer === 'number' && userAnswer === ex.correctIndex) {
+                  correctCount++;
+                }
+              });
+              activityScore = Math.round((correctCount / content.exercises.length) * activityPoints);
+            } else if (content?.options && typeof content.correctIndex === 'number') {
+              // Single question format (legacy)
               if (activityAnswers === content.correctIndex) {
                 activityScore = activityPoints;
-                console.log(
-                  `Grammar correct: user=${activityAnswers}, correct=${content.correctIndex}`,
-                );
+                console.log(`Grammar correct: user=${activityAnswers}, correct=${content.correctIndex}`);
               } else {
-                console.log(
-                  `Grammar incorrect: user=${activityAnswers}, correct=${content.correctIndex}`,
-                );
+                console.log(`Grammar incorrect: user=${activityAnswers}, correct=${content.correctIndex}`);
               }
             }
             break;
@@ -680,17 +716,94 @@ export class AssignmentService {
             }
             break;
 
-          default:
-            // For other activity types (writing, speaking, etc.), award full points if attempted
-            if (
-              activityAnswers !== null &&
-              activityAnswers !== undefined &&
-              activityAnswers !== ''
-            ) {
+          case 'speaking':
+            // Frontend submits: { audioUrl: string }
+            if (activityAnswers?.audioUrl) {
+              try {
+                const audioBase64 = await this.downloadAudioAsBase64(activityAnswers.audioUrl);
+                const result = await this.evaluationService.evaluateSpeaking('system', {
+                  audioBase64,
+                  mimeType: 'audio/webm',
+                  prompt: content?.prompt,
+                  minSeconds: content?.minSeconds,
+                });
+                activityScore = Math.round((result.score / 100) * activityPoints);
+                console.log(`Speaking: AI score ${result.score}/100 → ${activityScore}/${activityPoints}`);
+              } catch (error) {
+                console.error('Speaking evaluation failed:', error);
+                activityScore = Math.round(activityPoints * 0.5);
+              }
+            }
+            break;
+
+          case 'writing':
+            // Frontend submits: { text: string } or string directly
+            const writingText = activityAnswers?.text || (typeof activityAnswers === 'string' ? activityAnswers : null);
+            if (writingText && writingText.trim().length > 0) {
+              try {
+                const result = await this.evaluationService.evaluateWriting('system', {
+                  submission: writingText,
+                  prompt: content?.prompt,
+                  minWords: content?.minWords,
+                });
+                activityScore = Math.round((result.score / 100) * activityPoints);
+                console.log(`Writing: AI score ${result.score}/100 → ${activityScore}/${activityPoints}`);
+              } catch (error) {
+                console.error('Writing evaluation failed:', error);
+                activityScore = Math.round(activityPoints * 0.5);
+              }
+            }
+            break;
+
+          case 'pronunciation':
+            // Frontend submits: { audioUrl: string }
+            if (activityAnswers?.audioUrl) {
+              try {
+                const audioBase64 = await this.downloadAudioAsBase64(activityAnswers.audioUrl);
+                const phrases = content?.phrases || [];
+                const targetPhrase = phrases[0]?.text || content?.phrase || '';
+
+                const result = await this.evaluationService.evaluatePronunciation('system', {
+                  audioBase64,
+                  mimeType: 'audio/webm',
+                  phrase: targetPhrase,
+                });
+                activityScore = Math.round((result.score / 100) * activityPoints);
+                console.log(`Pronunciation: AI score ${result.score}/100 → ${activityScore}/${activityPoints}`);
+              } catch (error) {
+                console.error('Pronunciation evaluation failed:', error);
+                activityScore = Math.round(activityPoints * 0.5);
+              }
+            }
+            break;
+
+          case 'dictation':
+            // Frontend submits: string (typed text by user)
+            if (activityAnswers && content?.transcript) {
+              const userText = String(activityAnswers).toLowerCase().trim();
+              const correctText = content.transcript.toLowerCase().trim();
+              const similarity = this.calculateTextSimilarity(userText, correctText);
+              activityScore = Math.round(similarity * activityPoints);
+              console.log(`Dictation: ${(similarity * 100).toFixed(1)}% match → ${activityScore}/${activityPoints}`);
+            }
+            break;
+
+          case 'vocab':
+          case 'flashcard':
+          case 'conversation':
+          case 'mini_game':
+            // Completion-based: full points if attempted
+            if (activityAnswers !== null && activityAnswers !== undefined && activityAnswers !== '') {
               activityScore = activityPoints;
-              console.log(
-                `Activity ${activity.type} attempted, awarded full points`,
-              );
+              console.log(`${activity.type}: completed → ${activityScore}/${activityPoints}`);
+            }
+            break;
+
+          default:
+            // Unknown activity type - award points if attempted
+            if (activityAnswers !== null && activityAnswers !== undefined && activityAnswers !== '') {
+              activityScore = activityPoints;
+              console.log(`Activity ${activity.type} attempted, awarded full points`);
             }
             break;
         }
@@ -873,5 +986,39 @@ export class AssignmentService {
     );
 
     return gradedSubmission;
+  }
+
+  /**
+   * Download audio from URL and convert to base64
+   */
+  private async downloadAudioAsBase64(url: string): Promise<string> {
+    try {
+      const response = await axios.get(url, {
+        responseType: 'arraybuffer',
+        timeout: 30000,
+      });
+      return Buffer.from(response.data).toString('base64');
+    } catch (error) {
+      this.logger.error(`Failed to download audio from ${url}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Calculate text similarity for dictation scoring
+   */
+  private calculateTextSimilarity(a: string, b: string): number {
+    const wordsA = a.toLowerCase().trim().split(/\s+/).filter((w) => w);
+    const wordsB = b.toLowerCase().trim().split(/\s+/).filter((w) => w);
+    if (wordsB.length === 0) return wordsA.length === 0 ? 1 : 0;
+
+    let matches = 0;
+    const maxLen = Math.max(wordsA.length, wordsB.length);
+
+    wordsA.forEach((word, i) => {
+      if (i < wordsB.length && wordsB[i] === word) matches++;
+    });
+
+    return maxLen > 0 ? matches / maxLen : 0;
   }
 }
