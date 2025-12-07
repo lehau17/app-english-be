@@ -6,9 +6,10 @@ import { AssignmentService } from './service';
 import { AssignmentImportService } from './services/assignment-import.service';
 import { AssignmentPdfService } from './services/assignment-pdf.service';
 import { EvaluationModule } from '../evaluation/evaluation.module';
+import { EventsModule } from '../../events/events.module';
 
 @Module({
-  imports: [SharedModule, EvaluationModule],
+  imports: [SharedModule, EvaluationModule, EventsModule],
   controllers: [PrivateAssignmentController],
   providers: [
     AssignmentService,

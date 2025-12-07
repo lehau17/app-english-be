@@ -24,6 +24,7 @@ import {
   AssignmentWithDetails,
 } from '../repository';
 import { EvaluationService } from '../../evaluation/service/evaluation.service';
+import { EventsGateway } from '../../../events/events.gateway';
 import axios from 'axios';
 
 @Injectable()
@@ -34,6 +35,7 @@ export class AssignmentService {
     private readonly assignmentRepository: AssignmentRepository,
     private readonly geminiService: GeminiService,
     private readonly evaluationService: EvaluationService,
+    private readonly eventsGateway: EventsGateway,
   ) { }
 
   async createAssignment(
@@ -1020,5 +1022,402 @@ export class AssignmentService {
     });
 
     return maxLen > 0 ? matches / maxLen : 0;
+  }
+
+  // ==================== STREAMING GRADING ====================
+
+  /**
+   * Submit assignment with streaming grading via WebSocket
+   * Returns immediately after saving, grades in background
+   */
+  async submitAssignmentStreaming(
+    assignmentId: string,
+    studentId: string,
+    dto: SubmitAssignmentDto,
+  ): Promise<{ id: string; status: string; message: string }> {
+    const assignment = await this.getAssignmentById(assignmentId);
+
+    // Validation (same as submitAssignment)
+    if (!assignment.isPublished) {
+      throw new BadRequestException('Assignment is not published yet');
+    }
+
+    if (assignment.dueDate && new Date() > assignment.dueDate) {
+      throw new BadRequestException('Assignment deadline has passed');
+    }
+
+    if (
+      assignment.assignedTo.length > 0 &&
+      !assignment.assignedTo.includes(studentId)
+    ) {
+      throw new ForbiddenException('You are not assigned to this assignment');
+    }
+
+    // Check existing submissions and attempt limits
+    const existingSubmission =
+      await this.assignmentRepository.findSubmissionByAssignmentAndStudent(
+        assignmentId,
+        studentId,
+      );
+
+    let attemptCount = 1;
+    if (existingSubmission) {
+      attemptCount = existingSubmission.attemptCount + 1;
+
+      if (attemptCount > assignment.maxAttempts) {
+        throw new BadRequestException(
+          `Maximum attempts (${assignment.maxAttempts}) exceeded`,
+        );
+      }
+    }
+
+    // Save submission
+    const submission = await this.assignmentRepository.submitAssignment({
+      assignmentId,
+      studentId,
+      answers: dto.answers,
+      timeSpent: dto.timeSpent,
+      attemptCount,
+    });
+
+    // Spawn background grading (non-blocking)
+    setImmediate(() => {
+      this.gradeWithWebSocket(
+        submission.id,
+        studentId,
+        assignment,
+        dto.answers,
+      ).catch((err) => {
+        this.logger.error(`Background grading failed for ${submission.id}:`, err);
+        this.eventsGateway.emitToUser(studentId, 'grading:error', {
+          submissionId: submission.id,
+          error: 'Có lỗi khi chấm bài. Vui lòng tải lại trang để xem kết quả.',
+        });
+      });
+    });
+
+    // Return immediately
+    return {
+      id: submission.id,
+      status: 'GRADING',
+      message: 'Bài đã được nộp. Đang chấm điểm...',
+    };
+  }
+
+  /**
+   * Grade assignment in background and emit WebSocket events
+   */
+  private async gradeWithWebSocket(
+    submissionId: string,
+    studentId: string,
+    assignment: AssignmentWithDetails,
+    answers: Record<string, any>,
+  ): Promise<void> {
+    const activities = assignment.assignmentActivities;
+
+    this.logger.log(
+      `Starting streaming grading for submission ${submissionId} with ${activities.length} activities`,
+    );
+
+    // Emit start event
+    this.eventsGateway.emitToUser(studentId, 'grading:start', {
+      submissionId,
+      totalActivities: activities.length,
+      assignmentTitle: assignment.title,
+    });
+
+    let totalPoints = 0;
+    let earnedPoints = 0;
+    const activityScores: Record<string, { score: number; maxScore: number }> = {};
+
+    // Grade each activity
+    for (let i = 0; i < activities.length; i++) {
+      const activity = activities[i];
+      const activityPoints = activity.points || 10;
+      totalPoints += activityPoints;
+
+      // Get answer for this activity
+      const activityAnswers = answers[activity.id] || answers[`activity${i}`];
+
+      let activityScore = 0;
+
+      try {
+        activityScore = await this.gradeActivityForStreaming(
+          activity,
+          activityAnswers,
+          activityPoints,
+        );
+      } catch (error) {
+        this.logger.error(`Error grading activity ${activity.id}:`, error);
+        activityScore = 0;
+      }
+
+      earnedPoints += activityScore;
+      activityScores[activity.id] = {
+        score: activityScore,
+        maxScore: activityPoints,
+      };
+
+      // Emit activity graded event
+      this.eventsGateway.emitToUser(studentId, 'grading:activity', {
+        submissionId,
+        activityId: activity.id,
+        activityIndex: i,
+        activityType: activity.type,
+        activityTitle: activity.title,
+        score: activityScore,
+        maxScore: activityPoints,
+        totalGraded: i + 1,
+        totalActivities: activities.length,
+      });
+
+      this.logger.log(
+        `Graded activity ${i + 1}/${activities.length}: ${activity.type} = ${activityScore}/${activityPoints}`,
+      );
+    }
+
+    // Calculate final score
+    const finalScore =
+      totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+
+    // Generate feedback
+    let feedback = 'Hoàn thành chấm bài!';
+    if (finalScore < 90) {
+      try {
+        feedback = await this.geminiService.generateAttemptFeedback({
+          score: finalScore,
+          maxScore: 100,
+          activityType: 'Assignment',
+          userAnswers: answers,
+          correctAnswers: this.getCorrectAnswers(activities),
+          assignmentTitle: assignment.title,
+          assignmentDescription: assignment.description,
+          activities: activities.map((a) => ({
+            id: a.id,
+            type: a.type,
+            title: a.title,
+            content: a.content,
+            points: a.points,
+          })),
+          maxWords: 100,
+        });
+      } catch (e) {
+        this.logger.error('Error generating feedback:', e);
+        feedback = `Bạn đạt được ${finalScore}% điểm số. Hãy xem lại các câu trả lời để cải thiện kết quả!`;
+      }
+    } else {
+      feedback = 'Xuất sắc! Bạn đã hoàn thành bài tập với kết quả rất tốt. Tiếp tục phát huy!';
+    }
+
+    // Update database
+    await this.assignmentRepository.gradeSubmission(submissionId, {
+      score: finalScore,
+      feedback,
+    });
+
+    // Emit complete event
+    this.eventsGateway.emitToUser(studentId, 'grading:complete', {
+      submissionId,
+      totalScore: finalScore,
+      earnedPoints,
+      totalPoints,
+      feedback,
+      activityScores,
+    });
+
+    this.logger.log(
+      `Completed streaming grading for ${submissionId}: ${finalScore}%`,
+    );
+  }
+
+  /**
+   * Grade a single activity (used by streaming grading)
+   */
+  private async gradeActivityForStreaming(
+    activity: AssignmentActivityModel,
+    activityAnswers: any,
+    activityPoints: number,
+  ): Promise<number> {
+    if (!activityAnswers) {
+      return 0;
+    }
+
+    const content = activity.content as Record<string, any>;
+    let activityScore = 0;
+
+    switch (activity.type) {
+      case 'quiz':
+        if (content?.questions && Array.isArray(content.questions)) {
+          let correctCount = 0;
+          content.questions.forEach((q: any, qIndex: number) => {
+            const userAnswer = activityAnswers?.[qIndex];
+            if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+              correctCount++;
+            }
+          });
+          activityScore = Math.round((correctCount / content.questions.length) * activityPoints);
+        } else if (content?.options && typeof content.correctIndex === 'number') {
+          if (activityAnswers === content.correctIndex) {
+            activityScore = activityPoints;
+          }
+        }
+        break;
+
+      case 'grammar':
+        if (content?.questions && Array.isArray(content.questions)) {
+          let correctCount = 0;
+          content.questions.forEach((q: any, qIndex: number) => {
+            const userAnswer = activityAnswers?.[qIndex];
+            if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+              correctCount++;
+            }
+          });
+          activityScore = Math.round((correctCount / content.questions.length) * activityPoints);
+        } else if (content?.exercises && Array.isArray(content.exercises)) {
+          let correctCount = 0;
+          content.exercises.forEach((ex: any, exIndex: number) => {
+            const userAnswer = activityAnswers?.[exIndex];
+            if (typeof userAnswer === 'number' && userAnswer === ex.correctIndex) {
+              correctCount++;
+            }
+          });
+          activityScore = Math.round((correctCount / content.exercises.length) * activityPoints);
+        } else if (content?.options && typeof content.correctIndex === 'number') {
+          if (activityAnswers === content.correctIndex) {
+            activityScore = activityPoints;
+          }
+        }
+        break;
+
+      case 'listening':
+      case 'reading':
+        if (content?.questions && Array.isArray(content.questions)) {
+          let correctCount = 0;
+          content.questions.forEach((q: any, qIndex: number) => {
+            const userAnswer = activityAnswers?.[qIndex];
+            if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+              correctCount++;
+            }
+          });
+          activityScore = Math.round((correctCount / content.questions.length) * activityPoints);
+        } else if (content?.options && typeof content.correctIndex === 'number') {
+          if (activityAnswers === content.correctIndex) {
+            activityScore = activityPoints;
+          }
+        }
+        break;
+
+      case 'fill_blank':
+        if (content?.correctAnswers && Array.isArray(content.correctAnswers)) {
+          let correctCount = 0;
+          if (Array.isArray(activityAnswers)) {
+            content.correctAnswers.forEach((correctAnswer: string, index: number) => {
+              const userAnswer = activityAnswers[index];
+              if (userAnswer?.toLowerCase().trim() === correctAnswer.toLowerCase().trim()) {
+                correctCount++;
+              }
+            });
+            activityScore = Math.round((correctCount / content.correctAnswers.length) * activityPoints);
+          }
+        } else if (content?.correctAnswer && typeof activityAnswers === 'string') {
+          if (activityAnswers.toLowerCase().trim() === content.correctAnswer.toLowerCase().trim()) {
+            activityScore = activityPoints;
+          }
+        }
+        break;
+
+      case 'matching':
+        if (content?.pairs && Array.isArray(content.pairs) && typeof activityAnswers === 'object') {
+          let correctCount = 0;
+          content.pairs.forEach((pair: any) => {
+            if (activityAnswers[pair.left] === pair.right) {
+              correctCount++;
+            }
+          });
+          activityScore = Math.round((correctCount / content.pairs.length) * activityPoints);
+        }
+        break;
+
+      case 'speaking':
+        if (activityAnswers?.audioUrl) {
+          try {
+            const audioBase64 = await this.downloadAudioAsBase64(activityAnswers.audioUrl);
+            const result = await this.evaluationService.evaluateSpeaking('system', {
+              audioBase64,
+              mimeType: 'audio/webm',
+              prompt: content?.prompt,
+              minSeconds: content?.minSeconds,
+            });
+            activityScore = Math.round((result.score / 100) * activityPoints);
+          } catch (error) {
+            this.logger.error('Speaking evaluation failed:', error);
+            activityScore = Math.round(activityPoints * 0.5);
+          }
+        }
+        break;
+
+      case 'writing':
+        const writingText = activityAnswers?.text || (typeof activityAnswers === 'string' ? activityAnswers : null);
+        if (writingText && writingText.trim().length > 0) {
+          try {
+            const result = await this.evaluationService.evaluateWriting('system', {
+              submission: writingText,
+              prompt: content?.prompt,
+              minWords: content?.minWords,
+            });
+            activityScore = Math.round((result.score / 100) * activityPoints);
+          } catch (error) {
+            this.logger.error('Writing evaluation failed:', error);
+            activityScore = Math.round(activityPoints * 0.5);
+          }
+        }
+        break;
+
+      case 'pronunciation':
+        if (activityAnswers?.audioUrl) {
+          try {
+            const audioBase64 = await this.downloadAudioAsBase64(activityAnswers.audioUrl);
+            const phrases = content?.phrases || [];
+            const targetPhrase = phrases[0]?.text || content?.phrase || '';
+
+            const result = await this.evaluationService.evaluatePronunciation('system', {
+              audioBase64,
+              mimeType: 'audio/webm',
+              phrase: targetPhrase,
+            });
+            activityScore = Math.round((result.score / 100) * activityPoints);
+          } catch (error) {
+            this.logger.error('Pronunciation evaluation failed:', error);
+            activityScore = Math.round(activityPoints * 0.5);
+          }
+        }
+        break;
+
+      case 'dictation':
+        if (activityAnswers && content?.transcript) {
+          const userText = String(activityAnswers).toLowerCase().trim();
+          const correctText = content.transcript.toLowerCase().trim();
+          const similarity = this.calculateTextSimilarity(userText, correctText);
+          activityScore = Math.round(similarity * activityPoints);
+        }
+        break;
+
+      case 'vocab':
+      case 'flashcard':
+      case 'conversation':
+      case 'mini_game':
+        if (activityAnswers !== null && activityAnswers !== undefined && activityAnswers !== '') {
+          activityScore = activityPoints;
+        }
+        break;
+
+      default:
+        if (activityAnswers !== null && activityAnswers !== undefined && activityAnswers !== '') {
+          activityScore = activityPoints;
+        }
+        break;
+    }
+
+    return activityScore;
   }
 }

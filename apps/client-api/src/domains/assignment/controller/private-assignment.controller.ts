@@ -44,7 +44,7 @@ export class PrivateAssignmentController {
     private readonly assignmentService: AssignmentService,
     private readonly importService: AssignmentImportService,
     private readonly pdfService: AssignmentPdfService,
-  ) {}
+  ) { }
 
   @Get('import/template')
   @ApiOperation({
@@ -392,6 +392,39 @@ export class PrivateAssignmentController {
     @Body() dto: SubmitAssignmentDto,
   ) {
     return this.assignmentService.submitAssignment(
+      assignmentId,
+      payload.sub,
+      dto,
+    );
+  }
+
+  @Post(':id/submit-streaming')
+  @ApiOperation({
+    summary: 'Submit assignment with real-time grading via WebSocket (Student only)',
+    description:
+      'Returns immediately after saving submission. Grades in background and emits WebSocket events for each activity.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Submission created, grading in progress',
+    schema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Submission ID' },
+        status: { type: 'string', enum: ['GRADING'], description: 'Submission status' },
+        message: { type: 'string', description: 'Status message' },
+      },
+    },
+  })
+  @ApiResponse({ status: 400, description: 'Bad request or deadline passed' })
+  @ApiResponse({ status: 403, description: 'Not assigned to this assignment' })
+  @ApiResponse({ status: 404, description: 'Assignment not found' })
+  async submitAssignmentStreaming(
+    @Param('id') assignmentId: string,
+    @PayloadToken() payload: JwtPayload,
+    @Body() dto: SubmitAssignmentDto,
+  ) {
+    return this.assignmentService.submitAssignmentStreaming(
       assignmentId,
       payload.sub,
       dto,
