@@ -38,7 +38,20 @@ export class ActivityContentValidator implements ValidatorConstraintInterface {
     switch (activityType) {
       case 'quiz':
       case 'grammar':
-        // Single question format
+        // Support both single question format and multiple questions format
+        if (Array.isArray(content.questions) && content.questions.length > 0) {
+          // Multiple questions format (from AI generation)
+          return content.questions.every(
+            (q: any) =>
+              typeof q.question === 'string' &&
+              Array.isArray(q.options) &&
+              q.options.length > 0 &&
+              typeof q.correctIndex === 'number' &&
+              q.correctIndex >= 0 &&
+              q.correctIndex < q.options.length,
+          );
+        }
+        // Single question format (legacy)
         return (
           typeof content.question === 'string' &&
           Array.isArray(content.options) &&
