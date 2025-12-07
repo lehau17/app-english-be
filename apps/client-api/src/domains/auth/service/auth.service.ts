@@ -29,7 +29,7 @@ export class AuthService {
     private readonly tokenRepository: TokenRepository,
     private readonly kafkaService: KafkaService,
     private readonly configService: ConfigService,
-  ) {}
+  ) { }
 
   private readonly logger = new Logger(AuthService.name);
 
@@ -207,7 +207,7 @@ export class AuthService {
 
   async adminLogin(dto: LoginDto) {
     const user = await this.authRepository.findUserForLogin(dto.email);
-    if (!user || user.role !== UserRole.admin) {
+    if (!user || (user.role !== UserRole.admin && user.role !== UserRole.teacher)) {
       throw new BadRequestException('Invalid credentials');
     }
 
@@ -222,7 +222,7 @@ export class AuthService {
     const payload = {
       sub: user.id,
       email: user.email,
-      role: UserRole.admin,
+      role: user.role,  // Support both admin and teacher
     };
 
     const token = await this.tokenRepository.generateToken(payload);
@@ -289,10 +289,10 @@ export class AuthService {
       hasParent: !!parentRelation,
       parentInfo: parentRelation
         ? {
-            id: parentRelation.parent.id,
-            displayName: parentRelation.parent.displayName,
-            email: parentRelation.parent.email,
-          }
+          id: parentRelation.parent.id,
+          displayName: parentRelation.parent.displayName,
+          email: parentRelation.parent.email,
+        }
         : null,
     };
   }

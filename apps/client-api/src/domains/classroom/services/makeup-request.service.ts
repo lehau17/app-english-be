@@ -3,10 +3,14 @@ import {
     ConflictException,
     ForbiddenException,
     Injectable,
+    Logger,
     NotFoundException,
 } from '@nestjs/common';
+import { NotificationType } from '@prisma/client';
+import { PrismaRepository } from '@app/database';
 import { MakeupRequestRepository } from '../repository/makeup-request.repository';
 import { AttendanceRepository, AttendanceStatus } from '../repository/attendance.repository';
+import { NotificationService } from '../../notification/service/notification.service';
 import {
     CreateMakeupRequestDto,
     ReviewMakeupRequestDto,
@@ -22,9 +26,13 @@ enum MakeupRequestStatusLocal {
 
 @Injectable()
 export class MakeupRequestService {
+    private readonly logger = new Logger(MakeupRequestService.name);
+
     constructor(
         private readonly makeupRequestRepository: MakeupRequestRepository,
         private readonly attendanceRepository: AttendanceRepository,
+        private readonly notificationService: NotificationService,
+        private readonly prisma: PrismaRepository,
     ) { }
 
     /**
@@ -47,12 +55,99 @@ export class MakeupRequestService {
         }
 
         // Create the request
-        return this.makeupRequestRepository.create({
+        const request = await this.makeupRequestRepository.create({
             sessionId,
             studentId,
             reason: dto.reason,
             evidenceUrls: dto.evidenceUrls,
         });
+
+        // Send notification to teacher
+        await this.notifyTeacher(sessionId, studentId, request.id, dto.reason);
+
+        return request;
+    }
+
+    /**
+     * Notify teacher about new makeup request
+     */
+    private async notifyTeacher(
+        sessionId: string,
+        studentId: string,
+        requestId: string,
+        reason: string,
+    ) {
+        try {
+            // Get session with classroom and teacher info
+            const session = await this.prisma.classroomSession.findUnique({
+                where: { id: sessionId },
+                include: {
+                    classroom: {
+                        select: {
+                            id: true,
+                            name: true,
+                            teacherId: true,
+                        },
+                    },
+                },
+            });
+
+            if (!session?.classroom?.teacherId) {
+                this.logger.warn(`No teacher found for session ${sessionId}`);
+                return;
+            }
+
+            // Get student info
+            const student = await this.prisma.user.findUnique({
+                where: { id: studentId },
+                select: {
+                    displayName: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                },
+            });
+
+            const studentName = student?.displayName
+                || `${student?.firstName || ''} ${student?.lastName || ''}`.trim()
+                || student?.email
+                || 'Học viên';
+
+            const sessionDate = session.startTime
+                ? new Date(session.startTime).toLocaleDateString('vi-VN', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                })
+                : '';
+
+            // Send notification to teacher
+            await this.notificationService.create({
+                userId: session.classroom.teacherId,
+                type: NotificationType.assignment,
+                title: 'Yêu cầu điểm danh bù mới',
+                body: `${studentName} đã gửi yêu cầu điểm danh bù cho buổi học "${session.title || 'Không có tiêu đề'}" (${sessionDate}). Lý do: ${reason.slice(0, 100)}${reason.length > 100 ? '...' : ''}`,
+                data: JSON.stringify({
+                    type: 'makeup_attendance_request',
+                    requestId,
+                    sessionId,
+                    classroomId: session.classroom.id,
+                    classroomName: session.classroom.name,
+                    studentId,
+                    studentName,
+                    sessionTitle: session.title,
+                    sessionDate,
+                    reason,
+                }),
+                channel: 'socket' as any,
+            });
+
+            this.logger.log(`Sent makeup request notification to teacher ${session.classroom.teacherId}`);
+        } catch (error) {
+            this.logger.error(`Failed to send makeup request notification: ${error.message}`, error.stack);
+            // Don't throw - notification failure shouldn't block request creation
+        }
     }
 
     /**

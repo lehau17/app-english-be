@@ -4,6 +4,7 @@ import { EventsGateway } from '../../events/events.gateway';
 import { EventsModule } from '../../events/events.module';
 import { AssignmentModule } from '../assignment/assignment.module';
 import { LessonRepository } from '../lesson/repository';
+import { NotificationModule } from '../notification/notification.module';
 import { PaymentModule } from '../payment/payment.module';
 import { PrivateClassroomController } from './controller';
 import {
@@ -23,7 +24,7 @@ import { MakeupRequestService } from './services/makeup-request.service';
 import { AutoExamCreationService } from './services/auto-exam-creation.service';
 
 @Module({
-  imports: [AssignmentModule, EventsModule, PaymentModule],
+  imports: [AssignmentModule, EventsModule, PaymentModule, NotificationModule],
   controllers: [
     PrivateClassroomController,
     AttendanceController,

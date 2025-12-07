@@ -720,6 +720,18 @@ export class CourseService {
 
     async delete(id: string): Promise<Course> {
         await this.ensureExists(id);
+
+        // Check if course has any classrooms
+        const classroomCount = await this.prisma.classroom.count({
+            where: { courseId: id },
+        });
+
+        if (classroomCount > 0) {
+            throw new BadRequestException(
+                'Không thể xóa khóa học đã có lớp học. Vui lòng xóa lớp học trước.',
+            );
+        }
+
         const course = await this.courseRepository.delete(id);
 
         // Emit Neo4j sync event

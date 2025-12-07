@@ -2,18 +2,18 @@ import { PrismaRepository } from '@app/database';
 import { JwtPayload } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-    BadRequestException,
-    ForbiddenException,
-    Injectable,
-    NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import {
-    Classroom,
-    ClassroomStatus,
-    Prisma,
-    SessionStatus,
-    TimezoneCode,
-    UserRole,
+  Classroom,
+  ClassroomStatus,
+  Prisma,
+  SessionStatus,
+  TimezoneCode,
+  UserRole,
 } from '@prisma/client';
 import { EventsGateway } from 'apps/client-api/src/events/events.gateway';
 import * as bcrypt from 'bcrypt';
@@ -21,26 +21,26 @@ import { Readable } from 'stream';
 import * as XLSX from 'xlsx';
 import { PaymentService } from '../../payment/service/payment.service';
 import {
-    AddStudentToClassroomDto,
-    AssignTeacherToClassroomDto,
-    ClassroomAnnouncementQueryDto,
-    CreateClassroomDto,
-    FilterClassroomRequestDto,
-    ImportStudentsResultDto,
-    StudentDailyScheduleQueryDto,
-    StudentWeeklyScheduleQueryDto,
-    UpdateClassroomDto,
+  AddStudentToClassroomDto,
+  AssignTeacherToClassroomDto,
+  ClassroomAnnouncementQueryDto,
+  CreateClassroomDto,
+  FilterClassroomRequestDto,
+  ImportStudentsResultDto,
+  StudentDailyScheduleQueryDto,
+  StudentWeeklyScheduleQueryDto,
+  UpdateClassroomDto,
 } from '../dto/classroom.dto';
 import { EnrollClassroomDto } from '../dto/enroll-classroom.dto';
 import { ClassroomRepository } from '../repository/classroom.repository';
 import { AutoExamCreationService } from '../services/auto-exam-creation.service';
 import {
-    calculateClassroomSchedule,
-    generateClassroomSessions,
+  calculateClassroomSchedule,
+  generateClassroomSessions,
 } from '../utils/classroom-schedule.util';
 import {
-    generateClassCode,
-    getCsvTransformStream,
+  generateClassCode,
+  getCsvTransformStream,
 } from '../utils/classroom.util';
 
 const TIMEZONE_OFFSETS: Record<TimezoneCode, number> = {
@@ -61,7 +61,7 @@ export class ClassroomService {
     private readonly prisma: PrismaRepository,
     private readonly autoExamCreationService: AutoExamCreationService,
     private readonly paymentService: PaymentService,
-  ) {}
+  ) { }
 
   async create(dto: CreateClassroomDto): Promise<Classroom> {
     // Lấy thông tin khóa học bao gồm session schedules
@@ -232,7 +232,35 @@ export class ClassroomService {
   }
 
   async delete(id: string): Promise<Classroom> {
-    await this.findById(id);
+    const classroom = await this.prisma.classroom.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: { students: true },
+        },
+      },
+    });
+
+    if (!classroom) {
+      throw new NotFoundException(`Classroom with id ${id} not found`);
+    }
+
+    // Check if classroom has students and is active (completed/cancelled are safe to delete? Or maybe just cancelled?)
+    // User request: "nếu classroom đã có thành viên và trạng thái là đã vào học thì không cho xoá nữa"
+    // "đã vào học" -> ongoing
+    // We should also probably prevent unique "scheduled" with students if payment involved, but for now focusing on user request "ongoing" + "students".
+    // Actually, let's be safer: if it has active students, it shouldn't be deleted easily regardless of status unless cancelled/completed maybe?
+    // User specific request: status is "da vao hoc" (ongoing) && has members.
+
+    const hasStudents = classroom._count.students > 0;
+    const isOngoing = classroom.status === ClassroomStatus.ongoing;
+
+    if (hasStudents && isOngoing) {
+      throw new BadRequestException(
+        'Không thể xóa lớp học đang diễn ra và đã có học viên. Vui lòng cập nhật trạng thái hoặc xóa học viên trước.',
+      );
+    }
+
     return this.classroomRepository.delete(id);
   }
 
@@ -848,23 +876,23 @@ export class ClassroomService {
 
       const instructor = session.instructor
         ? {
-            id: session.instructor.id,
-            displayName:
-              session.instructor.displayName ||
-              [session.instructor.firstName, session.instructor.lastName]
-                .filter(Boolean)
-                .join(' ')
-                .trim(),
-            avatarUrl: session.instructor.avatarUrl,
-          }
+          id: session.instructor.id,
+          displayName:
+            session.instructor.displayName ||
+            [session.instructor.firstName, session.instructor.lastName]
+              .filter(Boolean)
+              .join(' ')
+              .trim(),
+          avatarUrl: session.instructor.avatarUrl,
+        }
         : null;
 
       const courseInfo = session.classroom.course
         ? {
-            id: session.classroom.course.id,
-            title: session.classroom.course.title,
-            description: session.classroom.course.description,
-          }
+          id: session.classroom.course.id,
+          title: session.classroom.course.title,
+          description: session.classroom.course.description,
+        }
         : null;
 
       // Parse metadata for session schedule info and activities
@@ -1047,15 +1075,15 @@ export class ClassroomService {
 
       const instructor = session.instructor
         ? {
-            id: session.instructor.id,
-            displayName:
-              session.instructor.displayName ||
-              [session.instructor.firstName, session.instructor.lastName]
-                .filter(Boolean)
-                .join(' ')
-                .trim(),
-            avatarUrl: session.instructor.avatarUrl,
-          }
+          id: session.instructor.id,
+          displayName:
+            session.instructor.displayName ||
+            [session.instructor.firstName, session.instructor.lastName]
+              .filter(Boolean)
+              .join(' ')
+              .trim(),
+          avatarUrl: session.instructor.avatarUrl,
+        }
         : null;
 
       return {
@@ -1251,24 +1279,24 @@ export class ClassroomService {
 
       const instructor = session.instructor
         ? {
-            id: session.instructor.id,
-            displayName:
-              session.instructor.displayName ||
-              [session.instructor.firstName, session.instructor.lastName]
-                .filter(Boolean)
-                .join(' ')
-                .trim(),
-            avatarUrl: session.instructor.avatarUrl,
-          }
+          id: session.instructor.id,
+          displayName:
+            session.instructor.displayName ||
+            [session.instructor.firstName, session.instructor.lastName]
+              .filter(Boolean)
+              .join(' ')
+              .trim(),
+          avatarUrl: session.instructor.avatarUrl,
+        }
         : null;
 
       // Extract course và lesson info từ metadata và classroom
       const courseInfo = session.classroom.course
         ? {
-            id: session.classroom.course.id,
-            title: session.classroom.course.title,
-            description: session.classroom.course.description,
-          }
+          id: session.classroom.course.id,
+          title: session.classroom.course.title,
+          description: session.classroom.course.description,
+        }
         : null;
 
       // Parse metadata để lấy session schedule info và activities (giáo trình)

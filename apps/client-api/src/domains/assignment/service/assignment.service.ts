@@ -28,7 +28,7 @@ export class AssignmentService {
   constructor(
     private readonly assignmentRepository: AssignmentRepository,
     private readonly geminiService: GeminiService,
-  ) {}
+  ) { }
 
   async createAssignment(
     teacherId: string,
@@ -412,8 +412,12 @@ export class AssignmentService {
   ): Promise<AssignmentSubmissionWithStudent[]> {
     const assignment = await this.getAssignmentById(assignmentId);
 
-    // Check if teacher owns this assignment
-    if (assignment.teacherId !== teacherId) {
+    // Check if user is admin
+    const user = await this.assignmentRepository.findTeacherById(teacherId);
+    const isAdmin = user?.role === 'admin';
+
+    // Allow access for admin or teacher who owns the assignment
+    if (!isAdmin && assignment.teacherId !== teacherId) {
       throw new ForbiddenException(
         'You can only view submissions for your own assignments',
       );
@@ -610,7 +614,7 @@ export class AssignmentService {
                     if (
                       userAnswer &&
                       userAnswer.toLowerCase().trim() ===
-                        correctAnswer.toLowerCase().trim()
+                      correctAnswer.toLowerCase().trim()
                     ) {
                       correctCount++;
                       console.log(
@@ -625,7 +629,7 @@ export class AssignmentService {
                 );
                 activityScore = Math.round(
                   (correctCount / content.correctAnswers.length) *
-                    activityPoints,
+                  activityPoints,
                 );
               }
             } else if (

@@ -37,6 +37,9 @@ const makeMocks = () => {
     sessionSchedule: {
       create: jest.fn(),
     },
+    classroom: {
+      count: jest.fn(),
+    },
     $transaction: jest.fn(),
   };
 
@@ -152,6 +155,10 @@ describe('CourseService', () => {
 
       const mockCourse = { id: 'course-1', title: 'Test Course' };
       courseRepository.findById.mockResolvedValue(mockCourse);
+
+      // Mock classroom count check
+      prisma.classroom.count.mockResolvedValue(0);
+
       courseRepository.delete.mockResolvedValue(mockCourse);
 
       const service = new CourseService(
@@ -190,6 +197,38 @@ describe('CourseService', () => {
 
       await expect(service.delete('non-existent')).rejects.toThrow(
         NotFoundException,
+      );
+      expect(courseRepository.delete).not.toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when course has classrooms', async () => {
+      const {
+        courseRepository,
+        prisma,
+        googleTranslateFreeService,
+        kafkaService,
+        sessionScheduleService,
+      } = makeMocks();
+
+      const mockCourse = { id: 'course-1', title: 'Test Course' };
+      courseRepository.findById.mockResolvedValue(mockCourse);
+
+      // Mock classroom count > 0
+      prisma.classroom.count.mockResolvedValue(1);
+
+      const service = new CourseService(
+        courseRepository,
+        prisma,
+        googleTranslateFreeService,
+        kafkaService,
+        sessionScheduleService,
+      );
+
+      await expect(service.delete('course-1')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.delete('course-1')).rejects.toThrow(
+        'Không thể xóa khóa học đã có lớp học. Vui lòng xóa lớp học trước.',
       );
       expect(courseRepository.delete).not.toHaveBeenCalled();
     });

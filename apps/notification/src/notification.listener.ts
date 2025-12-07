@@ -1,10 +1,10 @@
 import { PrismaRepository } from '@app/database';
 import { KafkaConfigService, KafkaTopic } from '@app/shared';
 import {
-    Injectable,
-    Logger,
-    OnModuleDestroy,
-    OnModuleInit,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { Consumer, Kafka } from 'kafkajs';
 import { NotificationService } from './notification.service';
@@ -253,7 +253,7 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
 
   private async handleWelcomeNewUser(notification: NotificationMessage) {
     try {
-      const { email, userName, role, courseName, classroomName, price, currency, loginUrl } = notification.data;
+      const { email, userName, role, courseName, classroomName, price, currency, loginUrl, password } = notification.data;
 
       await this.notificationService.sendEmail({
         to: [email],
@@ -270,6 +270,7 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
           currency,
           loginUrl,
           email,
+          password,
         },
       });
 
