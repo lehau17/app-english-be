@@ -27,7 +27,7 @@ export class ActivityAIService {
     private readonly geminiService: GeminiService,
     private readonly googleTranslateService: GoogleTranslateFreeService,
     private readonly uploadService: UploadService,
-  ) {}
+  ) { }
 
   async generateActivities(
     courseTitle: string,
@@ -736,13 +736,16 @@ Generate the writing activity now:`;
 Task: Generate a pronunciation practice activity.
 
 Requirements:
-1. phrase (string): Target phrase/sentence to practice
+1. phrases (array): 1-3 phrases to practice, each with:
+   - text (string): Target phrase/sentence to practice
 2. tips (array of strings): 3-5 pronunciation tips
-3. phonetics (string): IPA phonetic notation
+3. phonetics (string): IPA phonetic notation for the first phrase
 
 Return JSON format:
 {
-  "phrase": "The weather is beautiful today",
+  "phrases": [
+    { "text": "The weather is beautiful today" }
+  ],
   "tips": [
     "Pay attention to the 'th' sound in 'the' and 'weather'",
     "Stress the word 'beautiful'",
@@ -758,25 +761,38 @@ Generate the pronunciation activity now:`;
       const cleanedResponse = this.cleanJsonResponse(response);
       const data = JSON.parse(cleanedResponse);
 
-      // Generate sample audio
-      let sampleUrl = '';
-      try {
-        const result = await this.googleTranslateService.createAudioWithUrl(
-          data.phrase,
-          'en',
-        );
-        sampleUrl = result.url;
-        this.logger.log('🎵 Generated sample audio for pronunciation');
-      } catch (error) {
-        this.logger.warn('Failed to generate sample audio', error);
+      // Ensure phrases is an array
+      let phrases = data.phrases;
+      if (!Array.isArray(phrases)) {
+        // Convert single phrase format to array format
+        phrases = [{ text: data.phrase || '' }];
+      }
+
+      // Generate sample audio for each phrase
+      for (const phrase of phrases) {
+        try {
+          const result = await this.googleTranslateService.createAudioWithUrl(
+            phrase.text,
+            'en',
+          );
+          phrase.sampleUrl = result.url;
+          this.logger.log(`🎵 Generated sample audio for phrase: ${phrase.text.substring(0, 30)}...`);
+        } catch (error) {
+          this.logger.warn(`Failed to generate sample audio for phrase`, error);
+          phrase.sampleUrl = '';
+        }
       }
 
       return {
         type: ActivityType.PRONUNCIATION,
         title: `Pronunciation: ${lessonTitle}`,
-        content: { ...data, sampleUrl },
+        content: {
+          phrases,
+          tips: data.tips || [],
+          phonetics: data.phonetics || '',
+        },
         difficulty,
-        points: 30,
+        points: phrases.length * 30,
         orderNo,
         instructions: userPrompt || 'Practice pronouncing the phrase correctly',
       };
