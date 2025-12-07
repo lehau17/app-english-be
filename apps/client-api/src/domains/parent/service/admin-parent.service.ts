@@ -1,4 +1,5 @@
 import { PrismaRepository } from '@app/database';
+import { ExcelExportService } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
   BadRequestException,
@@ -8,7 +9,6 @@ import {
 } from '@nestjs/common';
 import { UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import { CreateParentDto } from '../dto';
 import {
   AssignParentDto,
   CreateParentDto,
@@ -18,7 +18,10 @@ import {
 
 @Injectable()
 export class AdminParentService {
-  constructor(private readonly prisma: PrismaRepository) {}
+  constructor(
+    private readonly prisma: PrismaRepository,
+    private readonly excelExportService: ExcelExportService,
+  ) { }
 
   async getParents(query: ParentListQueryDto) {
     const {
@@ -615,22 +618,41 @@ export class AdminParentService {
     };
   }
 
-  async exportParents(query: ParentListQueryDto): Promise<string> {
+  async exportParents(query: ParentListQueryDto): Promise<Buffer> {
     const parents = await this.getParentsForExport(query);
     if (parents.length === 0) {
-      return '';
+      return this.excelExportService.generateExcel(
+        [],
+        [{ header: 'Email', key: 'email', width: 30 }],
+        'Danh sách phụ huynh',
+      );
     }
 
-    const header =
-      'email,firstName,lastName,phoneNumber,displayName,isActive,childrenCount,createdAt\n';
-    const rows = parents
-      .map(
-        (p) =>
-          `${p.email || ''},${p.firstName || ''},${p.lastName || ''},${p.phoneNumber || ''},${p.displayName || ''},${p.isActive ? 'true' : 'false'},${p.childrenCount || 0},${p.createdAt.toISOString()}`,
-      )
-      .join('\n');
+    const data = parents.map((p) => ({
+      email: p.email || '',
+      firstName: p.firstName || '',
+      lastName: p.lastName || '',
+      phoneNumber: p.phoneNumber || '',
+      displayName: p.displayName || '',
+      isActive: p.isActive,
+      childrenCount: p.childrenCount || 0,
+      createdAt: p.createdAt,
+    }));
 
-    return header + rows;
+    return this.excelExportService.generateExcel(
+      data,
+      [
+        { header: 'Email', key: 'email', width: 30 },
+        { header: 'Họ', key: 'firstName', width: 15 },
+        { header: 'Tên', key: 'lastName', width: 15 },
+        { header: 'Số điện thoại', key: 'phoneNumber', width: 15 },
+        { header: 'Tên hiển thị', key: 'displayName', width: 20 },
+        { header: 'Hoạt động', key: 'isActive', width: 12 },
+        { header: 'Số con', key: 'childrenCount', width: 10 },
+        { header: 'Ngày tạo', key: 'createdAt', width: 18 },
+      ],
+      'Danh sách phụ huynh',
+    );
   }
 
   getImportTemplate(): string {

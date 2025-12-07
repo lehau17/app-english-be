@@ -1,3 +1,4 @@
+import { ExcelExportService } from '@app/shared';
 import { Module } from '@nestjs/common';
 import { UploadModule } from '../upload/upload.module';
 import { StudentController } from './controller/private-student.controller';
@@ -7,6 +8,7 @@ import { StudentService } from './service/student.service';
 @Module({
   imports: [UploadModule],
   controllers: [StudentController],
-  providers: [StudentService, StudentRepository],
+  providers: [StudentService, StudentRepository, ExcelExportService],
 })
-export class StudentModule {}
+export class StudentModule { }
+

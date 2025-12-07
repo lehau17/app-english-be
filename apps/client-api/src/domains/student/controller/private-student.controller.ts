@@ -64,19 +64,22 @@ export class StudentController {
     }
 
     @Get('export')
-    @ApiOperation({ summary: 'Export students to a CSV file' })
+    @ApiOperation({ summary: 'Export students to Excel file' })
     @ResponseMessage('Students exported successfully')
     async exportStudents(
         @Query() query: FilterStudentRequestDto,
         @Res() res: Response,
     ) {
-        const csv = await this.studentService.exportStudents(query);
-        res.setHeader('Content-Type', 'text/csv');
+        const buffer = await this.studentService.exportStudents(query);
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
         res.setHeader(
             'Content-Disposition',
-            `attachment; filename=students-${new Date().toISOString()}.csv`,
+            `attachment; filename=students-${new Date().toISOString().split('T')[0]}.xlsx`,
         );
-        res.send(csv);
+        res.send(buffer);
     }
 
     @Get('import-template')

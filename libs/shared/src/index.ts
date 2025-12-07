@@ -6,6 +6,7 @@ export * from './services/profanity-ban.service';
 export * from './services/profanity-detection.service';
 export * from './services/profanity.module';
 export * from './services/tts.service';
+export * from './services/excel-export.service';
 export * from './shared.module';
 export * from './types/neo4j-sync.interface';
 export * from './types/tts-task.interface';

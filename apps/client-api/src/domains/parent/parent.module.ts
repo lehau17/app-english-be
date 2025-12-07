@@ -1,4 +1,5 @@
 import { DatabaseModule } from '@app/database';
+import { ExcelExportService } from '@app/shared';
 import { Module } from '@nestjs/common';
 import { ParentChildModule } from '../parent-child';
 import {
@@ -33,6 +34,7 @@ import { ParentNotificationService } from './service/parent-notification.service
     ParentNotificationService,
     ParentTransactionService,
     ParentChildLinkRequestRepository,
+    ExcelExportService,
   ],
   exports: [
     ParentService,
@@ -43,4 +45,4 @@ import { ParentNotificationService } from './service/parent-notification.service
     ParentTransactionService,
   ],
 })
-export class ParentModule {}
+export class ParentModule { }

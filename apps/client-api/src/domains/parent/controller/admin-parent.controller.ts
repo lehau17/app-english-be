@@ -142,19 +142,22 @@ export class AdminParentController {
     }
 
     @Get('export')
-    @ApiOperation({ summary: 'Export parents to a CSV file' })
+    @ApiOperation({ summary: 'Export parents to Excel file' })
     @ResponseMessage('Parents exported successfully')
     async exportParents(
         @Query() query: ParentListQueryDto,
         @Res() res: Response,
     ) {
-        const csv = await this.adminParentService.exportParents(query);
-        res.setHeader('Content-Type', 'text/csv');
+        const buffer = await this.adminParentService.exportParents(query);
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
         res.setHeader(
             'Content-Disposition',
-            `attachment; filename=parents-${new Date().toISOString()}.csv`,
+            `attachment; filename=parents-${new Date().toISOString().split('T')[0]}.xlsx`,
         );
-        res.send(csv);
+        res.send(buffer);
     }
 
     @Get('import-template')

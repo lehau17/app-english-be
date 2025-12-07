@@ -1,4 +1,5 @@
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
+import { ExcelExportService } from '@app/shared';
 import {
   BadRequestException,
   Injectable,
@@ -19,7 +20,8 @@ export class StudentService {
   constructor(
     private readonly studentRepository: StudentRepository,
     private readonly uploadService: UploadService,
-  ) {}
+    private readonly excelExportService: ExcelExportService,
+  ) { }
 
   /**
    * Creates a new student record in the database.
@@ -83,21 +85,39 @@ export class StudentService {
     return this.studentRepository.update(id, { avatarUrl });
   }
 
-  async exportStudents(query: FilterStudentRequestDto): Promise<string> {
+  async exportStudents(query: FilterStudentRequestDto): Promise<Buffer> {
     const students = await this.studentRepository.listAll(query);
     if (students.length === 0) {
-      return '';
+      return this.excelExportService.generateExcel([], [
+        { header: 'Email', key: 'email', width: 30 },
+      ], 'Danh sách học viên');
     }
 
-    const header = 'email,phone,firstName,lastName,displayName,gender,status,createdAt\n';
-    const rows = students
-      .map(
-        (s) =>
-          `${s.email || ''},${s.phone || ''},${s.firstName || ''},${s.lastName || ''},${s.displayName || ''},${s.gender || ''},${s.status || ''},${s.createdAt.toISOString()}`,
-      )
-      .join('\n');
+    const data = students.map((s) => ({
+      email: s.email || '',
+      phone: s.phone || '',
+      firstName: s.firstName || '',
+      lastName: s.lastName || '',
+      displayName: s.displayName || '',
+      gender: this.excelExportService.translateStatus(s.gender || ''),
+      status: this.excelExportService.translateStatus(s.status || ''),
+      createdAt: s.createdAt,
+    }));
 
-    return header + rows;
+    return this.excelExportService.generateExcel(
+      data,
+      [
+        { header: 'Email', key: 'email', width: 30 },
+        { header: 'Số điện thoại', key: 'phone', width: 15 },
+        { header: 'Họ', key: 'firstName', width: 15 },
+        { header: 'Tên', key: 'lastName', width: 15 },
+        { header: 'Tên hiển thị', key: 'displayName', width: 20 },
+        { header: 'Giới tính', key: 'gender', width: 12 },
+        { header: 'Trạng thái', key: 'status', width: 15 },
+        { header: 'Ngày tạo', key: 'createdAt', width: 18 },
+      ],
+      'Danh sách học viên',
+    );
   }
 
   /**

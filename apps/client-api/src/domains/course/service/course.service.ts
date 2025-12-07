@@ -1,5 +1,6 @@
 import { PrismaRepository } from '@app/database';
 import {
+    ExcelExportService,
     KafkaService,
     Neo4jEntityType,
     Neo4jSyncMessage,
@@ -50,6 +51,7 @@ export class CourseService {
         private readonly sessionScheduleService: SessionScheduleService,
         private readonly certificateTemplateService: CertificateTemplateService,
         private readonly ttsService: TtsService,
+        private readonly excelExportService: ExcelExportService,
     ) { }
 
     // service.ts (đoạn create)
@@ -871,22 +873,50 @@ export class CourseService {
         return { count: result.count };
     }
 
-    async exportCourses(query: FilterCourseRequestDto): Promise<string> {
+    async exportCourses(query: FilterCourseRequestDto): Promise<Buffer> {
         const courses = await this.getCoursesForExport(query);
         if (courses.length === 0) {
-            return '';
+            return this.excelExportService.generateExcel(
+                [],
+                [{ header: 'Tiêu đề', key: 'title', width: 30 }],
+                'Danh sách khóa học',
+            );
         }
 
-        const header =
-            'id,title,description,difficulty,isPublished,price,currency,instructorId,instructorName,language,tags,totalLessons,totalDuration,createdAt,updatedAt\n';
-        const rows = courses
-            .map(
-                (c) =>
-                    `${c.id || ''},${(c.title || '').replace(/,/g, ';')},${(c.description || '').replace(/,/g, ';')},${c.difficulty || ''},${c.isPublished ? 'true' : 'false'},${c.price || 0},${c.currency || 'VND'},${c.instructorId || ''},${(c.instructor?.displayName || c.instructor?.firstName + ' ' + c.instructor?.lastName || '').replace(/,/g, ';')},${c.language || ''},${(c.tags || []).join(';')},${c.totalLessons || 0},${c.totalDuration || 0},${c.createdAt ? new Date(c.createdAt).toISOString() : ''},${c.updatedAt ? new Date(c.updatedAt).toISOString() : ''}`,
-            )
-            .join('\n');
+        const data = courses.map((c) => ({
+            title: c.title || '',
+            description: (c.description || '').substring(0, 100), // Truncate for Excel cell
+            difficulty: this.excelExportService.translateStatus(c.difficulty || ''),
+            isPublished: c.isPublished,
+            price: c.price || 0,
+            currency: c.currency || 'VND',
+            instructorName:
+                c.instructor?.displayName ||
+                `${c.instructor?.firstName || ''} ${c.instructor?.lastName || ''}`.trim() ||
+                '',
+            language: c.language || '',
+            totalLessons: c.totalLessons || 0,
+            totalDuration: c.totalDuration || 0,
+            createdAt: c.createdAt,
+        }));
 
-        return header + rows;
+        return this.excelExportService.generateExcel(
+            data,
+            [
+                { header: 'Tiêu đề', key: 'title', width: 30 },
+                { header: 'Mô tả', key: 'description', width: 40 },
+                { header: 'Độ khó', key: 'difficulty', width: 15 },
+                { header: 'Công khai', key: 'isPublished', width: 12 },
+                { header: 'Giá', key: 'price', width: 12 },
+                { header: 'Tiền tệ', key: 'currency', width: 10 },
+                { header: 'Giảng viên', key: 'instructorName', width: 20 },
+                { header: 'Ngôn ngữ', key: 'language', width: 12 },
+                { header: 'Số bài học', key: 'totalLessons', width: 12 },
+                { header: 'Thời lượng (phút)', key: 'totalDuration', width: 18 },
+                { header: 'Ngày tạo', key: 'createdAt', width: 18 },
+            ],
+            'Danh sách khóa học',
+        );
     }
 
     private async getCoursesForExport(query: FilterCourseRequestDto) {
