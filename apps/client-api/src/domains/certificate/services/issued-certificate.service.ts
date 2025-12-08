@@ -21,7 +21,7 @@ export class IssuedCertificateService {
     private readonly certificateRepo: IssuedCertificateRepository,
     private readonly templateService: CertificateTemplateService,
     private readonly prisma: PrismaRepository,
-  ) {}
+  ) { }
 
   /**
    * Issue certificate for a student
@@ -335,7 +335,7 @@ export class IssuedCertificateService {
   ): Promise<Buffer> {
     // Use Chrome for Testing (ARM64 version for Mac Silicon)
     const executablePath =
-      '/Users/hiteksofftware/.cache/puppeteer/chrome/mac_arm-134.0.6998.35/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing';
+      '/usr/bin/google-chrome'
 
     const browser = await puppeteer.launch({
       headless: true,
