@@ -346,45 +346,55 @@ Return JSON array format:
 
 Generate the vocabulary list now:`;
 
-    try {
-      const response = await this.geminiService.generateResponse(prompt);
-      const cleanedResponse = this.cleanJsonResponse(response);
-      const words = JSON.parse(cleanedResponse);
+    // Retry logic để xử lý khi AI trả về JSON không hợp lệ
+    const MAX_RETRIES = 2;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await this.geminiService.generateResponse(prompt);
+        const cleanedResponse = this.cleanJsonResponse(response);
+        const words = JSON.parse(cleanedResponse);
 
-      // Generate audio for each word using Google Translate TTS
-      for (const word of words) {
-        try {
-          const audioUrl =
-            await this.googleTranslateService.createAudioWithUrl(
-              word.word,
-              'en',
+        // Generate audio for each word using Google Translate TTS
+        for (const word of words) {
+          try {
+            const audioUrl =
+              await this.googleTranslateService.createAudioWithUrl(
+                word.word,
+                'en',
+              );
+            word.audioUrl = audioUrl;
+            word.imageUrl = ''; // No image for auto-generated vocab
+            this.logger.log(`🎵 Generated audio for word: ${word.word}`);
+          } catch (error) {
+            this.logger.warn(
+              `Failed to generate audio for word: ${word.word}`,
+              error,
             );
-          word.audioUrl = audioUrl;
-          word.imageUrl = ''; // No image for auto-generated vocab
-          this.logger.log(`🎵 Generated audio for word: ${word.word}`);
-        } catch (error) {
-          this.logger.warn(
-            `Failed to generate audio for word: ${word.word}`,
-            error,
-          );
-          word.audioUrl = '';
-          word.imageUrl = '';
+            word.audioUrl = '';
+            word.imageUrl = '';
+          }
         }
-      }
 
-      return {
-        type: ActivityType.VOCAB,
-        title: `Vocabulary: ${lessonTitle}`,
-        content: { items: words },
-        difficulty,
-        points: words.length * 10,
-        orderNo,
-        instructions: userPrompt || `Learn ${words.length} vocabulary words related to ${lessonTitle}`,
-      };
-    } catch (error) {
-      this.logger.error('Failed to generate vocab activity:', error);
-      throw error;
+        return {
+          type: ActivityType.VOCAB,
+          title: `Vocabulary: ${lessonTitle}`,
+          content: { items: words },
+          difficulty,
+          points: words.length * 10,
+          orderNo,
+          instructions: userPrompt || `Learn ${words.length} vocabulary words related to ${lessonTitle}`,
+        };
+      } catch (error) {
+        if (attempt < MAX_RETRIES) {
+          this.logger.warn(`Retry ${attempt + 1}/${MAX_RETRIES} for vocab activity due to JSON error`);
+          continue;
+        }
+        this.logger.error('Failed to generate vocab activity:', error);
+        throw error;
+      }
     }
+    // Fallback - should never reach here
+    throw new Error('Failed to generate vocab activity after retries');
   }
 
   private async generateQuizActivity(
@@ -1241,6 +1251,65 @@ Generate the conversation activity now:`;
     if (cleaned.endsWith('```')) {
       cleaned = cleaned.substring(0, cleaned.length - 3);
     }
-    return cleaned.trim();
+    cleaned = cleaned.trim();
+
+    // Check if JSON is valid, if not try to repair
+    try {
+      JSON.parse(cleaned);
+      return cleaned;
+    } catch {
+      // Try to repair truncated/malformed JSON
+      cleaned = this.attemptJsonRepair(cleaned);
+    }
+
+    return cleaned;
+  }
+
+  /**
+   * Attempt to repair common JSON issues from truncated AI responses
+   */
+  private attemptJsonRepair(json: string): string {
+    let repaired = json;
+
+    // Count open/close brackets and braces
+    const openBrackets = (repaired.match(/\[/g) || []).length;
+    const closeBrackets = (repaired.match(/\]/g) || []).length;
+    const openBraces = (repaired.match(/\{/g) || []).length;
+    const closeBraces = (repaired.match(/\}/g) || []).length;
+
+    // Fix unterminated string - if odd number of unescaped quotes
+    const unescapedQuotes = repaired.match(/(?<!\\)"/g) || [];
+    if (unescapedQuotes.length % 2 !== 0) {
+      // Find last meaningful content and close the string
+      const lastQuoteIndex = repaired.lastIndexOf('"');
+      if (lastQuoteIndex > 0) {
+        repaired = repaired.substring(0, lastQuoteIndex + 1);
+      }
+    }
+
+    // Remove trailing incomplete content after last complete element
+    // Look for patterns like: ,"incomplete or ,{ incomplete
+    repaired = repaired.replace(/,\s*"[^"]*$/g, '');
+    repaired = repaired.replace(/,\s*\{[^}]*$/g, '');
+
+    // Close unclosed braces first, then brackets
+    const newOpenBraces = (repaired.match(/\{/g) || []).length;
+    const newCloseBraces = (repaired.match(/\}/g) || []).length;
+    for (let i = 0; i < newOpenBraces - newCloseBraces; i++) {
+      repaired += '}';
+    }
+
+    const newOpenBrackets = (repaired.match(/\[/g) || []).length;
+    const newCloseBrackets = (repaired.match(/\]/g) || []).length;
+    for (let i = 0; i < newOpenBrackets - newCloseBrackets; i++) {
+      repaired += ']';
+    }
+
+    // Remove trailing comma before closing bracket/brace
+    repaired = repaired.replace(/,\s*([}\]])/g, '$1');
+
+    this.logger.warn(`Attempted JSON repair: ${openBrackets}[ ${closeBrackets}] ${openBraces}{ ${closeBraces}} -> repaired`);
+
+    return repaired;
   }
 }

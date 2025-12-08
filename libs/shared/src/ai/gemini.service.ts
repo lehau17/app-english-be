@@ -49,7 +49,7 @@ export class GeminiService {
         try {
             const model = this.genAI.getGenerativeModel({
                 model: 'gemini-2.5-flash',
-                generationConfig: { temperature: 0.7, maxOutputTokens: 2048 },
+                generationConfig: { temperature: 0.7, maxOutputTokens: 10000 },
             });
             const result = await model.generateContent(prompt);
             return result.response.text();
