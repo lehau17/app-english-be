@@ -7,6 +7,7 @@ import { AssignmentImportService } from './services/assignment-import.service';
 import { AssignmentPdfService } from './services/assignment-pdf.service';
 import { EvaluationModule } from '../evaluation/evaluation.module';
 import { EventsModule } from '../../events/events.module';
+import { EvaluationService } from '../evaluation/service/evaluation.service';
 
 @Module({
   imports: [SharedModule, EvaluationModule, EventsModule],
@@ -16,6 +17,7 @@ import { EventsModule } from '../../events/events.module';
     AssignmentRepository,
     AssignmentImportService,
     AssignmentPdfService,
+    EvaluationService
   ],
   exports: [
     AssignmentService,
