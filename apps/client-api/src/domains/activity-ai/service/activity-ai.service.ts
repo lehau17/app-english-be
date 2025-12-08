@@ -272,7 +272,14 @@ export class ActivityAIService {
     difficulty: DifficultyLevel,
   ): string {
     return `
-You are an expert ESL teacher creating engaging educational activities.
+You are an expert ESL (English as a Second Language) teacher creating engaging educational activities for Vietnamese students learning English.
+
+CRITICAL LANGUAGE REQUIREMENTS:
+- ALL generated content MUST be in ENGLISH
+- This is an English language learning system for Vietnamese students
+- Questions, options, passages, dialogues, prompts - everything must be in English
+- Only Vietnamese translations (translationVi field) should be in Vietnamese
+- Even if the input topic/description is in Vietnamese, generate English content about that topic
 
 Course Context:
 - Course Title: ${courseTitle}
@@ -285,9 +292,15 @@ ${lessonDescription ? `- Lesson Description: ${lessonDescription}` : ''}
 ${userPrompt ? `User Requirements:\n- ${userPrompt}` : ''}
 
 Difficulty Level: ${difficulty}
+- beginner: Use simple vocabulary (A1-A2 CEFR), short sentences, common words
+- elementary: Use basic vocabulary and grammar (A2-B1 CEFR)
+- intermediate: Include more complex structures (B1-B2 CEFR)
+- upper_intermediate: Advanced vocabulary and idioms (B2-C1 CEFR)
+- advanced: Complex academic language (C1-C2 CEFR)
 
 Important Guidelines:
-- All content must be relevant to the lesson topic
+- ALL content must be in ENGLISH (except translationVi fields)
+- Content must be relevant to the lesson topic
 - Use age-appropriate and culturally sensitive examples
 - Ensure accuracy in grammar, vocabulary, and definitions
 - Make activities engaging and interactive

@@ -692,29 +692,56 @@ export class AssignmentService {
             break;
 
           case 'matching':
-            // Matching pairs
-            if (
-              content?.pairs &&
-              Array.isArray(content.pairs) &&
-              typeof activityAnswers === 'object'
-            ) {
+            // Matching - support both pairs format and leftItems/rightItems format
+            if (typeof activityAnswers === 'object') {
               let correctCount = 0;
-              content.pairs.forEach((pair: any) => {
-                const userMatch = activityAnswers[pair.left];
-                if (userMatch === pair.right) {
-                  correctCount++;
-                  console.log(
-                    `Matching correct: "${pair.left}" -> "${pair.right}"`,
-                  );
-                } else {
-                  console.log(
-                    `Matching incorrect: "${pair.left}" -> user="${userMatch}", correct="${pair.right}"`,
-                  );
-                }
-              });
-              activityScore = Math.round(
-                (correctCount / content.pairs.length) * activityPoints,
-              );
+              let totalPairs = 0;
+
+              if (content?.pairs && Array.isArray(content.pairs)) {
+                // Format 1: pairs array with index-based answers
+                // activityAnswers: { 0: 0, 1: 2, 2: 1 } (leftIndex -> rightIndex)
+                totalPairs = content.pairs.length;
+                content.pairs.forEach((pair: any, pairIndex: number) => {
+                  const userRightIndex = activityAnswers[pairIndex];
+                  // Correct when user matches leftIndex to rightIndex (which should be same for correct pair)
+                  if (typeof userRightIndex === 'number' && userRightIndex === pairIndex) {
+                    correctCount++;
+                    console.log(
+                      `Matching correct (pairs format): "${pair.left}" -> "${pair.right}"`,
+                    );
+                  } else {
+                    console.log(
+                      `Matching incorrect (pairs format): "${pair.left}" -> user selected index ${userRightIndex}, correct index is ${pairIndex}`,
+                    );
+                  }
+                });
+              } else if (content?.leftItems && content?.rightItems) {
+                // Format 2: leftItems/rightItems arrays
+                // activityAnswers: { 0: 0, 1: 1, 2: 2 } (leftIndex -> rightIndex)
+                // Correct answer: leftItems[i] matches rightItems[i]
+                totalPairs = content.leftItems.length;
+                content.leftItems.forEach((leftItem: string, leftIndex: number) => {
+                  const userRightIndex = activityAnswers[leftIndex];
+                  // Correct when user matches leftIndex to the same rightIndex
+                  if (typeof userRightIndex === 'number' && userRightIndex === leftIndex) {
+                    correctCount++;
+                    console.log(
+                      `Matching correct (leftItems/rightItems format): "${leftItem}" -> "${content.rightItems[leftIndex]}"`,
+                    );
+                  } else {
+                    const userAnswer = userRightIndex !== undefined ? content.rightItems[userRightIndex] : 'none';
+                    console.log(
+                      `Matching incorrect: "${leftItem}" -> user="${userAnswer}", correct="${content.rightItems[leftIndex]}"`,
+                    );
+                  }
+                });
+              }
+
+              if (totalPairs > 0) {
+                activityScore = Math.round(
+                  (correctCount / totalPairs) * activityPoints,
+                );
+              }
             }
             break;
 
@@ -758,23 +785,47 @@ export class AssignmentService {
             break;
 
           case 'pronunciation':
-            // Frontend submits: { audioUrl: string }
-            if (activityAnswers?.audioUrl) {
-              try {
-                const audioBase64 = await this.downloadAudioAsBase64(activityAnswers.audioUrl);
-                const phrases = content?.phrases || [];
-                const targetPhrase = phrases[0]?.text || content?.phrase || '';
+            // Frontend submits: { [index]: "audioUrl" }
+            // Example: { "0": "http://...", "2": "http://..." }
+            const phases = content?.phrases || [];
+            let totalPronunciationScore = 0;
 
-                const result = await this.evaluationService.evaluatePronunciation('system', {
-                  audioBase64,
-                  mimeType: 'audio/webm',
-                  phrase: targetPhrase,
-                });
-                activityScore = Math.round((result.score / 100) * activityPoints);
-                console.log(`Pronunciation: AI score ${result.score}/100 → ${activityScore}/${activityPoints}`);
-              } catch (error) {
-                console.error('Pronunciation evaluation failed:', error);
-                activityScore = Math.round(activityPoints * 0.5);
+            if (typeof activityAnswers === 'object' && activityAnswers !== null) {
+              const phraseDetails = []; // To store details for the attempt
+
+              for (let i = 0; i < phases.length; i++) {
+                const audioUrl = activityAnswers[i];
+                if (audioUrl && typeof audioUrl === 'string') {
+                  try {
+                    const audioBase64 = await this.downloadAudioAsBase64(audioUrl);
+                    const targetPhrase = phases[i]?.text || '';
+
+                    const result = await this.evaluationService.evaluatePronunciation('system', {
+                      audioBase64,
+                      mimeType: 'audio/webm',
+                      phrase: targetPhrase,
+                    });
+
+                    totalPronunciationScore += result.score;
+                    console.log(`Pronunciation phrase ${i}: ${result.score}/100`);
+
+                    // Store detail (optional, if we want to return per-phrase feedback)
+                    phraseDetails.push({
+                      index: i,
+                      phrase: targetPhrase,
+                      score: result.score,
+                      feedback: result.feedback
+                    });
+                  } catch (error) {
+                    console.error(`Pronunciation evaluation failed for phrase ${i}:`, error);
+                  }
+                }
+              }
+
+              // Score = (Sum of scores) / (Total phrases) * ActivityPoints
+              // Unsubmitted phrases count as 0
+              if (phases.length > 0) {
+                activityScore = Math.round((totalPronunciationScore / phases.length / 100) * activityPoints);
               }
             }
             break;
@@ -1327,14 +1378,34 @@ export class AssignmentService {
         break;
 
       case 'matching':
-        if (content?.pairs && Array.isArray(content.pairs) && typeof activityAnswers === 'object') {
+        // Matching - support both pairs format and leftItems/rightItems format
+        if (typeof activityAnswers === 'object') {
           let correctCount = 0;
-          content.pairs.forEach((pair: any) => {
-            if (activityAnswers[pair.left] === pair.right) {
-              correctCount++;
-            }
-          });
-          activityScore = Math.round((correctCount / content.pairs.length) * activityPoints);
+          let totalPairs = 0;
+
+          if (content?.pairs && Array.isArray(content.pairs)) {
+            // Format 1: pairs array with index-based answers
+            totalPairs = content.pairs.length;
+            content.pairs.forEach((pair: any, pairIndex: number) => {
+              const userRightIndex = activityAnswers[pairIndex];
+              if (typeof userRightIndex === 'number' && userRightIndex === pairIndex) {
+                correctCount++;
+              }
+            });
+          } else if (content?.leftItems && content?.rightItems) {
+            // Format 2: leftItems/rightItems arrays
+            totalPairs = content.leftItems.length;
+            content.leftItems.forEach((_leftItem: string, leftIndex: number) => {
+              const userRightIndex = activityAnswers[leftIndex];
+              if (typeof userRightIndex === 'number' && userRightIndex === leftIndex) {
+                correctCount++;
+              }
+            });
+          }
+
+          if (totalPairs > 0) {
+            activityScore = Math.round((correctCount / totalPairs) * activityPoints);
+          }
         }
         break;
 
@@ -1374,21 +1445,33 @@ export class AssignmentService {
         break;
 
       case 'pronunciation':
-        if (activityAnswers?.audioUrl) {
-          try {
-            const audioBase64 = await this.downloadAudioAsBase64(activityAnswers.audioUrl);
-            const phrases = content?.phrases || [];
-            const targetPhrase = phrases[0]?.text || content?.phrase || '';
+        // Frontend submits: { [index]: "audioUrl" }
+        const phrases = content?.phrases || [];
+        let totalStreamingScore = 0;
 
-            const result = await this.evaluationService.evaluatePronunciation('system', {
-              audioBase64,
-              mimeType: 'audio/webm',
-              phrase: targetPhrase,
-            });
-            activityScore = Math.round((result.score / 100) * activityPoints);
-          } catch (error) {
-            this.logger.error('Pronunciation evaluation failed:', error);
-            activityScore = Math.round(activityPoints * 0.5);
+        if (typeof activityAnswers === 'object' && activityAnswers !== null) {
+          for (let i = 0; i < phrases.length; i++) {
+            const audioUrl = activityAnswers[i];
+            if (audioUrl && typeof audioUrl === 'string') {
+              try {
+                const audioBase64 = await this.downloadAudioAsBase64(audioUrl);
+                const targetPhrase = phrases[i]?.text || '';
+
+                const result = await this.evaluationService.evaluatePronunciation('system', {
+                  audioBase64,
+                  mimeType: 'audio/webm',
+                  phrase: targetPhrase,
+                });
+
+                totalStreamingScore += result.score;
+              } catch (error) {
+                this.logger.error(`Pronunciation evaluation failed for phrase ${i}:`, error);
+              }
+            }
+          }
+
+          if (phrases.length > 0) {
+            activityScore = Math.round((totalStreamingScore / phrases.length / 100) * activityPoints);
           }
         }
         break;
