@@ -1,0 +1,105 @@
+doctype html
+html
+  head
+    meta(charset='UTF-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    title Con bạn đã nhận được chứng chỉ
+    style.
+      body {
+        font-family: Arial, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        background-color: #FF9800;
+        color: white;
+        padding: 20px;
+        text-align: center;
+        border-radius: 5px 5px 0 0;
+      }
+      .content {
+        background-color: #f9f9f9;
+        padding: 30px;
+        border-radius: 0 0 5px 5px;
+      }
+      .certificate-info {
+        background-color: white;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 5px;
+        border-left: 4px solid #FF9800;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 24px;
+        background-color: #FF9800;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 10px 5px;
+      }
+      .button:hover {
+        background-color: #F57C00;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 30px;
+        color: #666;
+        font-size: 12px;
+      }
+  body
+    .header
+      h1 Chúc mừng!
+      p Con bạn đã hoàn thành khóa học thành công
+
+    .content
+      p Xin chào,
+      p Chúng tôi vui mừng thông báo rằng
+        strong #{childName}
+        |  đã hoàn thành khóa học
+        strong #{courseName}
+        |  với điểm số
+        strong #{gradeLevel}
+        | !
+
+      .certificate-info
+        h3 Thông tin chứng chỉ:
+        p
+          strong Học sinh:
+          |  #{childName}
+        p
+          strong Khóa học:
+          |  #{courseName}
+        p
+          strong Số chứng chỉ:
+          |  #{certificateNumber}
+        if finalScore
+          p
+            strong Điểm số:
+            |  #{finalScore}%
+        p
+          strong Xếp loại:
+          |  #{gradeLevel}
+
+      p Bạn có thể xem và tải xuống chứng chỉ của con mình bằng cách click vào nút bên dưới:
+
+      div(style='text-align: center; margin: 30px 0;')
+        a.button(href=downloadUrl) Xem chứng chỉ
+        a.button(href=verificationUrl, style='background-color: #2196F3;') Xác minh chứng chỉ
+
+      p
+        | Link xác minh:
+        a(href=verificationUrl) #{verificationUrl}
+
+      .footer
+        p Đây là email tự động, vui lòng không trả lời email này.
+        p Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với chúng tôi.
+
+
+
+
+
+

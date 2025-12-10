@@ -2,18 +2,18 @@ import { PrismaRepository } from '@app/database';
 import { JwtPayload } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
 } from '@nestjs/common';
 import {
-  Classroom,
-  ClassroomStatus,
-  Prisma,
-  SessionStatus,
-  TimezoneCode,
-  UserRole,
+    Classroom,
+    ClassroomStatus,
+    Prisma,
+    SessionStatus,
+    TimezoneCode,
+    UserRole,
 } from '@prisma/client';
 import { EventsGateway } from 'apps/client-api/src/events/events.gateway';
 import * as bcrypt from 'bcrypt';
@@ -21,26 +21,26 @@ import { Readable } from 'stream';
 import * as XLSX from 'xlsx';
 import { PaymentService } from '../../payment/service/payment.service';
 import {
-  AddStudentToClassroomDto,
-  AssignTeacherToClassroomDto,
-  ClassroomAnnouncementQueryDto,
-  CreateClassroomDto,
-  FilterClassroomRequestDto,
-  ImportStudentsResultDto,
-  StudentDailyScheduleQueryDto,
-  StudentWeeklyScheduleQueryDto,
-  UpdateClassroomDto,
+    AddStudentToClassroomDto,
+    AssignTeacherToClassroomDto,
+    ClassroomAnnouncementQueryDto,
+    CreateClassroomDto,
+    FilterClassroomRequestDto,
+    ImportStudentsResultDto,
+    StudentDailyScheduleQueryDto,
+    StudentWeeklyScheduleQueryDto,
+    UpdateClassroomDto,
 } from '../dto/classroom.dto';
 import { EnrollClassroomDto } from '../dto/enroll-classroom.dto';
 import { ClassroomRepository } from '../repository/classroom.repository';
 import { AutoExamCreationService } from '../services/auto-exam-creation.service';
 import {
-  calculateClassroomSchedule,
-  generateClassroomSessions,
+    calculateClassroomSchedule,
+    generateClassroomSessions,
 } from '../utils/classroom-schedule.util';
 import {
-  generateClassCode,
-  getCsvTransformStream,
+    generateClassCode,
+    getCsvTransformStream,
 } from '../utils/classroom.util';
 
 const TIMEZONE_OFFSETS: Record<TimezoneCode, number> = {
@@ -1926,6 +1926,10 @@ export class ClassroomService {
         updatedAt: now,
       },
     });
+
+    // Get completed classroom IDs to trigger certificate issuance
+    // Note: Certificate issuance will be handled by background worker or event listener
+    // This is just for logging - actual issuance should be async to not block status update
 
     console.log(
       `Auto-updated classroom statuses: ${activatedResult.count} activated, ${completedResult.count} completed`,

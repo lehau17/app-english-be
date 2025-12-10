@@ -4,14 +4,21 @@ import { JwtPayload } from '../payload';
 import { RequestContext } from '../request-context';
 
 export const PayloadToken = createParamDecorator<
-  unknown,
+  string | undefined,
   ExecutionContext,
-  JwtPayload
->((_: unknown, ctx: ExecutionContext) => {
-  const user = RequestContext.getValue('user');
-  if (user) return user;
+  JwtPayload | string | number | undefined
+>((field: string | undefined, ctx: ExecutionContext) => {
+  const user = RequestContext.getValue('user') || ctx.switchToHttp().getRequest().user;
 
-  // Fallback: lấy từ request (trường hợp chưa set vào RequestContext)
-  const request = ctx.switchToHttp().getRequest();
-  return request.user;
+  if (!user) {
+    return undefined;
+  }
+
+  // Nếu có field name, trả về giá trị của field đó
+  if (field) {
+    return (user as JwtPayload)[field as keyof JwtPayload] as string | number | undefined;
+  }
+
+  // Nếu không có field name, trả về toàn bộ payload (backward compatible)
+  return user as JwtPayload;
 });

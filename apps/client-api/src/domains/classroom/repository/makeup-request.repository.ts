@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
 import { PrismaRepository } from '@app/database';
+import { Injectable } from '@nestjs/common';
 import { MakeupRequestStatus, Prisma } from '@prisma/client';
 
 @Injectable()
@@ -216,10 +216,14 @@ export class MakeupRequestRepository {
         status?: MakeupRequestStatus,
         page = 1,
         limit = 20,
+        classroomId?: string,
     ) {
         const where: Prisma.MakeupAttendanceRequestWhereInput = {
             studentId,
             ...(status && { status }),
+            ...(classroomId && {
+                session: { classroomId },
+            }),
         };
 
         const [data, total] = await Promise.all([

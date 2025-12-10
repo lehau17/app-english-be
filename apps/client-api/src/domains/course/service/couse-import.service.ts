@@ -318,6 +318,14 @@ export class CoursesImportService {
                         const lessonActivityMap = new Map<string, Map<number, any>>();
                         courseActivitiesMap.set(m.code, lessonActivityMap);
 
+                        // Default assignment weights for gradebook calculation
+                        const defaultWeights = {
+                            midterm: 0.3,
+                            final: 0.4,
+                            tests: 0.2,
+                            activities: 0.1,
+                        };
+
                         const created = await this.prisma.course.create({
                             data: {
                                 title: m.title,
@@ -333,6 +341,7 @@ export class CoursesImportService {
                                 language: m.language,
                                 plannedSessions: m.plannedSessions,
                                 isPublished: dto.publish ?? m.isPublished ?? false,
+                                defaultAssignmentWeights: defaultWeights, // Set default weights for auto-assignment creation
                             },
                         });
 

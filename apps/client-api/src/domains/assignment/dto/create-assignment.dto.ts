@@ -221,6 +221,14 @@ export class CreateAssignmentDto {
   instructions?: string;
 
   @ApiPropertyOptional({
+    description: 'Start time for assignment (when students can begin)',
+    example: '2024-12-01T08:00:00Z',
+  })
+  @IsDateString()
+  @IsOptional()
+  startTime?: string;
+
+  @ApiPropertyOptional({
     description: 'Due date for assignment',
     example: '2024-12-31T17:00:00Z',
   })
@@ -246,7 +254,6 @@ export class CreateAssignmentDto {
     minimum: 1,
   })
   @IsInt()
-  @Min(1)
   @IsOptional()
   @Transform(({ value }) =>
     typeof value === 'number' ? value : parseInt(value),

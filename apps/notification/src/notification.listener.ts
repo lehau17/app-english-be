@@ -1,10 +1,10 @@
 import { PrismaRepository } from '@app/database';
 import { KafkaConfigService, KafkaTopic } from '@app/shared';
 import {
-  Injectable,
-  Logger,
-  OnModuleDestroy,
-  OnModuleInit,
+    Injectable,
+    Logger,
+    OnModuleDestroy,
+    OnModuleInit,
 } from '@nestjs/common';
 import { Consumer, Kafka } from 'kafkajs';
 import { NotificationService } from './notification.service';
@@ -124,6 +124,12 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
         await this.handleWelcomeNewUser(notification);
       } else if (topic === KafkaTopic.EMAIL_ENROLLMENT_CONFIRMATION) {
         await this.handleEnrollmentConfirmation(notification);
+      } else if (notification.type === 'certificate-issued') {
+        await this.handleCertificateIssued(notification);
+      } else if (notification.type === 'certificate-issued-parent') {
+        await this.handleParentCertificateIssued(notification);
+      } else if (notification.type === 'session-reschedule-notification') {
+        await this.handleSessionRescheduleNotification(notification);
       } else {
         this.logger.log(
           `Notification type "${notification.type}" - no email action needed`,
@@ -308,6 +314,144 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.error(
         `Failed to send enrollment confirmation email: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  private async handleCertificateIssued(notification: NotificationMessage) {
+    try {
+      const {
+        email,
+        studentName,
+        courseName,
+        gradeLevel,
+        finalScore,
+        certificateNumber,
+        downloadUrl,
+        verificationUrl,
+      } = notification.data;
+
+      if (!email) {
+        this.logger.warn(
+          `Certificate issued notification for user ${notification.userId} has no email`,
+        );
+        return;
+      }
+
+      await this.notificationService.sendEmail({
+        to: [email],
+        subject: `Chúc mừng! Bạn đã nhận được chứng chỉ - ${courseName}`,
+        template: './certificate-issued',
+        context: {
+          studentName,
+          courseName,
+          gradeLevel,
+          finalScore,
+          certificateNumber,
+          downloadUrl,
+          verificationUrl,
+        },
+      });
+
+      this.logger.log(`Sent certificate issued email to ${email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send certificate issued email: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  private async handleParentCertificateIssued(notification: NotificationMessage) {
+    try {
+      const {
+        email,
+        childName,
+        courseName,
+        gradeLevel,
+        finalScore,
+        certificateNumber,
+        downloadUrl,
+        verificationUrl,
+      } = notification.data;
+
+      if (!email) {
+        this.logger.warn(
+          `Parent certificate notification for user ${notification.userId} has no email`,
+        );
+        return;
+      }
+
+      await this.notificationService.sendEmail({
+        to: [email],
+        subject: `Con bạn đã nhận được chứng chỉ - ${courseName}`,
+        template: './parent-certificate-issued',
+        context: {
+          childName,
+          courseName,
+          gradeLevel,
+          finalScore,
+          certificateNumber,
+          downloadUrl,
+          verificationUrl,
+        },
+      });
+
+      this.logger.log(`Sent parent certificate email to ${email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send parent certificate email: ${error.message}`,
+        error.stack,
+      );
+    }
+  }
+
+  private async handleSessionRescheduleNotification(notification: NotificationMessage) {
+    try {
+      const {
+        email,
+        studentName,
+        classroomName,
+        sessionTitle,
+        teacherName,
+        oldStartTime,
+        oldEndTime,
+        newStartTime,
+        newEndTime,
+        reason,
+        classroomUrl,
+      } = notification.data;
+
+      if (!email) {
+        this.logger.warn(
+          `Session reschedule notification for user ${notification.userId} has no email`,
+        );
+        return;
+      }
+
+      await this.notificationService.sendEmail({
+        to: [email],
+        subject: `Thông báo dời lịch buổi học - ${sessionTitle}`,
+        template: './session-reschedule-notification',
+        context: {
+          studentName: studentName || 'Học viên',
+          classroomName: classroomName || 'Lớp học',
+          sessionTitle: sessionTitle || 'Buổi học',
+          teacherName: teacherName || 'Giáo viên',
+          oldStartTime: oldStartTime || 'N/A',
+          oldEndTime: oldEndTime || 'N/A',
+          newStartTime: newStartTime || 'N/A',
+          newEndTime: newEndTime || 'N/A',
+          reason: reason || 'Không có lý do',
+          classroomUrl: classroomUrl || '#',
+        },
+      });
+
+      this.logger.log(`Sent session reschedule email to ${email}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to send session reschedule email: ${error.message}`,
         error.stack,
       );
     }

@@ -1,35 +1,35 @@
 import { PrismaRepository } from '@app/database';
 import {
-    ExcelExportService,
-    KafkaService,
-    Neo4jEntityType,
-    Neo4jSyncMessage,
-    Neo4jSyncOperation,
-    TtsService,
+  ExcelExportService,
+  KafkaService,
+  Neo4jEntityType,
+  Neo4jSyncMessage,
+  Neo4jSyncOperation,
+  TtsService,
 } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-    BadRequestException,
-    ConflictException,
-    Injectable,
-    Logger,
-    NotFoundException,
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import {
-    ClassroomStatus,
-    Course,
-    DifficultyLevel,
-    LanguageCode,
-    Prisma,
-    UserRole,
-    Weekday,
+  ClassroomStatus,
+  Course,
+  DifficultyLevel,
+  LanguageCode,
+  Prisma,
+  UserRole,
+  Weekday,
 } from '@prisma/client';
 import { CertificateTemplateService } from '../../certificate/services';
 import { GoogleTranslateFreeService } from '../../google-translate/google-translate.service';
 import {
-    CreateCourseDto,
-    FilterCourseRequestDto,
-    UpdateCourseDto,
+  CreateCourseDto,
+  FilterCourseRequestDto,
+  UpdateCourseDto,
 } from '../dto/course.dto';
 import { CourseRepository } from '../repository/course.repository';
 import { SessionScheduleService } from './session-schedule.service';
@@ -151,6 +151,15 @@ export class CourseService {
         }> = [];
 
         const result = await this.prisma.$transaction(async (tx) => {
+            // Default assignment weights for gradebook calculation
+            // Midterm: 30%, Final: 40%, Tests: 20%, Activities: 10%
+            const defaultWeights = {
+                midterm: 0.3,
+                final: 0.4,
+                tests: 0.2,
+                activities: 0.1,
+            };
+
             // Tạo Course
             const course = await tx.course.create({
                 data: {
@@ -169,6 +178,7 @@ export class CourseService {
                     prerequisites: dto.prerequisites ?? [],
                     isPublished: dto.isPublished ?? false,
                     plannedSessions: dto.plannedSessions ?? 8, // Mặc định 8 buổi nếu không chỉ định
+                    defaultAssignmentWeights: defaultWeights, // Set default weights for auto-assignment creation
                 },
             });
 
@@ -997,7 +1007,7 @@ export class CourseService {
             duration: string;
             price: number;
             thumbnail?: string | null;
-            status: 'ACTIVE' | 'INACTIVE';
+            status: string
         }>;
         total: number;
     }> {

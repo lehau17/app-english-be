@@ -1,24 +1,24 @@
 import {
-  JwtPayload,
-  PayloadToken,
-  ResponseMessage,
-  Roles,
-  RolesGuard,
+    JwtPayload,
+    PayloadToken,
+    ResponseMessage,
+    Roles,
+    RolesGuard,
 } from '@app/shared';
 import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-  UseGuards,
+    Body,
+    Controller,
+    Get,
+    Param,
+    Post,
+    Query,
+    UseGuards
 } from '@nestjs/common';
 import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
+    ApiBearerAuth,
+    ApiOperation,
+    ApiResponse,
+    ApiTags,
 } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { IssueCertificateDto } from '../dto';
@@ -127,24 +127,6 @@ export class CertificateController {
   }
 
   // ==================== PUBLIC ENDPOINTS ====================
-
-  @Get('public/v1/verify/code/:verificationCode')
-  @ApiOperation({ summary: 'Verify certificate by verification code (Public)' })
-  @ApiResponse({ status: 200, description: 'Certificate verified' })
-  @ResponseMessage('Certificate verified successfully')
-  async verifyCertificate(@Param('verificationCode') verificationCode: string) {
-    return this.certificateService.verifyCertificate(verificationCode);
-  }
-
-  @Get('public/v1/verify/number/:certificateNumber')
-  @ApiOperation({
-    summary: 'Verify certificate by certificate number (Public)',
-  })
-  @ApiResponse({ status: 200, description: 'Certificate verified' })
-  @ResponseMessage('Certificate verified successfully')
-  async verifyCertificateByNumber(
-    @Param('certificateNumber') certificateNumber: string,
-  ) {
-    return this.certificateService.verifyCertificateByNumber(certificateNumber);
-  }
+  // Note: Public endpoints have been moved to PublicCertificateController
+  // See: public-certificate.controller.ts
 }

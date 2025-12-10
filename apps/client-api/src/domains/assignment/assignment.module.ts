@@ -1,16 +1,24 @@
 import { SharedModule } from '@app/shared';
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
+import { EventsModule } from '../../events/events.module';
+import { CertificateModule } from '../certificate/certificate.module';
+import { EvaluationModule } from '../evaluation/evaluation.module';
+import { EvaluationService } from '../evaluation/service/evaluation.service';
+import { GradebookModule } from '../gradebook';
 import { PrivateAssignmentController } from './controller';
 import { AssignmentRepository } from './repository';
 import { AssignmentService } from './service';
 import { AssignmentImportService } from './services/assignment-import.service';
 import { AssignmentPdfService } from './services/assignment-pdf.service';
-import { EvaluationModule } from '../evaluation/evaluation.module';
-import { EventsModule } from '../../events/events.module';
-import { EvaluationService } from '../evaluation/service/evaluation.service';
 
 @Module({
-  imports: [SharedModule, EvaluationModule, EventsModule],
+  imports: [
+    SharedModule,
+    EvaluationModule,
+    EventsModule,
+    GradebookModule,
+    forwardRef(() => CertificateModule),
+  ],
   controllers: [PrivateAssignmentController],
   providers: [
     AssignmentService,

@@ -74,6 +74,14 @@ export const PROGRESS_CACHE = {
   ACTIVITY: 'progress:activity',
 } as const;
 
+// ==================== GRADEBOOK ====================
+export const GRADEBOOK_CACHE = {
+  /** Student grade in a classroom */
+  STUDENT_GRADE: 'gradebook:student',
+  /** Classroom gradebook */
+  CLASSROOM: 'gradebook:classroom',
+} as const;
+
 // ==================== CACHE TTL (seconds) ====================
 export const CACHE_TTL = {
   /** Very short - 30 seconds */
@@ -109,4 +117,5 @@ export type UserCacheKey = (typeof USER_CACHE)[keyof typeof USER_CACHE];
 export type CourseCacheKey = (typeof COURSE_CACHE)[keyof typeof COURSE_CACHE];
 export type AssignmentCacheKey = (typeof ASSIGNMENT_CACHE)[keyof typeof ASSIGNMENT_CACHE];
 export type ProgressCacheKey = (typeof PROGRESS_CACHE)[keyof typeof PROGRESS_CACHE];
+export type GradebookCacheKey = (typeof GRADEBOOK_CACHE)[keyof typeof GRADEBOOK_CACHE];
 export type CacheTTL = (typeof CACHE_TTL)[keyof typeof CACHE_TTL];

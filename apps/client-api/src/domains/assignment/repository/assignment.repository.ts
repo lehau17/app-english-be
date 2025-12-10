@@ -371,7 +371,7 @@ export class AssignmentRepository extends PrismaRepository {
       score: number;
       feedback?: string;
     },
-  ): Promise<AssignmentSubmissionWithStudent> {
+  ) {
     return this.assignmentSubmission.update({
       where: { id: submissionId },
       data: {
@@ -388,6 +388,12 @@ export class AssignmentRepository extends PrismaRepository {
             firstName: true,
             lastName: true,
             email: true,
+          },
+        },
+        assignment: {
+          select: {
+            id: true,
+            classroomId: true,
           },
         },
       },

@@ -21,6 +21,7 @@ import { DeviceTokenModule } from './domains/device-token';
 import { DictionaryModule } from './domains/dictionary/dictionary.module';
 import { EvaluationModule } from './domains/evaluation';
 import { GoogleTranslateModule } from './domains/google-translate/google-translate.module';
+import { GradebookModule } from './domains/gradebook';
 import { LandingPageModule } from './domains/landing-page/landing-page.module';
 import { LeaderboardModule } from './domains/leaderboard';
 import { LessonModule } from './domains/lesson';
@@ -75,6 +76,7 @@ import { EventsModule } from './events/events.module';
     PodcastCommentModule,
     PodcastRatingModule,
     EvaluationModule,
+    GradebookModule,
     LeaderboardModule,
     AiSpeakingModule,
     PaymentModule,

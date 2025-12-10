@@ -1,4 +1,10 @@
 import { PrismaRepository } from '@app/database';
+import { KafkaService } from '@app/shared';
+import {
+  getGradeLevel,
+  isEligibleForCertificate,
+  MIN_CERTIFICATE_SCORE,
+} from '@app/shared/certificate';
 import {
   BadRequestException,
   ConflictException,
@@ -6,9 +12,10 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { IssuedCertificate } from '@prisma/client';
+import { IssuedCertificate, NotificationChannel, NotificationType } from '@prisma/client';
 import * as puppeteer from 'puppeteer';
 import { v4 as uuidv4 } from 'uuid';
+import { NotificationService } from '../../notification/service';
 import { IssueCertificateDto } from '../dto';
 import { IssuedCertificateRepository } from '../repository';
 import { CertificateTemplateService } from './certificate-template.service';
@@ -21,7 +28,9 @@ export class IssuedCertificateService {
     private readonly certificateRepo: IssuedCertificateRepository,
     private readonly templateService: CertificateTemplateService,
     private readonly prisma: PrismaRepository,
-  ) { }
+    private readonly notificationService?: NotificationService,
+    private readonly kafkaService?: KafkaService,
+  ) {}
 
   /**
    * Issue certificate for a student
@@ -71,6 +80,17 @@ export class IssuedCertificateService {
       if (template.minScore && dto.finalScore < template.minScore) {
         throw new BadRequestException(
           `Student score (${dto.finalScore}%) does not meet minimum requirement (${template.minScore}%)`,
+        );
+      }
+    }
+
+    // Check grade level eligibility (only Xuất sắc, Giỏi, Khá >= 70)
+    let gradeLevel: string | undefined;
+    if (dto.finalScore !== null && dto.finalScore !== undefined) {
+      gradeLevel = getGradeLevel(dto.finalScore);
+      if (!isEligibleForCertificate(gradeLevel as any)) {
+        throw new BadRequestException(
+          `Grade level ${gradeLevel} (${dto.finalScore}%) is not eligible for certificate. Minimum required: ${MIN_CERTIFICATE_SCORE}% (Khá)`,
         );
       }
     }
@@ -139,6 +159,7 @@ export class IssuedCertificateService {
       courseName: course.title,
       courseDescription: course.description,
       finalScore: dto.finalScore,
+      gradeLevel: gradeLevel || null,
       progress,
       totalHours: dto.totalHours || course.estimatedHours,
       metadata: dto.metadata,
@@ -148,7 +169,177 @@ export class IssuedCertificateService {
       `Issued certificate ${certificate.id} (${certificateNumber})`,
     );
 
+    // Send notifications (non-blocking, don't fail certificate creation if notification fails)
+    this.sendCertificateNotifications(
+      certificate,
+      student,
+      course,
+      gradeLevel || null,
+      certificateNumber,
+      verificationCode,
+    ).catch((error) => {
+      this.logger.error(
+        `Failed to send certificate notifications for certificate ${certificate.id}`,
+        error.stack,
+      );
+    });
+
     return certificate;
+  }
+
+  /**
+   * Send system and email notifications when certificate is issued
+   */
+  private async sendCertificateNotifications(
+    certificate: IssuedCertificate,
+    student: { id: string; email: string | null; displayName: string | null; firstName: string | null; lastName: string | null },
+    course: { title: string },
+    gradeLevel: string | null,
+    certificateNumber: string,
+    verificationCode: string,
+  ): Promise<void> {
+    if (!this.notificationService || !this.kafkaService) {
+      this.logger.warn('NotificationService or KafkaService not available, skipping notifications');
+      return;
+    }
+
+    const studentName =
+      student.displayName ||
+      [student.firstName, student.lastName].filter(Boolean).join(' ') ||
+      student.email ||
+      'Student';
+
+    // 1. System notification for student
+    try {
+      await this.notificationService.create({
+        userId: student.id,
+        type: NotificationType.system,
+        title: 'Bạn đã nhận được chứng chỉ',
+        body: `Chúc mừng! Bạn đã hoàn thành khóa học ${course.title}${gradeLevel ? ` với điểm số ${gradeLevel}` : ''}`,
+        channel: NotificationChannel.in_app,
+        data: JSON.stringify({
+          certificateId: certificate.id,
+          courseId: certificate.courseId,
+          classroomId: certificate.classroomId,
+          gradeLevel,
+          certificateNumber,
+        }),
+      });
+      this.logger.log(`System notification created for student ${student.id}`);
+    } catch (error) {
+      this.logger.error(`Failed to create system notification for student: ${error.message}`);
+    }
+
+    // 2. System notifications for parents
+    try {
+      const parents = await this.findLinkedParents(student.id);
+      for (const parent of parents) {
+        await this.notificationService.create({
+          userId: parent.id,
+          type: NotificationType.system,
+          title: 'Con bạn đã nhận được chứng chỉ',
+          body: `${studentName} đã hoàn thành khóa học ${course.title}${gradeLevel ? ` với điểm số ${gradeLevel}` : ''}`,
+          channel: NotificationChannel.in_app,
+          data: JSON.stringify({
+            childId: student.id,
+            childName: studentName,
+            certificateId: certificate.id,
+            courseId: certificate.courseId,
+            classroomId: certificate.classroomId,
+            gradeLevel,
+            certificateNumber,
+          }),
+        });
+        this.logger.log(`System notification created for parent ${parent.id}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to create parent notifications: ${error.message}`);
+    }
+
+    // 3. Email notification for student
+    if (student.email) {
+      try {
+        const downloadUrl = `${process.env.APP_URL || 'http://localhost:3000'}/api/private/v1/certificates/${certificate.id}/download`;
+        const verificationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/verify/${verificationCode}`;
+
+        await this.kafkaService.sendAsync('notifications', {
+          type: 'certificate-issued',
+          userId: student.id,
+          email: student.email,
+          channel: 'email',
+          template: 'certificate-issued',
+          data: {
+            studentName,
+            courseName: course.title,
+            gradeLevel: gradeLevel || 'N/A',
+            finalScore: certificate.finalScore,
+            certificateNumber,
+            downloadUrl,
+            verificationUrl,
+          },
+        });
+        this.logger.log(`Email notification queued for student ${student.id}`);
+      } catch (error) {
+        this.logger.error(`Failed to queue email notification for student: ${error.message}`);
+      }
+    }
+
+    // 4. Email notifications for parents
+    try {
+      const parents = await this.findLinkedParents(student.id);
+      for (const parent of parents) {
+        if (parent.email) {
+          const downloadUrl = `${process.env.APP_URL || 'http://localhost:3000'}/api/private/v1/certificates/${certificate.id}/download`;
+          const verificationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/verify/${verificationCode}`;
+
+          await this.kafkaService.sendAsync('notifications', {
+            type: 'certificate-issued-parent',
+            userId: parent.id,
+            email: parent.email,
+            channel: 'email',
+            template: 'parent-certificate-issued',
+            data: {
+              childName: studentName,
+              courseName: course.title,
+              gradeLevel: gradeLevel || 'N/A',
+              finalScore: certificate.finalScore,
+              certificateNumber,
+              downloadUrl,
+              verificationUrl,
+            },
+          });
+          this.logger.log(`Email notification queued for parent ${parent.id}`);
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Failed to queue parent email notifications: ${error.message}`);
+    }
+  }
+
+  /**
+   * Find all linked parents for a student
+   */
+  private async findLinkedParents(studentId: string): Promise<Array<{ id: string; email: string | null }>> {
+    try {
+      const relations = await this.prisma.parentChild.findMany({
+        where: {
+          childId: studentId,
+          // Assuming there's a status field, adjust if needed
+        },
+        include: {
+          parent: {
+            select: {
+              id: true,
+              email: true,
+            },
+          },
+        },
+      });
+      return relations.map((r) => r.parent).filter((p) => p !== null);
+    } catch (error) {
+      this.logger.error(`Failed to find linked parents for student ${studentId}: ${error.message}`);
+      return [];
+    }
   }
 
   /**
@@ -642,5 +833,438 @@ export class IssuedCertificateService {
 </body>
 </html>
         `;
+  }
+
+  /**
+   * Get public certificate share view (HTML) - simplified version for sharing
+   */
+  async getPublicCertificateShare(verificationCode: string): Promise<string> {
+    const certificate = await this.verifyCertificate(verificationCode);
+
+    if (certificate.isRevoked) {
+      throw new BadRequestException('Certificate has been revoked');
+    }
+
+    const shareUrl = `${process.env.APP_URL || 'http://localhost:3000'}/api/public/v1/certificates/share/${verificationCode}`;
+    const downloadUrl = `${process.env.APP_URL || 'http://localhost:3000'}/api/public/v1/certificates/share/${verificationCode}/download`;
+    const verificationUrl = `${process.env.APP_URL || 'http://localhost:3000'}/api/public/v1/certificates/verify/code/${verificationCode}`;
+
+    const completionDate = new Date(
+      certificate.completionDate,
+    ).toLocaleDateString('vi-VN');
+    const issueDate = new Date(certificate.issueDate).toLocaleDateString(
+      'vi-VN',
+    );
+
+    // Enhanced HTML with share buttons and download link
+    return `<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta property="og:title" content="Certificate - ${certificate.courseName}">
+    <meta property="og:description" content="Certificate of Completion for ${certificate.studentName}">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="${shareUrl}">
+    <title>Certificate - ${certificate.courseName}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Times New Roman', serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+
+        .certificate {
+            background: white;
+            width: 100%;
+            border: 8px solid #d4af37;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+
+        .certificate::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(212, 175, 55, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(212, 175, 55, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .header {
+            text-align: center;
+            padding: 40px 20px 20px;
+            border-bottom: 3px solid #d4af37;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 36px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+
+        .content {
+            padding: 0 40px;
+            text-align: center;
+        }
+
+        .award-text {
+            font-size: 20px;
+            color: #34495e;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .student-name {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin: 20px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .course-info {
+            font-size: 18px;
+            color: #34495e;
+            margin: 20px 0;
+            line-height: 1.5;
+        }
+
+        .course-name {
+            font-weight: bold;
+            color: #e74c3c;
+            font-size: 22px;
+        }
+
+        .details {
+            display: flex;
+            justify-content: space-between;
+            margin: 40px 0 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .detail-item {
+            text-align: center;
+        }
+
+        .detail-label {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .footer {
+            position: relative;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 40px 20px;
+            align-items: end;
+        }
+
+        .signature {
+            text-align: center;
+        }
+
+        .signature-line {
+            width: 200px;
+            height: 2px;
+            background: #2c3e50;
+            margin: 0 auto 10px;
+        }
+
+        .signature-text {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .verification {
+            text-align: right;
+            font-size: 12px;
+            color: #95a5a6;
+        }
+
+        .verification-code {
+            font-family: monospace;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .seal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            border: 3px solid #d4af37;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .seal-text {
+            font-size: 12px;
+            font-weight: bold;
+            color: #d4af37;
+            text-align: center;
+            line-height: 1.2;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn-share {
+            background: #34495e;
+            color: white;
+        }
+
+        .btn-share:hover {
+            background: #2c3e50;
+        }
+
+        .share-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .share-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+
+        .share-btn-linkedin {
+            background: #0077b5;
+            color: white;
+        }
+
+        .share-btn-linkedin:hover {
+            background: #005885;
+        }
+
+        .share-btn-facebook {
+            background: #1877f2;
+            color: white;
+        }
+
+        .share-btn-facebook:hover {
+            background: #1565c0;
+        }
+
+        .share-btn-twitter {
+            background: #1da1f2;
+            color: white;
+        }
+
+        .share-btn-twitter:hover {
+            background: #0d8bd9;
+        }
+
+        .info-box {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="certificate">
+            <div class="seal">
+                <div class="seal-text">
+                    ENGLISH<br>
+                    LEARNING<br>
+                    PLATFORM
+                </div>
+            </div>
+
+            <div class="header">
+                <div class="title">Chứng Chỉ Hoàn Thành</div>
+                <div class="subtitle">Certificate of Completion</div>
+            </div>
+
+            <div class="content">
+                <div class="award-text">
+                    Được trao tặng cho
+                </div>
+
+                <div class="student-name">
+                    ${certificate.studentName}
+                </div>
+
+                <div class="course-info">
+                    Đã hoàn thành xuất sắc khóa học<br>
+                    <span class="course-name">${certificate.courseName}</span>
+                </div>
+
+                <div class="details">
+                    <div class="detail-item">
+                        <div class="detail-label">Ngày hoàn thành</div>
+                        <div class="detail-value">${completionDate}</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Điểm số</div>
+                        <div class="detail-value">${certificate.finalScore || 'N/A'}/100</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Tiến độ</div>
+                        <div class="detail-value">${certificate.progress}%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer">
+                <div class="signature">
+                    <div class="signature-line"></div>
+                    <div class="signature-text">Giám đốc đào tạo</div>
+                </div>
+
+                <div class="verification">
+                    <div>Mã xác thực:</div>
+                    <div class="verification-code">${certificate.verificationCode}</div>
+                    <div>Ngày cấp: ${issueDate}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <a href="${downloadUrl}" class="btn btn-primary" download>📥 Tải PDF</a>
+            <a href="${verificationUrl}" class="btn btn-success" target="_blank">✓ Xác thực</a>
+        </div>
+
+        <div class="share-buttons">
+            <a href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}"
+               target="_blank"
+               class="share-btn share-btn-linkedin">
+                LinkedIn
+            </a>
+            <a href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}"
+               target="_blank"
+               class="share-btn share-btn-facebook">
+                Facebook
+            </a>
+            <a href="https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`Certificate of Completion: ${certificate.courseName}`)}"
+               target="_blank"
+               class="share-btn share-btn-twitter">
+                Twitter
+            </a>
+        </div>
+
+        <div class="info-box">
+            <strong>Mã xác thực:</strong> ${certificate.verificationCode}<br>
+            Sử dụng mã này để xác thực chứng chỉ tại: <a href="${verificationUrl}" target="_blank">${verificationUrl}</a>
+        </div>
+    </div>
+</body>
+</html>`;
+  }
+
+  /**
+   * Get public certificate PDF
+   */
+  async getPublicCertificatePDF(verificationCode: string): Promise<Buffer> {
+    const certificate = await this.verifyCertificate(verificationCode);
+
+    if (certificate.isRevoked) {
+      throw new BadRequestException('Certificate has been revoked');
+    }
+
+    return this.generateCertificatePdf(certificate);
   }
 }

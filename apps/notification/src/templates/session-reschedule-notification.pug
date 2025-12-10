@@ -1,0 +1,166 @@
+doctype html
+html(lang="vi")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    title Thông báo dời lịch buổi học
+    style.
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        background-color: #ffffff;
+        border-radius: 10px;
+        padding: 40px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo {
+        font-size: 32px;
+        font-weight: bold;
+        color: #1976d2;
+        margin-bottom: 10px;
+      }
+      h1 {
+        color: #ff9800;
+        font-size: 24px;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+      .warning-box {
+        background-color: #fff3e0;
+        border-left: 4px solid #ff9800;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+      .info-box {
+        background-color: #f0f7ff;
+        border-left: 4px solid #1976d2;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 5px;
+      }
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        margin: 10px 0;
+        padding: 8px 0;
+        border-bottom: 1px solid #e0e0e0;
+      }
+      .info-row:last-child {
+        border-bottom: none;
+      }
+      .time-box {
+        background-color: #e8f5e9;
+        border: 2px solid #4caf50;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        text-align: center;
+      }
+      .old-time {
+        color: #f44336;
+        text-decoration: line-through;
+        margin-bottom: 10px;
+      }
+      .new-time {
+        color: #4caf50;
+        font-size: 20px;
+        font-weight: bold;
+      }
+      .apology-box {
+        background-color: #fef2f2;
+        border: 2px solid #ef4444;
+        padding: 20px;
+        margin: 20px 0;
+        border-radius: 8px;
+        text-align: center;
+      }
+      .button {
+        display: inline-block;
+        padding: 12px 30px;
+        background-color: #1976d2;
+        color: #ffffff !important;
+        text-decoration: none;
+        border-radius: 5px;
+        margin: 10px 5px;
+        font-weight: bold;
+      }
+      .button:hover {
+        background-color: #1565c0;
+      }
+      .footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #e0e0e0;
+        font-size: 14px;
+        color: #666;
+        text-align: center;
+      }
+  body
+    .container
+      .header
+        .logo EngliMaster
+
+      h1 ⚠️ Thông báo dời lịch buổi học
+
+      .greeting
+        p Xin chào <strong>#{studentName}</strong>,
+        p Chúng tôi xin thông báo về việc thay đổi lịch học của buổi học sau:
+
+      .info-box
+        h3(style="margin-top: 0; color: #1976d2;") Thông tin buổi học
+
+        .info-row
+          span <strong>Lớp học:</strong>
+          span #{classroomName}
+
+        .info-row
+          span <strong>Buổi học:</strong>
+          span #{sessionTitle}
+
+        .info-row
+          span <strong>Giáo viên:</strong>
+          span #{teacherName}
+
+      .time-box
+        p(style="margin: 0; font-size: 16px; color: #666;") Thời gian mới
+        p.old-time Thời gian cũ: #{oldStartTime} - #{oldEndTime}
+        p.new-time #{newStartTime} - #{newEndTime}
+
+      .warning-box
+        p <strong>Lý do dời lịch:</strong>
+        p(style="margin: 5px 0;") #{reason}
+
+      .apology-box
+        p(style="margin: 0; font-size: 18px; color: #d32f2f; font-weight: bold;") 🙏 Xin lỗi vì sự bất tiện này!
+        p(style="margin: 10px 0 0 0;") Chúng tôi rất mong nhận được sự thông cảm và hợp tác từ quý phụ huynh và học viên.
+
+      div(style="text-align: center; margin: 30px 0;")
+        a.button(href=classroomUrl) Xem chi tiết lớp học
+
+      div(style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px;")
+        p(style="margin: 0;") <strong>Lưu ý:</strong>
+        ul(style="margin: 10px 0; padding-left: 20px;")
+          li Vui lòng cập nhật lịch học mới trong ứng dụng
+          li Tham gia buổi học đúng giờ mới
+          li Nếu có thắc mắc, vui lòng liên hệ giáo viên hoặc bộ phận hỗ trợ
+
+      .footer
+        p Trân trọng,<br><strong>Đội ngũ EngliMaster</strong>
+        p(style="font-size: 12px; color: #999; margin-top: 20px;")
+          | Email này được gửi tự động. Vui lòng không trả lời email này.<br>
+          | Nếu bạn có thắc mắc, vui lòng liên hệ: support@englimaster.com
+
+
+

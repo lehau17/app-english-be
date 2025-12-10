@@ -496,6 +496,7 @@ export class DashboardService {
             title: notification.title,
             message: notification.body,
             type: severityMap[notification.type] ?? 'info',
+            data: notification.data || null,
             createdAt: notification.createdAt.toISOString(),
         }));
     }

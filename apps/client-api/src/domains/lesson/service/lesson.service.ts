@@ -1,27 +1,30 @@
 import { PrismaRepository } from '@app/database';
+import { AutoCertificateIssuerService } from '@app/shared/certificate';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-    BadRequestException,
-    Injectable,
-    NotFoundException,
+  BadRequestException,
+  Inject,
+  Injectable,
+  NotFoundException,
+  forwardRef,
 } from '@nestjs/common';
 import { Lesson, ProgressState } from '@prisma/client';
 import { ParentNotificationService } from '../../parent/service/parent-notification.service';
 import {
-    CanStartActivityRequestDto,
-    CanStartActivityResponseDto,
-    CompleteActivityRequestDto,
-    CompleteActivityResponseDto,
-    CreateLessonDto,
-    FilterLessonRequestDto,
-    GetLessonHubsRequestDto,
-    GetLessonHubsResponseDto,
-    LessonProgressSummaryDto,
-    NextActivityResponseDto,
-    NextLessonWithActivityResponseDto,
-    StartActivityRequestDto,
-    StartActivityResponseDto,
-    UpdateLessonDto,
+  CanStartActivityRequestDto,
+  CanStartActivityResponseDto,
+  CompleteActivityRequestDto,
+  CompleteActivityResponseDto,
+  CreateLessonDto,
+  FilterLessonRequestDto,
+  GetLessonHubsRequestDto,
+  GetLessonHubsResponseDto,
+  LessonProgressSummaryDto,
+  NextActivityResponseDto,
+  NextLessonWithActivityResponseDto,
+  StartActivityRequestDto,
+  StartActivityResponseDto,
+  UpdateLessonDto,
 } from '../dto/lesson.dto';
 import { LessonRepository } from '../repository/lesson.repository';
 
@@ -31,7 +34,9 @@ export class LessonService {
         private readonly lessonRepository: LessonRepository,
         private readonly parentNotificationService: ParentNotificationService,
         private readonly prisma: PrismaRepository,
-    ) { }
+        @Inject(forwardRef(() => AutoCertificateIssuerService))
+        private readonly autoCertificateIssuer?: AutoCertificateIssuerService,
+    ) {}
 
     /** ===== CRUD ===== */
 
@@ -185,8 +190,6 @@ export class LessonService {
                 orderNo: a.orderNo,
                 title: a.title,
                 content: a.content,
-                timeLimit: a.timeLimit,
-                maxAttempts: a.maxAttempts,
                 passingScore: a.passingScore,
                 difficulty: a.difficulty,
                 points: a.points,
@@ -270,12 +273,89 @@ export class LessonService {
             await this.notifyParentActivityCompleted(userId, activityId, score);
         }
 
+        // Check course completion and trigger certificate issuance (async, non-blocking)
+        this.checkCourseCompletionForCertificate(userId, activityId).catch(
+            (error) => {
+                // Log error but don't fail activity completion
+                console.error(
+                    `Failed to check course completion for certificate: ${error.message}`,
+                );
+            },
+        );
+
         return {
             state: p.state as ProgressState,
             score: p.score ?? null,
             bestScore: p.bestScore ?? null,
             attemptsCount: p.attemptsCount ?? 1,
         };
+    }
+
+    /**
+     * Check course completion and trigger certificate issuance if eligible
+     */
+    private async checkCourseCompletionForCertificate(
+        userId: string,
+        activityId: string,
+    ): Promise<void> {
+        if (!this.autoCertificateIssuer) {
+            return; // Service not available
+        }
+
+        try {
+            // Get activity with lesson and course info
+            const activity = await this.prisma.activity.findUnique({
+                where: { id: activityId },
+                include: {
+                    lesson: {
+                        select: {
+                            id: true,
+                            courseId: true,
+                        },
+                    },
+                },
+            });
+
+            if (!activity?.lesson) {
+                return;
+            }
+
+            const courseId = activity.lesson.courseId;
+
+            // Get student's classrooms for this course
+            const classroomStudents = await this.prisma.classroomStudent.findMany({
+                where: {
+                    studentId: userId,
+                    isActive: true,
+                    classroom: {
+                        courseId,
+                        status: { in: ['ongoing', 'completed'] },
+                    },
+                },
+                select: {
+                    classroomId: true,
+                },
+                take: 1, // Use first active classroom
+            });
+
+            if (classroomStudents.length === 0) {
+                return; // Student not enrolled in any classroom for this course
+            }
+
+            const classroomId = classroomStudents[0].classroomId;
+
+            // Check and issue certificate (async, non-blocking)
+            await this.autoCertificateIssuer.checkAndIssueCertificate(
+                userId,
+                courseId,
+                classroomId,
+            );
+        } catch (error) {
+            // Silently fail - don't break activity completion
+            console.error(
+                `Error checking course completion for certificate: ${error.message}`,
+            );
+        }
     }
 
     /**
@@ -326,8 +406,6 @@ export class LessonService {
                         orderNo: nextActivity.orderNo,
                         title: nextActivity.title,
                         content: nextActivity.content,
-                        timeLimit: nextActivity.timeLimit,
-                        maxAttempts: nextActivity.maxAttempts,
                         passingScore: nextActivity.passingScore,
                         difficulty: nextActivity.difficulty,
                         points: nextActivity.points,
@@ -390,8 +468,6 @@ export class LessonService {
                     orderNo: nextActivity.orderNo,
                     title: nextActivity.title,
                     content: nextActivity.content,
-                    timeLimit: nextActivity.timeLimit,
-                    maxAttempts: nextActivity.maxAttempts,
                     passingScore: nextActivity.passingScore,
                     difficulty: nextActivity.difficulty,
                     points: nextActivity.points,

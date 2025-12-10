@@ -1,31 +1,36 @@
+
 import { GeminiService } from '@app/shared';
+import { AutoCertificateIssuerService } from '@app/shared/certificate';
 import {
-  BadRequestException,
-  ForbiddenException,
-  Injectable,
-  Logger,
-  NotFoundException,
+    BadRequestException,
+    ForbiddenException,
+    Inject,
+    Injectable,
+    Logger,
+    NotFoundException,
+    forwardRef,
 } from '@nestjs/common';
 import { AssignmentStatus, AssignmentType } from '@prisma/client';
-import {
-  CloneAssignmentDto,
-  CreateAssignmentDto,
-  GradeAssignmentDto,
-  QueryAssignmentsDto,
-  SubmitAssignmentDto,
-  UpdateAssignmentDto,
-} from '../dto';
+import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
+import { EventsGateway } from '../../../events/events.gateway';
+import { EvaluationService } from '../../evaluation/service/evaluation.service';
+import { GradebookService } from '../../gradebook/service';
+import {
+    CloneAssignmentDto,
+    CreateAssignmentDto,
+    GradeAssignmentDto,
+    QueryAssignmentsDto,
+    SubmitAssignmentDto,
+    UpdateAssignmentDto,
+} from '../dto';
 import { AssignmentActivityDto } from '../dto/create-assignment.dto';
 import {
-  AssignmentActivityModel,
-  AssignmentRepository,
-  AssignmentSubmissionWithStudent,
-  AssignmentWithDetails,
+    AssignmentActivityModel,
+    AssignmentRepository,
+    AssignmentSubmissionWithStudent,
+    AssignmentWithDetails,
 } from '../repository';
-import { EvaluationService } from '../../evaluation/service/evaluation.service';
-import { EventsGateway } from '../../../events/events.gateway';
-import axios from 'axios';
 
 @Injectable()
 export class AssignmentService {
@@ -36,7 +41,10 @@ export class AssignmentService {
     private readonly geminiService: GeminiService,
     private readonly evaluationService: EvaluationService,
     private readonly eventsGateway: EventsGateway,
-  ) { }
+    private readonly gradebookService?: GradebookService,
+    @Inject(forwardRef(() => AutoCertificateIssuerService))
+    private readonly autoCertificateIssuer?: AutoCertificateIssuerService,
+  ) {}
 
   async createAssignment(
     teacherId: string,
@@ -44,14 +52,27 @@ export class AssignmentService {
     classroomId: string,
   ): Promise<AssignmentWithDetails> {
     // Validate classroom belongs to teacher - should add this check
+
+    // Validate startTime < dueDate
+    if (dto.startTime && dto.dueDate) {
+      const startTime = new Date(dto.startTime);
+      const dueDate = new Date(dto.dueDate);
+      if (startTime >= dueDate) {
+        throw new BadRequestException(
+          'Start time must be before due date',
+        );
+      }
+    }
+
     const assignmentData = {
       teacherId,
       classroomId: classroomId,
       title: dto.title,
       description: dto.description,
       instructions: dto.instructions,
+      startTime: dto.startTime ? new Date(dto.startTime) : undefined,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
-      totalPoints: dto.totalPoints || 100,
+      totalPoints: 100, // Fixed at 100, not user input
       timeLimit: dto.timeLimit,
       maxAttempts: dto.maxAttempts || 1,
       status: dto.isPublished
@@ -155,9 +176,33 @@ export class AssignmentService {
       throw new ForbiddenException('You can only update your own assignments');
     }
 
+    // Check if assignment has started (cannot edit after startTime)
+    if (assignment.startTime) {
+      const now = new Date();
+      const startTime = new Date(assignment.startTime);
+      if (now >= startTime) {
+        throw new BadRequestException(
+          'Cannot edit assignment after start time has passed',
+        );
+      }
+    }
+
+    // Validate startTime < dueDate
+    if (dto.startTime && dto.dueDate) {
+      const startTime = new Date(dto.startTime);
+      const dueDate = new Date(dto.dueDate);
+      if (startTime >= dueDate) {
+        throw new BadRequestException(
+          'Start time must be before due date',
+        );
+      }
+    }
+
     const updateData: any = {
       ...dto,
+      startTime: dto.startTime ? new Date(dto.startTime) : undefined,
       dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+      totalPoints: 100, // Fixed at 100, not user input
     };
 
     if (dto.activities) {
@@ -264,10 +309,8 @@ export class AssignmentService {
       hints: activity.hints ?? [],
     }));
 
-    const totalPoints =
-      dto.totalPoints ??
-      source.totalPoints ??
-      clonedActivities.reduce((sum, item) => sum + (item.points ?? 0), 0);
+    // Use cloned activities as-is (no normalization)
+    const finalActivities = clonedActivities;
 
     const dueDate =
       dto.dueDate !== undefined
@@ -285,13 +328,13 @@ export class AssignmentService {
       description: dto.description ?? source.description ?? undefined,
       instructions: dto.instructions ?? source.instructions ?? undefined,
       dueDate,
-      totalPoints,
+      totalPoints: 100, // Fixed at 100, not user input
       timeLimit: dto.timeLimit ?? source.timeLimit ?? undefined,
       maxAttempts: dto.maxAttempts ?? source.maxAttempts ?? 1,
       status: isPublished ? AssignmentStatus.published : AssignmentStatus.draft,
       isPublished,
       assignedTo: [],
-      activities: clonedActivities,
+      activities: finalActivities,
       customContent: dto.customContent ?? source.customContent ?? undefined,
       weight: dto.weight ?? source.weight ?? 0,
       type: source.type,
@@ -303,15 +346,22 @@ export class AssignmentService {
     assignmentId: string,
     studentId: string,
     dto: SubmitAssignmentDto,
-  ): Promise<AssignmentSubmissionWithStudent> {
+  ) {
     const assignment = await this.getAssignmentById(assignmentId);
 
     if (!assignment.isPublished) {
       throw new BadRequestException('Assignment is not published yet');
     }
 
+    const now = new Date();
+
+    // Check start time
+    if (assignment.startTime && now < assignment.startTime) {
+      throw new BadRequestException('Assignment has not started yet');
+    }
+
     // Check due date
-    if (assignment.dueDate && new Date() > assignment.dueDate) {
+    if (assignment.dueDate && now > assignment.dueDate) {
       throw new BadRequestException('Assignment deadline has passed');
     }
 
@@ -393,10 +443,31 @@ export class AssignmentService {
           'Xuất sắc! Bạn đã hoàn thành bài tập với kết quả rất tốt. Tiếp tục phát huy!';
       }
 
-      return this.assignmentRepository.gradeSubmission(submission.id, {
+      const graded = await this.assignmentRepository.gradeSubmission(submission.id, {
         score,
         feedback,
       });
+
+      // Invalidate gradebook cache
+      if (this.gradebookService) {
+        await this.gradebookService.invalidateCache(studentId, assignment.classroomId).catch((err) => {
+          this.logger.warn(`Failed to invalidate gradebook cache: ${err.message}`);
+        });
+      }
+
+      // Check course completion and trigger certificate issuance (async, non-blocking)
+      if (assignment.classroomId) {
+        this.checkCourseCompletionForCertificate(
+          studentId,
+          assignment.classroomId,
+        ).catch((error) => {
+          this.logger.warn(
+            `Failed to check course completion for certificate: ${error.message}`,
+          );
+        });
+      }
+
+      return graded;
     }
 
     return submission;
@@ -406,12 +477,36 @@ export class AssignmentService {
     submissionId: string,
     teacherId: string,
     dto: GradeAssignmentDto,
-  ): Promise<AssignmentSubmissionWithStudent> {
+  ) {
     // Should add validation that teacher owns the assignment
-    return this.assignmentRepository.gradeSubmission(submissionId, {
+    const submission = await this.assignmentRepository.gradeSubmission(submissionId, {
       score: dto.score,
       feedback: dto.feedback,
     });
+
+    // Invalidate gradebook cache
+    if (this.gradebookService && submission.assignment?.classroomId) {
+      await this.gradebookService.invalidateCache(
+        submission.studentId,
+        submission.assignment.classroomId,
+      ).catch((err) => {
+        this.logger.warn(`Failed to invalidate gradebook cache: ${err.message}`);
+      });
+    }
+
+    // Check course completion and trigger certificate issuance (async, non-blocking)
+    if (submission.assignment?.classroomId) {
+      this.checkCourseCompletionForCertificate(
+        submission.studentId,
+        submission.assignment.classroomId,
+      ).catch((error) => {
+        this.logger.warn(
+          `Failed to check course completion for certificate: ${error.message}`,
+        );
+      });
+    }
+
+    return submission;
   }
 
   async getSubmissionsByAssignment(
@@ -923,6 +1018,71 @@ export class AssignmentService {
     }
   }
 
+  /**
+   * Normalize activity points to sum = 100
+   * Formula: scaleFactor = 100 / sumOfPoints
+   * Maintains relative weights between activities
+   */
+  private normalizeActivityPoints(
+    activities: AssignmentActivityDto[],
+  ): AssignmentActivityDto[] {
+    if (!activities || activities.length === 0) {
+      return activities;
+    }
+
+    // Calculate sum of activity points
+    const sumOfPoints = activities.reduce(
+      (sum, a) => sum + (a.points || 10),
+      0,
+    );
+
+    // If sum is 0 or already 100, return as-is
+    if (sumOfPoints === 0 || sumOfPoints === 100) {
+      return activities;
+    }
+
+    // Calculate scale factor
+    const scaleFactor = 100 / sumOfPoints;
+
+    // Scale each activity's points proportionally
+    return activities.map((activity) => ({
+      ...activity,
+      points: Math.round((activity.points || 10) * scaleFactor),
+    }));
+  }
+
+  /**
+   * Normalize activity points from any activity-like object
+   * Used for clone operations where activities may not be DTOs
+   */
+  private normalizeActivityPointsGeneric(
+    activities: Array<{ points?: number }>,
+  ): Array<{ points: number }> {
+    if (!activities || activities.length === 0) {
+      return activities as Array<{ points: number }>;
+    }
+
+    // Calculate sum of activity points
+    const sumOfPoints = activities.reduce(
+      (sum, a) => sum + (a.points || 10),
+      0,
+    );
+
+    // If sum is 0 or already 100, return as-is
+    if (sumOfPoints === 0 || sumOfPoints === 100) {
+      return activities.map((a) => ({ ...a, points: a.points || 10 }));
+    }
+
+    // Calculate scale factor
+    const scaleFactor = 100 / sumOfPoints;
+
+    // Scale each activity's points proportionally
+    return activities.map((activity) => ({
+      ...activity,
+      points: Math.round((activity.points || 10) * scaleFactor),
+    }));
+  }
+
   private mapActivityDto(activity: AssignmentActivityDto, index: number) {
     // Extract the actual content from the wrapper format { kind, data }
     let processedContent: any = activity.content;
@@ -1030,6 +1190,28 @@ export class AssignmentService {
         status: 'GRADED',
       },
     );
+
+    // Invalidate gradebook cache
+    if (this.gradebookService && assignment.classroomId) {
+      await this.gradebookService.invalidateCache(
+        submission.studentId,
+        assignment.classroomId,
+      ).catch((err) => {
+        this.logger.warn(`Failed to invalidate gradebook cache: ${err.message}`);
+      });
+    }
+
+    // Check course completion and trigger certificate issuance (async, non-blocking)
+    if (assignment.classroomId) {
+      this.checkCourseCompletionForCertificate(
+        submission.studentId,
+        assignment.classroomId,
+      ).catch((error) => {
+        this.logger.warn(
+          `Failed to check course completion for certificate: ${error.message}`,
+        );
+      });
+    }
 
     // TODO: Optional - Send notification to student about graded assignment
     // TODO: Optional - Update student progress/stats
@@ -1265,6 +1447,18 @@ export class AssignmentService {
       score: finalScore,
       feedback,
     });
+
+    // Check course completion and trigger certificate issuance (async, non-blocking)
+    if (assignment.classroomId) {
+      this.checkCourseCompletionForCertificate(
+        studentId,
+        assignment.classroomId,
+      ).catch((error) => {
+        this.logger.warn(
+          `Failed to check course completion for certificate: ${error.message}`,
+        );
+      });
+    }
 
     // Emit complete event
     this.eventsGateway.emitToUser(studentId, 'grading:complete', {
@@ -1502,5 +1696,50 @@ export class AssignmentService {
     }
 
     return activityScore;
+  }
+
+  /**
+   * Check course completion and trigger certificate issuance if eligible
+   */
+  private async checkCourseCompletionForCertificate(
+    studentId: string,
+    classroomId: string,
+  ): Promise<void> {
+    if (!this.autoCertificateIssuer) {
+      return; // Service not available
+    }
+
+    try {
+      // Get classroom with course info via repository's prisma client
+      const prisma = (this.assignmentRepository as any).prisma || (this.assignmentRepository as any).$;
+      if (!prisma) {
+        this.logger.warn('Cannot access Prisma client from repository');
+        return;
+      }
+
+      const classroom = await prisma.classroom.findUnique({
+        where: { id: classroomId },
+        select: {
+          id: true,
+          courseId: true,
+        },
+      });
+
+      if (!classroom) {
+        return;
+      }
+
+      // Check and issue certificate (async, non-blocking)
+      await this.autoCertificateIssuer.checkAndIssueCertificate(
+        studentId,
+        classroom.courseId,
+        classroomId,
+      );
+    } catch (error) {
+      // Silently fail - don't break assignment grading
+      this.logger.warn(
+        `Error checking course completion for certificate: ${error.message}`,
+      );
+    }
   }
 }

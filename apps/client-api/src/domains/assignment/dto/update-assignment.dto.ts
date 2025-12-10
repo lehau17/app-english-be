@@ -2,18 +2,18 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { AssignmentType } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
-  IsArray,
-  IsBoolean,
-  IsDateString,
-  IsEnum,
-  IsInt,
-  IsNumber,
-  IsObject,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
-  ValidateNested,
+    IsArray,
+    IsBoolean,
+    IsDateString,
+    IsEnum,
+    IsInt,
+    IsNumber,
+    IsObject,
+    IsOptional,
+    IsString,
+    Max,
+    Min,
+    ValidateNested,
 } from 'class-validator';
 import { AssignmentActivityDto } from './create-assignment.dto';
 
@@ -52,6 +52,14 @@ export class UpdateAssignmentDto {
   @IsString()
   @IsOptional()
   instructions?: string;
+
+  @ApiPropertyOptional({
+    description: 'Start time for assignment (when students can begin)',
+    example: '2024-12-01T08:00:00Z',
+  })
+  @IsDateString()
+  @IsOptional()
+  startTime?: string;
 
   @ApiPropertyOptional({
     description: 'Due date for assignment',

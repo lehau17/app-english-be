@@ -59,6 +59,9 @@ class DashboardNotificationItem {
   @ApiProperty({ enum: ['success', 'warning', 'error', 'info'] })
   type: 'success' | 'warning' | 'error' | 'info';
 
+  @ApiProperty({ required: false })
+  data?: string | null;
+
   @ApiProperty()
   createdAt: string;
 }

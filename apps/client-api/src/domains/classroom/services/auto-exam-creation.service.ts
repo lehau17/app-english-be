@@ -1,31 +1,36 @@
 import { PrismaRepository } from '@app/database';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { AssignmentType } from '@prisma/client';
+import { ClassroomRepository } from '../repository/classroom.repository';
 
 export interface AutoExamCreationOptions {
   classroomId: string;
   courseId: string;
   teacherId: string;
   totalSessions: number;
-  periodStart: Date;
-  periodEnd: Date;
+  periodStart: Date; // Kept for backward compatibility, not used in calculation
+  periodEnd: Date; // Kept for backward compatibility, not used in calculation
   slots: Array<{
     dayOfWeek: string;
     startMinuteOfDay: number;
     endMinuteOfDay: number;
-  }>;
+  }>; // Kept for backward compatibility, not used in calculation
 }
 
 @Injectable()
 export class AutoExamCreationService {
-  constructor(private readonly prisma: PrismaRepository) {}
+  private readonly logger = new Logger(AutoExamCreationService.name);
+
+  constructor(
+    private readonly prisma: PrismaRepository,
+    private readonly classroomRepository: ClassroomRepository,
+  ) {}
 
   /**
    * Tự động tạo bài thi giữa kỳ và cuối kỳ cho classroom
-   * - Bài thi giữa kỳ: 40% thời gian (session thứ 3-4 trong 8 buổi)
-   * - Bài thi cuối kỳ: 80% thời gian (session thứ 6-7 trong 8 buổi)
-   * - Thời gian bắt đầu = giờ bắt đầu buổi học
-   * - Thời gian tối đa = thời gian buổi học (mặc định 1h nếu không truyền)
+   * - Bài thi giữa kỳ: 60% thời gian (session tại 60% vị trí)
+   * - Bài thi cuối kỳ: 100% thời gian (session cuối cùng)
+   * - Sử dụng thời gian thực tế của session (startTime, endTime)
    */
   async createAutoExams(options: AutoExamCreationOptions): Promise<void> {
     const {
@@ -33,118 +38,156 @@ export class AutoExamCreationService {
       courseId,
       teacherId,
       totalSessions,
-      periodStart,
-      periodEnd,
-      slots,
     } = options;
 
-    console.log(
+    this.logger.log(
       `Creating auto exams for classroom ${classroomId} with ${totalSessions} sessions`,
     );
 
-    // Tính toán thời gian cho các bài thi
-    const periodDuration = periodEnd.getTime() - periodStart.getTime();
-    const midtermDate = new Date(periodStart.getTime() + periodDuration * 0.4);
-    const finalDate = new Date(periodStart.getTime() + periodDuration * 0.8);
+    // Query sessions sau khi đã được tạo
+    const sessions = await this.classroomRepository.getClassroomSessions(classroomId);
 
-    // Tính thời gian buổi học (mặc định 1h nếu không có slots)
-    const sessionDurationMinutes = this.calculateSessionDuration(slots);
-    const sessionStartTime = this.getSessionStartTime(slots);
+    // Validate sessions
+    if (!sessions || sessions.length < 2) {
+      this.logger.warn(
+        `Cannot create exams: classroom ${classroomId} has ${sessions?.length || 0} sessions (need at least 2)`,
+      );
+      return;
+    }
 
-    // Tạo bài thi giữa kỳ
-    await this.createMidtermExam({
-      classroomId,
-      courseId,
-      teacherId,
-      startTime: this.setTimeToDate(midtermDate, sessionStartTime),
-      dueDate: this.setTimeToDate(
-        midtermDate,
-        sessionStartTime + sessionDurationMinutes,
-      ),
-      sessionNumber: Math.ceil(totalSessions * 0.4),
-      timeLimit: sessionDurationMinutes,
-    });
+    // Tính toán index cho các session
+    const midtermIndex = Math.floor(sessions.length * 0.6);
+    const finalIndex = sessions.length - 1;
 
-    // Tạo bài thi cuối kỳ
-    await this.createFinalExam({
-      classroomId,
-      courseId,
-      teacherId,
-      startTime: this.setTimeToDate(finalDate, sessionStartTime),
-      dueDate: this.setTimeToDate(
-        finalDate,
-        sessionStartTime + sessionDurationMinutes,
-      ),
-      sessionNumber: Math.ceil(totalSessions * 0.8),
-      timeLimit: sessionDurationMinutes,
-    });
+    // Validate indices
+    if (midtermIndex < 0 || midtermIndex >= sessions.length) {
+      this.logger.warn(
+        `Invalid midterm index ${midtermIndex} for ${sessions.length} sessions`,
+      );
+      return;
+    }
 
-    console.log(
+    if (finalIndex < 0 || finalIndex >= sessions.length) {
+      this.logger.warn(
+        `Invalid final index ${finalIndex} for ${sessions.length} sessions`,
+      );
+      return;
+    }
+
+    // Kiểm tra midterm và final không trùng nhau
+    if (midtermIndex === finalIndex) {
+      this.logger.warn(
+        `Midterm and final exams would be on same session (index ${midtermIndex}). Adjusting midterm to ${midtermIndex - 1}`,
+      );
+      // Điều chỉnh midterm về trước 1 session nếu trùng
+      if (midtermIndex > 0) {
+        const adjustedMidtermIndex = midtermIndex - 1;
+        const midtermSession = sessions[adjustedMidtermIndex];
+        const finalSession = sessions[finalIndex];
+
+        // Validate session times
+        if (!this.validateSession(midtermSession)) {
+          this.logger.warn(`Invalid midterm session at index ${adjustedMidtermIndex}`);
+          return;
+        }
+        if (!this.validateSession(finalSession)) {
+          this.logger.warn(`Invalid final session at index ${finalIndex}`);
+          return;
+        }
+
+        await this.createMidtermExam({
+          classroomId,
+          courseId,
+          teacherId,
+          session: midtermSession,
+          sessionIndex: adjustedMidtermIndex,
+        });
+
+        await this.createFinalExam({
+          classroomId,
+          courseId,
+          teacherId,
+          session: finalSession,
+          sessionIndex: finalIndex,
+        });
+      } else {
+        this.logger.warn(`Cannot adjust midterm index, skipping exam creation`);
+        return;
+      }
+    } else {
+      // Lấy target sessions
+      const midtermSession = sessions[midtermIndex];
+      const finalSession = sessions[finalIndex];
+
+      // Validate session times
+      if (!this.validateSession(midtermSession)) {
+        this.logger.warn(`Invalid midterm session at index ${midtermIndex}`);
+        return;
+      }
+      if (!this.validateSession(finalSession)) {
+        this.logger.warn(`Invalid final session at index ${finalIndex}`);
+        return;
+      }
+
+      // Tạo bài thi giữa kỳ
+      await this.createMidtermExam({
+        classroomId,
+        courseId,
+        teacherId,
+        session: midtermSession,
+        sessionIndex: midtermIndex,
+      });
+
+      // Tạo bài thi cuối kỳ
+      await this.createFinalExam({
+        classroomId,
+        courseId,
+        teacherId,
+        session: finalSession,
+        sessionIndex: finalIndex,
+      });
+    }
+
+    this.logger.log(
       `Auto exams created successfully for classroom ${classroomId}`,
     );
   }
 
   /**
-   * Tính thời gian buổi học từ slots (mặc định 60 phút)
+   * Validate session has valid times
    */
-  private calculateSessionDuration(
-    slots: Array<{ startMinuteOfDay: number; endMinuteOfDay: number }>,
-  ): number {
-    if (!slots || slots.length === 0) {
-      return 60; // Mặc định 1 giờ
+  private validateSession(session: any): boolean {
+    if (!session) return false;
+    if (!session.startTime || !session.endTime) return false;
+    if (!(session.startTime instanceof Date) || !(session.endTime instanceof Date)) {
+      return false;
     }
-
-    // Lấy slot đầu tiên để tính thời gian
-    const firstSlot = slots[0];
-    const duration = firstSlot.endMinuteOfDay - firstSlot.startMinuteOfDay;
-
-    // Đảm bảo thời gian hợp lý (tối thiểu 30 phút, tối đa 180 phút)
-    return Math.max(30, Math.min(180, duration));
+    if (session.endTime <= session.startTime) return false;
+    if (!session.durationHours || session.durationHours <= 0) return false;
+    return true;
   }
 
-  /**
-   * Lấy thời gian bắt đầu buổi học từ slots (mặc định 7:30 AM = 450 phút)
-   */
-  private getSessionStartTime(
-    slots: Array<{ startMinuteOfDay: number }>,
-  ): number {
-    if (!slots || slots.length === 0) {
-      return 450; // Mặc định 7:30 AM
-    }
-
-    return slots[0].startMinuteOfDay;
-  }
-
-  /**
-   * Set thời gian cụ thể cho một ngày
-   */
-  private setTimeToDate(date: Date, minuteOfDay: number): Date {
-    const newDate = new Date(date);
-    const hours = Math.floor(minuteOfDay / 60);
-    const minutes = minuteOfDay % 60;
-
-    newDate.setHours(hours, minutes, 0, 0);
-    return newDate;
-  }
 
   private async createMidtermExam(params: {
     classroomId: string;
     courseId: string;
     teacherId: string;
-    startTime: Date;
-    dueDate: Date;
-    sessionNumber: number;
-    timeLimit: number;
+    session: any;
+    sessionIndex: number;
   }): Promise<void> {
     const {
       classroomId,
       courseId,
       teacherId,
-      startTime,
-      dueDate,
-      sessionNumber,
-      timeLimit,
+      session,
+      sessionIndex,
     } = params;
+
+    // Use actual session times
+    const startTime = new Date(session.startTime);
+    const dueDate = new Date(session.endTime);
+    const timeLimit = Math.round(session.durationHours * 60); // Convert hours to minutes
+    const sessionNumber = sessionIndex + 1; // 1-indexed for display
 
     const midtermExam = await this.prisma.assignment.create({
       data: {
@@ -169,12 +212,18 @@ export class AutoExamCreationService {
 - Nếu gặp sự cố kỹ thuật, báo ngay với giáo viên
         `,
         type: AssignmentType.MIDTERM_EXAM,
+        weight: 0.3, // 30% trọng số điểm
         totalPoints: 100,
         timeLimit: timeLimit, // Thời gian buổi học
         maxAttempts: 1, // Chỉ được làm 1 lần
-        startTime: startTime, // Thời gian bắt đầu làm bài
-        dueDate: dueDate,
+        startTime: startTime, // Thời gian bắt đầu làm bài (từ session)
+        dueDate: dueDate, // Thời gian kết thúc (từ session)
         isPublished: true,
+        customContent: {
+          sessionId: session.id,
+          sessionIndex: sessionIndex,
+          sessionTitle: session.title,
+        },
         classroom: {
           connect: { id: classroomId },
         },
@@ -300,8 +349,8 @@ The future of our planet depends on the choices we make today. If we act now, we
       },
     });
 
-    console.log(
-      `Created midterm exam: ${midtermExam.id} for session ${sessionNumber}`,
+    this.logger.log(
+      `Created midterm exam: ${midtermExam.id} for session ${sessionNumber} (index ${sessionIndex})`,
     );
   }
 
@@ -309,20 +358,22 @@ The future of our planet depends on the choices we make today. If we act now, we
     classroomId: string;
     courseId: string;
     teacherId: string;
-    startTime: Date;
-    dueDate: Date;
-    sessionNumber: number;
-    timeLimit: number;
+    session: any;
+    sessionIndex: number;
   }): Promise<void> {
     const {
       classroomId,
       courseId,
       teacherId,
-      startTime,
-      dueDate,
-      sessionNumber,
-      timeLimit,
+      session,
+      sessionIndex,
     } = params;
+
+    // Use actual session times
+    const startTime = new Date(session.startTime);
+    const dueDate = new Date(session.endTime);
+    const timeLimit = Math.round(session.durationHours * 60); // Convert hours to minutes
+    const sessionNumber = sessionIndex + 1; // 1-indexed for display
 
     const finalExam = await this.prisma.assignment.create({
       data: {
@@ -349,12 +400,18 @@ The future of our planet depends on the choices we make today. If we act now, we
 - Nếu gặp sự cố kỹ thuật, báo ngay với giáo viên
         `,
         type: AssignmentType.FINAL_EXAM,
+        weight: 0.4, // 40% trọng số điểm
         totalPoints: 100,
         timeLimit: timeLimit, // Thời gian buổi học
         maxAttempts: 1, // Chỉ được làm 1 lần
-        startTime: startTime, // Thời gian bắt đầu làm bài
-        dueDate: dueDate,
+        startTime: startTime, // Thời gian bắt đầu làm bài (từ session)
+        dueDate: dueDate, // Thời gian kết thúc (từ session)
         isPublished: true,
+        customContent: {
+          sessionId: session.id,
+          sessionIndex: sessionIndex,
+          sessionTitle: session.title,
+        },
         classroom: {
           connect: { id: classroomId },
         },
@@ -485,8 +542,8 @@ As AI continues to evolve, it is crucial to ensure that its development is guide
       },
     });
 
-    console.log(
-      `Created final exam: ${finalExam.id} for session ${sessionNumber}`,
+    this.logger.log(
+      `Created final exam: ${finalExam.id} for session ${sessionNumber} (index ${sessionIndex})`,
     );
   }
 }

@@ -3,12 +3,12 @@ import { MakeupRequestStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
     IsArray,
-    IsDate,
     IsEnum,
     IsNotEmpty,
     IsOptional,
     IsString,
     IsUUID,
+    ValidateIf,
 } from 'class-validator';
 
 /**
@@ -48,10 +48,12 @@ export class ReviewMakeupRequestDto {
 
     @ApiPropertyOptional({
         example: 'Đã xác minh giấy khám bệnh',
-        description: 'Ghi chú của người duyệt',
+        description: 'Ghi chú của người duyệt (bắt buộc khi từ chối)',
     })
-    @IsOptional()
+    @ValidateIf((o) => o.status === 'rejected')
+    @IsNotEmpty({ message: 'Lý do từ chối là bắt buộc' })
     @IsString()
+    @IsOptional()
     reviewNote?: string;
 }
 
@@ -67,6 +69,14 @@ export class QueryMakeupRequestDto {
     @IsOptional()
     @IsEnum(MakeupRequestStatus)
     status?: MakeupRequestStatus;
+
+    @ApiPropertyOptional({
+        example: 'uuid',
+        description: 'Lọc theo lớp học',
+    })
+    @IsOptional()
+    @IsUUID()
+    classroomId?: string;
 
     @ApiPropertyOptional({
         example: 1,

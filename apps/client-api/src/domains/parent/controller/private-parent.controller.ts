@@ -1,22 +1,26 @@
 import { ResponseMessage } from '@app/shared';
 import { RequestContext } from '@app/shared/request-context';
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Put,
-  Query,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    ParseUUIDPipe,
+    Patch,
+    Post,
+    Put,
+    Query,
+    Res,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Response } from 'express';
+import { ParentChildrenGradesDto } from '../../gradebook/dto';
+import { GradebookExportService, GradebookService } from '../../gradebook/service';
 import { UpdateParentChildSettingsDto } from '../dto';
 import {
-  CreateParentRewardDto,
-  UpdateParentRewardDto,
+    CreateParentRewardDto,
+    UpdateParentRewardDto,
 } from '../dto/parent-reward.dto';
 import { ParentService } from '../service/parent.service';
 
@@ -24,7 +28,23 @@ import { ParentService } from '../service/parent.service';
 @ApiBearerAuth('Authorization')
 @Controller('/private/v1/parent')
 export class PrivateParentController {
-  constructor(private readonly parentService: ParentService) {}
+  constructor(
+    private readonly parentService: ParentService,
+    private readonly gradebookService: GradebookService,
+    private readonly gradebookExportService: GradebookExportService,
+  ) {}
+
+  /**
+   * Sanitize filename to remove invalid characters for HTTP headers
+   */
+  private sanitizeFilename(name: string): string {
+    if (!name) return 'unknown';
+    return name
+      .replace(/[<>:"/\\|?*\x00-\x1F]/g, '') // Remove invalid chars
+      .replace(/\s+/g, '-') // Replace spaces with dashes
+      .replace(/[^\w\-._]/g, '') // Keep only alphanumeric, dash, dot, underscore
+      .substring(0, 100); // Limit length
+  }
 
   @Get('dashboard')
   @ApiOperation({ summary: 'Get parent dashboard data' })
@@ -60,6 +80,43 @@ export class PrivateParentController {
     }
 
     return this.parentService.getRewards(user.sub);
+  }
+
+  @Get('children/grades')
+  @ApiOperation({ summary: 'Get grades for all children' })
+  @ResponseMessage('Children grades fetched successfully')
+  getChildrenGrades(): Promise<ParentChildrenGradesDto> {
+    const user = RequestContext.getValue('user');
+    if (!user || !user.sub) {
+      throw new Error('User not authenticated');
+    }
+
+    return this.gradebookService.getParentChildrenGrades(user.sub);
+  }
+
+  @Get('children/grades/export')
+  @ApiOperation({ summary: 'Export children grades to Excel' })
+  @ResponseMessage('Children grades exported successfully')
+  async exportChildrenGrades(@Res() res: Response): Promise<void> {
+    const user = RequestContext.getValue('user');
+    if (!user || !user.sub) {
+      throw new Error('User not authenticated');
+    }
+
+    const buffer = await this.gradebookExportService.exportParentChildrenGrades(
+      user.sub,
+    );
+
+    const filename = `bang-diem-cac-con-${Date.now()}.xlsx`;
+    const encodedFilename = encodeURIComponent(filename);
+
+    res.set({
+      'Content-Type':
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': `attachment; filename="${filename}"; filename*=UTF-8''${encodedFilename}`,
+    });
+
+    res.send(buffer);
   }
 
   @Post('rewards')
