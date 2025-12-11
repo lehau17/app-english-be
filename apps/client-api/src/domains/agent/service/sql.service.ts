@@ -57,9 +57,7 @@ export class SqlService {
           sqlResult.sql,
         );
 
-        this.logger.log(
-          `SQL executed successfully on attempt ${attempt + 1}`,
-        );
+        this.logger.log(`SQL executed successfully on attempt ${attempt + 1}`);
 
         return {
           answer,

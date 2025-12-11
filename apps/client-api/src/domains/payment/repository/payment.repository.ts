@@ -136,11 +136,14 @@ export class PaymentRepository extends PrismaRepository {
     classroomId: string,
     isPurchased: boolean,
   ): Promise<void> {
-    console.log(`[PaymentRepository] updateStudentPurchaseStatus called with:`, {
-      studentId,
-      classroomId,
-      isPurchased,
-    });
+    console.log(
+      `[PaymentRepository] updateStudentPurchaseStatus called with:`,
+      {
+        studentId,
+        classroomId,
+        isPurchased,
+      },
+    );
 
     // Sử dụng upsert: tạo mới hoặc update
     // Khi thanh toán thành công, tự động enroll student vào classroom

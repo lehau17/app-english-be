@@ -1,24 +1,24 @@
 import {
-    JwtPayload,
-    PayloadToken,
-    ResponseMessage,
-    Roles,
-    RolesGuard,
+  JwtPayload,
+  PayloadToken,
+  ResponseMessage,
+  Roles,
+  RolesGuard,
 } from '@app/shared';
 import {
-    Body,
-    Controller,
-    Get,
-    Param,
-    Post,
-    Query,
-    UseGuards
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import {
-    ApiBearerAuth,
-    ApiOperation,
-    ApiResponse,
-    ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { IssueCertificateDto } from '../dto';

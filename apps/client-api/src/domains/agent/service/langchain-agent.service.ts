@@ -587,8 +587,14 @@ CÔNG CỤ CÓ SẴN:
                     );
 
                     // Send multiple charts from analytics tools
-                    if (analyticsResult.success && analyticsResult.charts && Array.isArray(analyticsResult.charts)) {
-                      this.logger.log(`Analytics detected with ${analyticsResult.charts.length} charts`);
+                    if (
+                      analyticsResult.success &&
+                      analyticsResult.charts &&
+                      Array.isArray(analyticsResult.charts)
+                    ) {
+                      this.logger.log(
+                        `Analytics detected with ${analyticsResult.charts.length} charts`,
+                      );
                       for (const chart of analyticsResult.charts) {
                         yield {
                           type: 'chart',
@@ -660,9 +666,7 @@ CÔNG CỤ CÓ SẴN:
         }
       }
 
-      this.logger.log(
-        `Streaming complete. Total length: ${fullAnswer.length}`,
-      );
+      this.logger.log(`Streaming complete. Total length: ${fullAnswer.length}`);
       this.logger.log(`Full answer content: "${fullAnswer}"`);
 
       // Use finalIntermediateSteps if steps is empty
@@ -753,8 +757,14 @@ CÔNG CỤ CÓ SẴN:
               );
 
               // Send multiple charts from analytics tools
-              if (analyticsResult.success && analyticsResult.charts && Array.isArray(analyticsResult.charts)) {
-                this.logger.log(`Sending ${analyticsResult.charts.length} charts from ${step.action?.tool}!`);
+              if (
+                analyticsResult.success &&
+                analyticsResult.charts &&
+                Array.isArray(analyticsResult.charts)
+              ) {
+                this.logger.log(
+                  `Sending ${analyticsResult.charts.length} charts from ${step.action?.tool}!`,
+                );
                 for (const chart of analyticsResult.charts) {
                   yield {
                     type: 'chart',

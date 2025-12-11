@@ -54,7 +54,7 @@ export class PodcastController {
     private readonly youtubeTranscriptService: YouTubeTranscriptService,
     private readonly audioExtractionService: AudioExtractionService,
     private readonly videoProcessingService: VideoProcessingService,
-  ) { }
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get all podcasts with filtering and pagination' })
@@ -83,7 +83,6 @@ export class PodcastController {
       limit || 10,
     );
   }
-
 
   @Get(':id')
   @ApiOperation({ summary: 'Get podcast by ID' })

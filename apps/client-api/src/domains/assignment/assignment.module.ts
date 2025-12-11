@@ -27,7 +27,7 @@ import { AssignmentPdfService } from './services/assignment-pdf.service';
     AssignmentRepository,
     AssignmentImportService,
     AssignmentPdfService,
-    EvaluationService
+    EvaluationService,
   ],
   exports: [
     AssignmentService,
@@ -36,4 +36,4 @@ import { AssignmentPdfService } from './services/assignment-pdf.service';
     AssignmentPdfService,
   ],
 })
-export class AssignmentModule { }
+export class AssignmentModule {}

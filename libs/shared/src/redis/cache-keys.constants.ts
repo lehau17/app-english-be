@@ -111,11 +111,16 @@ export const LOCK_CONFIG = {
 } as const;
 
 // ==================== TYPE EXPORTS ====================
-export type AttendanceCacheKey = (typeof ATTENDANCE_CACHE)[keyof typeof ATTENDANCE_CACHE];
-export type ClassroomCacheKey = (typeof CLASSROOM_CACHE)[keyof typeof CLASSROOM_CACHE];
+export type AttendanceCacheKey =
+  (typeof ATTENDANCE_CACHE)[keyof typeof ATTENDANCE_CACHE];
+export type ClassroomCacheKey =
+  (typeof CLASSROOM_CACHE)[keyof typeof CLASSROOM_CACHE];
 export type UserCacheKey = (typeof USER_CACHE)[keyof typeof USER_CACHE];
 export type CourseCacheKey = (typeof COURSE_CACHE)[keyof typeof COURSE_CACHE];
-export type AssignmentCacheKey = (typeof ASSIGNMENT_CACHE)[keyof typeof ASSIGNMENT_CACHE];
-export type ProgressCacheKey = (typeof PROGRESS_CACHE)[keyof typeof PROGRESS_CACHE];
-export type GradebookCacheKey = (typeof GRADEBOOK_CACHE)[keyof typeof GRADEBOOK_CACHE];
+export type AssignmentCacheKey =
+  (typeof ASSIGNMENT_CACHE)[keyof typeof ASSIGNMENT_CACHE];
+export type ProgressCacheKey =
+  (typeof PROGRESS_CACHE)[keyof typeof PROGRESS_CACHE];
+export type GradebookCacheKey =
+  (typeof GRADEBOOK_CACHE)[keyof typeof GRADEBOOK_CACHE];
 export type CacheTTL = (typeof CACHE_TTL)[keyof typeof CACHE_TTL];

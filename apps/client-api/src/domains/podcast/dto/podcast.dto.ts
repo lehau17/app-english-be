@@ -1,24 +1,24 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-    PodcastCategory,
-    PodcastDifficulty,
-    PodcastSource,
-    PodcastStatus,
+  PodcastCategory,
+  PodcastDifficulty,
+  PodcastSource,
+  PodcastStatus,
 } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
-    IsArray,
-    IsBoolean,
-    IsEnum,
-    IsIn,
-    IsInt,
-    IsNumber,
-    IsOptional,
-    IsString,
-    IsUrl,
-    Min,
-    ValidateNested,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsIn,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
+  Min,
+  ValidateNested,
 } from 'class-validator';
 
 // Media type enum for podcast
@@ -175,7 +175,9 @@ export class CreatePodcastDto {
 }
 
 export class UpdatePodcastGapDto {
-  @ApiPropertyOptional({ description: 'Gap ID (if present, update existing; if absent, create new)' })
+  @ApiPropertyOptional({
+    description: 'Gap ID (if present, update existing; if absent, create new)',
+  })
   @IsOptional()
   @IsString()
   id?: string;
@@ -310,7 +312,8 @@ export class UpdatePodcastDto {
   status?: PodcastStatus;
 
   @ApiPropertyOptional({
-    description: 'Gaps cho fill-in-the-blank (tùy chọn, để trống sẽ xóa tất cả gaps)',
+    description:
+      'Gaps cho fill-in-the-blank (tùy chọn, để trống sẽ xóa tất cả gaps)',
     type: [UpdatePodcastGapDto],
   })
   @IsOptional()

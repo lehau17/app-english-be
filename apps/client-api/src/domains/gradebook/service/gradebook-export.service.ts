@@ -12,12 +12,9 @@ export class GradebookExportService {
   /**
    * Export classroom gradebook to Excel
    */
-  async exportClassroomGradebook(
-    classroomId: string,
-  ): Promise<Buffer> {
-    const gradebook = await this.gradebookService.calculateClassroomGrades(
-      classroomId,
-    );
+  async exportClassroomGradebook(classroomId: string): Promise<Buffer> {
+    const gradebook =
+      await this.gradebookService.calculateClassroomGrades(classroomId);
 
     const columns = [
       { header: 'Họ và tên', key: 'studentName', width: 25 },
@@ -48,9 +45,8 @@ export class GradebookExportService {
    * Export student transcript to Excel
    */
   async exportStudentTranscript(studentId: string): Promise<Buffer> {
-    const transcript = await this.gradebookService.getStudentTranscript(
-      studentId,
-    );
+    const transcript =
+      await this.gradebookService.getStudentTranscript(studentId);
 
     const columns = [
       { header: 'Lớp học', key: 'classroomName', width: 25 },
@@ -83,9 +79,8 @@ export class GradebookExportService {
    * Export parent children grades to Excel
    */
   async exportParentChildrenGrades(parentId: string): Promise<Buffer> {
-    const grades = await this.gradebookService.getParentChildrenGrades(
-      parentId,
-    );
+    const grades =
+      await this.gradebookService.getParentChildrenGrades(parentId);
 
     const columns = [
       { header: 'Tên con', key: 'childName', width: 20 },
@@ -121,19 +116,3 @@ export class GradebookExportService {
     );
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

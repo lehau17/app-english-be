@@ -36,11 +36,34 @@ OUTPUT: Danh sach canh bao theo muc do uu tien voi goi y hanh dong.`,
       schema: z.object({
         teacherId: z.string().optional().describe('ID giao vien'),
         classroomId: z.string().optional().describe('ID lop hoc'),
-        period: z.enum(['7d', '30d', '90d']).optional().default('30d').describe('Khoang thoi gian'),
-        alertTypes: z.array(z.enum(['low_score', 'low_attendance', 'inactive', 'late_submissions', 'all'])).optional().default(['all']).describe('Loai canh bao'),
+        period: z
+          .enum(['7d', '30d', '90d'])
+          .optional()
+          .default('30d')
+          .describe('Khoang thoi gian'),
+        alertTypes: z
+          .array(
+            z.enum([
+              'low_score',
+              'low_attendance',
+              'inactive',
+              'late_submissions',
+              'all',
+            ]),
+          )
+          .optional()
+          .default(['all'])
+          .describe('Loai canh bao'),
       }),
-      func: async ({ teacherId, classroomId, period = '30d', alertTypes = ['all'] }) => {
-        return this._call(JSON.stringify({ teacherId, classroomId, period, alertTypes }));
+      func: async ({
+        teacherId,
+        classroomId,
+        period = '30d',
+        alertTypes = ['all'],
+      }) => {
+        return this._call(
+          JSON.stringify({ teacherId, classroomId, period, alertTypes }),
+        );
       },
     });
   }
@@ -83,7 +106,10 @@ OUTPUT: Danh sach canh bao theo muc do uu tien voi goi y hanh dong.`,
 
       // 1. Check low scores
       if (checkAll || alertTypes.includes('low_score')) {
-        const lowScoreAlerts = await this.checkLowScores(studentIds, dateFilter);
+        const lowScoreAlerts = await this.checkLowScores(
+          studentIds,
+          dateFilter,
+        );
         alerts.push(...lowScoreAlerts);
       }
 
@@ -142,7 +168,9 @@ OUTPUT: Danh sach canh bao theo muc do uu tien voi goi y hanh dong.`,
       let aiRecommendations = null;
       if (critical > 0 || high > 0) {
         aiRecommendations = await this.getAIRecommendations(
-          alerts.filter((a) => a.priority === 'critical' || a.priority === 'high'),
+          alerts.filter(
+            (a) => a.priority === 'critical' || a.priority === 'high',
+          ),
         );
       }
 
@@ -495,8 +523,9 @@ OUTPUT: Danh sach canh bao theo muc do uu tien voi goi y hanh dong.`,
     // Check late count
     for (const [studentId, lateCount] of byStudent) {
       if (lateCount >= 5) {
-        const student = lateSubmissions.find((s) => s.studentId === studentId)
-          ?.student;
+        const student = lateSubmissions.find(
+          (s) => s.studentId === studentId,
+        )?.student;
 
         alerts.push({
           type: 'late_submissions',
@@ -516,7 +545,9 @@ OUTPUT: Danh sach canh bao theo muc do uu tien voi goi y hanh dong.`,
 
   private async getAIRecommendations(criticalAlerts: any[]): Promise<any> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = this.genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+      });
 
       const prompt = `Phân tích các cảnh báo học sinh cần hỗ trợ và đưa ra gợi ý:
 

@@ -33,7 +33,13 @@ import { MakeupRequestService } from './services/makeup-request.service';
 import { RescheduleRequestService } from './services/reschedule-request.service';
 
 @Module({
-  imports: [AssignmentModule, EventsModule, PaymentModule, NotificationModule, SharedModule],
+  imports: [
+    AssignmentModule,
+    EventsModule,
+    PaymentModule,
+    NotificationModule,
+    SharedModule,
+  ],
   controllers: [
     PrivateClassroomController,
     AttendanceController,
@@ -45,7 +51,6 @@ import { RescheduleRequestService } from './services/reschedule-request.service'
     // Reschedule Request
     RescheduleRequestTeacherController,
     RescheduleRequestAdminController,
-
   ],
   providers: [
     ClassroomService,
@@ -66,7 +71,13 @@ import { RescheduleRequestService } from './services/reschedule-request.service'
     RescheduleRequestService,
     RescheduleRequestRepository,
   ],
-  exports: [ClassroomService, ClassroomRepository, AttendanceService, AttendanceBlockingService, MakeupRequestService, RescheduleRequestService],
+  exports: [
+    ClassroomService,
+    ClassroomRepository,
+    AttendanceService,
+    AttendanceBlockingService,
+    MakeupRequestService,
+    RescheduleRequestService,
+  ],
 })
-export class ClassroomModule { }
-
+export class ClassroomModule {}

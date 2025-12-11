@@ -1,5 +1,9 @@
 import { PrismaRepository } from '@app/database';
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as ffmpeg from 'fluent-ffmpeg';
@@ -29,7 +33,8 @@ export class MediaProcessorService implements OnModuleInit {
     // Initialize S3 client
     const s3Region = this.configService.getOrThrow<string>('S3_REGION');
     this.s3Endpoint = this.configService.getOrThrow<string>('S3_ENDPOINT');
-    const s3AccessKeyId = this.configService.getOrThrow<string>('S3_ACCESS_KEY_ID');
+    const s3AccessKeyId =
+      this.configService.getOrThrow<string>('S3_ACCESS_KEY_ID');
     const s3SecretAccessKey = this.configService.getOrThrow<string>(
       'S3_SECRET_ACCESS_KEY',
     );
@@ -80,7 +85,10 @@ export class MediaProcessorService implements OnModuleInit {
     this.logger.log(`Processing video ${mediaId} from ${url}`);
 
     const ext = this.getExtensionFromUrl(url);
-    const tempVideoPath = path.join(this.tempDir, `${mediaId}-${Date.now()}.${ext}`);
+    const tempVideoPath = path.join(
+      this.tempDir,
+      `${mediaId}-${Date.now()}.${ext}`,
+    );
     const tempThumbnailPath = path.join(this.tempDir, `${mediaId}-thumb.jpg`);
 
     try {
@@ -197,7 +205,10 @@ export class MediaProcessorService implements OnModuleInit {
     this.logger.log(`Processing audio ${mediaId} from ${url}`);
 
     const ext = this.getExtensionFromUrl(url);
-    const tempAudioPath = path.join(this.tempDir, `${mediaId}-${Date.now()}.${ext}`);
+    const tempAudioPath = path.join(
+      this.tempDir,
+      `${mediaId}-${Date.now()}.${ext}`,
+    );
 
     try {
       // 1. Download from S3
@@ -266,7 +277,8 @@ export class MediaProcessorService implements OnModuleInit {
    */
   private async ensureTempDir(): Promise<void> {
     const tempDir =
-      this.configService.get<string>('MEDIA_TEMP_DIR') || '/tmp/media-processing';
+      this.configService.get<string>('MEDIA_TEMP_DIR') ||
+      '/tmp/media-processing';
     try {
       await mkdir(tempDir, { recursive: true });
       this.tempDir = tempDir;
@@ -391,11 +403,3 @@ export class MediaProcessorService implements OnModuleInit {
     return match ? match[1] : 'mp4'; // Default to mp4
   }
 }
-
-
-
-
-
-
-
-

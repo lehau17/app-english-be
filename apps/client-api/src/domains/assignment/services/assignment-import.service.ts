@@ -586,9 +586,7 @@ export class AssignmentImportService {
       ['   Fill in the assignment details in the "Value" column'],
       ['    Only "title" is REQUIRED, other fields are optional'],
       ['   📅 Date format: ISO 8601 (YYYY-MM-DDTHH:mm:ssZ)'],
-      [
-        '   type: HOMEWORK, QUIZ, MIDTERM_EXAM, FINAL_EXAM (default: HOMEWORK)',
-      ],
+      ['   type: HOMEWORK, QUIZ, MIDTERM_EXAM, FINAL_EXAM (default: HOMEWORK)'],
       ['   ⚖️  weight: 0-100 for final grade calculation (default: 0)'],
       [
         '   👥 assignedTo: comma-separated student IDs (leave empty for all students)',
@@ -598,9 +596,7 @@ export class AssignmentImportService {
       ['2️⃣  ACTIVITIES SHEET - ALL TYPES INCLUDED!'],
       ['═══════════════════════════════════════════════════════════════'],
       ['   Template includes 19 sample activities covering ALL types'],
-      [
-        '   Each row = one activity (or one question for multi-question types)',
-      ],
+      ['   Each row = one activity (or one question for multi-question types)'],
       ['   🗑️  Delete sample rows and add your own, or modify the samples'],
       ['   📌 Required fields vary by activity type (see below)'],
       [''],

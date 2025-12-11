@@ -33,19 +33,15 @@ export class AutoExamCreationService {
    * - Sử dụng thời gian thực tế của session (startTime, endTime)
    */
   async createAutoExams(options: AutoExamCreationOptions): Promise<void> {
-    const {
-      classroomId,
-      courseId,
-      teacherId,
-      totalSessions,
-    } = options;
+    const { classroomId, courseId, teacherId, totalSessions } = options;
 
     this.logger.log(
       `Creating auto exams for classroom ${classroomId} with ${totalSessions} sessions`,
     );
 
     // Query sessions sau khi đã được tạo
-    const sessions = await this.classroomRepository.getClassroomSessions(classroomId);
+    const sessions =
+      await this.classroomRepository.getClassroomSessions(classroomId);
 
     // Validate sessions
     if (!sessions || sessions.length < 2) {
@@ -87,7 +83,9 @@ export class AutoExamCreationService {
 
         // Validate session times
         if (!this.validateSession(midtermSession)) {
-          this.logger.warn(`Invalid midterm session at index ${adjustedMidtermIndex}`);
+          this.logger.warn(
+            `Invalid midterm session at index ${adjustedMidtermIndex}`,
+          );
           return;
         }
         if (!this.validateSession(finalSession)) {
@@ -159,14 +157,16 @@ export class AutoExamCreationService {
   private validateSession(session: any): boolean {
     if (!session) return false;
     if (!session.startTime || !session.endTime) return false;
-    if (!(session.startTime instanceof Date) || !(session.endTime instanceof Date)) {
+    if (
+      !(session.startTime instanceof Date) ||
+      !(session.endTime instanceof Date)
+    ) {
       return false;
     }
     if (session.endTime <= session.startTime) return false;
     if (!session.durationHours || session.durationHours <= 0) return false;
     return true;
   }
-
 
   private async createMidtermExam(params: {
     classroomId: string;
@@ -175,13 +175,7 @@ export class AutoExamCreationService {
     session: any;
     sessionIndex: number;
   }): Promise<void> {
-    const {
-      classroomId,
-      courseId,
-      teacherId,
-      session,
-      sessionIndex,
-    } = params;
+    const { classroomId, courseId, teacherId, session, sessionIndex } = params;
 
     // Use actual session times
     const startTime = new Date(session.startTime);
@@ -361,13 +355,7 @@ The future of our planet depends on the choices we make today. If we act now, we
     session: any;
     sessionIndex: number;
   }): Promise<void> {
-    const {
-      classroomId,
-      courseId,
-      teacherId,
-      session,
-      sessionIndex,
-    } = params;
+    const { classroomId, courseId, teacherId, session, sessionIndex } = params;
 
     // Use actual session times
     const startTime = new Date(session.startTime);

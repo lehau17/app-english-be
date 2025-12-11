@@ -48,7 +48,8 @@ export class PodcastRepository {
     if (category) baseConditions.category = category;
     // if (source) baseConditions.source = source;
     if (difficulty) baseConditions.difficulty = difficulty;
-    if (recommended !== undefined) (baseConditions as any).isRecommended = recommended;
+    if (recommended !== undefined)
+      (baseConditions as any).isRecommended = recommended;
     if (premium !== undefined) (baseConditions as any).isPremium = premium;
 
     if (duration) {
@@ -67,10 +68,7 @@ export class PodcastRepository {
 
     // Handle visibility filter: show public podcasts OR user's own podcasts
     const visibilityFilter: Prisma.PodcastWhereInput = {
-      OR: [
-        { isPublic: true },
-        { authorId: userId },
-      ],
+      OR: [{ isPublic: true }, { authorId: userId }],
     };
 
     // Initialize where clause
@@ -98,7 +96,6 @@ export class PodcastRepository {
             some: {
               userId,
               status: 'completed',
-
             },
           };
           where.AND = [baseConditions, visibilityFilter];

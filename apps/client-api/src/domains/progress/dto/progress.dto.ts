@@ -53,7 +53,11 @@ export class UpdateProgressTimeSpentDto {
   @IsUUID()
   activityId: string;
 
-  @ApiProperty({ example: 3600, description: 'Time spent in seconds (will be added to existing timeSpentSec)' })
+  @ApiProperty({
+    example: 3600,
+    description:
+      'Time spent in seconds (will be added to existing timeSpentSec)',
+  })
   @IsInt()
   timeSpentSec: number;
 }

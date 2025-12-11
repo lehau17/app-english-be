@@ -7,9 +7,7 @@ import { IssuedCertificateService } from '../services';
 @ApiTags('Public Certificates')
 @Controller('/public/v1/certificates')
 export class PublicCertificateController {
-  constructor(
-    private readonly certificateService: IssuedCertificateService,
-  ) {}
+  constructor(private readonly certificateService: IssuedCertificateService) {}
 
   @Get('/share/:verificationCode')
   @UseGuards(RateLimitGuard)
@@ -25,9 +23,8 @@ export class PublicCertificateController {
     @Param('verificationCode') verificationCode: string,
     @Res() res: Response,
   ) {
-    const html = await this.certificateService.getPublicCertificateShare(
-      verificationCode,
-    );
+    const html =
+      await this.certificateService.getPublicCertificateShare(verificationCode);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(html);
   }
@@ -46,12 +43,10 @@ export class PublicCertificateController {
     @Param('verificationCode') verificationCode: string,
     @Res() res: Response,
   ) {
-    const pdfBuffer = await this.certificateService.getPublicCertificatePDF(
-      verificationCode,
-    );
-    const certificate = await this.certificateService.verifyCertificate(
-      verificationCode,
-    );
+    const pdfBuffer =
+      await this.certificateService.getPublicCertificatePDF(verificationCode);
+    const certificate =
+      await this.certificateService.verifyCertificate(verificationCode);
 
     // Sanitize filename for Content-Disposition header
     const sanitizedFilename = `certificate-${certificate.certificateNumber}.pdf`
@@ -87,24 +82,6 @@ export class PublicCertificateController {
   async verifyCertificateByNumber(
     @Param('certificateNumber') certificateNumber: string,
   ) {
-    return this.certificateService.verifyCertificateByNumber(
-      certificateNumber,
-    );
+    return this.certificateService.verifyCertificateByNumber(certificateNumber);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

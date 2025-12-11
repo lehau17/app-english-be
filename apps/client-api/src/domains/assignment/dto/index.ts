@@ -6,4 +6,3 @@ export * from './import-assignment.dto';
 export * from './query-bank-activities.dto';
 export * from './query-bank-assignments.dto';
 export * from './update-assignment.dto';
-

@@ -25,11 +25,22 @@ export class AssignmentAnalyticsTool {
       schema: z.object({
         classroomId: z.string().optional().describe('ID lop hoc'),
         assignmentId: z.string().optional().describe('ID bai tap cu the'),
-        period: z.enum(['7d', '30d', '90d', 'all']).optional().default('30d').describe('Khoang thoi gian'),
+        period: z
+          .enum(['7d', '30d', '90d', 'all'])
+          .optional()
+          .default('30d')
+          .describe('Khoang thoi gian'),
         teacherId: z.string().optional().describe('ID giao vien'),
       }),
-      func: async ({ classroomId, assignmentId, period = '30d', teacherId }) => {
-        return this._call(JSON.stringify({ classroomId, assignmentId, period, teacherId }));
+      func: async ({
+        classroomId,
+        assignmentId,
+        period = '30d',
+        teacherId,
+      }) => {
+        return this._call(
+          JSON.stringify({ classroomId, assignmentId, period, teacherId }),
+        );
       },
     });
   }
@@ -145,7 +156,10 @@ export class AssignmentAnalyticsTool {
 
     // Calculate summary
     const totalAssignments = assignments.length;
-    const totalSubmissions = assignments.reduce((sum, a) => sum + a.submissions.length, 0);
+    const totalSubmissions = assignments.reduce(
+      (sum, a) => sum + a.submissions.length,
+      0,
+    );
     const totalPossibleSubmissions = assignments.reduce(
       (sum, a) => sum + (a.classroom?.students?.length || 0),
       0,
@@ -157,12 +171,20 @@ export class AssignmentAnalyticsTool {
 
     // Calculate average scores
     const allScores = assignments.flatMap((a) =>
-      a.submissions.filter((s) => s.score !== null).map((s) => s.score as number),
+      a.submissions
+        .filter((s) => s.score !== null)
+        .map((s) => s.score as number),
     );
-    const avgScore = allScores.length > 0 ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length) : 0;
+    const avgScore =
+      allScores.length > 0
+        ? Math.round(allScores.reduce((a, b) => a + b, 0) / allScores.length)
+        : 0;
 
     // Group by type
-    const byType: Record<string, { count: number; avgScore: number; submissions: number }> = {};
+    const byType: Record<
+      string,
+      { count: number; avgScore: number; submissions: number }
+    > = {};
     assignments.forEach((a) => {
       const type = a.type || 'HOMEWORK';
       if (!byType[type]) {
@@ -171,12 +193,17 @@ export class AssignmentAnalyticsTool {
       byType[type].count++;
       byType[type].submissions += a.submissions.length;
 
-      const scores = a.submissions.filter((s) => s.score !== null).map((s) => s.score as number);
+      const scores = a.submissions
+        .filter((s) => s.score !== null)
+        .map((s) => s.score as number);
       if (scores.length > 0) {
         const currentAvg = byType[type].avgScore;
         const currentCount = byType[type].count - 1;
         const newAvg = scores.reduce((x, y) => x + y, 0) / scores.length;
-        byType[type].avgScore = currentCount > 0 ? (currentAvg * currentCount + newAvg) / byType[type].count : newAvg;
+        byType[type].avgScore =
+          currentCount > 0
+            ? (currentAvg * currentCount + newAvg) / byType[type].count
+            : newAvg;
       }
     });
 
@@ -191,8 +218,13 @@ export class AssignmentAnalyticsTool {
     // Find top difficult assignments (lowest avg score)
     const topDifficult = assignments
       .map((a) => {
-        const scores = a.submissions.filter((s) => s.score !== null).map((s) => s.score as number);
-        const avg = scores.length > 0 ? scores.reduce((x, y) => x + y, 0) / scores.length : null;
+        const scores = a.submissions
+          .filter((s) => s.score !== null)
+          .map((s) => s.score as number);
+        const avg =
+          scores.length > 0
+            ? scores.reduce((x, y) => x + y, 0) / scores.length
+            : null;
         return {
           id: a.id,
           title: a.title,
@@ -228,7 +260,9 @@ export class AssignmentAnalyticsTool {
 
     assignments.forEach((a) => {
       if (a.isPublished && a.classroom?.students) {
-        const submittedStudentIds = new Set(a.submissions.map((s) => s.studentId));
+        const submittedStudentIds = new Set(
+          a.submissions.map((s) => s.studentId),
+        );
         const missing = a.classroom.students
           .filter((cs) => !submittedStudentIds.has(cs.studentId))
           .map((cs) => ({
@@ -263,7 +297,10 @@ export class AssignmentAnalyticsTool {
         submissionRate,
         avgScore,
         lateCount: lateSubmissions.length,
-        notSubmittedCount: notSubmitted.reduce((sum, a) => sum + a.students.length, 0),
+        notSubmittedCount: notSubmitted.reduce(
+          (sum, a) => sum + a.students.length,
+          0,
+        ),
       },
       byType: Object.entries(byType).map(([type, data]) => ({
         type,
@@ -280,7 +317,9 @@ export class AssignmentAnalyticsTool {
 
   private async analyzeWithAI(data: any): Promise<any> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = this.genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+      });
 
       const prompt = `Phân tích dữ liệu bài tập và đưa ra insights chi tiết:
 

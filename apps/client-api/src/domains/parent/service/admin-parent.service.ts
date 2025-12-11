@@ -21,7 +21,7 @@ export class AdminParentService {
   constructor(
     private readonly prisma: PrismaRepository,
     private readonly excelExportService: ExcelExportService,
-  ) { }
+  ) {}
 
   async getParents(query: ParentListQueryDto) {
     const {
@@ -710,8 +710,7 @@ export class AdminParentService {
       const lastName = values[lastNameIndex]?.trim();
       const phoneNumber = values[phoneNumberIndex]?.trim();
       const displayName =
-        values[displayNameIndex]?.trim() ||
-        `${firstName} ${lastName}`.trim();
+        values[displayNameIndex]?.trim() || `${firstName} ${lastName}`.trim();
 
       if (email && password && firstName && lastName) {
         parentsToCreate.push({

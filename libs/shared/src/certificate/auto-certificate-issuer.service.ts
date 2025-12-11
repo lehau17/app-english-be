@@ -4,8 +4,8 @@ import { ClassroomStatus } from '@prisma/client';
 import { CourseCompletionService } from './course-completion.service';
 import { ICertificateIssuer } from './interfaces/certificate-issuer.interface';
 import {
-    getGradeLevel,
-    isEligibleForCertificate,
+  getGradeLevel,
+  isEligibleForCertificate,
 } from './utils/grade-level.util';
 
 /**
@@ -50,11 +50,12 @@ export class AutoCertificateIssuerService {
       );
 
       // Get comprehensive course completion
-      const completion = await this.courseCompletionService.calculateCourseCompletion(
-        studentId,
-        courseId,
-        classroomId,
-      );
+      const completion =
+        await this.courseCompletionService.calculateCourseCompletion(
+          studentId,
+          courseId,
+          classroomId,
+        );
 
       if (!completion.isCompleted) {
         this.logger.log(
@@ -319,11 +320,12 @@ export class AutoCertificateIssuerService {
       for (const cs of classroomStudents) {
         try {
           // Check if student completed all requirements (comprehensive)
-          const completion = await this.courseCompletionService.calculateCourseCompletion(
-            cs.studentId,
-            classroom.courseId,
-            classroomId,
-          );
+          const completion =
+            await this.courseCompletionService.calculateCourseCompletion(
+              cs.studentId,
+              classroom.courseId,
+              classroomId,
+            );
 
           if (!completion.isCompleted) {
             this.logger.log(
@@ -344,10 +346,11 @@ export class AutoCertificateIssuerService {
           let finalScore = progress.averageScore; // Fallback
           if (this.gradebookService) {
             try {
-              const gradebook = await this.gradebookService.calculateStudentGrade(
-                cs.studentId,
-                classroomId,
-              );
+              const gradebook =
+                await this.gradebookService.calculateStudentGrade(
+                  cs.studentId,
+                  classroomId,
+                );
               finalScore = gradebook.finalGrade;
             } catch (error) {
               this.logger.warn(
@@ -416,19 +419,3 @@ export class AutoCertificateIssuerService {
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

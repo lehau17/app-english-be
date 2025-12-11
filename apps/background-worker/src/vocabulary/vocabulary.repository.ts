@@ -5,8 +5,6 @@ import { Injectable } from '@nestjs/common';
 export class VocabularyRepository {
   constructor(private readonly prisma: PrismaRepository) {}
 
-
-
   /**
    * Update termCount for all vocabulary units based on actual term counts
    * Used by background worker to sync cached counts
@@ -44,7 +42,10 @@ export class VocabularyRepository {
       ),
     );
 
-    const totalTerms = unitCounts.reduce((sum, { termCount }) => sum + termCount, 0);
+    const totalTerms = unitCounts.reduce(
+      (sum, { termCount }) => sum + termCount,
+      0,
+    );
 
     return {
       unitsUpdated: units.length,

@@ -1,12 +1,17 @@
 import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { BadRequestException, Inject, Injectable, forwardRef } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  forwardRef,
+} from '@nestjs/common';
 import { Classroom, Prisma } from '@prisma/client';
 import { Readable } from 'stream';
 import { LessonRepository } from '../../lesson/repository/lesson.repository';
 import {
-    ClassroomAnnouncementQueryDto,
-    FilterClassroomRequestDto,
+  ClassroomAnnouncementQueryDto,
+  FilterClassroomRequestDto,
 } from '../dto/classroom.dto';
 import { AttendanceBlockingService } from '../service/attendance-blocking.service';
 
@@ -845,8 +850,12 @@ export class ClassroomRepository {
         !(blockingStatus?.isBlocked || studentRecord?.isBlocked || false),
       isBlocked: blockingStatus?.isBlocked || studentRecord?.isBlocked || false,
       blockedAt: blockingStatus?.blockedAt || studentRecord?.blockedAt || null,
-      blockedReason: blockingStatus?.blockedReason || studentRecord?.blockedReason || null,
-      consecutiveAbsences: blockingStatus?.consecutiveAbsences || studentRecord?.consecutiveAbsences || 0,
+      blockedReason:
+        blockingStatus?.blockedReason || studentRecord?.blockedReason || null,
+      consecutiveAbsences:
+        blockingStatus?.consecutiveAbsences ||
+        studentRecord?.consecutiveAbsences ||
+        0,
       blockingThreshold: blockingStatus?.threshold || null,
     };
   }

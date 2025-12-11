@@ -28,7 +28,7 @@ import { NotificationService } from '../service/notification.service';
 @ApiBearerAuth('Authorization')
 @Controller('/private/v1/notifications')
 export class PrivateNotificationController {
-  constructor(private readonly notificationService: NotificationService) { }
+  constructor(private readonly notificationService: NotificationService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a notification' })

@@ -16,10 +16,7 @@ import { TokenRepository } from './repositories';
     Neo4jModule,
     RedisModule,
   ],
-  providers: [
-    TokenRepository,
-    CourseCompletionService,
-  ],
+  providers: [TokenRepository, CourseCompletionService],
   exports: [
     KafkaModule,
     Neo4jModule,

@@ -1,14 +1,14 @@
 import { PrismaRepository } from '@app/database';
 import {
-    KafkaConfigService,
-    KafkaTopic,
-    MediaProcessingMessage,
+  KafkaConfigService,
+  KafkaTopic,
+  MediaProcessingMessage,
 } from '@app/shared';
 import {
-    Injectable,
-    Logger,
-    OnModuleDestroy,
-    OnModuleInit,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { Consumer, Kafka } from 'kafkajs';
 import { MediaProcessorService } from './media-processor.service';
@@ -155,11 +155,3 @@ export class MediaProcessingListener implements OnModuleInit, OnModuleDestroy {
     }
   }
 }
-
-
-
-
-
-
-
-

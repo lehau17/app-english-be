@@ -203,9 +203,7 @@ export class PrivateAgentController {
     @Res() res: Response,
   ): Promise<void> {
     if (payload.role !== 'parent') {
-      throw new ForbiddenException(
-        'Parent chat endpoint is for parents only',
-      );
+      throw new ForbiddenException('Parent chat endpoint is for parents only');
     }
 
     this.logger.log(

@@ -182,11 +182,13 @@ Trả về lịch sử, thống kê và gợi ý podcast.`,
                 count: data.count,
                 avgScore: Math.round(data.avgScore * 10) / 10,
               })),
-              byDifficulty: Object.entries(byDifficulty).map(([diff, data]) => ({
-                difficulty: diff,
-                count: data.count,
-                avgScore: Math.round(data.avgScore * 10) / 10,
-              })),
+              byDifficulty: Object.entries(byDifficulty).map(
+                ([diff, data]) => ({
+                  difficulty: diff,
+                  count: data.count,
+                  avgScore: Math.round(data.avgScore * 10) / 10,
+                }),
+              ),
               bestScores: bestScores.map((a) => ({
                 podcastId: a.podcastId,
                 score: a.scorePercent,

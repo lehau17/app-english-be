@@ -1,15 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-    IsArray,
-    IsEnum,
-    IsNotEmpty,
-    IsObject,
-    IsOptional,
-    IsString,
-    IsUUID,
-    ValidateIf,
-    ValidateNested,
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import { GuestEnrollmentRole } from './guest-enrollment.dto';
 

@@ -44,14 +44,33 @@ OUTPUT:
 - AI recommendations cho tung lop
 - Nhieu bieu do so sanh`,
       schema: z.object({
-        teacherId: z.string().optional().describe('Chi xem lop cua giao vien nay'),
+        teacherId: z
+          .string()
+          .optional()
+          .describe('Chi xem lop cua giao vien nay'),
         courseId: z.string().optional().describe('Chi xem lop hoc khoa nay'),
-        period: z.enum(['7d', '30d', '90d', 'all']).optional().default('30d').describe('Khoang thoi gian'),
-        sortBy: z.enum(['score', 'attendance', 'completion', 'engagement', 'overall']).optional().default('overall').describe('Sap xep theo'),
+        period: z
+          .enum(['7d', '30d', '90d', 'all'])
+          .optional()
+          .default('30d')
+          .describe('Khoang thoi gian'),
+        sortBy: z
+          .enum(['score', 'attendance', 'completion', 'engagement', 'overall'])
+          .optional()
+          .default('overall')
+          .describe('Sap xep theo'),
         limit: z.number().optional().default(10).describe('So lop muon xem'),
       }),
-      func: async ({ teacherId, courseId, period = '30d', sortBy = 'overall', limit = 10 }) => {
-        return this._call(JSON.stringify({ teacherId, courseId, period, sortBy, limit }));
+      func: async ({
+        teacherId,
+        courseId,
+        period = '30d',
+        sortBy = 'overall',
+        limit = 10,
+      }) => {
+        return this._call(
+          JSON.stringify({ teacherId, courseId, period, sortBy, limit }),
+        );
       },
     });
   }
@@ -210,8 +229,12 @@ OUTPUT:
         const studentCount = studentIds.length;
 
         // 1. Assignment metrics
-        const allSubmissions = classroom.assignments.flatMap((a) => a.submissions);
-        const gradedSubmissions = allSubmissions.filter((s) => s.score !== null);
+        const allSubmissions = classroom.assignments.flatMap(
+          (a) => a.submissions,
+        );
+        const gradedSubmissions = allSubmissions.filter(
+          (s) => s.score !== null,
+        );
         const totalAssignments = classroom.assignments.length;
         const totalPossibleSubmissions = totalAssignments * studentCount;
         const submissionRate =
@@ -225,7 +248,9 @@ OUTPUT:
               gradedSubmissions.length
             : 0;
 
-        const onTimeSubmissions = allSubmissions.filter((s) => !s.isLate).length;
+        const onTimeSubmissions = allSubmissions.filter(
+          (s) => !s.isLate,
+        ).length;
         const onTimeRate =
           allSubmissions.length > 0
             ? (onTimeSubmissions / allSubmissions.length) * 100
@@ -233,7 +258,9 @@ OUTPUT:
 
         // 2. Attendance metrics
         const totalSessionSlots = classroom.sessions.length * studentCount;
-        const attendanceRecords = classroom.sessions.flatMap((s) => s.attendance);
+        const attendanceRecords = classroom.sessions.flatMap(
+          (s) => s.attendance,
+        );
         const presentCount = attendanceRecords.filter(
           (a) => a.status === 'present',
         ).length;
@@ -367,13 +394,19 @@ OUTPUT:
         sorted.sort((a, b) => b.metrics.avgScore - a.metrics.avgScore);
         break;
       case 'attendance':
-        sorted.sort((a, b) => b.metrics.attendanceRate - a.metrics.attendanceRate);
+        sorted.sort(
+          (a, b) => b.metrics.attendanceRate - a.metrics.attendanceRate,
+        );
         break;
       case 'completion':
-        sorted.sort((a, b) => b.metrics.submissionRate - a.metrics.submissionRate);
+        sorted.sort(
+          (a, b) => b.metrics.submissionRate - a.metrics.submissionRate,
+        );
         break;
       case 'engagement':
-        sorted.sort((a, b) => b.metrics.engagementScore - a.metrics.engagementScore);
+        sorted.sort(
+          (a, b) => b.metrics.engagementScore - a.metrics.engagementScore,
+        );
         break;
       case 'overall':
       default:
@@ -394,7 +427,11 @@ OUTPUT:
     const trends = classes.map((c) => {
       // Simulate trend based on current metrics
       const trend =
-        c.overallScore >= 75 ? 'improving' : c.overallScore < 50 ? 'declining' : 'stable';
+        c.overallScore >= 75
+          ? 'improving'
+          : c.overallScore < 50
+            ? 'declining'
+            : 'stable';
       const changePercent = Math.round((Math.random() - 0.3) * 20); // Simulated
 
       return {
@@ -402,7 +439,8 @@ OUTPUT:
         className: c.name,
         trend,
         changePercent,
-        trendEmoji: trend === 'improving' ? '📈' : trend === 'declining' ? '📉' : '➡️',
+        trendEmoji:
+          trend === 'improving' ? '📈' : trend === 'declining' ? '📉' : '➡️',
       };
     });
 
@@ -428,25 +466,37 @@ OUTPUT:
     const systemAvg = {
       avgScore:
         Math.round(
-          (classes.reduce((sum: number, c: any) => sum + c.metrics.avgScore, 0) /
+          (classes.reduce(
+            (sum: number, c: any) => sum + c.metrics.avgScore,
+            0,
+          ) /
             classes.length) *
             10,
         ) / 10,
       attendanceRate:
         Math.round(
-          (classes.reduce((sum: number, c: any) => sum + c.metrics.attendanceRate, 0) /
+          (classes.reduce(
+            (sum: number, c: any) => sum + c.metrics.attendanceRate,
+            0,
+          ) /
             classes.length) *
             10,
         ) / 10,
       submissionRate:
         Math.round(
-          (classes.reduce((sum: number, c: any) => sum + c.metrics.submissionRate, 0) /
+          (classes.reduce(
+            (sum: number, c: any) => sum + c.metrics.submissionRate,
+            0,
+          ) /
             classes.length) *
             10,
         ) / 10,
       engagementScore:
         Math.round(
-          (classes.reduce((sum: number, c: any) => sum + c.metrics.engagementScore, 0) /
+          (classes.reduce(
+            (sum: number, c: any) => sum + c.metrics.engagementScore,
+            0,
+          ) /
             classes.length) *
             10,
         ) / 10,
@@ -474,14 +524,24 @@ OUTPUT:
       systemAverage: systemAvg,
       aboveBenchmark,
       belowBenchmark,
-      topDeviation: deviation.sort((a, b) => b.deviation - a.deviation).slice(0, 3),
-      bottomDeviation: deviation.sort((a, b) => a.deviation - b.deviation).slice(0, 3),
+      topDeviation: deviation
+        .sort((a, b) => b.deviation - a.deviation)
+        .slice(0, 3),
+      bottomDeviation: deviation
+        .sort((a, b) => a.deviation - b.deviation)
+        .slice(0, 3),
     };
   }
 
-  private async analyzeWithAI(rankings: any[], trends: any, benchmarks: any): Promise<any> {
+  private async analyzeWithAI(
+    rankings: any[],
+    trends: any,
+    benchmarks: any,
+  ): Promise<any> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = this.genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+      });
 
       const prompt = `Phân tích hiệu suất các lớp học và đưa ra insights chi tiết:
 
@@ -559,13 +619,19 @@ Trả về JSON với format:
           {
             metric: 'Attendance',
             ...Object.fromEntries(
-              top3.map((c) => [c.name.substring(0, 10), c.metrics.attendanceRate]),
+              top3.map((c) => [
+                c.name.substring(0, 10),
+                c.metrics.attendanceRate,
+              ]),
             ),
           },
           {
             metric: 'Submission',
             ...Object.fromEntries(
-              top3.map((c) => [c.name.substring(0, 10), c.metrics.submissionRate]),
+              top3.map((c) => [
+                c.name.substring(0, 10),
+                c.metrics.submissionRate,
+              ]),
             ),
           },
           {
@@ -577,7 +643,10 @@ Trả về JSON với format:
           {
             metric: 'Engagement',
             ...Object.fromEntries(
-              top3.map((c) => [c.name.substring(0, 10), c.metrics.engagementScore]),
+              top3.map((c) => [
+                c.name.substring(0, 10),
+                c.metrics.engagementScore,
+              ]),
             ),
           },
         ],
@@ -659,7 +728,12 @@ Trả về JSON với format:
         xAxisKey: 'name',
         lines: [
           { dataKey: 'Score', color: '#3B82F6', strokeWidth: 2 },
-          { dataKey: 'Benchmark', color: '#EF4444', strokeWidth: 1, strokeDasharray: '5 5' },
+          {
+            dataKey: 'Benchmark',
+            color: '#EF4444',
+            strokeWidth: 1,
+            strokeDasharray: '5 5',
+          },
         ],
       },
     });

@@ -201,9 +201,7 @@ export class RagService {
     this.cacheService.invalidateSearchCache();
     this.logger.log('🗑️ Cache invalidated due to new chunked document');
 
-    this.logger.log(
-      `Successfully added document with ${chunks.length} chunks`,
-    );
+    this.logger.log(`Successfully added document with ${chunks.length} chunks`);
 
     return { parent, chunks, totalChunks: chunks.length };
   }

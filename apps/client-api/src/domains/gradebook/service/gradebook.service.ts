@@ -1,8 +1,4 @@
-import {
-  CACHE_TTL,
-  GRADEBOOK_CACHE,
-  RedisCacheService,
-} from '@app/shared';
+import { CACHE_TTL, GRADEBOOK_CACHE, RedisCacheService } from '@app/shared';
 import { Injectable, Logger } from '@nestjs/common';
 import { AssignmentType } from '@prisma/client';
 import {
@@ -48,9 +44,7 @@ export class GradebookService {
     }
 
     // Get classroom to find courseId
-    const classroom = await this.repository.getClassroomWithCourse(
-      classroomId,
-    );
+    const classroom = await this.repository.getClassroomWithCourse(classroomId);
     if (!classroom) {
       throw new Error(`Classroom ${classroomId} not found`);
     }
@@ -64,7 +58,12 @@ export class GradebookService {
     ]);
 
     // Calculate final grade with weighted formula
-    const finalGrade = this.calculateWeightedGrade(midterm, final, tests, activities);
+    const finalGrade = this.calculateWeightedGrade(
+      midterm,
+      final,
+      tests,
+      activities,
+    );
 
     const result: GradeCalculationResult = {
       midterm,
@@ -126,9 +125,8 @@ export class GradebookService {
     }
 
     // Normalize if some components are missing
-    const normalizedGrade = totalWeight < 1
-      ? weightedSum / totalWeight
-      : weightedSum;
+    const normalizedGrade =
+      totalWeight < 1 ? weightedSum / totalWeight : weightedSum;
 
     return Math.round(normalizedGrade * 10) / 10;
   }
@@ -139,9 +137,7 @@ export class GradebookService {
   async calculateClassroomGrades(
     classroomId: string,
   ): Promise<ClassroomGradebookDto> {
-    const classroom = await this.repository.getClassroomWithCourse(
-      classroomId,
-    );
+    const classroom = await this.repository.getClassroomWithCourse(classroomId);
     if (!classroom) {
       throw new Error(`Classroom ${classroomId} not found`);
     }
@@ -183,9 +179,7 @@ export class GradebookService {
   /**
    * Get student transcript (all classrooms)
    */
-  async getStudentTranscript(
-    studentId: string,
-  ): Promise<StudentTranscriptDto> {
+  async getStudentTranscript(studentId: string): Promise<StudentTranscriptDto> {
     const classrooms = await this.repository.getStudentClassrooms(studentId);
 
     const student = classrooms[0]?.student;
@@ -296,17 +290,14 @@ export class GradebookService {
     studentId: string,
     classroomId: string,
   ): Promise<StudentGradeDetailsDto> {
-    const classroom = await this.repository.getClassroomWithCourse(
-      classroomId,
-    );
+    const classroom = await this.repository.getClassroomWithCourse(classroomId);
     if (!classroom) {
       throw new Error(`Classroom ${classroomId} not found`);
     }
 
     // Get student info
-    const classroomStudents = await this.repository.getClassroomStudents(
-      classroomId,
-    );
+    const classroomStudents =
+      await this.repository.getClassroomStudents(classroomId);
     const studentRecord = classroomStudents.find(
       (cs) => cs.studentId === studentId,
     );
@@ -385,19 +376,3 @@ export class GradebookService {
     };
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,15 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
-    IsArray,
-    IsBoolean,
-    IsEnum,
-    IsOptional,
-    IsString,
-    IsUUID,
-    Length,
-    ValidateIf,
-    ValidateNested,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 
 export enum GuestEnrollmentRole {
@@ -98,7 +98,8 @@ export class GuestEnrollmentDto {
   classroomId: string;
 
   @ApiProperty({
-    description: 'Thông tin học viên sẽ tham gia lớp (có thể nhiều học sinh nếu role=parent)',
+    description:
+      'Thông tin học viên sẽ tham gia lớp (có thể nhiều học sinh nếu role=parent)',
     type: () => [GuestPersonDto],
   })
   @ValidateNested({ each: true })

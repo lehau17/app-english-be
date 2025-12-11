@@ -19,7 +19,7 @@ import {
   EnrollmentFlowType,
   EnrollmentMetadata,
   extractEnrollmentMetadata,
-  getEnrollmentFlowType
+  getEnrollmentFlowType,
 } from '../types/enrollment-metadata.type';
 import { VNPayReturnData, VNPayService } from './vnpay.service';
 
@@ -33,7 +33,7 @@ export class PaymentService {
     private readonly vnpayService: VNPayService,
     private readonly kafkaProducer: KafkaProducerService,
     private readonly configService: ConfigService,
-  ) { }
+  ) {}
 
   /**
    * Tạo link thanh toán cho khóa học
@@ -283,9 +283,7 @@ export class PaymentService {
           }
         }
 
-        this.logger.log(
-          `Payment successful for transaction ${transaction.id}`,
-        );
+        this.logger.log(`Payment successful for transaction ${transaction.id}`);
 
         return {
           success: true,
@@ -342,7 +340,10 @@ export class PaymentService {
     const match = description.match(/StudentIDs:\s*([a-f0-9,-]+)/i);
     if (!match || !match[1]) return [];
 
-    return match[1].split(',').map(id => id.trim()).filter(id => id.length > 0);
+    return match[1]
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0);
   }
 
   /**
@@ -423,7 +424,9 @@ export class PaymentService {
             },
           });
           studentIds.push(createdStudent.id);
-          this.logger.log(`Created student user: ${createdStudent.id} (${email})`);
+          this.logger.log(
+            `Created student user: ${createdStudent.id} (${email})`,
+          );
         }
 
         // Link parent-child if parent exists
@@ -444,7 +447,9 @@ export class PaymentService {
                 childId: studentIds[studentIds.length - 1],
               },
             });
-            this.logger.log(`Linked parent ${parentId} to student ${studentIds[studentIds.length - 1]}`);
+            this.logger.log(
+              `Linked parent ${parentId} to student ${studentIds[studentIds.length - 1]}`,
+            );
           }
         }
       }
@@ -469,7 +474,9 @@ export class PaymentService {
           `Existing user enrollment for transaction ${transactionId}, userId: ${metadata.userId}`,
         );
         await this.enrollExistingUser(metadata.userId!, classroomId, metadata);
-        this.logger.log(`Existing user ${metadata.userId} enrolled successfully`);
+        this.logger.log(
+          `Existing user ${metadata.userId} enrolled successfully`,
+        );
         break;
 
       case 'guest-verified':
@@ -477,7 +484,11 @@ export class PaymentService {
         this.logger.log(
           `Guest verified enrollment for transaction ${transactionId}, creating users...`,
         );
-        await this.handleGuestVerifiedEnrollment(metadata, transactionId, classroomId);
+        await this.handleGuestVerifiedEnrollment(
+          metadata,
+          transactionId,
+          classroomId,
+        );
         break;
 
       case 'guest-legacy':
@@ -485,7 +496,11 @@ export class PaymentService {
         this.logger.log(
           `Legacy guest enrollment for transaction ${transactionId}`,
         );
-        await this.handleLegacyGuestEnrollment(metadata, transactionId, classroomId);
+        await this.handleLegacyGuestEnrollment(
+          metadata,
+          transactionId,
+          classroomId,
+        );
         break;
 
       default:
@@ -513,7 +528,9 @@ export class PaymentService {
     // Send enrollment confirmation email
     await this.sendEnrollmentConfirmationEmail(userId, metadata);
 
-    this.logger.log(`Enrolled existing user ${userId} in classroom ${classroomId}`);
+    this.logger.log(
+      `Enrolled existing user ${userId} in classroom ${classroomId}`,
+    );
   }
 
   /**
@@ -525,7 +542,8 @@ export class PaymentService {
     classroomId: string,
   ): Promise<void> {
     // Get original transaction
-    const originalTransaction = await this.paymentRepository.findTransactionById(transactionId);
+    const originalTransaction =
+      await this.paymentRepository.findTransactionById(transactionId);
     if (!originalTransaction) {
       throw new NotFoundException(`Transaction ${transactionId} not found`);
     }
@@ -568,7 +586,9 @@ export class PaymentService {
           completedAt: originalTransaction.completedAt,
         });
 
-        this.logger.log(`Created transaction for student ${studentId}: ${pricePerStudent}`);
+        this.logger.log(
+          `Created transaction for student ${studentId}: ${pricePerStudent}`,
+        );
       }
 
       // Mark original transaction as "split" by updating description
@@ -594,7 +614,9 @@ export class PaymentService {
       `Starting enrollment for ${createdUserIds.studentIds.length} students in classroom ${classroomId}`,
     );
     for (const studentId of createdUserIds.studentIds) {
-      this.logger.log(`Enrolling studentId=${studentId} in classroomId=${classroomId}`);
+      this.logger.log(
+        `Enrolling studentId=${studentId} in classroomId=${classroomId}`,
+      );
       await this.paymentRepository.updateStudentPurchaseStatus(
         studentId,
         classroomId,
@@ -620,7 +642,8 @@ export class PaymentService {
     classroomId: string,
   ): Promise<void> {
     // Get original transaction
-    const originalTransaction = await this.paymentRepository.findTransactionById(transactionId);
+    const originalTransaction =
+      await this.paymentRepository.findTransactionById(transactionId);
     if (!originalTransaction) {
       throw new NotFoundException(`Transaction ${transactionId} not found`);
     }
@@ -661,7 +684,9 @@ export class PaymentService {
           completedAt: originalTransaction.completedAt,
         });
 
-        this.logger.log(`Created transaction for student ${studentId}: ${pricePerStudent}`);
+        this.logger.log(
+          `Created transaction for student ${studentId}: ${pricePerStudent}`,
+        );
       }
 
       await this.paymentRepository.transaction.update({
@@ -700,7 +725,11 @@ export class PaymentService {
   private async createUsersFromMetadata(
     metadata: EnrollmentMetadata,
     transactionId: string,
-  ): Promise<{ studentIds: string[]; parentId?: string; passwords: Record<string, string> }> {
+  ): Promise<{
+    studentIds: string[];
+    parentId?: string;
+    passwords: Record<string, string>;
+  }> {
     const { role, students, parent, source, note } = metadata;
 
     const studentIds: string[] = [];
@@ -744,7 +773,9 @@ export class PaymentService {
           });
           parentId = createdParent.id;
           passwords[email] = defaultPassword; // Store plaintext for email
-          this.logger.log(`Created parent user: ${parentId} (${email}) with password`);
+          this.logger.log(
+            `Created parent user: ${parentId} (${email}) with password`,
+          );
         }
       }
 
@@ -781,7 +812,9 @@ export class PaymentService {
           });
           studentIds.push(createdStudent.id);
           passwords[email] = defaultPassword; // Store plaintext for email
-          this.logger.log(`Created student user: ${createdStudent.id} (${email}) with password`);
+          this.logger.log(
+            `Created student user: ${createdStudent.id} (${email}) with password`,
+          );
         }
 
         // Link parent-child if parent exists
@@ -817,7 +850,11 @@ export class PaymentService {
    * Send welcome emails to newly created users
    */
   private async sendWelcomeEmails(
-    createdUserIds: { studentIds: string[]; parentId?: string; passwords: Record<string, string> },
+    createdUserIds: {
+      studentIds: string[];
+      parentId?: string;
+      passwords: Record<string, string>;
+    },
     metadata: EnrollmentMetadata,
   ): Promise<void> {
     try {
@@ -829,7 +866,14 @@ export class PaymentService {
 
       const users = await this.prisma.user.findMany({
         where: { id: { in: allUserIds } },
-        select: { id: true, email: true, displayName: true, firstName: true, lastName: true, role: true },
+        select: {
+          id: true,
+          email: true,
+          displayName: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+        },
       });
 
       // Fetch course and classroom info
@@ -855,25 +899,24 @@ export class PaymentService {
       for (const user of users) {
         const password = createdUserIds.passwords[user.email] || null;
 
-        await this.kafkaProducer.send(
-          KafkaTopic.EMAIL_WELCOME_NEW_USER,
-          {
-            type: 'welcome-new-user',
-            data: {
-              email: user.email,
-              userName: user.displayName || `${user.firstName} ${user.lastName}`,
-              role: user.role === 'parent' ? 'Phụ huynh' : 'Học viên',
-              courseName: course.title,
-              classroomName: classroom.name,
-              price: course.price.toLocaleString('vi-VN'),
-              currency: course.currency,
-              loginUrl,
-              password, // Gửi password cho user mới
-            },
+        await this.kafkaProducer.send(KafkaTopic.EMAIL_WELCOME_NEW_USER, {
+          type: 'welcome-new-user',
+          data: {
+            email: user.email,
+            userName: user.displayName || `${user.firstName} ${user.lastName}`,
+            role: user.role === 'parent' ? 'Phụ huynh' : 'Học viên',
+            courseName: course.title,
+            classroomName: classroom.name,
+            price: course.price.toLocaleString('vi-VN'),
+            currency: course.currency,
+            loginUrl,
+            password, // Gửi password cho user mới
           },
-        );
+        });
 
-        this.logger.log(`Welcome email event sent to Kafka for ${user.email} (${user.role})`);
+        this.logger.log(
+          `Welcome email event sent to Kafka for ${user.email} (${user.role})`,
+        );
       }
     } catch (error) {
       this.logger.error('Failed to send welcome email events', error);
@@ -892,11 +935,19 @@ export class PaymentService {
       // Fetch user data
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
-        select: { email: true, displayName: true, firstName: true, lastName: true, role: true },
+        select: {
+          email: true,
+          displayName: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+        },
       });
 
       if (!user) {
-        this.logger.warn(`User ${userId} not found for enrollment confirmation email`);
+        this.logger.warn(
+          `User ${userId} not found for enrollment confirmation email`,
+        );
         return;
       }
 
@@ -904,16 +955,23 @@ export class PaymentService {
       const [course, classroom] = await Promise.all([
         this.prisma.course.findUnique({
           where: { id: metadata.courseId },
-          select: { title: true, price: true, currency: true, description: true },
+          select: {
+            title: true,
+            price: true,
+            currency: true,
+            description: true,
+          },
         }),
         this.prisma.classroom.findUnique({
           where: { id: metadata.classroomId },
-          select: { name: true, periodStart:true, periodEnd:true},
+          select: { name: true, periodStart: true, periodEnd: true },
         }),
       ]);
 
       if (!course || !classroom) {
-        this.logger.warn('Course or classroom not found for enrollment confirmation email');
+        this.logger.warn(
+          'Course or classroom not found for enrollment confirmation email',
+        );
         return;
       }
 
@@ -921,28 +979,34 @@ export class PaymentService {
       const classroomUrl = `${this.configService.get('WEB_APP_URL')}/classrooms/${metadata.classroomId}`;
 
       // Send confirmation email via Kafka
-      await this.kafkaProducer.send(
-        KafkaTopic.EMAIL_ENROLLMENT_CONFIRMATION,
-        {
-          type: 'enrollment-confirmation',
-          data: {
-            email: user.email,
-            userName: user.displayName || `${user.firstName} ${user.lastName}`,
-            courseName: course.title,
-            classroomName: classroom.name,
-            price: course.price.toLocaleString('vi-VN'),
-            currency: course.currency,
-            startDate: classroom.periodStart ? new Date(classroom.periodStart).toLocaleDateString('vi-VN') : 'Chưa xác định',
-            endDate: classroom.periodEnd ? new Date(classroom.periodEnd).toLocaleDateString('vi-VN') : 'Chưa xác định',
-            dashboardUrl,
-            classroomUrl,
-          },
+      await this.kafkaProducer.send(KafkaTopic.EMAIL_ENROLLMENT_CONFIRMATION, {
+        type: 'enrollment-confirmation',
+        data: {
+          email: user.email,
+          userName: user.displayName || `${user.firstName} ${user.lastName}`,
+          courseName: course.title,
+          classroomName: classroom.name,
+          price: course.price.toLocaleString('vi-VN'),
+          currency: course.currency,
+          startDate: classroom.periodStart
+            ? new Date(classroom.periodStart).toLocaleDateString('vi-VN')
+            : 'Chưa xác định',
+          endDate: classroom.periodEnd
+            ? new Date(classroom.periodEnd).toLocaleDateString('vi-VN')
+            : 'Chưa xác định',
+          dashboardUrl,
+          classroomUrl,
         },
-      );
+      });
 
-      this.logger.log(`Enrollment confirmation email event sent to Kafka for ${user.email}`);
+      this.logger.log(
+        `Enrollment confirmation email event sent to Kafka for ${user.email}`,
+      );
     } catch (error) {
-      this.logger.error('Failed to send enrollment confirmation email event', error);
+      this.logger.error(
+        'Failed to send enrollment confirmation email event',
+        error,
+      );
       // Don't throw - email failure shouldn't block enrollment
     }
   }

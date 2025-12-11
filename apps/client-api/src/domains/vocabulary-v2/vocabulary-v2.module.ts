@@ -15,7 +15,12 @@ import { VocabularyTermService } from './service/vocabulary-term.service';
 import { VocabularyUnitService } from './service/vocabulary-unit.service';
 
 @Module({
-  imports: [NotificationModule, GoogleTranslateModule, UploadModule, MediaModule],
+  imports: [
+    NotificationModule,
+    GoogleTranslateModule,
+    UploadModule,
+    MediaModule,
+  ],
   controllers: [
     VocabularyListController,
     VocabularyUnitController,

@@ -1,6 +1,10 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { NotificationChannel, NotificationType, UserRole } from '@prisma/client';
+import {
+  NotificationChannel,
+  NotificationType,
+  UserRole,
+} from '@prisma/client';
 import {
   IsBoolean,
   IsEnum,
@@ -155,7 +159,9 @@ export class CreateBroadcastNotificationDto {
   @IsString()
   title: string;
 
-  @ApiPropertyOptional({ example: 'The system will be down for maintenance...' })
+  @ApiPropertyOptional({
+    example: 'The system will be down for maintenance...',
+  })
   @IsOptional()
   @IsString()
   body?: string;
@@ -172,4 +178,3 @@ export class CreateBroadcastNotificationDto {
   @IsEnum(NotificationChannel)
   channel: NotificationChannel;
 }
-

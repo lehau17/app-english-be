@@ -32,7 +32,11 @@ OUTPUT: Tra ve:
       schema: z.object({
         courseId: z.string().optional().describe('ID khoa hoc cu the'),
         courseName: z.string().optional().describe('Ten khoa hoc de tim'),
-        compareAll: z.boolean().optional().default(true).describe('So sanh tat ca khoa hoc'),
+        compareAll: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('So sanh tat ca khoa hoc'),
       }),
       func: async ({ courseId, courseName, compareAll = true }) => {
         return this._call(JSON.stringify({ courseId, courseName, compareAll }));
@@ -44,7 +48,11 @@ OUTPUT: Tra ve:
     try {
       this.logger.log(`Course Analytics Tool called with: ${input}`);
 
-      let params: { courseId?: string; courseName?: string; compareAll?: boolean } = {};
+      let params: {
+        courseId?: string;
+        courseName?: string;
+        compareAll?: boolean;
+      } = {};
       try {
         params = JSON.parse(input);
       } catch {
@@ -95,7 +103,11 @@ OUTPUT: Tra ve:
     }
   }
 
-  private async getCourseData(params: { courseId?: string; courseName?: string; compareAll?: boolean }) {
+  private async getCourseData(params: {
+    courseId?: string;
+    courseName?: string;
+    compareAll?: boolean;
+  }) {
     const where: any = { isPublished: true };
 
     if (params.courseId) {
@@ -120,7 +132,10 @@ OUTPUT: Tra ve:
 
     const courseStats = await Promise.all(
       courses.map(async (course) => {
-        const enrollments = course.classrooms.reduce((sum, c) => sum + c.students.length, 0);
+        const enrollments = course.classrooms.reduce(
+          (sum, c) => sum + c.students.length,
+          0,
+        );
 
         // Get submissions for this course via classrooms
         const classroomIds = course.classrooms.map((c) => c.id);
@@ -133,10 +148,19 @@ OUTPUT: Tra ve:
         });
 
         const totalSubmissions = submissions.length;
-        const completedSubmissions = submissions.filter((s) => s.status === 'submitted').length;
-        const totalScore = submissions.reduce((sum, s) => sum + (s.score || 0), 0);
-        const avgScore = totalSubmissions > 0 ? Math.round(totalScore / totalSubmissions) : 0;
-        const completionRate = totalSubmissions > 0 ? Math.round((completedSubmissions / totalSubmissions) * 100) : 0;
+        const completedSubmissions = submissions.filter(
+          (s) => s.status === 'submitted',
+        ).length;
+        const totalScore = submissions.reduce(
+          (sum, s) => sum + (s.score || 0),
+          0,
+        );
+        const avgScore =
+          totalSubmissions > 0 ? Math.round(totalScore / totalSubmissions) : 0;
+        const completionRate =
+          totalSubmissions > 0
+            ? Math.round((completedSubmissions / totalSubmissions) * 100)
+            : 0;
 
         return {
           id: course.id,
@@ -151,14 +175,23 @@ OUTPUT: Tra ve:
       }),
     );
 
-    const totalEnrollments = courseStats.reduce((sum, c) => sum + c.enrollments, 0);
+    const totalEnrollments = courseStats.reduce(
+      (sum, c) => sum + c.enrollments,
+      0,
+    );
     const avgCompletionRate =
       courseStats.length > 0
-        ? Math.round(courseStats.reduce((sum, c) => sum + c.completionRate, 0) / courseStats.length)
+        ? Math.round(
+            courseStats.reduce((sum, c) => sum + c.completionRate, 0) /
+              courseStats.length,
+          )
         : 0;
     const avgScore =
       courseStats.length > 0
-        ? Math.round(courseStats.reduce((sum, c) => sum + c.avgScore, 0) / courseStats.length)
+        ? Math.round(
+            courseStats.reduce((sum, c) => sum + c.avgScore, 0) /
+              courseStats.length,
+          )
         : 0;
 
     return {
@@ -171,7 +204,9 @@ OUTPUT: Tra ve:
 
   private async analyzeWithAI(data: any): Promise<any> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = this.genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+      });
 
       const prompt = `Phân tích dữ liệu khóa học sau và đưa ra insights:
 
@@ -232,7 +267,10 @@ Trả về JSON với format:
       type: 'chart',
       chartType: 'pie',
       title: 'Phân bố độ khó khóa học',
-      data: Object.entries(difficultyCounts).map(([name, value]) => ({ name, value })),
+      data: Object.entries(difficultyCounts).map(([name, value]) => ({
+        name,
+        value,
+      })),
       config: {
         colors: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'],
       },
@@ -248,19 +286,33 @@ Trả về JSON với format:
         data: [
           {
             metric: 'Enrollment',
-            ...Object.fromEntries(top5.map((c: any) => [c.title.substring(0, 15), c.enrollments])),
+            ...Object.fromEntries(
+              top5.map((c: any) => [c.title.substring(0, 15), c.enrollments]),
+            ),
           },
           {
             metric: 'Completion %',
-            ...Object.fromEntries(top5.map((c: any) => [c.title.substring(0, 15), c.completionRate])),
+            ...Object.fromEntries(
+              top5.map((c: any) => [
+                c.title.substring(0, 15),
+                c.completionRate,
+              ]),
+            ),
           },
           {
             metric: 'Điểm TB',
-            ...Object.fromEntries(top5.map((c: any) => [c.title.substring(0, 15), c.avgScore])),
+            ...Object.fromEntries(
+              top5.map((c: any) => [c.title.substring(0, 15), c.avgScore]),
+            ),
           },
           {
             metric: 'Bài học',
-            ...Object.fromEntries(top5.map((c: any) => [c.title.substring(0, 15), c.totalLessons * 10])),
+            ...Object.fromEntries(
+              top5.map((c: any) => [
+                c.title.substring(0, 15),
+                c.totalLessons * 10,
+              ]),
+            ),
           },
         ],
         config: {

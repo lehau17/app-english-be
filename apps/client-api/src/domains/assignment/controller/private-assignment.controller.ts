@@ -1,39 +1,42 @@
 import { JwtPayload, PayloadToken } from '@app/shared';
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    Patch,
-    Post,
-    Put,
-    Query,
-    Res,
-    UploadedFile,
-    UseInterceptors,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
-    ApiBearerAuth,
-    ApiConsumes,
-    ApiOperation,
-    ApiResponse,
-    ApiTags,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import {
-    CloneAssignmentDto,
-    CreateAssignmentDto,
-    GradeAssignmentDto,
-    ImportAssignmentDto,
-    QueryAssignmentsDto,
-    QueryBankActivitiesDto,
-    QueryBankAssignmentsDto,
-    SubmitAssignmentDto,
-    UpdateAssignmentDto,
+  CloneAssignmentDto,
+  CreateAssignmentDto,
+  GradeAssignmentDto,
+  ImportAssignmentDto,
+  QueryAssignmentsDto,
+  QueryBankActivitiesDto,
+  QueryBankAssignmentsDto,
+  SubmitAssignmentDto,
+  UpdateAssignmentDto,
 } from '../dto';
-import { GradeSubmissionDetailedDto, GradeSubmissionDto } from '../dto/grade-submission.dto';
+import {
+  GradeSubmissionDetailedDto,
+  GradeSubmissionDto,
+} from '../dto/grade-submission.dto';
 import { AssignmentService } from '../service';
 import { AssignmentImportService } from '../services/assignment-import.service';
 import { AssignmentPdfService } from '../services/assignment-pdf.service';
@@ -46,7 +49,7 @@ export class PrivateAssignmentController {
     private readonly assignmentService: AssignmentService,
     private readonly importService: AssignmentImportService,
     private readonly pdfService: AssignmentPdfService,
-  ) { }
+  ) {}
 
   @Get('import/template')
   @ApiOperation({
@@ -430,7 +433,8 @@ export class PrivateAssignmentController {
 
   @Post(':id/submit-streaming')
   @ApiOperation({
-    summary: 'Submit assignment with real-time grading via WebSocket (Student only)',
+    summary:
+      'Submit assignment with real-time grading via WebSocket (Student only)',
     description:
       'Returns immediately after saving submission. Grades in background and emits WebSocket events for each activity.',
   })
@@ -441,7 +445,11 @@ export class PrivateAssignmentController {
       type: 'object',
       properties: {
         id: { type: 'string', description: 'Submission ID' },
-        status: { type: 'string', enum: ['GRADING'], description: 'Submission status' },
+        status: {
+          type: 'string',
+          enum: ['GRADING'],
+          description: 'Submission status',
+        },
         message: { type: 'string', description: 'Status message' },
       },
     },
@@ -594,7 +602,8 @@ export class PrivateAssignmentController {
 
   @Patch('assignment-submissions/:id/grade-detailed')
   @ApiOperation({
-    summary: 'Grade an assignment submission with per-activity scores (Teacher only)',
+    summary:
+      'Grade an assignment submission with per-activity scores (Teacher only)',
     description:
       'Chấm điểm chi tiết theo từng activity. ' +
       'Tính điểm tổng bằng công thức: (earned/total) * 100. ' +

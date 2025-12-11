@@ -133,7 +133,14 @@ export class StudentRepository {
    * List all students (for export)
    */
   async listAll(params: FilterStudentRequestDto): Promise<User[]> {
-    const { search, sortBy = 'createdAt', sortOrder = 'desc', status, gender, phone } = params;
+    const {
+      search,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+      status,
+      gender,
+      phone,
+    } = params;
 
     const where: Prisma.UserWhereInput = {
       role: 'student',
@@ -196,7 +203,9 @@ export class StudentRepository {
     const [total, active, inactive, byGender] = await Promise.all([
       this.prisma.user.count({ where: { role: 'student' } }),
       this.prisma.user.count({ where: { role: 'student', status: 'active' } }),
-      this.prisma.user.count({ where: { role: 'student', status: 'inactive' } }),
+      this.prisma.user.count({
+        where: { role: 'student', status: 'inactive' },
+      }),
       this.prisma.user.groupBy({
         by: ['gender'],
         where: { role: 'student' },

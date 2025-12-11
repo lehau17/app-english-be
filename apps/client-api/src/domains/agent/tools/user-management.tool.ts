@@ -30,15 +30,32 @@ export class UserManagementTool {
 - "danh sach giao vien", "admin nao dang hoat dong"
 OUTPUT: Danh sach user hoac thong tin chi tiet.`,
       schema: z.object({
-        action: z.enum(['search', 'detail', 'stats', 'recent']).optional().default('stats').describe('Hanh dong'),
+        action: z
+          .enum(['search', 'detail', 'stats', 'recent'])
+          .optional()
+          .default('stats')
+          .describe('Hanh dong'),
         query: z.string().optional().describe('Ten/email de tim'),
-        role: z.enum(['student', 'teacher', 'parent', 'admin', 'all']).optional().default('all').describe('Role'),
+        role: z
+          .enum(['student', 'teacher', 'parent', 'admin', 'all'])
+          .optional()
+          .default('all')
+          .describe('Role'),
         userId: z.string().optional().describe('ID user (cho action detail)'),
         limit: z.number().optional().default(20).describe('So luong ket qua'),
         period: z.string().optional().describe('Khoang thoi gian'),
       }),
-      func: async ({ action = 'stats', query, role = 'all', userId, limit = 20, period }) => {
-        return this._call(JSON.stringify({ action, query, role, userId, limit, period }));
+      func: async ({
+        action = 'stats',
+        query,
+        role = 'all',
+        userId,
+        limit = 20,
+        period,
+      }) => {
+        return this._call(
+          JSON.stringify({ action, query, role, userId, limit, period }),
+        );
       },
     });
   }
@@ -133,7 +150,10 @@ OUTPUT: Danh sach user hoac thong tin chi tiet.`,
       users: users.map((u) => ({
         id: u.id,
         email: u.email,
-        name: u.displayName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'N/A',
+        name:
+          u.displayName ||
+          `${u.firstName || ''} ${u.lastName || ''}`.trim() ||
+          'N/A',
         role: u.role,
         status: u.status,
         createdAt: u.createdAt,
@@ -198,7 +218,9 @@ OUTPUT: Danh sach user hoac thong tin chi tiet.`,
       user: {
         id: user.id,
         email: user.email,
-        name: user.displayName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        name:
+          user.displayName ||
+          `${user.firstName || ''} ${user.lastName || ''}`.trim(),
         firstName: user.firstName,
         lastName: user.lastName,
         phone: user.phone,

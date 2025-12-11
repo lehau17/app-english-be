@@ -474,7 +474,11 @@ Hãy trả lời dựa trên thông tin con em ở trên. Nếu phụ huynh hỏ
                 }
 
                 // Check for analytics tools (multiple charts)
-                const analyticsTools = ['get_child_progress', 'compare_children', 'get_children_summary'];
+                const analyticsTools = [
+                  'get_child_progress',
+                  'compare_children',
+                  'get_children_summary',
+                ];
                 if (
                   analyticsTools.includes(logValue.name) &&
                   logValue.type === 'tool_end'

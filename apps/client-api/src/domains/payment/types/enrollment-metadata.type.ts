@@ -1,4 +1,4 @@
-import { GuestEnrollmentRole } from "../../landing-page/dto/guest-enrollment.dto";
+import { GuestEnrollmentRole } from '../../landing-page/dto/guest-enrollment.dto';
 
 interface StudentInfo {
   firstName: string;
@@ -120,7 +120,11 @@ export function getEnrollmentFlowType(
   }
 
   // Check guest verified flow
-  if (metadata.emailVerified && metadata.students && metadata.students.length > 0) {
+  if (
+    metadata.emailVerified &&
+    metadata.students &&
+    metadata.students.length > 0
+  ) {
     return 'guest-verified';
   }
 

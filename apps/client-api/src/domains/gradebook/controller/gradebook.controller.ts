@@ -54,9 +54,8 @@ export class GradebookController {
     }
 
     // Check if user is admin or teacher of this classroom
-    const classroom = await this.gradebookRepository.getClassroomWithCourse(
-      classroomId,
-    );
+    const classroom =
+      await this.gradebookRepository.getClassroomWithCourse(classroomId);
     if (!classroom) {
       throw new NotFoundException(`Classroom ${classroomId} not found`);
     }
@@ -107,10 +106,8 @@ export class GradebookController {
 
     // Students can only access their own transcript
     // Admin and teachers can access any student's transcript
-    if (user.role === UserRole.student     && user.sub !== studentId) {
-      throw new ForbiddenException(
-        'You can only access your own transcript',
-      );
+    if (user.role === UserRole.student && user.sub !== studentId) {
+      throw new ForbiddenException('You can only access your own transcript');
     }
 
     return this.gradebookService.getStudentTranscript(studentId);
@@ -128,9 +125,8 @@ export class GradebookController {
       throw new ForbiddenException('User not authenticated');
     }
 
-    const classroom = await this.gradebookRepository.getClassroomWithCourse(
-      classroomId,
-    );
+    const classroom =
+      await this.gradebookRepository.getClassroomWithCourse(classroomId);
     if (!classroom) {
       throw new NotFoundException(`Classroom ${classroomId} not found`);
     }
@@ -147,9 +143,8 @@ export class GradebookController {
       );
     }
 
-    const buffer = await this.gradebookExportService.exportClassroomGradebook(
-      classroomId,
-    );
+    const buffer =
+      await this.gradebookExportService.exportClassroomGradebook(classroomId);
 
     const sanitizedName = this.sanitizeFilename(classroom.name);
     const filename = `bang-diem-${sanitizedName}-${Date.now()}.xlsx`;
@@ -210,17 +205,13 @@ export class GradebookController {
     }
 
     if (user.role === UserRole.student && user.sub !== studentId) {
-      throw new ForbiddenException(
-        'You can only export your own transcript',
-      );
+      throw new ForbiddenException('You can only export your own transcript');
     }
 
-    const transcript = await this.gradebookService.getStudentTranscript(
-      studentId,
-    );
-    const buffer = await this.gradebookExportService.exportStudentTranscript(
-      studentId,
-    );
+    const transcript =
+      await this.gradebookService.getStudentTranscript(studentId);
+    const buffer =
+      await this.gradebookExportService.exportStudentTranscript(studentId);
 
     const sanitizedName = this.sanitizeFilename(transcript.studentName);
     const filename = `bang-diem-${sanitizedName}-${Date.now()}.xlsx`;
@@ -249,9 +240,8 @@ export class GradebookController {
       throw new ForbiddenException('User not authenticated');
     }
 
-    const classroom = await this.gradebookRepository.getClassroomWithCourse(
-      classroomId,
-    );
+    const classroom =
+      await this.gradebookRepository.getClassroomWithCourse(classroomId);
     if (!classroom) {
       throw new NotFoundException(`Classroom ${classroomId} not found`);
     }
@@ -278,10 +268,7 @@ export class GradebookController {
       );
     }
 
-    return this.gradebookService.getStudentGradeDetails(
-      studentId,
-      classroomId,
-    );
+    return this.gradebookService.getStudentGradeDetails(studentId, classroomId);
   }
 
   @Get('students/:studentId/classrooms/:classroomId/details')
@@ -297,19 +284,3 @@ export class GradebookController {
     return this.getStudentGradeDetails(classroomId, studentId);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

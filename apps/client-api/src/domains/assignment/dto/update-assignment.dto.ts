@@ -2,18 +2,18 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { AssignmentType } from '@prisma/client';
 import { Transform, Type } from 'class-transformer';
 import {
-    IsArray,
-    IsBoolean,
-    IsDateString,
-    IsEnum,
-    IsInt,
-    IsNumber,
-    IsObject,
-    IsOptional,
-    IsString,
-    Max,
-    Min,
-    ValidateNested,
+  IsArray,
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  ValidateNested,
 } from 'class-validator';
 import { AssignmentActivityDto } from './create-assignment.dto';
 

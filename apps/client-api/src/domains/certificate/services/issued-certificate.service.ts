@@ -12,7 +12,11 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { IssuedCertificate, NotificationChannel, NotificationType } from '@prisma/client';
+import {
+  IssuedCertificate,
+  NotificationChannel,
+  NotificationType,
+} from '@prisma/client';
 import * as puppeteer from 'puppeteer';
 import { v4 as uuidv4 } from 'uuid';
 import { NotificationService } from '../../notification/service';
@@ -192,14 +196,22 @@ export class IssuedCertificateService {
    */
   private async sendCertificateNotifications(
     certificate: IssuedCertificate,
-    student: { id: string; email: string | null; displayName: string | null; firstName: string | null; lastName: string | null },
+    student: {
+      id: string;
+      email: string | null;
+      displayName: string | null;
+      firstName: string | null;
+      lastName: string | null;
+    },
     course: { title: string },
     gradeLevel: string | null,
     certificateNumber: string,
     verificationCode: string,
   ): Promise<void> {
     if (!this.notificationService || !this.kafkaService) {
-      this.logger.warn('NotificationService or KafkaService not available, skipping notifications');
+      this.logger.warn(
+        'NotificationService or KafkaService not available, skipping notifications',
+      );
       return;
     }
 
@@ -227,7 +239,9 @@ export class IssuedCertificateService {
       });
       this.logger.log(`System notification created for student ${student.id}`);
     } catch (error) {
-      this.logger.error(`Failed to create system notification for student: ${error.message}`);
+      this.logger.error(
+        `Failed to create system notification for student: ${error.message}`,
+      );
     }
 
     // 2. System notifications for parents
@@ -253,7 +267,9 @@ export class IssuedCertificateService {
         this.logger.log(`System notification created for parent ${parent.id}`);
       }
     } catch (error) {
-      this.logger.error(`Failed to create parent notifications: ${error.message}`);
+      this.logger.error(
+        `Failed to create parent notifications: ${error.message}`,
+      );
     }
 
     // 3. Email notification for student
@@ -280,7 +296,9 @@ export class IssuedCertificateService {
         });
         this.logger.log(`Email notification queued for student ${student.id}`);
       } catch (error) {
-        this.logger.error(`Failed to queue email notification for student: ${error.message}`);
+        this.logger.error(
+          `Failed to queue email notification for student: ${error.message}`,
+        );
       }
     }
 
@@ -312,14 +330,18 @@ export class IssuedCertificateService {
         }
       }
     } catch (error) {
-      this.logger.error(`Failed to queue parent email notifications: ${error.message}`);
+      this.logger.error(
+        `Failed to queue parent email notifications: ${error.message}`,
+      );
     }
   }
 
   /**
    * Find all linked parents for a student
    */
-  private async findLinkedParents(studentId: string): Promise<Array<{ id: string; email: string | null }>> {
+  private async findLinkedParents(
+    studentId: string,
+  ): Promise<Array<{ id: string; email: string | null }>> {
     try {
       const relations = await this.prisma.parentChild.findMany({
         where: {
@@ -337,7 +359,9 @@ export class IssuedCertificateService {
       });
       return relations.map((r) => r.parent).filter((p) => p !== null);
     } catch (error) {
-      this.logger.error(`Failed to find linked parents for student ${studentId}: ${error.message}`);
+      this.logger.error(
+        `Failed to find linked parents for student ${studentId}: ${error.message}`,
+      );
       return [];
     }
   }
@@ -525,8 +549,7 @@ export class IssuedCertificateService {
     certificate: IssuedCertificate,
   ): Promise<Buffer> {
     // Use Chrome for Testing (ARM64 version for Mac Silicon)
-    const executablePath =
-      '/usr/bin/google-chrome'
+    const executablePath = '/usr/bin/google-chrome';
 
     const browser = await puppeteer.launch({
       headless: true,

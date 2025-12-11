@@ -1,30 +1,30 @@
 import { PrismaRepository } from '@app/database';
 import { KafkaProducerService, KafkaTopic } from '@app/shared';
 import {
-    BadRequestException,
-    ConflictException,
-    Injectable,
-    Logger,
-    NotFoundException,
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import {
-    Classroom,
-    ClassroomStatus,
-    Course,
-    DifficultyLevel,
-    Prisma,
-    Status,
-    User,
-    UserRole,
-    Weekday,
+  Classroom,
+  ClassroomStatus,
+  Course,
+  DifficultyLevel,
+  Prisma,
+  Status,
+  User,
+  UserRole,
+  Weekday,
 } from '@prisma/client';
 import { PaymentService } from '../payment/service/payment.service';
 import {
-    GuestEnrollmentDto,
-    GuestEnrollmentRole,
-    GuestPersonDto,
+  GuestEnrollmentDto,
+  GuestEnrollmentRole,
+  GuestPersonDto,
 } from './dto/guest-enrollment.dto';
 import { VerifyEnrollmentEmailDto } from './dto/verify-enrollment-email.dto';
 
@@ -169,11 +169,7 @@ const FOOTER_SECTIONS: LandingPageFooterSection[] = [
   },
   {
     title: 'Liên hệ',
-    links: [
-      '1900-1234',
-      'support@englimaster.com',
-      'Hà Nội, Việt Nam',
-    ],
+    links: ['1900-1234', 'support@englimaster.com', 'Hà Nội, Việt Nam'],
   },
 ];
 
@@ -563,7 +559,8 @@ export class LandingPageService {
     const token = this.jwtService.sign(enrollmentData, {
       secret:
         this.configService.get('ENROLLMENT_VERIFICATION_SECRET') ||
-        this.configService.get('JWT_SECRET') || "KLTN",
+        this.configService.get('JWT_SECRET') ||
+        'KLTN',
       expiresIn: '30m',
     });
 
@@ -572,31 +569,30 @@ export class LandingPageService {
     const primaryStudent = students[0];
 
     // Determine recipient: parent if role=parent, else primary student
-    const recipientEmail = (role === GuestEnrollmentRole.parent && parent)
-      ? parent.email
-      : primaryStudent.email;
-    const recipientName = (role === GuestEnrollmentRole.parent && parent)
-      ? `${parent.firstName} ${parent.lastName}`
-      : `${primaryStudent.firstName} ${primaryStudent.lastName}`;
+    const recipientEmail =
+      role === GuestEnrollmentRole.parent && parent
+        ? parent.email
+        : primaryStudent.email;
+    const recipientName =
+      role === GuestEnrollmentRole.parent && parent
+        ? `${parent.firstName} ${parent.lastName}`
+        : `${primaryStudent.firstName} ${primaryStudent.lastName}`;
 
     try {
-      await this.kafkaProducer.send(
-        KafkaTopic.EMAIL_ENROLLMENT_VERIFICATION,
-        {
-          type: 'enrollment-verification',
-          data: {
-            email: recipientEmail,
-            studentName: recipientName,
-            courseName: course.title,
-            classroomName: classroom.name,
-            price: course.price.toLocaleString('vi-VN'),
-            currency: course.currency,
-            studentCount: students.length,
-            verificationLink,
-            expiresIn: '30 phút',
-          },
+      await this.kafkaProducer.send(KafkaTopic.EMAIL_ENROLLMENT_VERIFICATION, {
+        type: 'enrollment-verification',
+        data: {
+          email: recipientEmail,
+          studentName: recipientName,
+          courseName: course.title,
+          classroomName: classroom.name,
+          price: course.price.toLocaleString('vi-VN'),
+          currency: course.currency,
+          studentCount: students.length,
+          verificationLink,
+          expiresIn: '30 phút',
         },
-      );
+      });
 
       this.logger.log({
         message: 'Enrollment verification email event sent to Kafka',
@@ -631,7 +627,8 @@ export class LandingPageService {
       const enrollmentData = this.jwtService.verify(token, {
         secret:
           this.configService.get('ENROLLMENT_VERIFICATION_SECRET') ||
-          this.configService.get('JWT_SECRET') || "KLTN"
+          this.configService.get('JWT_SECRET') ||
+          'KLTN',
       });
 
       return {
@@ -662,8 +659,16 @@ export class LandingPageService {
   ): Promise<{ paymentUrl: string; transactionId: string }> {
     // Verify token
     const { data: enrollmentData } = await this.verifyEnrollmentToken(token);
-    const { role, students, parent, courseId, classroomId, courseName, price, currency } =
-      enrollmentData;
+    const {
+      role,
+      students,
+      parent,
+      courseId,
+      classroomId,
+      courseName,
+      price,
+      currency,
+    } = enrollmentData;
 
     // Calculate amount
     const studentsCount = students.length;
@@ -730,7 +735,11 @@ export class LandingPageService {
     const conflicts: any = {};
 
     // Check students
-    const studentConflicts: Array<{ index: number; email?: boolean; phone?: boolean }> = [];
+    const studentConflicts: Array<{
+      index: number;
+      email?: boolean;
+      phone?: boolean;
+    }> = [];
     for (let i = 0; i < students.length; i++) {
       const student = students[i];
       const conflict: any = { index: i };
@@ -895,7 +904,7 @@ export class LandingPageService {
       supportNotes,
       courseId: payload.courseId,
       classroomId: payload.classroomId,
-    };    // Calculate total amount: price * number of students
+    }; // Calculate total amount: price * number of students
     const baseAmount = course.price;
     if (!baseAmount || baseAmount <= 0) {
       throw new BadRequestException(
@@ -926,7 +935,8 @@ export class LandingPageService {
     );
 
     this.logger.log({
-      message: 'Guest enrollment payment created (Users will be created after payment success)',
+      message:
+        'Guest enrollment payment created (Users will be created after payment success)',
       transactionId: payment.transactionId,
       studentsCount,
       totalAmount,
@@ -937,7 +947,7 @@ export class LandingPageService {
       paymentUrl: payment.paymentUrl,
       transactionId: payment.transactionId,
       studentId: null, // User chưa được tạo
-      parentId: null,  // User chưa được tạo
+      parentId: null, // User chưa được tạo
       role,
     };
   }

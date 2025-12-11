@@ -10,7 +10,12 @@ import {
   Put,
   UseGuards,
 } from '@nestjs/common';
-import { BlockingStatusDto, BlockStudentDto, UnblockStudentDto, UpdateBlockingConfigDto } from '../dto/attendance-blocking.dto';
+import {
+  BlockingStatusDto,
+  BlockStudentDto,
+  UnblockStudentDto,
+  UpdateBlockingConfigDto,
+} from '../dto/attendance-blocking.dto';
 import { AttendanceBlockingService } from '../service/attendance-blocking.service';
 import { ClassroomService } from '../service/classroom.service';
 
@@ -36,7 +41,10 @@ export class AttendanceBlockingController {
     @Param('id') classroomId: string,
     @Param('studentId') studentId: string,
   ): Promise<BlockingStatusDto> {
-    return this.attendanceBlockingService.checkBlockingStatus(classroomId, studentId);
+    return this.attendanceBlockingService.checkBlockingStatus(
+      classroomId,
+      studentId,
+    );
   }
 
   /**
@@ -80,7 +88,9 @@ export class AttendanceBlockingController {
 
     // Check if user is teacher of this classroom
     if (user.role === 'teacher' && classroom.teacherId !== user.sub) {
-      throw new BadRequestException('You are not the teacher of this classroom');
+      throw new BadRequestException(
+        'You are not the teacher of this classroom',
+      );
     }
 
     const settings = (classroom.settings as any) || {};
@@ -116,7 +126,8 @@ export class AttendanceBlockingController {
       throw new BadRequestException('Classroom not found');
     }
 
-    const blockedStudents = await this.attendanceBlockingService.getBlockedStudents(classroomId);
+    const blockedStudents =
+      await this.attendanceBlockingService.getBlockedStudents(classroomId);
 
     return blockedStudents.map((cs) => ({
       studentId: cs.studentId,
@@ -149,7 +160,9 @@ export class AttendanceBlockingController {
 
     // Check if user is teacher of this classroom
     if (user.role === 'teacher' && classroom.teacherId !== user.sub) {
-      throw new BadRequestException('You are not the teacher of this classroom');
+      throw new BadRequestException(
+        'You are not the teacher of this classroom',
+      );
     }
 
     await this.attendanceBlockingService.manualUnblock(
@@ -189,7 +202,9 @@ export class AttendanceBlockingController {
 
     // Check if user is teacher of this classroom
     if (user.role === 'teacher' && classroom.teacherId !== user.sub) {
-      throw new BadRequestException('You are not the teacher of this classroom');
+      throw new BadRequestException(
+        'You are not the teacher of this classroom',
+      );
     }
 
     await this.attendanceBlockingService.manualBlock(
@@ -209,6 +224,3 @@ export class AttendanceBlockingController {
     };
   }
 }
-
-
-

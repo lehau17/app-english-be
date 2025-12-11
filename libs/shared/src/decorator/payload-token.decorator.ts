@@ -8,7 +8,8 @@ export const PayloadToken = createParamDecorator<
   ExecutionContext,
   JwtPayload | string | number | undefined
 >((field: string | undefined, ctx: ExecutionContext) => {
-  const user = RequestContext.getValue('user') || ctx.switchToHttp().getRequest().user;
+  const user =
+    RequestContext.getValue('user') || ctx.switchToHttp().getRequest().user;
 
   if (!user) {
     return undefined;
@@ -16,7 +17,10 @@ export const PayloadToken = createParamDecorator<
 
   // Nếu có field name, trả về giá trị của field đó
   if (field) {
-    return (user as JwtPayload)[field as keyof JwtPayload] as string | number | undefined;
+    return (user as JwtPayload)[field as keyof JwtPayload] as
+      | string
+      | number
+      | undefined;
   }
 
   // Nếu không có field name, trả về toàn bộ payload (backward compatible)

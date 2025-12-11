@@ -1,13 +1,13 @@
 import { PrismaRepository } from '@app/database';
 import { Injectable } from '@nestjs/common';
 import {
-    Assignment,
-    AssignmentStatus,
-    AssignmentSubmission,
-    AssignmentType,
-    DifficultyLevel,
-    Prisma,
-    AssignmentActivity as PrismaAssignmentActivity,
+  Assignment,
+  AssignmentStatus,
+  AssignmentSubmission,
+  AssignmentType,
+  DifficultyLevel,
+  Prisma,
+  AssignmentActivity as PrismaAssignmentActivity,
 } from '@prisma/client';
 import { ActivityTypeValue } from '../../course/dto';
 
@@ -668,8 +668,14 @@ export class AssignmentRepository extends PrismaRepository {
   async findBankActivities(
     filters: BankActivityFilters,
   ): Promise<{ activities: BankActivityWithAssignment[]; total: number }> {
-    const { type, difficulty, teacherId, search, page = 1, limit = 20 } =
-      filters;
+    const {
+      type,
+      difficulty,
+      teacherId,
+      search,
+      page = 1,
+      limit = 20,
+    } = filters;
     const skip = (page - 1) * limit;
 
     const where: Prisma.AssignmentActivityWhereInput = {};

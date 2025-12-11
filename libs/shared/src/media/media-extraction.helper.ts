@@ -39,7 +39,13 @@ export function extractMediaFromActivity(activity: {
 
   // From content (JSON) - depends on activity type
   if (activity.content) {
-    extractUrlsFromContent(activity.type, activity.content, images, audio, video);
+    extractUrlsFromContent(
+      activity.type,
+      activity.content,
+      images,
+      audio,
+      video,
+    );
   }
 
   return {
@@ -78,7 +84,11 @@ function extractUrlsFromContent(
   if (!content || typeof content !== 'object') return;
 
   // VOCAB: content.items[].imageUrl, content.items[].audioUrl
-  if (activityType === 'vocab' && content.items && Array.isArray(content.items)) {
+  if (
+    activityType === 'vocab' &&
+    content.items &&
+    Array.isArray(content.items)
+  ) {
     content.items.forEach((item: any) => {
       if (item?.imageUrl) images.push(item.imageUrl);
       if (item?.audioUrl) audio.push(item.audioUrl);
@@ -115,11 +125,3 @@ export function extractMediaUrls(activity: {
   const result = extractMediaFromActivity(activity);
   return result.all;
 }
-
-
-
-
-
-
-
-

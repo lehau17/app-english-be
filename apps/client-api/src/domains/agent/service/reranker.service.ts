@@ -95,10 +95,7 @@ export class RerankerService {
 
       return filtered;
     } catch (error) {
-      this.logger.error(
-        `Re-ranking failed: ${(error as any)?.message}`,
-        error,
-      );
+      this.logger.error(`Re-ranking failed: ${(error as any)?.message}`, error);
 
       // Fallback: return original order with synthetic scores
       return documents.slice(0, topK).map((doc, index) => ({

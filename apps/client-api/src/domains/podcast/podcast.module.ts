@@ -50,4 +50,4 @@ import { YouTubeTranscriptService } from './service/youtube-transcript.service';
     GoogleTranscriptionService,
   ],
 })
-export class PodcastModule { }
+export class PodcastModule {}

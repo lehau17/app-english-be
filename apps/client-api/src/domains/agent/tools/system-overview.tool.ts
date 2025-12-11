@@ -33,8 +33,16 @@ OUTPUT: Tra ve:
 - 3-4 bieu do truc quan
 - AI insights va alerts`,
       schema: z.object({
-        period: z.enum(['day', 'week', 'month', 'year']).optional().default('month').describe('Khoang thoi gian'),
-        includeDetails: z.boolean().optional().default(false).describe('Lay chi tiet'),
+        period: z
+          .enum(['day', 'week', 'month', 'year'])
+          .optional()
+          .default('month')
+          .describe('Khoang thoi gian'),
+        includeDetails: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Lay chi tiet'),
       }),
       func: async ({ period = 'month', includeDetails = false }) => {
         return this._call(JSON.stringify({ period, includeDetails }));
@@ -80,13 +88,31 @@ OUTPUT: Tra ve:
     }
   }
 
-  private async getSystemData(params: { period?: string; includeDetails?: boolean }) {
+  private async getSystemData(params: {
+    period?: string;
+    includeDetails?: boolean;
+  }) {
     const now = new Date();
-    const periodDays = params.period === 'day' ? 1 : params.period === 'week' ? 7 : params.period === 'year' ? 365 : 30;
-    const startDate = new Date(now.getTime() - periodDays * 24 * 60 * 60 * 1000);
+    const periodDays =
+      params.period === 'day'
+        ? 1
+        : params.period === 'week'
+          ? 7
+          : params.period === 'year'
+            ? 365
+            : 30;
+    const startDate = new Date(
+      now.getTime() - periodDays * 24 * 60 * 60 * 1000,
+    );
 
     // Get counts
-    const [totalUsers, totalCourses, totalClassrooms, totalLessons, totalAssignments] = await Promise.all([
+    const [
+      totalUsers,
+      totalCourses,
+      totalClassrooms,
+      totalLessons,
+      totalAssignments,
+    ] = await Promise.all([
       this.prisma.user.count(),
       this.prisma.course.count({ where: { isPublished: true } }),
       this.prisma.classroom.count(),
@@ -111,7 +137,11 @@ OUTPUT: Tra ve:
     });
 
     // Get daily activity (last 14 days for better performance)
-    const dailyActivity: { date: string; registrations: number; submissions: number }[] = [];
+    const dailyActivity: {
+      date: string;
+      registrations: number;
+      submissions: number;
+    }[] = [];
     for (let i = 13; i >= 0; i--) {
       const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
       const nextDate = new Date(date.getTime() + 24 * 60 * 60 * 1000);
@@ -145,10 +175,19 @@ OUTPUT: Tra ve:
       topStudents.map(async (s) => {
         const user = await this.prisma.user.findUnique({
           where: { id: s.studentId },
-          select: { displayName: true, firstName: true, lastName: true, email: true },
+          select: {
+            displayName: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
         });
         return {
-          name: user?.displayName || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.email || 'N/A',
+          name:
+            user?.displayName ||
+            `${user?.firstName || ''} ${user?.lastName || ''}`.trim() ||
+            user?.email ||
+            'N/A',
           submissions: s._count.id,
         };
       }),
@@ -178,7 +217,9 @@ OUTPUT: Tra ve:
 
   private async analyzeWithAI(data: any): Promise<any> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = this.genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+      });
 
       const prompt = `Phân tích dữ liệu hệ thống sau và đưa ra insights:
 

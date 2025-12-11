@@ -22,8 +22,6 @@ import { BackgroundWorkerUploadService } from './services/upload.service';
 import { TtsListener } from './tts/tts.listener';
 import { VocabularyModule } from './vocabulary/vocabulary.module';
 
-
-
 @Global()
 @Module({
   imports: [

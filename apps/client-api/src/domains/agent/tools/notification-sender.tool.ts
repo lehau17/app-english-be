@@ -1,7 +1,11 @@
 import { PrismaRepository } from '@app/database';
 import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
-import { NotificationChannel, NotificationType, UserRole } from '@prisma/client';
+import {
+  NotificationChannel,
+  NotificationType,
+  UserRole,
+} from '@prisma/client';
 import { z } from 'zod';
 
 @Injectable()
@@ -29,12 +33,22 @@ OUTPUT: Tra ve:
       schema: z.object({
         title: z.string().describe('Tieu de thong bao'),
         body: z.string().describe('Noi dung thong bao'),
-        targetType: z.enum(['user', 'role', 'classroom', 'course', 'all']).describe('Loai nguoi nhan'),
-        targetId: z.string().optional().describe('ID cua user/classroom/course cu the'),
-        targetRole: z.enum(['student', 'teacher', 'parent']).optional().describe('Role khi targetType = role'),
+        targetType: z
+          .enum(['user', 'role', 'classroom', 'course', 'all'])
+          .describe('Loai nguoi nhan'),
+        targetId: z
+          .string()
+          .optional()
+          .describe('ID cua user/classroom/course cu the'),
+        targetRole: z
+          .enum(['student', 'teacher', 'parent'])
+          .optional()
+          .describe('Role khi targetType = role'),
       }),
       func: async ({ title, body, targetType, targetId, targetRole }) => {
-        return this._call(JSON.stringify({ title, body, targetType, targetId, targetRole }));
+        return this._call(
+          JSON.stringify({ title, body, targetType, targetId, targetRole }),
+        );
       },
     });
   }
@@ -93,7 +107,10 @@ OUTPUT: Tra ve:
           targetUsers.length <= 10
             ? targetUsers.map((u) => ({
                 id: u.id,
-                name: u.displayName || `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email,
+                name:
+                  u.displayName ||
+                  `${u.firstName || ''} ${u.lastName || ''}`.trim() ||
+                  u.email,
                 email: u.email,
               }))
             : `${targetUsers.length} người (danh sách quá dài để hiển thị)`,

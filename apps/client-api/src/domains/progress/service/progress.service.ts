@@ -41,9 +41,7 @@ export class ProgressService {
     return this.progressRepository.list(params);
   }
 
-  async updateTimeSpent(
-    dto: UpdateProgressTimeSpentDto,
-  ): Promise<Progress> {
+  async updateTimeSpent(dto: UpdateProgressTimeSpentDto): Promise<Progress> {
     return this.progressRepository.updateTimeSpent(
       dto.userId,
       dto.activityId,

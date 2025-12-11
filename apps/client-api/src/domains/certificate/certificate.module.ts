@@ -6,14 +6,14 @@ import { GradebookModule } from '../gradebook';
 import { GradebookService } from '../gradebook/service/gradebook.service';
 import { NotificationModule } from '../notification/notification.module';
 import {
-    CertificateController,
-    CertificateTemplateController,
-    PublicCertificateController,
+  CertificateController,
+  CertificateTemplateController,
+  PublicCertificateController,
 } from './controllers';
 import { RateLimitGuard } from './guards/rate-limit.guard';
 import {
-    CertificateTemplateRepository,
-    IssuedCertificateRepository,
+  CertificateTemplateRepository,
+  IssuedCertificateRepository,
 } from './repository';
 import { CertificateTemplateService } from './services/certificate-template.service';
 import { IssuedCertificateService } from './services/issued-certificate.service';

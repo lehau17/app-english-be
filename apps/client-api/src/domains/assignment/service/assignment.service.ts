@@ -1,4 +1,3 @@
-
 import { extractMediaFromActivity, GeminiService } from '@app/shared';
 import { AutoCertificateIssuerService } from '@app/shared/certificate';
 import {
@@ -69,9 +68,7 @@ export class AssignmentService {
       const startTime = new Date(dto.startTime);
       const dueDate = new Date(dto.dueDate);
       if (startTime >= dueDate) {
-        throw new BadRequestException(
-          'Start time must be before due date',
-        );
+        throw new BadRequestException('Start time must be before due date');
       }
     }
 
@@ -99,18 +96,20 @@ export class AssignmentService {
       weight: dto.weight ?? 0,
     };
 
-    const assignment = await this.assignmentRepository.createAssignment(assignmentData);
+    const assignment =
+      await this.assignmentRepository.createAssignment(assignmentData);
 
     // Extract media from activities and create MediaFile records (async, non-blocking)
     if (this.mediaService && assignment.assignmentActivities) {
-      this.extractMediaFromAssignmentActivities(assignment, dto.activities).catch(
-        (error) => {
-          this.logger.error(
-            `Failed to extract media from assignment ${assignment.id}: ${error.message}`,
-            error,
-          );
-        },
-      );
+      this.extractMediaFromAssignmentActivities(
+        assignment,
+        dto.activities,
+      ).catch((error) => {
+        this.logger.error(
+          `Failed to extract media from assignment ${assignment.id}: ${error.message}`,
+          error,
+        );
+      });
     }
 
     return assignment;
@@ -189,9 +188,7 @@ export class AssignmentService {
     };
   }
 
-  async getBankAssignments(
-    query: QueryBankAssignmentsDto,
-  ): Promise<{
+  async getBankAssignments(query: QueryBankAssignmentsDto): Promise<{
     assignments: AssignmentWithDetails[];
     total: number;
     page: number;
@@ -215,9 +212,7 @@ export class AssignmentService {
     };
   }
 
-  async getBankActivities(
-    query: QueryBankActivitiesDto,
-  ): Promise<{
+  async getBankActivities(query: QueryBankActivitiesDto): Promise<{
     activities: BankActivityWithAssignment[];
     total: number;
     page: number;
@@ -269,9 +264,7 @@ export class AssignmentService {
       const startTime = new Date(dto.startTime);
       const dueDate = new Date(dto.dueDate);
       if (startTime >= dueDate) {
-        throw new BadRequestException(
-          'Start time must be before due date',
-        );
+        throw new BadRequestException('Start time must be before due date');
       }
     }
 
@@ -521,19 +514,26 @@ export class AssignmentService {
       }
 
       // Save AI evaluation fields when auto-grading
-      const graded = await this.assignmentRepository.gradeSubmission(submission.id, {
-        score,
-        feedback,
-        aiScore: score, // Preserve AI score
-        aiFeedback: feedback, // Preserve AI feedback
-        aiGradedAt: new Date(), // Record when AI graded
-      });
+      const graded = await this.assignmentRepository.gradeSubmission(
+        submission.id,
+        {
+          score,
+          feedback,
+          aiScore: score, // Preserve AI score
+          aiFeedback: feedback, // Preserve AI feedback
+          aiGradedAt: new Date(), // Record when AI graded
+        },
+      );
 
       // Invalidate gradebook cache
       if (this.gradebookService) {
-        await this.gradebookService.invalidateCache(studentId, assignment.classroomId).catch((err) => {
-          this.logger.warn(`Failed to invalidate gradebook cache: ${err.message}`);
-        });
+        await this.gradebookService
+          .invalidateCache(studentId, assignment.classroomId)
+          .catch((err) => {
+            this.logger.warn(
+              `Failed to invalidate gradebook cache: ${err.message}`,
+            );
+          });
       }
 
       // Check course completion and trigger certificate issuance (async, non-blocking)
@@ -560,19 +560,26 @@ export class AssignmentService {
     dto: GradeAssignmentDto,
   ) {
     // Should add validation that teacher owns the assignment
-    const submission = await this.assignmentRepository.gradeSubmission(submissionId, {
-      score: dto.score,
-      feedback: dto.feedback,
-    });
+    const submission = await this.assignmentRepository.gradeSubmission(
+      submissionId,
+      {
+        score: dto.score,
+        feedback: dto.feedback,
+      },
+    );
 
     // Invalidate gradebook cache
     if (this.gradebookService && submission.assignment?.classroomId) {
-      await this.gradebookService.invalidateCache(
-        submission.studentId,
-        submission.assignment.classroomId,
-      ).catch((err) => {
-        this.logger.warn(`Failed to invalidate gradebook cache: ${err.message}`);
-      });
+      await this.gradebookService
+        .invalidateCache(
+          submission.studentId,
+          submission.assignment.classroomId,
+        )
+        .catch((err) => {
+          this.logger.warn(
+            `Failed to invalidate gradebook cache: ${err.message}`,
+          );
+        });
     }
 
     // Check course completion and trigger certificate issuance (async, non-blocking)
@@ -673,21 +680,37 @@ export class AssignmentService {
               let correctCount = 0;
               content.questions.forEach((q: any, qIndex: number) => {
                 const userAnswer = activityAnswers?.[qIndex];
-                if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+                if (
+                  typeof userAnswer === 'number' &&
+                  userAnswer === q.correctIndex
+                ) {
                   correctCount++;
-                  console.log(`Quiz Q${qIndex} correct: user=${userAnswer}, correct=${q.correctIndex}`);
+                  console.log(
+                    `Quiz Q${qIndex} correct: user=${userAnswer}, correct=${q.correctIndex}`,
+                  );
                 } else {
-                  console.log(`Quiz Q${qIndex} incorrect: user=${userAnswer}, correct=${q.correctIndex}`);
+                  console.log(
+                    `Quiz Q${qIndex} incorrect: user=${userAnswer}, correct=${q.correctIndex}`,
+                  );
                 }
               });
-              activityScore = Math.round((correctCount / content.questions.length) * activityPoints);
-            } else if (content?.options && typeof content.correctIndex === 'number') {
+              activityScore = Math.round(
+                (correctCount / content.questions.length) * activityPoints,
+              );
+            } else if (
+              content?.options &&
+              typeof content.correctIndex === 'number'
+            ) {
               // Single question format (legacy)
               if (activityAnswers === content.correctIndex) {
                 activityScore = activityPoints;
-                console.log(`Quiz correct: user=${activityAnswers}, correct=${content.correctIndex}`);
+                console.log(
+                  `Quiz correct: user=${activityAnswers}, correct=${content.correctIndex}`,
+                );
               } else {
-                console.log(`Quiz incorrect: user=${activityAnswers}, correct=${content.correctIndex}`);
+                console.log(
+                  `Quiz incorrect: user=${activityAnswers}, correct=${content.correctIndex}`,
+                );
               }
             }
             break;
@@ -783,31 +806,52 @@ export class AssignmentService {
               let correctCount = 0;
               content.questions.forEach((q: any, qIndex: number) => {
                 const userAnswer = activityAnswers?.[qIndex];
-                if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+                if (
+                  typeof userAnswer === 'number' &&
+                  userAnswer === q.correctIndex
+                ) {
                   correctCount++;
-                  console.log(`Grammar Q${qIndex} correct: user=${userAnswer}, correct=${q.correctIndex}`);
+                  console.log(
+                    `Grammar Q${qIndex} correct: user=${userAnswer}, correct=${q.correctIndex}`,
+                  );
                 } else {
-                  console.log(`Grammar Q${qIndex} incorrect: user=${userAnswer}, correct=${q.correctIndex}`);
+                  console.log(
+                    `Grammar Q${qIndex} incorrect: user=${userAnswer}, correct=${q.correctIndex}`,
+                  );
                 }
               });
-              activityScore = Math.round((correctCount / content.questions.length) * activityPoints);
+              activityScore = Math.round(
+                (correctCount / content.questions.length) * activityPoints,
+              );
             } else if (content?.exercises && Array.isArray(content.exercises)) {
               // Exercises format with rule
               let correctCount = 0;
               content.exercises.forEach((ex: any, exIndex: number) => {
                 const userAnswer = activityAnswers?.[exIndex];
-                if (typeof userAnswer === 'number' && userAnswer === ex.correctIndex) {
+                if (
+                  typeof userAnswer === 'number' &&
+                  userAnswer === ex.correctIndex
+                ) {
                   correctCount++;
                 }
               });
-              activityScore = Math.round((correctCount / content.exercises.length) * activityPoints);
-            } else if (content?.options && typeof content.correctIndex === 'number') {
+              activityScore = Math.round(
+                (correctCount / content.exercises.length) * activityPoints,
+              );
+            } else if (
+              content?.options &&
+              typeof content.correctIndex === 'number'
+            ) {
               // Single question format (legacy)
               if (activityAnswers === content.correctIndex) {
                 activityScore = activityPoints;
-                console.log(`Grammar correct: user=${activityAnswers}, correct=${content.correctIndex}`);
+                console.log(
+                  `Grammar correct: user=${activityAnswers}, correct=${content.correctIndex}`,
+                );
               } else {
-                console.log(`Grammar incorrect: user=${activityAnswers}, correct=${content.correctIndex}`);
+                console.log(
+                  `Grammar incorrect: user=${activityAnswers}, correct=${content.correctIndex}`,
+                );
               }
             }
             break;
@@ -828,7 +872,7 @@ export class AssignmentService {
                     if (
                       userAnswer &&
                       userAnswer.toLowerCase().trim() ===
-                      correctAnswer.toLowerCase().trim()
+                        correctAnswer.toLowerCase().trim()
                     ) {
                       correctCount++;
                       console.log(
@@ -843,7 +887,7 @@ export class AssignmentService {
                 );
                 activityScore = Math.round(
                   (correctCount / content.correctAnswers.length) *
-                  activityPoints,
+                    activityPoints,
                 );
               }
             } else if (
@@ -880,7 +924,10 @@ export class AssignmentService {
                 content.pairs.forEach((pair: any, pairIndex: number) => {
                   const userRightIndex = activityAnswers[pairIndex];
                   // Correct when user matches leftIndex to rightIndex (which should be same for correct pair)
-                  if (typeof userRightIndex === 'number' && userRightIndex === pairIndex) {
+                  if (
+                    typeof userRightIndex === 'number' &&
+                    userRightIndex === pairIndex
+                  ) {
                     correctCount++;
                     console.log(
                       `Matching correct (pairs format): "${pair.left}" -> "${pair.right}"`,
@@ -896,21 +943,29 @@ export class AssignmentService {
                 // activityAnswers: { 0: 0, 1: 1, 2: 2 } (leftIndex -> rightIndex)
                 // Correct answer: leftItems[i] matches rightItems[i]
                 totalPairs = content.leftItems.length;
-                content.leftItems.forEach((leftItem: string, leftIndex: number) => {
-                  const userRightIndex = activityAnswers[leftIndex];
-                  // Correct when user matches leftIndex to the same rightIndex
-                  if (typeof userRightIndex === 'number' && userRightIndex === leftIndex) {
-                    correctCount++;
-                    console.log(
-                      `Matching correct (leftItems/rightItems format): "${leftItem}" -> "${content.rightItems[leftIndex]}"`,
-                    );
-                  } else {
-                    const userAnswer = userRightIndex !== undefined ? content.rightItems[userRightIndex] : 'none';
-                    console.log(
-                      `Matching incorrect: "${leftItem}" -> user="${userAnswer}", correct="${content.rightItems[leftIndex]}"`,
-                    );
-                  }
-                });
+                content.leftItems.forEach(
+                  (leftItem: string, leftIndex: number) => {
+                    const userRightIndex = activityAnswers[leftIndex];
+                    // Correct when user matches leftIndex to the same rightIndex
+                    if (
+                      typeof userRightIndex === 'number' &&
+                      userRightIndex === leftIndex
+                    ) {
+                      correctCount++;
+                      console.log(
+                        `Matching correct (leftItems/rightItems format): "${leftItem}" -> "${content.rightItems[leftIndex]}"`,
+                      );
+                    } else {
+                      const userAnswer =
+                        userRightIndex !== undefined
+                          ? content.rightItems[userRightIndex]
+                          : 'none';
+                      console.log(
+                        `Matching incorrect: "${leftItem}" -> user="${userAnswer}", correct="${content.rightItems[leftIndex]}"`,
+                      );
+                    }
+                  },
+                );
               }
 
               if (totalPairs > 0) {
@@ -925,15 +980,24 @@ export class AssignmentService {
             // Frontend submits: { audioUrl: string }
             if (activityAnswers?.audioUrl) {
               try {
-                const audioBase64 = await this.downloadAudioAsBase64(activityAnswers.audioUrl);
-                const result = await this.evaluationService.evaluateSpeaking('system', {
-                  audioBase64,
-                  mimeType: 'audio/webm',
-                  prompt: content?.prompt,
-                  minSeconds: content?.minSeconds,
-                });
-                activityScore = Math.round((result.score / 100) * activityPoints);
-                console.log(`Speaking: AI score ${result.score}/100 → ${activityScore}/${activityPoints}`);
+                const audioBase64 = await this.downloadAudioAsBase64(
+                  activityAnswers.audioUrl,
+                );
+                const result = await this.evaluationService.evaluateSpeaking(
+                  'system',
+                  {
+                    audioBase64,
+                    mimeType: 'audio/webm',
+                    prompt: content?.prompt,
+                    minSeconds: content?.minSeconds,
+                  },
+                );
+                activityScore = Math.round(
+                  (result.score / 100) * activityPoints,
+                );
+                console.log(
+                  `Speaking: AI score ${result.score}/100 → ${activityScore}/${activityPoints}`,
+                );
               } catch (error) {
                 console.error('Speaking evaluation failed:', error);
                 activityScore = Math.round(activityPoints * 0.5);
@@ -943,16 +1007,25 @@ export class AssignmentService {
 
           case 'writing':
             // Frontend submits: { text: string } or string directly
-            const writingText = activityAnswers?.text || (typeof activityAnswers === 'string' ? activityAnswers : null);
+            const writingText =
+              activityAnswers?.text ||
+              (typeof activityAnswers === 'string' ? activityAnswers : null);
             if (writingText && writingText.trim().length > 0) {
               try {
-                const result = await this.evaluationService.evaluateWriting('system', {
-                  submission: writingText,
-                  prompt: content?.prompt,
-                  minWords: content?.minWords,
-                });
-                activityScore = Math.round((result.score / 100) * activityPoints);
-                console.log(`Writing: AI score ${result.score}/100 → ${activityScore}/${activityPoints}`);
+                const result = await this.evaluationService.evaluateWriting(
+                  'system',
+                  {
+                    submission: writingText,
+                    prompt: content?.prompt,
+                    minWords: content?.minWords,
+                  },
+                );
+                activityScore = Math.round(
+                  (result.score / 100) * activityPoints,
+                );
+                console.log(
+                  `Writing: AI score ${result.score}/100 → ${activityScore}/${activityPoints}`,
+                );
               } catch (error) {
                 console.error('Writing evaluation failed:', error);
                 activityScore = Math.round(activityPoints * 0.5);
@@ -966,34 +1039,47 @@ export class AssignmentService {
             const phases = content?.phrases || [];
             let totalPronunciationScore = 0;
 
-            if (typeof activityAnswers === 'object' && activityAnswers !== null) {
+            if (
+              typeof activityAnswers === 'object' &&
+              activityAnswers !== null
+            ) {
               const phraseDetails = []; // To store details for the attempt
 
               for (let i = 0; i < phases.length; i++) {
                 const audioUrl = activityAnswers[i];
                 if (audioUrl && typeof audioUrl === 'string') {
                   try {
-                    const audioBase64 = await this.downloadAudioAsBase64(audioUrl);
+                    const audioBase64 =
+                      await this.downloadAudioAsBase64(audioUrl);
                     const targetPhrase = phases[i]?.text || '';
 
-                    const result = await this.evaluationService.evaluatePronunciation('system', {
-                      audioBase64,
-                      mimeType: 'audio/webm',
-                      phrase: targetPhrase,
-                    });
+                    const result =
+                      await this.evaluationService.evaluatePronunciation(
+                        'system',
+                        {
+                          audioBase64,
+                          mimeType: 'audio/webm',
+                          phrase: targetPhrase,
+                        },
+                      );
 
                     totalPronunciationScore += result.score;
-                    console.log(`Pronunciation phrase ${i}: ${result.score}/100`);
+                    console.log(
+                      `Pronunciation phrase ${i}: ${result.score}/100`,
+                    );
 
                     // Store detail (optional, if we want to return per-phrase feedback)
                     phraseDetails.push({
                       index: i,
                       phrase: targetPhrase,
                       score: result.score,
-                      feedback: result.feedback
+                      feedback: result.feedback,
                     });
                   } catch (error) {
-                    console.error(`Pronunciation evaluation failed for phrase ${i}:`, error);
+                    console.error(
+                      `Pronunciation evaluation failed for phrase ${i}:`,
+                      error,
+                    );
                   }
                 }
               }
@@ -1001,7 +1087,10 @@ export class AssignmentService {
               // Score = (Sum of scores) / (Total phrases) * ActivityPoints
               // Unsubmitted phrases count as 0
               if (phases.length > 0) {
-                activityScore = Math.round((totalPronunciationScore / phases.length / 100) * activityPoints);
+                activityScore = Math.round(
+                  (totalPronunciationScore / phases.length / 100) *
+                    activityPoints,
+                );
               }
             }
             break;
@@ -1011,9 +1100,14 @@ export class AssignmentService {
             if (activityAnswers && content?.transcript) {
               const userText = String(activityAnswers).toLowerCase().trim();
               const correctText = content.transcript.toLowerCase().trim();
-              const similarity = this.calculateTextSimilarity(userText, correctText);
+              const similarity = this.calculateTextSimilarity(
+                userText,
+                correctText,
+              );
               activityScore = Math.round(similarity * activityPoints);
-              console.log(`Dictation: ${(similarity * 100).toFixed(1)}% match → ${activityScore}/${activityPoints}`);
+              console.log(
+                `Dictation: ${(similarity * 100).toFixed(1)}% match → ${activityScore}/${activityPoints}`,
+              );
             }
             break;
 
@@ -1022,17 +1116,29 @@ export class AssignmentService {
           case 'conversation':
           case 'mini_game':
             // Completion-based: full points if attempted
-            if (activityAnswers !== null && activityAnswers !== undefined && activityAnswers !== '') {
+            if (
+              activityAnswers !== null &&
+              activityAnswers !== undefined &&
+              activityAnswers !== ''
+            ) {
               activityScore = activityPoints;
-              console.log(`${activity.type}: completed → ${activityScore}/${activityPoints}`);
+              console.log(
+                `${activity.type}: completed → ${activityScore}/${activityPoints}`,
+              );
             }
             break;
 
           default:
             // Unknown activity type - award points if attempted
-            if (activityAnswers !== null && activityAnswers !== undefined && activityAnswers !== '') {
+            if (
+              activityAnswers !== null &&
+              activityAnswers !== undefined &&
+              activityAnswers !== ''
+            ) {
               activityScore = activityPoints;
-              console.log(`Activity ${activity.type} attempted, awarded full points`);
+              console.log(
+                `Activity ${activity.type} attempted, awarded full points`,
+              );
             }
             break;
         }
@@ -1116,33 +1222,53 @@ export class AssignmentService {
             let correctCount = 0;
             content.questions.forEach((q: any, qIndex: number) => {
               const userAnswer = studentAnswer?.[qIndex];
-              if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+              if (
+                typeof userAnswer === 'number' &&
+                userAnswer === q.correctIndex
+              ) {
                 correctCount++;
               }
             });
-            return Math.round((correctCount / content.questions.length) * activityPoints);
-          } else if (content?.options && typeof content.correctIndex === 'number') {
+            return Math.round(
+              (correctCount / content.questions.length) * activityPoints,
+            );
+          } else if (
+            content?.options &&
+            typeof content.correctIndex === 'number'
+          ) {
             return studentAnswer === content.correctIndex ? activityPoints : 0;
           }
           break;
 
         case 'fill_blank':
-          if (content?.correctAnswers && Array.isArray(content.correctAnswers)) {
+          if (
+            content?.correctAnswers &&
+            Array.isArray(content.correctAnswers)
+          ) {
             let correctCount = 0;
             if (Array.isArray(studentAnswer)) {
-              content.correctAnswers.forEach((correctAnswer: string, index: number) => {
-                const userAnswer = studentAnswer[index];
-                if (
-                  userAnswer &&
-                  userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
-                ) {
-                  correctCount++;
-                }
-              });
+              content.correctAnswers.forEach(
+                (correctAnswer: string, index: number) => {
+                  const userAnswer = studentAnswer[index];
+                  if (
+                    userAnswer &&
+                    userAnswer.toLowerCase().trim() ===
+                      correctAnswer.toLowerCase().trim()
+                  ) {
+                    correctCount++;
+                  }
+                },
+              );
             }
-            return Math.round((correctCount / content.correctAnswers.length) * activityPoints);
-          } else if (content?.correctAnswer && typeof studentAnswer === 'string') {
-            return studentAnswer.toLowerCase().trim() === content.correctAnswer.toLowerCase().trim()
+            return Math.round(
+              (correctCount / content.correctAnswers.length) * activityPoints,
+            );
+          } else if (
+            content?.correctAnswer &&
+            typeof studentAnswer === 'string'
+          ) {
+            return studentAnswer.toLowerCase().trim() ===
+              content.correctAnswer.toLowerCase().trim()
               ? activityPoints
               : 0;
           }
@@ -1157,18 +1283,26 @@ export class AssignmentService {
               totalPairs = content.pairs.length;
               content.pairs.forEach((_pair: any, pairIndex: number) => {
                 const userRightIndex = studentAnswer[pairIndex];
-                if (typeof userRightIndex === 'number' && userRightIndex === pairIndex) {
+                if (
+                  typeof userRightIndex === 'number' &&
+                  userRightIndex === pairIndex
+                ) {
                   correctCount++;
                 }
               });
             } else if (content?.leftItems && content?.rightItems) {
               totalPairs = content.leftItems.length;
-              content.leftItems.forEach((_leftItem: string, leftIndex: number) => {
-                const userRightIndex = studentAnswer[leftIndex];
-                if (typeof userRightIndex === 'number' && userRightIndex === leftIndex) {
-                  correctCount++;
-                }
-              });
+              content.leftItems.forEach(
+                (_leftItem: string, leftIndex: number) => {
+                  const userRightIndex = studentAnswer[leftIndex];
+                  if (
+                    typeof userRightIndex === 'number' &&
+                    userRightIndex === leftIndex
+                  ) {
+                    correctCount++;
+                  }
+                },
+              );
             }
 
             if (totalPairs > 0) {
@@ -1183,12 +1317,20 @@ export class AssignmentService {
             let correctCount = 0;
             content.questions.forEach((q: any, qIndex: number) => {
               const userAnswer = studentAnswer?.[qIndex];
-              if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+              if (
+                typeof userAnswer === 'number' &&
+                userAnswer === q.correctIndex
+              ) {
                 correctCount++;
               }
             });
-            return Math.round((correctCount / content.questions.length) * activityPoints);
-          } else if (content?.options && typeof content.correctIndex === 'number') {
+            return Math.round(
+              (correctCount / content.questions.length) * activityPoints,
+            );
+          } else if (
+            content?.options &&
+            typeof content.correctIndex === 'number'
+          ) {
             return studentAnswer === content.correctIndex ? activityPoints : 0;
           }
           break;
@@ -1197,7 +1339,10 @@ export class AssignmentService {
           if (studentAnswer && content?.transcript) {
             const userText = String(studentAnswer).toLowerCase().trim();
             const correctText = content.transcript.toLowerCase().trim();
-            const similarity = this.calculateTextSimilarity(userText, correctText);
+            const similarity = this.calculateTextSimilarity(
+              userText,
+              correctText,
+            );
             return Math.round(similarity * activityPoints);
           }
           break;
@@ -1207,12 +1352,20 @@ export class AssignmentService {
             let correctCount = 0;
             content.questions.forEach((q: any, qIndex: number) => {
               const userAnswer = studentAnswer?.[qIndex];
-              if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+              if (
+                typeof userAnswer === 'number' &&
+                userAnswer === q.correctIndex
+              ) {
                 correctCount++;
               }
             });
-            return Math.round((correctCount / content.questions.length) * activityPoints);
-          } else if (content?.options && typeof content.correctIndex === 'number') {
+            return Math.round(
+              (correctCount / content.questions.length) * activityPoints,
+            );
+          } else if (
+            content?.options &&
+            typeof content.correctIndex === 'number'
+          ) {
             return studentAnswer === content.correctIndex ? activityPoints : 0;
           }
           break;
@@ -1220,7 +1373,10 @@ export class AssignmentService {
 
       return 0;
     } catch (error) {
-      this.logger.error(`Error calculating score for activity ${activity.id}:`, error);
+      this.logger.error(
+        `Error calculating score for activity ${activity.id}:`,
+        error,
+      );
       return 0;
     }
   }
@@ -1245,12 +1401,18 @@ export class AssignmentService {
         });
         return answers;
       } else if (activity.type === 'fill_blank' && content?.correctAnswers) {
-        return Array.isArray(content.correctAnswers) ? content.correctAnswers : [content.correctAnswers];
+        return Array.isArray(content.correctAnswers)
+          ? content.correctAnswers
+          : [content.correctAnswers];
       } else if (activity.type === 'fill_blank' && content?.correctAnswer) {
         return content.correctAnswer;
       } else if (activity.type === 'matching' && content?.pairs) {
         return content.pairs;
-      } else if (activity.type === 'matching' && content?.leftItems && content?.rightItems) {
+      } else if (
+        activity.type === 'matching' &&
+        content?.leftItems &&
+        content?.rightItems
+      ) {
         return { leftItems: content.leftItems, rightItems: content.rightItems };
       } else if (content?.correctAnswer !== undefined) {
         return content.correctAnswer;
@@ -1260,7 +1422,10 @@ export class AssignmentService {
 
       return null;
     } catch (error) {
-      this.logger.error(`Error getting correct answer for activity ${activity.id}:`, error);
+      this.logger.error(
+        `Error getting correct answer for activity ${activity.id}:`,
+        error,
+      );
       return null;
     }
   }
@@ -1398,43 +1563,53 @@ export class AssignmentService {
     // Enhance response: map answers to activities
     const assignment = submission.assignment;
     const activities = assignment.assignmentActivities || [];
-    const answers = submission.answers as Record<string, any> || {};
+    const answers = (submission.answers as Record<string, any>) || {};
 
     // Map answers to activities and calculate scores
-    const activitiesWithAnswers = activities.map((activity: any, index: number) => {
-      // Get student answer (try by ID first, then by index)
-      const studentAnswer = answers[activity.id] || answers[`activity${index}`] || null;
+    const activitiesWithAnswers = activities.map(
+      (activity: any, index: number) => {
+        // Get student answer (try by ID first, then by index)
+        const studentAnswer =
+          answers[activity.id] || answers[`activity${index}`] || null;
 
-      // Get correct answer for auto-graded activities
-      const correctAnswer = isAutoGradable(activity.type)
-        ? this.getCorrectAnswerForActivity(activity)
-        : null;
+        // Get correct answer for auto-graded activities
+        const correctAnswer = isAutoGradable(activity.type)
+          ? this.getCorrectAnswerForActivity(activity)
+          : null;
 
-      // Classify activity
-      const classification = getActivityClassification(activity.type);
-      const isAutoGraded = isAutoGradable(activity.type);
-      const isAIGraded = isAIGradable(activity.type);
-      const requiresManual = requiresManualGrading(activity.type);
+        // Classify activity
+        const classification = getActivityClassification(activity.type);
+        const isAutoGraded = isAutoGradable(activity.type);
+        const isAIGraded = isAIGradable(activity.type);
+        const requiresManual = requiresManualGrading(activity.type);
 
-      // Calculate score for auto-graded activities
-      let calculatedScore: number | null = null;
-      if (isAutoGraded && studentAnswer !== null && studentAnswer !== undefined) {
-        // Calculate score even if correctAnswer is null (we can get it from activity content)
-        calculatedScore = this.calculateActivityScore(activity, studentAnswer);
-      }
+        // Calculate score for auto-graded activities
+        let calculatedScore: number | null = null;
+        if (
+          isAutoGraded &&
+          studentAnswer !== null &&
+          studentAnswer !== undefined
+        ) {
+          // Calculate score even if correctAnswer is null (we can get it from activity content)
+          calculatedScore = this.calculateActivityScore(
+            activity,
+            studentAnswer,
+          );
+        }
 
-      return {
-        ...activity,
-        studentAnswer,
-        correctAnswer,
-        classification,
-        isAutoGraded,
-        isAIGradable: isAIGraded,
-        requiresManualGrading: requiresManual,
-        calculatedScore, // Score calculated from answers (for auto-graded)
-        // AI score and teacher score will be added if available
-      };
-    });
+        return {
+          ...activity,
+          studentAnswer,
+          correctAnswer,
+          classification,
+          isAutoGraded,
+          isAIGradable: isAIGraded,
+          requiresManualGrading: requiresManual,
+          calculatedScore, // Score calculated from answers (for auto-graded)
+          // AI score and teacher score will be added if available
+        };
+      },
+    );
 
     return {
       ...submission,
@@ -1454,7 +1629,11 @@ export class AssignmentService {
    */
   async gradeSubmissionDetailed(
     submissionId: string,
-    dto: { activityScores: Record<string, number>; feedback?: string; acceptAIScores?: boolean },
+    dto: {
+      activityScores: Record<string, number>;
+      feedback?: string;
+      acceptAIScores?: boolean;
+    },
     teacherUserId: string,
   ): Promise<any> {
     // 1. Get submission with permission check
@@ -1492,9 +1671,8 @@ export class AssignmentService {
     });
 
     // Final score on 100-point scale
-    const finalScore = totalPoints > 0
-      ? Math.round((earnedPoints / totalPoints) * 100)
-      : 0;
+    const finalScore =
+      totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
 
     // Validate final score doesn't exceed 100
     const normalizedScore = Math.min(finalScore, 100);
@@ -1513,12 +1691,13 @@ export class AssignmentService {
 
     // Invalidate gradebook cache
     if (this.gradebookService && assignment.classroomId) {
-      await this.gradebookService.invalidateCache(
-        submission.studentId,
-        assignment.classroomId,
-      ).catch((err) => {
-        this.logger.warn(`Failed to invalidate gradebook cache: ${err.message}`);
-      });
+      await this.gradebookService
+        .invalidateCache(submission.studentId, assignment.classroomId)
+        .catch((err) => {
+          this.logger.warn(
+            `Failed to invalidate gradebook cache: ${err.message}`,
+          );
+        });
     }
 
     // Check course completion and trigger certificate issuance (async, non-blocking)
@@ -1587,12 +1766,13 @@ export class AssignmentService {
 
     // Invalidate gradebook cache
     if (this.gradebookService && assignment.classroomId) {
-      await this.gradebookService.invalidateCache(
-        submission.studentId,
-        assignment.classroomId,
-      ).catch((err) => {
-        this.logger.warn(`Failed to invalidate gradebook cache: ${err.message}`);
-      });
+      await this.gradebookService
+        .invalidateCache(submission.studentId, assignment.classroomId)
+        .catch((err) => {
+          this.logger.warn(
+            `Failed to invalidate gradebook cache: ${err.message}`,
+          );
+        });
     }
 
     // Check course completion and trigger certificate issuance (async, non-blocking)
@@ -1637,8 +1817,16 @@ export class AssignmentService {
    * Calculate text similarity for dictation scoring
    */
   private calculateTextSimilarity(a: string, b: string): number {
-    const wordsA = a.toLowerCase().trim().split(/\s+/).filter((w) => w);
-    const wordsB = b.toLowerCase().trim().split(/\s+/).filter((w) => w);
+    const wordsA = a
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w);
+    const wordsB = b
+      .toLowerCase()
+      .trim()
+      .split(/\s+/)
+      .filter((w) => w);
     if (wordsB.length === 0) return wordsA.length === 0 ? 1 : 0;
 
     let matches = 0;
@@ -1715,7 +1903,10 @@ export class AssignmentService {
         assignment,
         dto.answers,
       ).catch((err) => {
-        this.logger.error(`Background grading failed for ${submission.id}:`, err);
+        this.logger.error(
+          `Background grading failed for ${submission.id}:`,
+          err,
+        );
         this.eventsGateway.emitToUser(studentId, 'grading:error', {
           submissionId: submission.id,
           error: 'Có lỗi khi chấm bài. Vui lòng tải lại trang để xem kết quả.',
@@ -1755,7 +1946,8 @@ export class AssignmentService {
 
     let totalPoints = 0;
     let earnedPoints = 0;
-    const activityScores: Record<string, { score: number; maxScore: number }> = {};
+    const activityScores: Record<string, { score: number; maxScore: number }> =
+      {};
 
     // Grade each activity
     for (let i = 0; i < activities.length; i++) {
@@ -1833,7 +2025,8 @@ export class AssignmentService {
         feedback = `Bạn đạt được ${finalScore}% điểm số. Hãy xem lại các câu trả lời để cải thiện kết quả!`;
       }
     } else {
-      feedback = 'Xuất sắc! Bạn đã hoàn thành bài tập với kết quả rất tốt. Tiếp tục phát huy!';
+      feedback =
+        'Xuất sắc! Bạn đã hoàn thành bài tập với kết quả rất tốt. Tiếp tục phát huy!';
     }
 
     // Update database with AI evaluation fields
@@ -1893,12 +2086,20 @@ export class AssignmentService {
           let correctCount = 0;
           content.questions.forEach((q: any, qIndex: number) => {
             const userAnswer = activityAnswers?.[qIndex];
-            if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+            if (
+              typeof userAnswer === 'number' &&
+              userAnswer === q.correctIndex
+            ) {
               correctCount++;
             }
           });
-          activityScore = Math.round((correctCount / content.questions.length) * activityPoints);
-        } else if (content?.options && typeof content.correctIndex === 'number') {
+          activityScore = Math.round(
+            (correctCount / content.questions.length) * activityPoints,
+          );
+        } else if (
+          content?.options &&
+          typeof content.correctIndex === 'number'
+        ) {
           if (activityAnswers === content.correctIndex) {
             activityScore = activityPoints;
           }
@@ -1910,21 +2111,34 @@ export class AssignmentService {
           let correctCount = 0;
           content.questions.forEach((q: any, qIndex: number) => {
             const userAnswer = activityAnswers?.[qIndex];
-            if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+            if (
+              typeof userAnswer === 'number' &&
+              userAnswer === q.correctIndex
+            ) {
               correctCount++;
             }
           });
-          activityScore = Math.round((correctCount / content.questions.length) * activityPoints);
+          activityScore = Math.round(
+            (correctCount / content.questions.length) * activityPoints,
+          );
         } else if (content?.exercises && Array.isArray(content.exercises)) {
           let correctCount = 0;
           content.exercises.forEach((ex: any, exIndex: number) => {
             const userAnswer = activityAnswers?.[exIndex];
-            if (typeof userAnswer === 'number' && userAnswer === ex.correctIndex) {
+            if (
+              typeof userAnswer === 'number' &&
+              userAnswer === ex.correctIndex
+            ) {
               correctCount++;
             }
           });
-          activityScore = Math.round((correctCount / content.exercises.length) * activityPoints);
-        } else if (content?.options && typeof content.correctIndex === 'number') {
+          activityScore = Math.round(
+            (correctCount / content.exercises.length) * activityPoints,
+          );
+        } else if (
+          content?.options &&
+          typeof content.correctIndex === 'number'
+        ) {
           if (activityAnswers === content.correctIndex) {
             activityScore = activityPoints;
           }
@@ -1937,12 +2151,20 @@ export class AssignmentService {
           let correctCount = 0;
           content.questions.forEach((q: any, qIndex: number) => {
             const userAnswer = activityAnswers?.[qIndex];
-            if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+            if (
+              typeof userAnswer === 'number' &&
+              userAnswer === q.correctIndex
+            ) {
               correctCount++;
             }
           });
-          activityScore = Math.round((correctCount / content.questions.length) * activityPoints);
-        } else if (content?.options && typeof content.correctIndex === 'number') {
+          activityScore = Math.round(
+            (correctCount / content.questions.length) * activityPoints,
+          );
+        } else if (
+          content?.options &&
+          typeof content.correctIndex === 'number'
+        ) {
           if (activityAnswers === content.correctIndex) {
             activityScore = activityPoints;
           }
@@ -1953,16 +2175,29 @@ export class AssignmentService {
         if (content?.correctAnswers && Array.isArray(content.correctAnswers)) {
           let correctCount = 0;
           if (Array.isArray(activityAnswers)) {
-            content.correctAnswers.forEach((correctAnswer: string, index: number) => {
-              const userAnswer = activityAnswers[index];
-              if (userAnswer?.toLowerCase().trim() === correctAnswer.toLowerCase().trim()) {
-                correctCount++;
-              }
-            });
-            activityScore = Math.round((correctCount / content.correctAnswers.length) * activityPoints);
+            content.correctAnswers.forEach(
+              (correctAnswer: string, index: number) => {
+                const userAnswer = activityAnswers[index];
+                if (
+                  userAnswer?.toLowerCase().trim() ===
+                  correctAnswer.toLowerCase().trim()
+                ) {
+                  correctCount++;
+                }
+              },
+            );
+            activityScore = Math.round(
+              (correctCount / content.correctAnswers.length) * activityPoints,
+            );
           }
-        } else if (content?.correctAnswer && typeof activityAnswers === 'string') {
-          if (activityAnswers.toLowerCase().trim() === content.correctAnswer.toLowerCase().trim()) {
+        } else if (
+          content?.correctAnswer &&
+          typeof activityAnswers === 'string'
+        ) {
+          if (
+            activityAnswers.toLowerCase().trim() ===
+            content.correctAnswer.toLowerCase().trim()
+          ) {
             activityScore = activityPoints;
           }
         }
@@ -1979,23 +2214,33 @@ export class AssignmentService {
             totalPairs = content.pairs.length;
             content.pairs.forEach((pair: any, pairIndex: number) => {
               const userRightIndex = activityAnswers[pairIndex];
-              if (typeof userRightIndex === 'number' && userRightIndex === pairIndex) {
+              if (
+                typeof userRightIndex === 'number' &&
+                userRightIndex === pairIndex
+              ) {
                 correctCount++;
               }
             });
           } else if (content?.leftItems && content?.rightItems) {
             // Format 2: leftItems/rightItems arrays
             totalPairs = content.leftItems.length;
-            content.leftItems.forEach((_leftItem: string, leftIndex: number) => {
-              const userRightIndex = activityAnswers[leftIndex];
-              if (typeof userRightIndex === 'number' && userRightIndex === leftIndex) {
-                correctCount++;
-              }
-            });
+            content.leftItems.forEach(
+              (_leftItem: string, leftIndex: number) => {
+                const userRightIndex = activityAnswers[leftIndex];
+                if (
+                  typeof userRightIndex === 'number' &&
+                  userRightIndex === leftIndex
+                ) {
+                  correctCount++;
+                }
+              },
+            );
           }
 
           if (totalPairs > 0) {
-            activityScore = Math.round((correctCount / totalPairs) * activityPoints);
+            activityScore = Math.round(
+              (correctCount / totalPairs) * activityPoints,
+            );
           }
         }
         break;
@@ -2003,13 +2248,18 @@ export class AssignmentService {
       case 'speaking':
         if (activityAnswers?.audioUrl) {
           try {
-            const audioBase64 = await this.downloadAudioAsBase64(activityAnswers.audioUrl);
-            const result = await this.evaluationService.evaluateSpeaking('system', {
-              audioBase64,
-              mimeType: 'audio/webm',
-              prompt: content?.prompt,
-              minSeconds: content?.minSeconds,
-            });
+            const audioBase64 = await this.downloadAudioAsBase64(
+              activityAnswers.audioUrl,
+            );
+            const result = await this.evaluationService.evaluateSpeaking(
+              'system',
+              {
+                audioBase64,
+                mimeType: 'audio/webm',
+                prompt: content?.prompt,
+                minSeconds: content?.minSeconds,
+              },
+            );
             activityScore = Math.round((result.score / 100) * activityPoints);
           } catch (error) {
             this.logger.error('Speaking evaluation failed:', error);
@@ -2019,14 +2269,19 @@ export class AssignmentService {
         break;
 
       case 'writing':
-        const writingText = activityAnswers?.text || (typeof activityAnswers === 'string' ? activityAnswers : null);
+        const writingText =
+          activityAnswers?.text ||
+          (typeof activityAnswers === 'string' ? activityAnswers : null);
         if (writingText && writingText.trim().length > 0) {
           try {
-            const result = await this.evaluationService.evaluateWriting('system', {
-              submission: writingText,
-              prompt: content?.prompt,
-              minWords: content?.minWords,
-            });
+            const result = await this.evaluationService.evaluateWriting(
+              'system',
+              {
+                submission: writingText,
+                prompt: content?.prompt,
+                minWords: content?.minWords,
+              },
+            );
             activityScore = Math.round((result.score / 100) * activityPoints);
           } catch (error) {
             this.logger.error('Writing evaluation failed:', error);
@@ -2048,21 +2303,27 @@ export class AssignmentService {
                 const audioBase64 = await this.downloadAudioAsBase64(audioUrl);
                 const targetPhrase = phrases[i]?.text || '';
 
-                const result = await this.evaluationService.evaluatePronunciation('system', {
-                  audioBase64,
-                  mimeType: 'audio/webm',
-                  phrase: targetPhrase,
-                });
+                const result =
+                  await this.evaluationService.evaluatePronunciation('system', {
+                    audioBase64,
+                    mimeType: 'audio/webm',
+                    phrase: targetPhrase,
+                  });
 
                 totalStreamingScore += result.score;
               } catch (error) {
-                this.logger.error(`Pronunciation evaluation failed for phrase ${i}:`, error);
+                this.logger.error(
+                  `Pronunciation evaluation failed for phrase ${i}:`,
+                  error,
+                );
               }
             }
           }
 
           if (phrases.length > 0) {
-            activityScore = Math.round((totalStreamingScore / phrases.length / 100) * activityPoints);
+            activityScore = Math.round(
+              (totalStreamingScore / phrases.length / 100) * activityPoints,
+            );
           }
         }
         break;
@@ -2071,7 +2332,10 @@ export class AssignmentService {
         if (activityAnswers && content?.transcript) {
           const userText = String(activityAnswers).toLowerCase().trim();
           const correctText = content.transcript.toLowerCase().trim();
-          const similarity = this.calculateTextSimilarity(userText, correctText);
+          const similarity = this.calculateTextSimilarity(
+            userText,
+            correctText,
+          );
           activityScore = Math.round(similarity * activityPoints);
         }
         break;
@@ -2080,13 +2344,21 @@ export class AssignmentService {
       case 'flashcard':
       case 'conversation':
       case 'mini_game':
-        if (activityAnswers !== null && activityAnswers !== undefined && activityAnswers !== '') {
+        if (
+          activityAnswers !== null &&
+          activityAnswers !== undefined &&
+          activityAnswers !== ''
+        ) {
           activityScore = activityPoints;
         }
         break;
 
       default:
-        if (activityAnswers !== null && activityAnswers !== undefined && activityAnswers !== '') {
+        if (
+          activityAnswers !== null &&
+          activityAnswers !== undefined &&
+          activityAnswers !== ''
+        ) {
           activityScore = activityPoints;
         }
         break;
@@ -2108,7 +2380,9 @@ export class AssignmentService {
 
     try {
       // Get classroom with course info via repository's prisma client
-      const prisma = (this.assignmentRepository as any).prisma || (this.assignmentRepository as any).$;
+      const prisma =
+        (this.assignmentRepository as any).prisma ||
+        (this.assignmentRepository as any).$;
       if (!prisma) {
         this.logger.warn('Cannot access Prisma client from repository');
         return;
@@ -2170,7 +2444,11 @@ export class AssignmentService {
         // Extract media URLs from activity
         const media = extractMediaFromActivity({
           type: activityDto.type,
-          mediaUrls: activityDto.mediaUrls || (typeof activityDto.mediaUrls === 'object' ? Object.values(activityDto.mediaUrls) : []),
+          mediaUrls:
+            activityDto.mediaUrls ||
+            (typeof activityDto.mediaUrls === 'object'
+              ? Object.values(activityDto.mediaUrls)
+              : []),
           content: activityDto.content,
         });
 

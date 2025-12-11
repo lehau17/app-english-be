@@ -370,8 +370,8 @@ Rating: 1=again (quên), 2=hard (khó), 3=good (ok), 4=easy (dễ)`,
           }
 
           // Get all progress
-          const allProgress =
-            await this.prisma.userVocabularyProgress.findMany({
+          const allProgress = await this.prisma.userVocabularyProgress.findMany(
+            {
               where: whereClause,
               include: {
                 term: {
@@ -387,7 +387,8 @@ Rating: 1=again (quên), 2=hard (khó), 3=good (ok), 4=easy (dễ)`,
                   },
                 },
               },
-            });
+            },
+          );
 
           // Count by status
           const byStatus = {
@@ -876,8 +877,7 @@ Rating: 1=again (quên), 2=hard (khó), 3=good (ok), 4=easy (dễ)`,
     accuracy: number,
   ): string {
     const total = Object.values(byStatus).reduce((a, b) => a + b, 0);
-    const masteredPercent =
-      total > 0 ? (byStatus.mastered / total) * 100 : 0;
+    const masteredPercent = total > 0 ? (byStatus.mastered / total) * 100 : 0;
 
     if (masteredPercent >= 80) {
       return '🏆 Xuất sắc! Bạn đã thuộc hầu hết từ vựng!';

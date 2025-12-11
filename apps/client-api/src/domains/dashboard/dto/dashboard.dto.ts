@@ -142,10 +142,16 @@ export class DashboardDto {
   notifications: DashboardNotificationItem[];
 
   // NEW: Additional data
-  @ApiProperty({ type: [RevenueTrendPoint], description: 'Doanh thu 7 ngày gần đây' })
+  @ApiProperty({
+    type: [RevenueTrendPoint],
+    description: 'Doanh thu 7 ngày gần đây',
+  })
   revenueTrend: RevenueTrendPoint[];
 
-  @ApiProperty({ type: [TopCourseItem], description: 'Top 5 khóa học nhiều học viên nhất' })
+  @ApiProperty({
+    type: [TopCourseItem],
+    description: 'Top 5 khóa học nhiều học viên nhất',
+  })
   topCourses: TopCourseItem[];
 
   static defaultValueResponse(): DashboardDto {

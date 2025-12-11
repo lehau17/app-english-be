@@ -44,8 +44,8 @@ export class CertificateIssuanceCron {
         `Found ${completedClassrooms.length} completed classrooms`,
       );
 
-      let totalIssued = 0;
-      let totalSkipped = 0;
+      const totalIssued = 0;
+      const totalSkipped = 0;
 
       for (const classroom of completedClassrooms) {
         try {
@@ -64,25 +64,7 @@ export class CertificateIssuanceCron {
         `Certificate issuance cron job completed. Processed ${completedClassrooms.length} classrooms`,
       );
     } catch (error) {
-      this.logger.error(
-        `Certificate issuance cron job failed: ${error.stack}`,
-      );
+      this.logger.error(`Certificate issuance cron job failed: ${error.stack}`);
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

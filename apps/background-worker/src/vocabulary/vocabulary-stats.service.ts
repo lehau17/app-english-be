@@ -28,6 +28,3 @@ export class VocabularyStatsService {
     }
   }
 }
-
-
-

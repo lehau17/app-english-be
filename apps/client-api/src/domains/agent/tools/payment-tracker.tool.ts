@@ -53,16 +53,39 @@ Ket qua tra ve:
 - So tien, khoa hoc, ngay
 - Thong ke tong hop`,
       schema: z.object({
-        studentId: z.string().optional().describe('UUID hoc sinh (cho phu huynh)'),
-        status: z.enum(['pending', 'success', 'failed', 'cancelled', 'refunded', 'expired', 'all']).optional().default('all'),
+        studentId: z
+          .string()
+          .optional()
+          .describe('UUID hoc sinh (cho phu huynh)'),
+        status: z
+          .enum([
+            'pending',
+            'success',
+            'failed',
+            'cancelled',
+            'refunded',
+            'expired',
+            'all',
+          ])
+          .optional()
+          .default('all'),
         fromDate: z.string().optional().describe('Ngay bat dau (YYYY-MM-DD)'),
         toDate: z.string().optional().describe('Ngay ket thuc (YYYY-MM-DD)'),
         courseId: z.string().optional().describe('Loc theo khoa hoc'),
         limit: z.number().optional().default(50),
       }),
-      func: async ({ studentId, status = 'all', fromDate, toDate, courseId, limit = 50 }) => {
+      func: async ({
+        studentId,
+        status = 'all',
+        fromDate,
+        toDate,
+        courseId,
+        limit = 50,
+      }) => {
         try {
-          this.logger.log(`Payment history: studentId=${studentId}, status=${status}`);
+          this.logger.log(
+            `Payment history: studentId=${studentId}, status=${status}`,
+          );
 
           // Build filter
           const where: any = {};
@@ -112,8 +135,10 @@ Ket qua tra ve:
             pending: transactions.filter((t) => t.status === 'pending').length,
             success: transactions.filter((t) => t.status === 'success').length,
             failed: transactions.filter((t) => t.status === 'failed').length,
-            cancelled: transactions.filter((t) => t.status === 'cancelled').length,
-            refunded: transactions.filter((t) => t.status === 'refunded').length,
+            cancelled: transactions.filter((t) => t.status === 'cancelled')
+              .length,
+            refunded: transactions.filter((t) => t.status === 'refunded')
+              .length,
             expired: transactions.filter((t) => t.status === 'expired').length,
           };
 
@@ -177,13 +202,25 @@ Ket qua tra ve:
 - Bieu do xu huong
 - So sanh giai doan`,
       schema: z.object({
-        period: z.enum(['week', 'month', 'quarter', 'year']).optional().default('month'),
-        groupBy: z.enum(['day', 'week', 'month', 'course']).optional().default('day'),
+        period: z
+          .enum(['week', 'month', 'quarter', 'year'])
+          .optional()
+          .default('month'),
+        groupBy: z
+          .enum(['day', 'week', 'month', 'course'])
+          .optional()
+          .default('day'),
         includeCharts: z.boolean().optional().default(true),
       }),
-      func: async ({ period = 'month', groupBy = 'day', includeCharts = true }) => {
+      func: async ({
+        period = 'month',
+        groupBy = 'day',
+        includeCharts = true,
+      }) => {
         try {
-          this.logger.log(`Revenue report: period=${period}, groupBy=${groupBy}`);
+          this.logger.log(
+            `Revenue report: period=${period}, groupBy=${groupBy}`,
+          );
 
           const startDate = this.getStartDate(period);
 
@@ -202,14 +239,21 @@ Ket qua tra ve:
           });
 
           // Total revenue
-          const totalRevenue = transactions.reduce((sum, t) => sum + t.amount, 0);
+          const totalRevenue = transactions.reduce(
+            (sum, t) => sum + t.amount,
+            0,
+          );
           const totalTransactions = transactions.length;
-          const avgTransactionValue = totalTransactions > 0
-            ? Math.round(totalRevenue / totalTransactions)
-            : 0;
+          const avgTransactionValue =
+            totalTransactions > 0
+              ? Math.round(totalRevenue / totalTransactions)
+              : 0;
 
           // Group by time period
-          const timeGroups = new Map<string, { date: string; amount: number; count: number }>();
+          const timeGroups = new Map<
+            string,
+            { date: string; amount: number; count: number }
+          >();
 
           transactions.forEach((t) => {
             let key: string;
@@ -236,11 +280,20 @@ Ket qua tra ve:
             group.count++;
           });
 
-          const timeSeriesData = Array.from(timeGroups.values())
-            .sort((a, b) => a.date.localeCompare(b.date));
+          const timeSeriesData = Array.from(timeGroups.values()).sort((a, b) =>
+            a.date.localeCompare(b.date),
+          );
 
           // Revenue by course
-          const courseRevenue = new Map<string, { courseId: string; courseTitle: string; amount: number; count: number }>();
+          const courseRevenue = new Map<
+            string,
+            {
+              courseId: string;
+              courseTitle: string;
+              amount: number;
+              count: number;
+            }
+          >();
 
           transactions.forEach((t) => {
             if (t.course) {
@@ -258,21 +311,33 @@ Ket qua tra ve:
             }
           });
 
-          const courseRevenueData = Array.from(courseRevenue.values())
-            .sort((a, b) => b.amount - a.amount);
+          const courseRevenueData = Array.from(courseRevenue.values()).sort(
+            (a, b) => b.amount - a.amount,
+          );
 
           // Transaction type breakdown
           const typeBreakdown = {
-            course_purchase: transactions.filter((t) => t.type === 'course_purchase').reduce((s, t) => s + t.amount, 0),
-            lesson_unlock: transactions.filter((t) => t.type === 'lesson_unlock').reduce((s, t) => s + t.amount, 0),
-            refund: transactions.filter((t) => t.type === 'refund').reduce((s, t) => s + t.amount, 0),
-            bonus: transactions.filter((t) => t.type === 'bonus').reduce((s, t) => s + t.amount, 0),
+            course_purchase: transactions
+              .filter((t) => t.type === 'course_purchase')
+              .reduce((s, t) => s + t.amount, 0),
+            lesson_unlock: transactions
+              .filter((t) => t.type === 'lesson_unlock')
+              .reduce((s, t) => s + t.amount, 0),
+            refund: transactions
+              .filter((t) => t.type === 'refund')
+              .reduce((s, t) => s + t.amount, 0),
+            bonus: transactions
+              .filter((t) => t.type === 'bonus')
+              .reduce((s, t) => s + t.amount, 0),
           };
 
           // Provider breakdown
           const providerBreakdown = new Map<string, number>();
           transactions.forEach((t) => {
-            providerBreakdown.set(t.provider, (providerBreakdown.get(t.provider) || 0) + t.amount);
+            providerBreakdown.set(
+              t.provider,
+              (providerBreakdown.get(t.provider) || 0) + t.amount,
+            );
           });
 
           // Generate charts
@@ -285,13 +350,22 @@ Ket qua tra ve:
                 chartType: 'line',
                 title: `Doanh thu theo ${groupBy === 'day' ? 'ngay' : groupBy === 'week' ? 'tuan' : 'thang'}`,
                 data: timeSeriesData.slice(-14).map((d) => ({
-                  name: groupBy === 'day'
-                    ? new Date(d.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
-                    : d.date,
+                  name:
+                    groupBy === 'day'
+                      ? new Date(d.date).toLocaleDateString('vi-VN', {
+                          day: '2-digit',
+                          month: '2-digit',
+                        })
+                      : d.date,
                   value: Math.round(d.amount / 1000), // In thousands
                 })),
                 config: {
-                  xLabel: groupBy === 'day' ? 'Ngay' : groupBy === 'week' ? 'Tuan' : 'Thang',
+                  xLabel:
+                    groupBy === 'day'
+                      ? 'Ngay'
+                      : groupBy === 'week'
+                        ? 'Tuan'
+                        : 'Thang',
                   yLabel: 'Doanh thu (nghìn VND)',
                   colors: ['#10b981'],
                 },
@@ -322,12 +396,20 @@ Ket qua tra ve:
                 type: 'chart',
                 chartType: 'pie',
                 title: 'Phan bo theo phuong thuc thanh toan',
-                data: Array.from(providerBreakdown.entries()).map(([provider, amount]) => ({
-                  name: provider.toUpperCase(),
-                  value: Math.round(amount / 1000),
-                })),
+                data: Array.from(providerBreakdown.entries()).map(
+                  ([provider, amount]) => ({
+                    name: provider.toUpperCase(),
+                    value: Math.round(amount / 1000),
+                  }),
+                ),
                 config: {
-                  colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+                  colors: [
+                    '#3b82f6',
+                    '#10b981',
+                    '#f59e0b',
+                    '#ef4444',
+                    '#8b5cf6',
+                  ],
                   legend: true,
                 },
               });
@@ -340,13 +422,22 @@ Ket qua tra ve:
                 chartType: 'bar',
                 title: 'So giao dich theo thoi gian',
                 data: timeSeriesData.slice(-14).map((d) => ({
-                  name: groupBy === 'day'
-                    ? new Date(d.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
-                    : d.date,
+                  name:
+                    groupBy === 'day'
+                      ? new Date(d.date).toLocaleDateString('vi-VN', {
+                          day: '2-digit',
+                          month: '2-digit',
+                        })
+                      : d.date,
                   value: d.count,
                 })),
                 config: {
-                  xLabel: groupBy === 'day' ? 'Ngay' : groupBy === 'week' ? 'Tuan' : 'Thang',
+                  xLabel:
+                    groupBy === 'day'
+                      ? 'Ngay'
+                      : groupBy === 'week'
+                        ? 'Tuan'
+                        : 'Thang',
                   yLabel: 'So giao dich',
                   colors: ['#8b5cf6'],
                 },
@@ -412,13 +503,27 @@ Ket qua tra ve:
 - Thoi gian cho
 - Goi y xu ly`,
       schema: z.object({
-        includeExpired: z.boolean().optional().default(true).describe('Bao gom giao dich het han'),
-        includeFailed: z.boolean().optional().default(true).describe('Bao gom giao dich that bai'),
+        includeExpired: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('Bao gom giao dich het han'),
+        includeFailed: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('Bao gom giao dich that bai'),
         limit: z.number().optional().default(50),
       }),
-      func: async ({ includeExpired = true, includeFailed = true, limit = 50 }) => {
+      func: async ({
+        includeExpired = true,
+        includeFailed = true,
+        limit = 50,
+      }) => {
         try {
-          this.logger.log(`Pending payments: expired=${includeExpired}, failed=${includeFailed}`);
+          this.logger.log(
+            `Pending payments: expired=${includeExpired}, failed=${includeFailed}`,
+          );
 
           const statusFilter: PaymentStatus[] = ['pending'];
           if (includeExpired) statusFilter.push('expired');
@@ -430,7 +535,12 @@ Ket qua tra ve:
             },
             include: {
               student: {
-                select: { id: true, displayName: true, email: true, phone: true },
+                select: {
+                  id: true,
+                  displayName: true,
+                  email: true,
+                  phone: true,
+                },
               },
               course: {
                 select: { id: true, title: true, price: true },
@@ -451,7 +561,9 @@ Ket qua tra ve:
           // Calculate waiting time
           const now = new Date();
           const pendingWithAge = pending.map((t) => {
-            const ageMinutes = Math.round((now.getTime() - new Date(t.createdAt).getTime()) / 60000);
+            const ageMinutes = Math.round(
+              (now.getTime() - new Date(t.createdAt).getTime()) / 60000,
+            );
             return {
               ...this.formatTransaction(t),
               ageMinutes,
@@ -465,7 +577,9 @@ Ket qua tra ve:
             responseCode: t.vnpayResponseCode,
           }));
 
-          const expiredFormatted = expired.map((t) => this.formatTransaction(t));
+          const expiredFormatted = expired.map((t) =>
+            this.formatTransaction(t),
+          );
 
           // Summary
           const summary = {
@@ -479,15 +593,25 @@ Ket qua tra ve:
           // Recommendations
           const recommendations: string[] = [];
           if (summary.staleTransactions > 0) {
-            recommendations.push(`Co ${summary.staleTransactions} giao dich dang cho qua 30 phut - kiem tra trang thai`);
+            recommendations.push(
+              `Co ${summary.staleTransactions} giao dich dang cho qua 30 phut - kiem tra trang thai`,
+            );
           }
           if (failed.length > 0) {
-            recommendations.push(`Co ${failed.length} giao dich that bai - lien he hoc sinh de ho tro`);
+            recommendations.push(
+              `Co ${failed.length} giao dich that bai - lien he hoc sinh de ho tro`,
+            );
           }
           if (expired.length > 0) {
-            recommendations.push(`Co ${expired.length} giao dich het han - co the gui nhac nho thanh toan lai`);
+            recommendations.push(
+              `Co ${expired.length} giao dich het han - co the gui nhac nho thanh toan lai`,
+            );
           }
-          if (summary.totalPending === 0 && failed.length === 0 && expired.length === 0) {
+          if (
+            summary.totalPending === 0 &&
+            failed.length === 0 &&
+            expired.length === 0
+          ) {
             recommendations.push('Khong co giao dich can xu ly');
           }
 
@@ -538,13 +662,18 @@ Ket qua tra ve:
       }),
       func: async ({ studentId, studentEmail, studentName }) => {
         try {
-          this.logger.log(`Student payment status: ${studentId || studentEmail || studentName}`);
+          this.logger.log(
+            `Student payment status: ${studentId || studentEmail || studentName}`,
+          );
 
           // Find student
           if (!studentId) {
             const whereClause: any = { role: 'student' };
             if (studentEmail) {
-              whereClause.email = { contains: studentEmail, mode: 'insensitive' };
+              whereClause.email = {
+                contains: studentEmail,
+                mode: 'insensitive',
+              };
             } else if (studentName) {
               whereClause.OR = [
                 { displayName: { contains: studentName, mode: 'insensitive' } },
@@ -554,11 +683,14 @@ Ket qua tra ve:
             } else {
               return JSON.stringify({
                 success: false,
-                error: 'Vui long cung cap studentId, studentEmail hoac studentName',
+                error:
+                  'Vui long cung cap studentId, studentEmail hoac studentName',
               });
             }
 
-            const student = await this.prisma.user.findFirst({ where: whereClause });
+            const student = await this.prisma.user.findFirst({
+              where: whereClause,
+            });
             if (!student) {
               return JSON.stringify({
                 success: false,
@@ -575,7 +707,10 @@ Ket qua tra ve:
           });
 
           if (!student) {
-            return JSON.stringify({ success: false, error: 'Khong tim thay hoc sinh' });
+            return JSON.stringify({
+              success: false,
+              error: 'Khong tim thay hoc sinh',
+            });
           }
 
           // Get all transactions
@@ -607,13 +742,25 @@ Ket qua tra ve:
           });
 
           // Categorize transactions
-          const successTransactions = transactions.filter((t) => t.status === 'success');
-          const pendingTransactions = transactions.filter((t) => t.status === 'pending');
-          const failedTransactions = transactions.filter((t) => t.status === 'failed');
+          const successTransactions = transactions.filter(
+            (t) => t.status === 'success',
+          );
+          const pendingTransactions = transactions.filter(
+            (t) => t.status === 'pending',
+          );
+          const failedTransactions = transactions.filter(
+            (t) => t.status === 'failed',
+          );
 
           // Calculate totals
-          const totalPaid = successTransactions.reduce((s, t) => s + t.amount, 0);
-          const totalPending = pendingTransactions.reduce((s, t) => s + t.amount, 0);
+          const totalPaid = successTransactions.reduce(
+            (s, t) => s + t.amount,
+            0,
+          );
+          const totalPending = pendingTransactions.reduce(
+            (s, t) => s + t.amount,
+            0,
+          );
 
           // Purchased courses
           const purchasedCourses = successTransactions
@@ -713,12 +860,14 @@ Ket qua tra ve:
       type: t.type,
       status: t.status,
       provider: t.provider,
-      student: t.student ? {
-        id: t.student.id,
-        name: t.student.displayName,
-        email: t.student.email,
-        phone: t.student.phone,
-      } : null,
+      student: t.student
+        ? {
+            id: t.student.id,
+            name: t.student.displayName,
+            email: t.student.email,
+            phone: t.student.phone,
+          }
+        : null,
       course: t.course?.title,
       classroom: t.classroom?.name,
       vnpayTxnRef: t.vnpayTxnRef,
@@ -749,9 +898,13 @@ Ket qua tra ve:
 - Gia tri TB: ${data.avgTransactionValue.toLocaleString()} VND
 - Khoa hoc ban chay nhat: ${data.topCourse?.courseTitle || 'N/A'} (${data.topCourse?.amount?.toLocaleString() || 0} VND)
 
-**Xu huong:** ${data.trend.length > 1 ?
-  (data.trend[data.trend.length - 1].amount > data.trend[0].amount ? 'Tang' : 'Giam')
-  : 'Chua du du lieu'}
+**Xu huong:** ${
+      data.trend.length > 1
+        ? data.trend[data.trend.length - 1].amount > data.trend[0].amount
+          ? 'Tang'
+          : 'Giam'
+        : 'Chua du du lieu'
+    }
 
 Dua ra 2-3 insights ngan gon va 1-2 goi y.
 
@@ -763,7 +916,10 @@ Format JSON:
 
     try {
       const response = await this.gemini.generateResponse(prompt);
-      const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const cleaned = response
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
       return JSON.parse(cleaned);
     } catch {
       return {

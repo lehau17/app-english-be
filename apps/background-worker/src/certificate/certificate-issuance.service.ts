@@ -3,7 +3,7 @@ import { KafkaService } from '@app/shared';
 import { ICertificateIssuer } from '@app/shared/certificate/interfaces/certificate-issuer.interface';
 import {
   getGradeLevel,
-  isEligibleForCertificate
+  isEligibleForCertificate,
 } from '@app/shared/certificate/utils/grade-level.util';
 import { Injectable, Logger } from '@nestjs/common';
 import { IssuedCertificate, NotificationChannel } from '@prisma/client';
@@ -150,7 +150,12 @@ export class CertificateIssuanceService implements ICertificateIssuer {
       // Get student email
       const student = await this.prisma.user.findUnique({
         where: { id: certificate.studentId },
-        select: { email: true, displayName: true, firstName: true, lastName: true },
+        select: {
+          email: true,
+          displayName: true,
+          firstName: true,
+          lastName: true,
+        },
       });
 
       if (!student?.email) {
@@ -248,19 +253,3 @@ export class CertificateIssuanceService implements ICertificateIssuer {
     return `CERT-${coursePrefix}-${timestamp}-${random}`;
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

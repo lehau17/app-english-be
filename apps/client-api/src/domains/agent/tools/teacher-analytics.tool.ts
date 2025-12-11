@@ -33,13 +33,41 @@ Ket qua tra ve:
 - 3-4 bieu do: bar (diem lop), pie (phan bo hoc vien), bar (completion), radar (tong quan)`,
       schema: z.object({
         teacherId: z.string().optional().describe('UUID cua giao vien'),
-        teacherName: z.string().optional().describe('Ten giao vien de tim kiem'),
-        teacherEmail: z.string().optional().describe('Email giao vien de tim kiem'),
-        period: z.enum(['week', 'month', 'quarter', 'all']).optional().default('month').describe('Khoang thoi gian phan tich'),
-        includeCharts: z.boolean().optional().default(true).describe('Co tao bieu do khong'),
+        teacherName: z
+          .string()
+          .optional()
+          .describe('Ten giao vien de tim kiem'),
+        teacherEmail: z
+          .string()
+          .optional()
+          .describe('Email giao vien de tim kiem'),
+        period: z
+          .enum(['week', 'month', 'quarter', 'all'])
+          .optional()
+          .default('month')
+          .describe('Khoang thoi gian phan tich'),
+        includeCharts: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('Co tao bieu do khong'),
       }),
-      func: async ({ teacherId, teacherName, teacherEmail, period = 'month', includeCharts = true }) => {
-        return this._call(JSON.stringify({ teacherId, teacherName, teacherEmail, period, includeCharts }));
+      func: async ({
+        teacherId,
+        teacherName,
+        teacherEmail,
+        period = 'month',
+        includeCharts = true,
+      }) => {
+        return this._call(
+          JSON.stringify({
+            teacherId,
+            teacherName,
+            teacherEmail,
+            period,
+            includeCharts,
+          }),
+        );
       },
     });
   }
@@ -142,7 +170,10 @@ Ket qua tra ve:
         generatedAt: new Date().toISOString(),
       });
     } catch (error) {
-      this.logger.error(`Teacher analytics error: ${error.message}`, error.stack);
+      this.logger.error(
+        `Teacher analytics error: ${error.message}`,
+        error.stack,
+      );
       return JSON.stringify({
         success: false,
         error: `Lỗi phân tích giáo viên: ${error.message}`,
@@ -207,7 +238,9 @@ Ket qua tra ve:
       }),
     ]);
 
-    const activeClasses = classrooms.filter((c) => c.status === 'ongoing').length;
+    const activeClasses = classrooms.filter(
+      (c) => c.status === 'ongoing',
+    ).length;
     const totalStudents = classrooms.reduce(
       (sum, c) => sum + c.students.length,
       0,

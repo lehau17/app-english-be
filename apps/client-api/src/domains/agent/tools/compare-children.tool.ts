@@ -109,20 +109,23 @@ Trả về bảng so sánh chi tiết với biểu đồ và gợi ý.`,
                 'Chưa có tên';
 
               // Get submissions
-              const submissions = await this.prisma.assignmentSubmission.findMany({
-                where: {
-                  studentId: childId,
-                  ...(dateFilter && { submittedAt: { gte: dateFilter } }),
-                },
-                include: {
-                  assignment: {
-                    select: { totalPoints: true, type: true },
+              const submissions =
+                await this.prisma.assignmentSubmission.findMany({
+                  where: {
+                    studentId: childId,
+                    ...(dateFilter && { submittedAt: { gte: dateFilter } }),
                   },
-                },
-              });
+                  include: {
+                    assignment: {
+                      select: { totalPoints: true, type: true },
+                    },
+                  },
+                });
 
               // Calculate scores
-              const gradedSubmissions = submissions.filter((s) => s.score !== null);
+              const gradedSubmissions = submissions.filter(
+                (s) => s.score !== null,
+              );
               const avgScore =
                 gradedSubmissions.length > 0
                   ? gradedSubmissions.reduce(
@@ -153,7 +156,9 @@ Trả về bảng so sánh chi tiết với biểu đồ và gợi ý.`,
                 s.attendance.some((a) => a.status === 'present'),
               ).length;
               const attendanceRate =
-                totalSessions > 0 ? (attendedSessions / totalSessions) * 100 : 0;
+                totalSessions > 0
+                  ? (attendedSessions / totalSessions) * 100
+                  : 0;
 
               // Get activity progress
               const progressRecords = await this.prisma.progress.findMany({
@@ -203,7 +208,8 @@ Trả về bảng so sánh chi tiết với biểu đồ và gợi ý.`,
               else if (avgScore < 60) weaknesses.push('Điểm số cần cải thiện');
 
               if (attendanceRate >= 90) strengths.push('Chuyên cần tốt');
-              else if (attendanceRate < 70) weaknesses.push('Cần đi học đều hơn');
+              else if (attendanceRate < 70)
+                weaknesses.push('Cần đi học đều hơn');
 
               if (completedActivities >= 20)
                 strengths.push('Hoàn thành nhiều bài học');
@@ -257,9 +263,8 @@ Trả về bảng so sánh chi tiết với biểu đồ và gợi ý.`,
           );
 
           // Generate AI recommendations
-          const recommendations = await this.generateRecommendations(
-            childrenData,
-          );
+          const recommendations =
+            await this.generateRecommendations(childrenData);
 
           // Generate comparison chart data
           const chartData = this.generateChartData(childrenData);
@@ -397,7 +402,10 @@ Trả về bảng so sánh chi tiết với biểu đồ và gợi ý.`,
           {
             metric: 'Điểm số',
             ...Object.fromEntries(
-              childrenData.map((c) => [c.name.substring(0, 8), c.metrics.avgScore]),
+              childrenData.map((c) => [
+                c.name.substring(0, 8),
+                c.metrics.avgScore,
+              ]),
             ),
           },
           {

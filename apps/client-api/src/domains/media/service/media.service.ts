@@ -1,8 +1,8 @@
 import {
-    GeminiService,
-    KafkaProducerService,
-    KafkaTopic,
-    MediaProcessingMessage,
+  GeminiService,
+  KafkaProducerService,
+  KafkaTopic,
+  MediaProcessingMessage,
 } from '@app/shared';
 import { Injectable, Logger } from '@nestjs/common';
 import { MediaFile } from '@prisma/client';
@@ -31,7 +31,10 @@ export class MediaService {
     return this.repository.findBySource(source, sourceId);
   }
 
-  async createFromContext(url: string, context: MediaContext): Promise<MediaFile> {
+  async createFromContext(
+    url: string,
+    context: MediaContext,
+  ): Promise<MediaFile> {
     // Check if MediaFile already exists
     const existing = await this.repository.findByUrl(url);
     if (existing) {
@@ -69,7 +72,10 @@ export class MediaService {
 
     // Generate embedding asynchronously (don't block)
     this.generateAndSaveEmbedding(mediaFile.id, context).catch((error) => {
-      this.logger.error(`Failed to generate embedding for media ${mediaFile.id}:`, error);
+      this.logger.error(
+        `Failed to generate embedding for media ${mediaFile.id}:`,
+        error,
+      );
     });
 
     // Emit Kafka event for media processing (thumbnail, duration)
@@ -150,7 +156,10 @@ export class MediaService {
       if (context.lessonTitle) {
         parts.push(`lesson: ${context.lessonTitle}`);
       }
-    } else if (context.source === 'assignment_activity' && context.activityTitle) {
+    } else if (
+      context.source === 'assignment_activity' &&
+      context.activityTitle
+    ) {
       parts.push(`Media for assignment activity: ${context.activityTitle}`);
       if (context.assignmentTitle) {
         parts.push(`in assignment: ${context.assignmentTitle}`);
@@ -172,7 +181,10 @@ export class MediaService {
     return this.geminiService.generateEmbedding(text);
   }
 
-  async saveEmbeddingToVector(mediaId: string, embedding: number[]): Promise<void> {
+  async saveEmbeddingToVector(
+    mediaId: string,
+    embedding: number[],
+  ): Promise<void> {
     await this.repository.saveEmbedding(mediaId, embedding);
   }
 
@@ -185,7 +197,10 @@ export class MediaService {
       await this.saveEmbeddingToVector(mediaId, embedding);
       this.logger.log(`Generated and saved embedding for media ${mediaId}`);
     } catch (error) {
-      this.logger.error(`Failed to generate embedding for media ${mediaId}:`, error);
+      this.logger.error(
+        `Failed to generate embedding for media ${mediaId}:`,
+        error,
+      );
     }
   }
 

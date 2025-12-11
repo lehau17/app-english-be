@@ -27,7 +27,7 @@ export class ActivityAIService {
     private readonly geminiService: GeminiService,
     private readonly googleTranslateService: GoogleTranslateFreeService,
     private readonly uploadService: UploadService,
-  ) { }
+  ) {}
 
   async generateActivities(
     courseTitle: string,
@@ -395,11 +395,15 @@ Generate the vocabulary list now:`;
           difficulty,
           points: words.length * 10,
           orderNo,
-          instructions: userPrompt || `Learn ${words.length} vocabulary words related to ${lessonTitle}`,
+          instructions:
+            userPrompt ||
+            `Learn ${words.length} vocabulary words related to ${lessonTitle}`,
         };
       } catch (error) {
         if (attempt < MAX_RETRIES) {
-          this.logger.warn(`Retry ${attempt + 1}/${MAX_RETRIES} for vocab activity due to JSON error`);
+          this.logger.warn(
+            `Retry ${attempt + 1}/${MAX_RETRIES} for vocab activity due to JSON error`,
+          );
           continue;
         }
         this.logger.error('Failed to generate vocab activity:', error);
@@ -463,7 +467,9 @@ Generate the quiz questions now:`;
         points: questions.length * 20,
         orderNo,
         passingScore: 60,
-        instructions: userPrompt || `Complete this ${questions.length}-question quiz about ${lessonTitle}`,
+        instructions:
+          userPrompt ||
+          `Complete this ${questions.length}-question quiz about ${lessonTitle}`,
       };
     } catch (error) {
       this.logger.error('Failed to generate quiz activity:', error);
@@ -525,8 +531,8 @@ Generate the listening activity now:`;
         const result = await this.googleTranslateService.createAudioWithUrl(
           data.dialogue,
           'en',
-        )
-        audioUrl = result.url
+        );
+        audioUrl = result.url;
         this.logger.log('🎵 Generated audio for listening dialogue');
       } catch (error) {
         this.logger.warn('Failed to generate dialogue audio', error);
@@ -543,7 +549,9 @@ Generate the listening activity now:`;
         points: data.questions.length * 20,
         orderNo,
         passingScore: 60,
-        instructions: userPrompt || `Listen to the audio and answer ${data.questions.length} questions`,
+        instructions:
+          userPrompt ||
+          `Listen to the audio and answer ${data.questions.length} questions`,
       };
     } catch (error) {
       this.logger.error('Failed to generate listening activity:', error);
@@ -603,7 +611,9 @@ Generate the speaking activity now:`;
         difficulty,
         points: 50,
         orderNo,
-        instructions: userPrompt || `Record yourself speaking for at least ${data.minSeconds} seconds`,
+        instructions:
+          userPrompt ||
+          `Record yourself speaking for at least ${data.minSeconds} seconds`,
       };
     } catch (error) {
       this.logger.error('Failed to generate speaking activity:', error);
@@ -667,7 +677,9 @@ Generate the reading activity now:`;
         points: data.questions.length * 20,
         orderNo,
         passingScore: 60,
-        instructions: userPrompt || `Read the passage and answer ${data.questions.length} questions`,
+        instructions:
+          userPrompt ||
+          `Read the passage and answer ${data.questions.length} questions`,
       };
     } catch (error) {
       this.logger.error('Failed to generate reading activity:', error);
@@ -728,7 +740,8 @@ Generate the writing activity now:`;
         difficulty,
         points: 100,
         orderNo,
-        instructions: userPrompt || `Write at least ${data.minWords} words about the topic`,
+        instructions:
+          userPrompt || `Write at least ${data.minWords} words about the topic`,
       };
     } catch (error) {
       this.logger.error('Failed to generate writing activity:', error);
@@ -799,7 +812,9 @@ Generate the pronunciation activity now:`;
             'en',
           );
           phrase.sampleUrl = result.url;
-          this.logger.log(`🎵 Generated sample audio for phrase: ${phrase.text.substring(0, 30)}...`);
+          this.logger.log(
+            `🎵 Generated sample audio for phrase: ${phrase.text.substring(0, 30)}...`,
+          );
         } catch (error) {
           this.logger.warn(`Failed to generate sample audio for phrase`, error);
           phrase.sampleUrl = '';
@@ -872,7 +887,9 @@ Generate the fill-blank activity now with 5-8 blanks:`;
         points: data.blanks.length * 10,
         orderNo,
         passingScore: 70,
-        instructions: userPrompt || `Complete the passage by filling in ${data.blanks.length} blanks`,
+        instructions:
+          userPrompt ||
+          `Complete the passage by filling in ${data.blanks.length} blanks`,
       };
     } catch (error) {
       this.logger.error('Failed to generate fill-blank activity:', error);
@@ -995,7 +1012,8 @@ Generate the matching activity now with 6-8 pairs:`;
         points: data.leftItems.length * 10,
         orderNo,
         passingScore: 70,
-        instructions: userPrompt || `Match ${data.leftItems.length} pairs correctly`,
+        instructions:
+          userPrompt || `Match ${data.leftItems.length} pairs correctly`,
       };
     } catch (error) {
       this.logger.error('Failed to generate matching activity:', error);
@@ -1051,7 +1069,8 @@ Generate the mini-game activity now:`;
         difficulty,
         points: 40,
         orderNo,
-        instructions: userPrompt || `Unscramble the letters to form the correct word`,
+        instructions:
+          userPrompt || `Unscramble the letters to form the correct word`,
       };
     } catch (error) {
       this.logger.error('Failed to generate mini-game activity:', error);
@@ -1115,7 +1134,9 @@ Generate the grammar activity now:`;
         points: data.exercises.length * 15,
         orderNo,
         passingScore: 70,
-        instructions: userPrompt || `Practice grammar with ${data.exercises.length} exercises`,
+        instructions:
+          userPrompt ||
+          `Practice grammar with ${data.exercises.length} exercises`,
       };
     } catch (error) {
       this.logger.error('Failed to generate grammar activity:', error);
@@ -1245,7 +1266,8 @@ Generate the conversation activity now:`;
         difficulty,
         points: 60,
         orderNo,
-        instructions: userPrompt || 'Practice a conversation based on the scenario',
+        instructions:
+          userPrompt || 'Practice a conversation based on the scenario',
       };
     } catch (error) {
       this.logger.error('Failed to generate conversation activity:', error);
@@ -1321,7 +1343,9 @@ Generate the conversation activity now:`;
     // Remove trailing comma before closing bracket/brace
     repaired = repaired.replace(/,\s*([}\]])/g, '$1');
 
-    this.logger.warn(`Attempted JSON repair: ${openBrackets}[ ${closeBrackets}] ${openBraces}{ ${closeBraces}} -> repaired`);
+    this.logger.warn(
+      `Attempted JSON repair: ${openBrackets}[ ${closeBrackets}] ${openBraces}{ ${closeBraces}} -> repaired`,
+    );
 
     return repaired;
   }

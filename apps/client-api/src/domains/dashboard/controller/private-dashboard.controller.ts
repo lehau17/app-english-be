@@ -1,6 +1,12 @@
 import { ResponseMessage, Roles, RolesGuard } from '@app/shared';
 import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { AnalyticsPeriod } from '../dto/analytics.dto';
 import { DashboardService } from '../service/dashboard.service';
@@ -11,7 +17,7 @@ import { DashboardService } from '../service/dashboard.service';
 @Controller('/private/v1/dashboard')
 @UseGuards(RolesGuard)
 export class DashboardController {
-  constructor(private readonly dashboardService: DashboardService) { }
+  constructor(private readonly dashboardService: DashboardService) {}
 
   @Get()
   @ApiOperation({ summary: 'Get dashboard data' })
@@ -47,7 +53,11 @@ export class DashboardController {
     summary: 'Get AI-powered analytics for a classroom',
     description: 'Analyze classroom learning patterns using Gemini AI',
   })
-  @ApiParam({ name: 'classroomId', type: String, description: 'Classroom UUID' })
+  @ApiParam({
+    name: 'classroomId',
+    type: String,
+    description: 'Classroom UUID',
+  })
   @ApiQuery({
     name: 'period',
     enum: AnalyticsPeriod,

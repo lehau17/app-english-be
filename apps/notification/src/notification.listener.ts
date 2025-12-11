@@ -1,10 +1,10 @@
 import { PrismaRepository } from '@app/database';
 import { KafkaConfigService, KafkaTopic } from '@app/shared';
 import {
-    Injectable,
-    Logger,
-    OnModuleDestroy,
-    OnModuleInit,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
 } from '@nestjs/common';
 import { Consumer, Kafka } from 'kafkajs';
 import { NotificationService } from './notification.service';
@@ -228,9 +228,21 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async handleEnrollmentVerification(notification: NotificationMessage) {
+  private async handleEnrollmentVerification(
+    notification: NotificationMessage,
+  ) {
     try {
-      const { email, studentName, courseName, classroomName, price, currency, studentCount, verificationLink, expiresIn } = notification.data;
+      const {
+        email,
+        studentName,
+        courseName,
+        classroomName,
+        price,
+        currency,
+        studentCount,
+        verificationLink,
+        expiresIn,
+      } = notification.data;
 
       await this.notificationService.sendEmail({
         to: [email],
@@ -259,13 +271,24 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
 
   private async handleWelcomeNewUser(notification: NotificationMessage) {
     try {
-      const { email, userName, role, courseName, classroomName, price, currency, loginUrl, password } = notification.data;
+      const {
+        email,
+        userName,
+        role,
+        courseName,
+        classroomName,
+        price,
+        currency,
+        loginUrl,
+        password,
+      } = notification.data;
 
       await this.notificationService.sendEmail({
         to: [email],
-        subject: role === 'Phụ huynh'
-          ? 'Chào mừng phụ huynh đến với EngliMaster'
-          : 'Chào mừng bạn đến với EngliMaster',
+        subject:
+          role === 'Phụ huynh'
+            ? 'Chào mừng phụ huynh đến với EngliMaster'
+            : 'Chào mừng bạn đến với EngliMaster',
         template: './welcome-new-user',
         context: {
           userName,
@@ -289,9 +312,22 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async handleEnrollmentConfirmation(notification: NotificationMessage) {
+  private async handleEnrollmentConfirmation(
+    notification: NotificationMessage,
+  ) {
     try {
-      const { email, userName, courseName, classroomName, price, currency, startDate, endDate, dashboardUrl, classroomUrl } = notification.data;
+      const {
+        email,
+        userName,
+        courseName,
+        classroomName,
+        price,
+        currency,
+        startDate,
+        endDate,
+        dashboardUrl,
+        classroomUrl,
+      } = notification.data;
 
       await this.notificationService.sendEmail({
         to: [email],
@@ -363,7 +399,9 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async handleParentCertificateIssued(notification: NotificationMessage) {
+  private async handleParentCertificateIssued(
+    notification: NotificationMessage,
+  ) {
     try {
       const {
         email,
@@ -407,7 +445,9 @@ export class NotificationListener implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private async handleSessionRescheduleNotification(notification: NotificationMessage) {
+  private async handleSessionRescheduleNotification(
+    notification: NotificationMessage,
+  ) {
     try {
       const {
         email,

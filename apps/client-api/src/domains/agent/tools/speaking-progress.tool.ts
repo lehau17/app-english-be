@@ -55,13 +55,21 @@ Ket qua tra ve:
 - Bieu do tien trinh
 - Goi y cai thien`,
       schema: z.object({
-        studentId: z.string().optional().describe('UUID cua hoc sinh (tu dong lay neu la student)'),
-        period: z.enum(['week', 'month', 'quarter', 'all']).optional().default('month'),
+        studentId: z
+          .string()
+          .optional()
+          .describe('UUID cua hoc sinh (tu dong lay neu la student)'),
+        period: z
+          .enum(['week', 'month', 'quarter', 'all'])
+          .optional()
+          .default('month'),
         includeCharts: z.boolean().optional().default(true),
       }),
       func: async ({ studentId, period = 'month', includeCharts = true }) => {
         try {
-          this.logger.log(`Speaking overview: studentId=${studentId}, period=${period}`);
+          this.logger.log(
+            `Speaking overview: studentId=${studentId}, period=${period}`,
+          );
 
           if (!studentId) {
             return JSON.stringify({
@@ -101,7 +109,10 @@ Ket qua tra ve:
           ).length;
           const totalTurns = sessions.reduce((sum, s) => sum + s.turnCount, 0);
           const totalDuration = sessions.reduce((sum, s) => {
-            const turnDuration = s.turns.reduce((t, turn) => t + (turn.userDurationSec || 0), 0);
+            const turnDuration = s.turns.reduce(
+              (t, turn) => t + (turn.userDurationSec || 0),
+              0,
+            );
             return sum + turnDuration;
           }, 0);
 
@@ -109,28 +120,40 @@ Ket qua tra ve:
           const allTurns = sessions.flatMap((s) => s.turns);
           const turnsWithScores = allTurns.filter((t) => t.score !== null);
 
-          const avgScore = turnsWithScores.length > 0
-            ? Math.round(turnsWithScores.reduce((sum, t) => sum + (t.score || 0), 0) / turnsWithScores.length)
-            : 0;
+          const avgScore =
+            turnsWithScores.length > 0
+              ? Math.round(
+                  turnsWithScores.reduce((sum, t) => sum + (t.score || 0), 0) /
+                    turnsWithScores.length,
+                )
+              : 0;
 
-          const avgRelevance = turnsWithScores.length > 0
-            ? Math.round(
-                turnsWithScores.reduce((sum, t) => sum + (t.relevanceScore || 0), 0) /
-                  turnsWithScores.length * 100,
-              ) / 100
-            : 0;
+          const avgRelevance =
+            turnsWithScores.length > 0
+              ? Math.round(
+                  (turnsWithScores.reduce(
+                    (sum, t) => sum + (t.relevanceScore || 0),
+                    0,
+                  ) /
+                    turnsWithScores.length) *
+                    100,
+                ) / 100
+              : 0;
 
           // Extract pronunciation metrics from feedback
           const pronunciationData = this.extractPronunciationMetrics(allTurns);
 
           // Group by date for trend
-          const dailyStats = new Map<string, {
-            date: string;
-            sessions: number;
-            turns: number;
-            avgScore: number;
-            scores: number[];
-          }>();
+          const dailyStats = new Map<
+            string,
+            {
+              date: string;
+              sessions: number;
+              turns: number;
+              avgScore: number;
+              scores: number[];
+            }
+          >();
 
           sessions.forEach((session) => {
             const dateKey = session.createdAt.toISOString().split('T')[0];
@@ -157,9 +180,12 @@ Ket qua tra ve:
               date: d.date,
               sessions: d.sessions,
               turns: d.turns,
-              avgScore: d.scores.length > 0
-                ? Math.round(d.scores.reduce((a, b) => a + b, 0) / d.scores.length)
-                : 0,
+              avgScore:
+                d.scores.length > 0
+                  ? Math.round(
+                      d.scores.reduce((a, b) => a + b, 0) / d.scores.length,
+                    )
+                  : 0,
             }))
             .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -176,9 +202,13 @@ Ket qua tra ve:
 
           // Difficulty distribution
           const difficultyStats = {
-            beginner: sessions.filter((s) => s.targetDifficulty === 'beginner').length,
-            intermediate: sessions.filter((s) => s.targetDifficulty === 'intermediate').length,
-            advanced: sessions.filter((s) => s.targetDifficulty === 'advanced').length,
+            beginner: sessions.filter((s) => s.targetDifficulty === 'beginner')
+              .length,
+            intermediate: sessions.filter(
+              (s) => s.targetDifficulty === 'intermediate',
+            ).length,
+            advanced: sessions.filter((s) => s.targetDifficulty === 'advanced')
+              .length,
           };
 
           // Generate charts
@@ -190,7 +220,10 @@ Ket qua tra ve:
               chartType: 'line',
               title: 'Xu huong diem luyen noi',
               data: dailyTrend.slice(-14).map((d) => ({
-                name: new Date(d.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+                name: new Date(d.date).toLocaleDateString('vi-VN', {
+                  day: '2-digit',
+                  month: '2-digit',
+                }),
                 value: d.avgScore,
               })),
               config: {
@@ -206,7 +239,10 @@ Ket qua tra ve:
               chartType: 'bar',
               title: 'So phien luyen tap theo ngay',
               data: dailyTrend.slice(-14).map((d) => ({
-                name: new Date(d.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+                name: new Date(d.date).toLocaleDateString('vi-VN', {
+                  day: '2-digit',
+                  month: '2-digit',
+                }),
                 value: d.sessions,
               })),
               config: {
@@ -227,7 +263,13 @@ Ket qua tra ve:
                   value: t.count,
                 })),
                 config: {
-                  colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+                  colors: [
+                    '#3b82f6',
+                    '#10b981',
+                    '#f59e0b',
+                    '#ef4444',
+                    '#8b5cf6',
+                  ],
                   legend: true,
                 },
               });
@@ -242,8 +284,14 @@ Ket qua tra ve:
                 data: [
                   { name: 'Accuracy', value: pronunciationData.avgAccuracy },
                   { name: 'Fluency', value: pronunciationData.avgFluency },
-                  { name: 'Completeness', value: pronunciationData.avgCompleteness },
-                  { name: 'Pronunciation', value: pronunciationData.avgPronunciation },
+                  {
+                    name: 'Completeness',
+                    value: pronunciationData.avgCompleteness,
+                  },
+                  {
+                    name: 'Pronunciation',
+                    value: pronunciationData.avgPronunciation,
+                  },
                 ],
                 config: {
                   colors: ['#8b5cf6'],
@@ -267,9 +315,10 @@ Ket qua tra ve:
             overview: {
               totalSessions,
               completedSessions,
-              completionRate: totalSessions > 0
-                ? Math.round((completedSessions / totalSessions) * 100)
-                : 0,
+              completionRate:
+                totalSessions > 0
+                  ? Math.round((completedSessions / totalSessions) * 100)
+                  : 0,
               totalTurns,
               totalDurationMinutes: Math.round(totalDuration / 60),
               avgScore,
@@ -314,12 +363,20 @@ Ket qua tra ve:
 - Feedback phat am
 - Phan tich AI`,
       schema: z.object({
-        sessionId: z.string().optional().describe('UUID cua phien (lay phien gan nhat neu khong co)'),
-        studentId: z.string().optional().describe('UUID hoc sinh (de lay phien gan nhat)'),
+        sessionId: z
+          .string()
+          .optional()
+          .describe('UUID cua phien (lay phien gan nhat neu khong co)'),
+        studentId: z
+          .string()
+          .optional()
+          .describe('UUID hoc sinh (de lay phien gan nhat)'),
       }),
       func: async ({ sessionId, studentId }) => {
         try {
-          this.logger.log(`Session detail: sessionId=${sessionId}, studentId=${studentId}`);
+          this.logger.log(
+            `Session detail: sessionId=${sessionId}, studentId=${studentId}`,
+          );
 
           let session: any;
 
@@ -383,55 +440,87 @@ Ket qua tra ve:
               relevanceScore: turn.relevanceScore,
               silenceDetected: turn.silenceDetected,
               suggestions: turn.suggestions,
-              pronunciation: pronunciationFb ? {
-                accuracyScore: pronunciationFb.NBest?.[0]?.PronunciationAssessment?.AccuracyScore,
-                fluencyScore: pronunciationFb.NBest?.[0]?.PronunciationAssessment?.FluencyScore,
-                completenessScore: pronunciationFb.NBest?.[0]?.PronunciationAssessment?.CompletenessScore,
-                pronScore: pronunciationFb.NBest?.[0]?.PronunciationAssessment?.PronScore,
-              } : null,
-              evaluation: evaluation ? {
-                feedback: evaluation.feedback,
-                strengths: evaluation.strengths,
-                improvements: evaluation.improvements,
-              } : null,
+              pronunciation: pronunciationFb
+                ? {
+                    accuracyScore:
+                      pronunciationFb.NBest?.[0]?.PronunciationAssessment
+                        ?.AccuracyScore,
+                    fluencyScore:
+                      pronunciationFb.NBest?.[0]?.PronunciationAssessment
+                        ?.FluencyScore,
+                    completenessScore:
+                      pronunciationFb.NBest?.[0]?.PronunciationAssessment
+                        ?.CompletenessScore,
+                    pronScore:
+                      pronunciationFb.NBest?.[0]?.PronunciationAssessment
+                        ?.PronScore,
+                  }
+                : null,
+              evaluation: evaluation
+                ? {
+                    feedback: evaluation.feedback,
+                    strengths: evaluation.strengths,
+                    improvements: evaluation.improvements,
+                  }
+                : null,
               metrics,
             };
           });
 
           // Calculate session-level stats
-          const turnsWithScores = turnsDetail.filter((t: any) => t.score !== null);
-          const avgScore = turnsWithScores.length > 0
-            ? Math.round(turnsWithScores.reduce((sum: number, t: any) => sum + t.score, 0) / turnsWithScores.length)
-            : 0;
+          const turnsWithScores = turnsDetail.filter(
+            (t: any) => t.score !== null,
+          );
+          const avgScore =
+            turnsWithScores.length > 0
+              ? Math.round(
+                  turnsWithScores.reduce(
+                    (sum: number, t: any) => sum + t.score,
+                    0,
+                  ) / turnsWithScores.length,
+                )
+              : 0;
 
           const pronunciationScores = turnsDetail
             .filter((t: any) => t.pronunciation?.accuracyScore)
             .map((t: any) => t.pronunciation);
 
-          const avgPronunciation = pronunciationScores.length > 0 ? {
-            accuracy: Math.round(
-              pronunciationScores.reduce((sum: number, p: any) => sum + p.accuracyScore, 0) /
-                pronunciationScores.length,
-            ),
-            fluency: Math.round(
-              pronunciationScores.reduce((sum: number, p: any) => sum + p.fluencyScore, 0) /
-                pronunciationScores.length,
-            ),
-            completeness: Math.round(
-              pronunciationScores.reduce((sum: number, p: any) => sum + p.completenessScore, 0) /
-                pronunciationScores.length,
-            ),
-            pronunciation: Math.round(
-              pronunciationScores.reduce((sum: number, p: any) => sum + p.pronScore, 0) /
-                pronunciationScores.length,
-            ),
-          } : null;
+          const avgPronunciation =
+            pronunciationScores.length > 0
+              ? {
+                  accuracy: Math.round(
+                    pronunciationScores.reduce(
+                      (sum: number, p: any) => sum + p.accuracyScore,
+                      0,
+                    ) / pronunciationScores.length,
+                  ),
+                  fluency: Math.round(
+                    pronunciationScores.reduce(
+                      (sum: number, p: any) => sum + p.fluencyScore,
+                      0,
+                    ) / pronunciationScores.length,
+                  ),
+                  completeness: Math.round(
+                    pronunciationScores.reduce(
+                      (sum: number, p: any) => sum + p.completenessScore,
+                      0,
+                    ) / pronunciationScores.length,
+                  ),
+                  pronunciation: Math.round(
+                    pronunciationScores.reduce(
+                      (sum: number, p: any) => sum + p.pronScore,
+                      0,
+                    ) / pronunciationScores.length,
+                  ),
+                }
+              : null;
 
           // Session duration
           const startTime = session.startedAt || session.createdAt;
           const endTime = session.endedAt || session.updatedAt;
           const durationMinutes = Math.round(
-            (new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000,
+            (new Date(endTime).getTime() - new Date(startTime).getTime()) /
+              60000,
           );
 
           return JSON.stringify({
@@ -457,8 +546,10 @@ Ket qua tra ve:
             performance: {
               avgScore,
               avgPronunciation,
-              turnsCompleted: turnsDetail.filter((t: any) => t.userTranscript).length,
-              silenceCount: turnsDetail.filter((t: any) => t.silenceDetected).length,
+              turnsCompleted: turnsDetail.filter((t: any) => t.userTranscript)
+                .length,
+              silenceCount: turnsDetail.filter((t: any) => t.silenceDetected)
+                .length,
             },
             turns: turnsDetail,
             generatedAt: new Date().toISOString(),
@@ -495,12 +586,21 @@ Ket qua tra ve:
 - Phan tich AI ve tien trinh`,
       schema: z.object({
         studentId: z.string().describe('UUID cua hoc sinh'),
-        compareType: z.enum(['week_over_week', 'month_over_month']).optional().default('week_over_week'),
+        compareType: z
+          .enum(['week_over_week', 'month_over_month'])
+          .optional()
+          .default('week_over_week'),
         includeCharts: z.boolean().optional().default(true),
       }),
-      func: async ({ studentId, compareType = 'week_over_week', includeCharts = true }) => {
+      func: async ({
+        studentId,
+        compareType = 'week_over_week',
+        includeCharts = true,
+      }) => {
         try {
-          this.logger.log(`Speaking trends: studentId=${studentId}, compareType=${compareType}`);
+          this.logger.log(
+            `Speaking trends: studentId=${studentId}, compareType=${compareType}`,
+          );
 
           const now = new Date();
           let currentPeriodStart: Date;
@@ -539,24 +639,26 @@ Ket qua tra ve:
           });
 
           // Get previous period sessions
-          const previousSessions = await this.prisma.aiSpeakingSession.findMany({
-            where: {
-              userId: studentId,
-              createdAt: {
-                gte: previousPeriodStart,
-                lt: previousPeriodEnd,
+          const previousSessions = await this.prisma.aiSpeakingSession.findMany(
+            {
+              where: {
+                userId: studentId,
+                createdAt: {
+                  gte: previousPeriodStart,
+                  lt: previousPeriodEnd,
+                },
               },
-            },
-            include: {
-              turns: {
-                select: {
-                  score: true,
-                  pronunciationFeedback: true,
-                  relevanceScore: true,
+              include: {
+                turns: {
+                  select: {
+                    score: true,
+                    pronunciationFeedback: true,
+                    relevanceScore: true,
+                  },
                 },
               },
             },
-          });
+          );
 
           // Calculate stats for each period
           const currentStats = this.calculatePeriodStats(currentSessions);
@@ -567,15 +669,27 @@ Ket qua tra ve:
             sessions: currentStats.totalSessions - previousStats.totalSessions,
             turns: currentStats.totalTurns - previousStats.totalTurns,
             avgScore: currentStats.avgScore - previousStats.avgScore,
-            avgPronunciation: currentStats.pronunciation.avgPronunciation - previousStats.pronunciation.avgPronunciation,
-            avgFluency: currentStats.pronunciation.avgFluency - previousStats.pronunciation.avgFluency,
+            avgPronunciation:
+              currentStats.pronunciation.avgPronunciation -
+              previousStats.pronunciation.avgPronunciation,
+            avgFluency:
+              currentStats.pronunciation.avgFluency -
+              previousStats.pronunciation.avgFluency,
           };
 
           // Determine trend
-          const scoreTrend = changes.avgScore > 5 ? 'improving' :
-            changes.avgScore < -5 ? 'declining' : 'stable';
-          const activityTrend = changes.sessions > 0 ? 'increasing' :
-            changes.sessions < 0 ? 'decreasing' : 'stable';
+          const scoreTrend =
+            changes.avgScore > 5
+              ? 'improving'
+              : changes.avgScore < -5
+                ? 'declining'
+                : 'stable';
+          const activityTrend =
+            changes.sessions > 0
+              ? 'increasing'
+              : changes.sessions < 0
+                ? 'decreasing'
+                : 'stable';
 
           // Generate charts
           const charts: any[] = [];
@@ -597,16 +711,31 @@ Ket qua tra ve:
             });
 
             // Chart 2: Pronunciation comparison
-            if (currentStats.pronunciation.avgAccuracy > 0 || previousStats.pronunciation.avgAccuracy > 0) {
+            if (
+              currentStats.pronunciation.avgAccuracy > 0 ||
+              previousStats.pronunciation.avgAccuracy > 0
+            ) {
               charts.push({
                 type: 'chart',
                 chartType: 'bar',
                 title: 'So sanh phat am',
                 data: [
-                  { name: 'Accuracy (truoc)', value: previousStats.pronunciation.avgAccuracy },
-                  { name: 'Accuracy (nay)', value: currentStats.pronunciation.avgAccuracy },
-                  { name: 'Fluency (truoc)', value: previousStats.pronunciation.avgFluency },
-                  { name: 'Fluency (nay)', value: currentStats.pronunciation.avgFluency },
+                  {
+                    name: 'Accuracy (truoc)',
+                    value: previousStats.pronunciation.avgAccuracy,
+                  },
+                  {
+                    name: 'Accuracy (nay)',
+                    value: currentStats.pronunciation.avgAccuracy,
+                  },
+                  {
+                    name: 'Fluency (truoc)',
+                    value: previousStats.pronunciation.avgFluency,
+                  },
+                  {
+                    name: 'Fluency (nay)',
+                    value: currentStats.pronunciation.avgFluency,
+                  },
                 ],
                 config: {
                   xLabel: 'Chi so',
@@ -700,7 +829,11 @@ Ket qua tra ve:
 - Bieu do radar`,
       schema: z.object({
         studentId: z.string().describe('UUID cua hoc sinh'),
-        limit: z.number().optional().default(50).describe('So phien gan nhat de phan tich'),
+        limit: z
+          .number()
+          .optional()
+          .default(50)
+          .describe('So phien gan nhat de phan tich'),
       }),
       func: async ({ studentId, limit = 50 }) => {
         try {
@@ -734,7 +867,10 @@ Ket qua tra ve:
 
           // Extract all pronunciation feedback
           const allFeedback: any[] = [];
-          const wordErrors: Map<string, { count: number; avgScore: number; scores: number[] }> = new Map();
+          const wordErrors: Map<
+            string,
+            { count: number; avgScore: number; scores: number[] }
+          > = new Map();
 
           sessions.forEach((session) => {
             session.turns.forEach((turn) => {
@@ -753,9 +889,15 @@ Ket qua tra ve:
                 words.forEach((word: any) => {
                   if (word.PronunciationAssessment?.AccuracyScore < 70) {
                     const wordText = word.Word.toLowerCase();
-                    const existing = wordErrors.get(wordText) || { count: 0, avgScore: 0, scores: [] };
+                    const existing = wordErrors.get(wordText) || {
+                      count: 0,
+                      avgScore: 0,
+                      scores: [],
+                    };
                     existing.count++;
-                    existing.scores.push(word.PronunciationAssessment.AccuracyScore);
+                    existing.scores.push(
+                      word.PronunciationAssessment.AccuracyScore,
+                    );
                     wordErrors.set(wordText, existing);
                   }
                 });
@@ -764,48 +906,71 @@ Ket qua tra ve:
           });
 
           // Calculate averages
-          const avgScores = allFeedback.length > 0 ? {
-            accuracy: Math.round(allFeedback.reduce((s, f) => s + f.accuracy, 0) / allFeedback.length),
-            fluency: Math.round(allFeedback.reduce((s, f) => s + f.fluency, 0) / allFeedback.length),
-            completeness: Math.round(allFeedback.reduce((s, f) => s + f.completeness, 0) / allFeedback.length),
-            pronunciation: Math.round(allFeedback.reduce((s, f) => s + f.pronunciation, 0) / allFeedback.length),
-          } : { accuracy: 0, fluency: 0, completeness: 0, pronunciation: 0 };
+          const avgScores =
+            allFeedback.length > 0
+              ? {
+                  accuracy: Math.round(
+                    allFeedback.reduce((s, f) => s + f.accuracy, 0) /
+                      allFeedback.length,
+                  ),
+                  fluency: Math.round(
+                    allFeedback.reduce((s, f) => s + f.fluency, 0) /
+                      allFeedback.length,
+                  ),
+                  completeness: Math.round(
+                    allFeedback.reduce((s, f) => s + f.completeness, 0) /
+                      allFeedback.length,
+                  ),
+                  pronunciation: Math.round(
+                    allFeedback.reduce((s, f) => s + f.pronunciation, 0) /
+                      allFeedback.length,
+                  ),
+                }
+              : { accuracy: 0, fluency: 0, completeness: 0, pronunciation: 0 };
 
           // Get top problem words
           const problemWords = Array.from(wordErrors.entries())
             .map(([word, data]) => ({
               word,
               errorCount: data.count,
-              avgScore: Math.round(data.scores.reduce((a, b) => a + b, 0) / data.scores.length),
+              avgScore: Math.round(
+                data.scores.reduce((a, b) => a + b, 0) / data.scores.length,
+              ),
             }))
             .sort((a, b) => b.errorCount - a.errorCount)
             .slice(0, 10);
 
           // Identify strengths and weaknesses
-          const sortedMetrics = Object.entries(avgScores)
-            .sort(([, a], [, b]) => b - a);
+          const sortedMetrics = Object.entries(avgScores).sort(
+            ([, a], [, b]) => b - a,
+          );
           const strengths = sortedMetrics.slice(0, 2).map(([metric]) => metric);
           const weaknesses = sortedMetrics.slice(-2).map(([metric]) => metric);
 
           // Generate recommendations
-          const recommendations = this.generatePronunciationRecommendations(avgScores, problemWords);
+          const recommendations = this.generatePronunciationRecommendations(
+            avgScores,
+            problemWords,
+          );
 
           // Generate chart
-          const charts = [{
-            type: 'chart',
-            chartType: 'radar',
-            title: 'Chi so phat am tong hop',
-            data: [
-              { name: 'Accuracy', value: avgScores.accuracy },
-              { name: 'Fluency', value: avgScores.fluency },
-              { name: 'Completeness', value: avgScores.completeness },
-              { name: 'Pronunciation', value: avgScores.pronunciation },
-            ],
-            config: {
-              colors: ['#8b5cf6'],
-              legend: false,
+          const charts = [
+            {
+              type: 'chart',
+              chartType: 'radar',
+              title: 'Chi so phat am tong hop',
+              data: [
+                { name: 'Accuracy', value: avgScores.accuracy },
+                { name: 'Fluency', value: avgScores.fluency },
+                { name: 'Completeness', value: avgScores.completeness },
+                { name: 'Pronunciation', value: avgScores.pronunciation },
+              ],
+              config: {
+                colors: ['#8b5cf6'],
+                legend: false,
+              },
             },
-          }];
+          ];
 
           // Add problem words chart if any
           if (problemWords.length > 0) {
@@ -879,12 +1044,14 @@ Ket qua tra ve:
       .map((t) => {
         const fb = t.pronunciationFeedback as any;
         const assessment = fb?.NBest?.[0]?.PronunciationAssessment;
-        return assessment ? {
-          accuracy: assessment.AccuracyScore || 0,
-          fluency: assessment.FluencyScore || 0,
-          completeness: assessment.CompletenessScore || 0,
-          pronunciation: assessment.PronScore || 0,
-        } : null;
+        return assessment
+          ? {
+              accuracy: assessment.AccuracyScore || 0,
+              fluency: assessment.FluencyScore || 0,
+              completeness: assessment.CompletenessScore || 0,
+              pronunciation: assessment.PronScore || 0,
+            }
+          : null;
       })
       .filter(Boolean);
 
@@ -899,10 +1066,20 @@ Ket qua tra ve:
     }
 
     return {
-      avgAccuracy: Math.round(feedbacks.reduce((s, f: any) => s + f.accuracy, 0) / feedbacks.length),
-      avgFluency: Math.round(feedbacks.reduce((s, f: any) => s + f.fluency, 0) / feedbacks.length),
-      avgCompleteness: Math.round(feedbacks.reduce((s, f: any) => s + f.completeness, 0) / feedbacks.length),
-      avgPronunciation: Math.round(feedbacks.reduce((s, f: any) => s + f.pronunciation, 0) / feedbacks.length),
+      avgAccuracy: Math.round(
+        feedbacks.reduce((s, f: any) => s + f.accuracy, 0) / feedbacks.length,
+      ),
+      avgFluency: Math.round(
+        feedbacks.reduce((s, f: any) => s + f.fluency, 0) / feedbacks.length,
+      ),
+      avgCompleteness: Math.round(
+        feedbacks.reduce((s, f: any) => s + f.completeness, 0) /
+          feedbacks.length,
+      ),
+      avgPronunciation: Math.round(
+        feedbacks.reduce((s, f: any) => s + f.pronunciation, 0) /
+          feedbacks.length,
+      ),
       count: feedbacks.length,
     };
   }
@@ -912,14 +1089,21 @@ Ket qua tra ve:
     const completedSessions = sessions.filter(
       (s) => s.state === AiSpeakingSessionState.finished,
     ).length;
-    const totalTurns = sessions.reduce((sum, s) => sum + (s.turns?.length || 0), 0);
+    const totalTurns = sessions.reduce(
+      (sum, s) => sum + (s.turns?.length || 0),
+      0,
+    );
 
     const allTurns = sessions.flatMap((s) => s.turns || []);
     const turnsWithScores = allTurns.filter((t: any) => t.score !== null);
 
-    const avgScore = turnsWithScores.length > 0
-      ? Math.round(turnsWithScores.reduce((sum: number, t: any) => sum + t.score, 0) / turnsWithScores.length)
-      : 0;
+    const avgScore =
+      turnsWithScores.length > 0
+        ? Math.round(
+            turnsWithScores.reduce((sum: number, t: any) => sum + t.score, 0) /
+              turnsWithScores.length,
+          )
+        : 0;
 
     const pronunciation = this.extractPronunciationMetrics(allTurns);
 
@@ -942,23 +1126,35 @@ Ket qua tra ve:
   }
 
   private generatePronunciationRecommendations(
-    scores: { accuracy: number; fluency: number; completeness: number; pronunciation: number },
+    scores: {
+      accuracy: number;
+      fluency: number;
+      completeness: number;
+      pronunciation: number;
+    },
     problemWords: any[],
   ): string[] {
     const recommendations: string[] = [];
 
     if (scores.accuracy < 70) {
-      recommendations.push('Tap trung vao phat am chinh xac tung tu - nghe va lap lai cham');
+      recommendations.push(
+        'Tap trung vao phat am chinh xac tung tu - nghe va lap lai cham',
+      );
     }
     if (scores.fluency < 70) {
-      recommendations.push('Luyen noi lien mach hon - doc to cac doan van ngan');
+      recommendations.push(
+        'Luyen noi lien mach hon - doc to cac doan van ngan',
+      );
     }
     if (scores.completeness < 70) {
       recommendations.push('Co gang noi het cau - khong bo dang giua chung');
     }
 
     if (problemWords.length > 0) {
-      const topProblems = problemWords.slice(0, 3).map((w) => w.word).join(', ');
+      const topProblems = problemWords
+        .slice(0, 3)
+        .map((w) => w.word)
+        .join(', ');
       recommendations.push(`Luyen phat am lai cac tu: ${topProblems}`);
     }
 
@@ -983,7 +1179,9 @@ Ket qua tra ve:
     }
 
     if (data.completedSessions / data.totalSessions < 0.8) {
-      recommendations.push('Co gang hoan thanh het cac phien - dung bo giua chung');
+      recommendations.push(
+        'Co gang hoan thanh het cac phien - dung bo giua chung',
+      );
     }
 
     if (data.avgScore < 60) {
@@ -992,8 +1190,12 @@ Ket qua tra ve:
       recommendations.push('Thu thach ban than voi cac chu de kho hon');
     }
 
-    if (data.pronunciationData.avgFluency < data.pronunciationData.avgAccuracy) {
-      recommendations.push('Tap trung vao do luu loat - noi nhanh hon mot chut');
+    if (
+      data.pronunciationData.avgFluency < data.pronunciationData.avgAccuracy
+    ) {
+      recommendations.push(
+        'Tap trung vao do luu loat - noi nhanh hon mot chut',
+      );
     }
 
     if (data.topTopics.length < 3) {
@@ -1037,7 +1239,10 @@ Format JSON:
 
     try {
       const response = await this.gemini.generateResponse(prompt);
-      const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const cleaned = response
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
       return JSON.parse(cleaned);
     } catch {
       return {

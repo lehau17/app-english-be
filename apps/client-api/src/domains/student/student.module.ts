@@ -10,5 +10,4 @@ import { StudentService } from './service/student.service';
   controllers: [StudentController],
   providers: [StudentService, StudentRepository, ExcelExportService],
 })
-export class StudentModule { }
-
+export class StudentModule {}

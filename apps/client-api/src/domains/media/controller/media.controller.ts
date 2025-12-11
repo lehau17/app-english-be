@@ -1,17 +1,11 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
+import { Controller, Get, Param, ParseUUIDPipe, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
-  Controller,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Query,
-} from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
-import { MediaFileResponseDto, MediaFileQueryDto, MediaSearchQueryDto } from '../dto/media.dto';
+  MediaFileResponseDto,
+  MediaFileQueryDto,
+  MediaSearchQueryDto,
+} from '../dto/media.dto';
 import { MediaService } from '../service/media.service';
 
 @ApiTags('Media')
@@ -57,7 +51,9 @@ export class MediaController {
     const paginatedResults = results.slice(startIndex, endIndex);
 
     return {
-      results: paginatedResults.map((item) => MediaFileResponseDto.fromEntity(item)),
+      results: paginatedResults.map((item) =>
+        MediaFileResponseDto.fromEntity(item),
+      ),
       total: results.length,
       page: query.page || 1,
     };

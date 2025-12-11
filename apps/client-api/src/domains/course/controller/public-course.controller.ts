@@ -7,76 +7,75 @@ import { CoursesImportService } from '../service/couse-import.service';
 @ApiTags('Public Courses')
 @Controller('/public/v1/courses')
 export class PublicCourseController {
-  constructor(private readonly courseService: CourseService,
+  constructor(
+    private readonly courseService: CourseService,
     private readonly svc: CoursesImportService,
-
-  ) { }
-
+  ) {}
 
   @Get('templates/toeic-basic')
   @ApiOperation({
-      summary: 'Download TOEIC Basic course template Excel',
-      description:
-          'Download a pre-filled Excel template for TOEIC Basic course with 10 lessons and 20 activities per lesson',
+    summary: 'Download TOEIC Basic course template Excel',
+    description:
+      'Download a pre-filled Excel template for TOEIC Basic course with 10 lessons and 20 activities per lesson',
   })
   @Header(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   )
   async downloadToeicBasicTemplate(@Res() res: Response) {
-      const template = await this.svc.generateToeicBasicTemplate();
+    const template = await this.svc.generateToeicBasicTemplate();
 
-      res.setHeader(
-          'Content-Disposition',
-          `attachment; filename="${template.filename}"`,
-      );
-      res.setHeader('Content-Type', template.contentType);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${template.filename}"`,
+    );
+    res.setHeader('Content-Type', template.contentType);
 
-      return res.send(template.buffer);
+    return res.send(template.buffer);
   }
 
   @Get('templates/toeic-intermediate')
   @ApiOperation({
-      summary: 'Download TOEIC Intermediate course template Excel',
-      description:
-          'Download a pre-filled Excel template for TOEIC Intermediate course with 10 lessons and 20 activities per lesson',
+    summary: 'Download TOEIC Intermediate course template Excel',
+    description:
+      'Download a pre-filled Excel template for TOEIC Intermediate course with 10 lessons and 20 activities per lesson',
   })
   @Header(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   )
   async downloadToeicIntermediateTemplate(@Res() res: Response) {
-      const template = await this.svc.generateToeicIntermediateTemplate();
+    const template = await this.svc.generateToeicIntermediateTemplate();
 
-      res.setHeader(
-          'Content-Disposition',
-          `attachment; filename="${template.filename}"`,
-      );
-      res.setHeader('Content-Type', template.contentType);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${template.filename}"`,
+    );
+    res.setHeader('Content-Type', template.contentType);
 
-      return res.send(template.buffer);
+    return res.send(template.buffer);
   }
 
   @Get('templates/toeic-advanced')
   @ApiOperation({
-      summary: 'Download TOEIC Advanced course template Excel',
-      description:
-          'Download a pre-filled Excel template for TOEIC Advanced course with 10 lessons and 20 activities per lesson',
+    summary: 'Download TOEIC Advanced course template Excel',
+    description:
+      'Download a pre-filled Excel template for TOEIC Advanced course with 10 lessons and 20 activities per lesson',
   })
   @Header(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   )
   async downloadToeicAdvancedTemplate(@Res() res: Response) {
-      const template = await this.svc.generateToeicAdvancedTemplate();
+    const template = await this.svc.generateToeicAdvancedTemplate();
 
-      res.setHeader(
-          'Content-Disposition',
-          `attachment; filename="${template.filename}"`,
-      );
-      res.setHeader('Content-Type', template.contentType);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${template.filename}"`,
+    );
+    res.setHeader('Content-Type', template.contentType);
 
-      return res.send(template.buffer);
+    return res.send(template.buffer);
   }
 
   @Get()

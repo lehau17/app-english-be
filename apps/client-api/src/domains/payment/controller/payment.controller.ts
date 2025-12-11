@@ -36,7 +36,7 @@ import { PaymentService } from '../service/payment.service';
 export class PaymentController {
   private readonly logger = new Logger(PaymentController.name);
 
-  constructor(private readonly paymentService: PaymentService) { }
+  constructor(private readonly paymentService: PaymentService) {}
 
   @Post('/create')
   @ApiOperation({ summary: 'Tạo link thanh toán VNPay cho khóa học' })
@@ -122,7 +122,7 @@ export class PaymentController {
 export class PaymentWebhookController {
   private readonly logger = new Logger(PaymentWebhookController.name);
 
-  constructor(private readonly paymentService: PaymentService) { }
+  constructor(private readonly paymentService: PaymentService) {}
 
   @Get('/vnpay/return')
   @ApiOperation({ summary: 'VNPay return URL (webhook)' })

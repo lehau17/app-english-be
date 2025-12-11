@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsArray, IsEnum, IsInt, Min } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsArray,
+  IsEnum,
+  IsInt,
+  Min,
+} from 'class-validator';
 import { MediaFile } from '@prisma/client';
 
 export class MediaFileResponseDto {

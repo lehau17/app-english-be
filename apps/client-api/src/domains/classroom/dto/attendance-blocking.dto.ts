@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 /**
  * Blocking status response
@@ -28,12 +35,18 @@ export class BlockingStatusDto {
  * Update blocking configuration DTO
  */
 export class UpdateBlockingConfigDto {
-  @ApiPropertyOptional({ description: 'Enable/disable blocking for this classroom' })
+  @ApiPropertyOptional({
+    description: 'Enable/disable blocking for this classroom',
+  })
   @IsOptional()
   @IsBoolean()
   enabled?: boolean;
 
-  @ApiPropertyOptional({ description: 'Consecutive absences threshold (1-10)', minimum: 1, maximum: 10 })
+  @ApiPropertyOptional({
+    description: 'Consecutive absences threshold (1-10)',
+    minimum: 1,
+    maximum: 10,
+  })
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -68,6 +81,3 @@ export class BlockStudentDto {
   @IsString()
   notes?: string;
 }
-
-
-

@@ -5,9 +5,9 @@ import { GoogleTranslateFreeService } from '../../google-translate/google-transl
 import { MediaService } from '../../media/service/media.service';
 import { UploadService } from '../../upload/upload.service';
 import {
-    CreateVocabularyTermDto,
-    UpdateVocabularyTermDto,
-    VocabularyTermResponseDto,
+  CreateVocabularyTermDto,
+  UpdateVocabularyTermDto,
+  VocabularyTermResponseDto,
 } from '../dto/vocabulary-term.dto';
 import { VocabularyRepository } from '../repository/vocabulary.repository';
 
@@ -177,12 +177,14 @@ export class VocabularyTermService {
 
     // Extract media from vocabulary term and create MediaFile records (async, non-blocking)
     if (this.mediaService) {
-      this.extractMediaFromVocabularyTerm(term.id, dto, unitId).catch((error) => {
-        this.logger.error(
-          `Failed to extract media from vocabulary term ${term.id}: ${error.message}`,
-          error,
-        );
-      });
+      this.extractMediaFromVocabularyTerm(term.id, dto, unitId).catch(
+        (error) => {
+          this.logger.error(
+            `Failed to extract media from vocabulary term ${term.id}: ${error.message}`,
+            error,
+          );
+        },
+      );
     }
 
     return {
@@ -243,13 +245,20 @@ export class VocabularyTermService {
     const updated = await this.repository.updateTerm(termId, updateData);
 
     // Extract media from updated vocabulary term and create MediaFile records (async, non-blocking)
-    if (this.mediaService && (dto.imageUrl !== undefined || dto.audioUrl !== undefined)) {
-      this.extractMediaFromVocabularyTerm(updated.id, {
-        word: updated.word,
-        definition: updated.definition,
-        imageUrl: updated.imageUrl || undefined,
-        audioUrl: updated.audioUrl || undefined,
-      } as CreateVocabularyTermDto, updated.unitId).catch((error) => {
+    if (
+      this.mediaService &&
+      (dto.imageUrl !== undefined || dto.audioUrl !== undefined)
+    ) {
+      this.extractMediaFromVocabularyTerm(
+        updated.id,
+        {
+          word: updated.word,
+          definition: updated.definition,
+          imageUrl: updated.imageUrl || undefined,
+          audioUrl: updated.audioUrl || undefined,
+        } as CreateVocabularyTermDto,
+        updated.unitId,
+      ).catch((error) => {
         this.logger.error(
           `Failed to extract media from updated vocabulary term ${updated.id}: ${error.message}`,
           error,
@@ -386,9 +395,7 @@ Return ONLY valid JSON:
       // Validate and filter out duplicates
       const validSuggestions = parsed.suggestions.filter((s: any) => {
         return (
-          s.word &&
-          s.hint &&
-          !existingWords.includes(s.word.toLowerCase())
+          s.word && s.hint && !existingWords.includes(s.word.toLowerCase())
         );
       });
 

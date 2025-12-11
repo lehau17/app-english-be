@@ -58,11 +58,23 @@ Ket qua tra ve:
         classroomName: z.string().optional().describe('Ten lop de tim kiem'),
         fromDate: z.string().optional().describe('Ngay bat dau (YYYY-MM-DD)'),
         toDate: z.string().optional().describe('Ngay ket thuc (YYYY-MM-DD)'),
-        includeCharts: z.boolean().optional().default(true).describe('Co tao bieu do khong'),
+        includeCharts: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('Co tao bieu do khong'),
       }),
-      func: async ({ classroomId, classroomName, fromDate, toDate, includeCharts = true }) => {
+      func: async ({
+        classroomId,
+        classroomName,
+        fromDate,
+        toDate,
+        includeCharts = true,
+      }) => {
         try {
-          this.logger.log(`Classroom attendance report: ${classroomId || classroomName}`);
+          this.logger.log(
+            `Classroom attendance report: ${classroomId || classroomName}`,
+          );
 
           // Find classroom if only name provided
           if (!classroomId && classroomName) {
@@ -120,7 +132,9 @@ Ket qua tra ve:
           const sessions = await this.prisma.classroomSession.findMany({
             where: {
               classroomId,
-              ...(Object.keys(dateFilter).length > 0 ? { startTime: dateFilter } : {}),
+              ...(Object.keys(dateFilter).length > 0
+                ? { startTime: dateFilter }
+                : {}),
             },
             include: {
               attendance: {
@@ -139,15 +153,18 @@ Ket qua tra ve:
 
           // Aggregate attendance stats
           const statusCounts = { present: 0, absent: 0, late: 0, excused: 0 };
-          const studentStats = new Map<string, {
-            studentId: string;
-            studentName: string;
-            present: number;
-            absent: number;
-            late: number;
-            excused: number;
-            total: number;
-          }>();
+          const studentStats = new Map<
+            string,
+            {
+              studentId: string;
+              studentName: string;
+              present: number;
+              absent: number;
+              late: number;
+              excused: number;
+              total: number;
+            }
+          >();
 
           // Initialize student stats
           classroom.students.forEach((cs) => {
@@ -179,17 +196,24 @@ Ket qua tra ve:
           });
 
           // Calculate rates
-          const totalAttendanceRecords = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+          const totalAttendanceRecords = Object.values(statusCounts).reduce(
+            (a, b) => a + b,
+            0,
+          );
           const attendedCount = statusCounts.present + statusCounts.late;
-          const overallAttendanceRate = totalAttendanceRecords > 0
-            ? Math.round((attendedCount / totalAttendanceRecords) * 100)
-            : 0;
+          const overallAttendanceRate =
+            totalAttendanceRecords > 0
+              ? Math.round((attendedCount / totalAttendanceRecords) * 100)
+              : 0;
 
           // Student ranking
           const studentRanking = Array.from(studentStats.values())
             .map((s) => {
               const attended = s.present + s.late;
-              const rate = totalSessions > 0 ? Math.round((attended / totalSessions) * 100) : 0;
+              const rate =
+                totalSessions > 0
+                  ? Math.round((attended / totalSessions) * 100)
+                  : 0;
               return { ...s, attendanceRate: rate };
             })
             .sort((a, b) => b.attendanceRate - a.attendanceRate);
@@ -213,7 +237,9 @@ Ket qua tra ve:
             totalStudents,
             overallAttendanceRate,
             statusCounts,
-            lowAttendanceStudents: studentRanking.filter((s) => s.attendanceRate < 70),
+            lowAttendanceStudents: studentRanking.filter(
+              (s) => s.attendanceRate < 70,
+            ),
           });
 
           // Generate charts
@@ -261,8 +287,14 @@ Ket qua tra ve:
                 chartType: 'line',
                 title: 'Xu huong diem danh theo buoi',
                 data: recentSessions.reverse().map((s) => ({
-                  name: new Date(s.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
-                  value: s.total > 0 ? Math.round(((s.present + s.late) / s.total) * 100) : 0,
+                  name: new Date(s.date).toLocaleDateString('vi-VN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                  }),
+                  value:
+                    s.total > 0
+                      ? Math.round(((s.present + s.late) / s.total) * 100)
+                      : 0,
                 })),
                 config: {
                   xLabel: 'Ngay',
@@ -290,7 +322,9 @@ Ket qua tra ve:
             },
             studentRanking: studentRanking.slice(0, 20),
             recentSessions,
-            lowAttendanceStudents: studentRanking.filter((s) => s.attendanceRate < 70),
+            lowAttendanceStudents: studentRanking.filter(
+              (s) => s.attendanceRate < 70,
+            ),
             aiInsights: aiAnalysis.insights,
             recommendations: aiAnalysis.recommendations,
             charts,
@@ -331,18 +365,32 @@ Ket qua tra ve:
         studentId: z.string().optional().describe('UUID cua hoc sinh'),
         studentEmail: z.string().optional().describe('Email hoc sinh'),
         studentName: z.string().optional().describe('Ten hoc sinh de tim'),
-        classroomId: z.string().optional().describe('Gioi han trong lop cu the'),
+        classroomId: z
+          .string()
+          .optional()
+          .describe('Gioi han trong lop cu the'),
         limit: z.number().optional().default(50).describe('So ban ghi toi da'),
       }),
-      func: async ({ studentId, studentEmail, studentName, classroomId, limit = 50 }) => {
+      func: async ({
+        studentId,
+        studentEmail,
+        studentName,
+        classroomId,
+        limit = 50,
+      }) => {
         try {
-          this.logger.log(`Student attendance: ${studentId || studentEmail || studentName}`);
+          this.logger.log(
+            `Student attendance: ${studentId || studentEmail || studentName}`,
+          );
 
           // Find student
           if (!studentId) {
             const whereClause: any = { role: 'student' };
             if (studentEmail) {
-              whereClause.email = { contains: studentEmail, mode: 'insensitive' };
+              whereClause.email = {
+                contains: studentEmail,
+                mode: 'insensitive',
+              };
             } else if (studentName) {
               whereClause.OR = [
                 { displayName: { contains: studentName, mode: 'insensitive' } },
@@ -351,7 +399,9 @@ Ket qua tra ve:
               ];
             }
 
-            const student = await this.prisma.user.findFirst({ where: whereClause });
+            const student = await this.prisma.user.findFirst({
+              where: whereClause,
+            });
             if (!student) {
               return JSON.stringify({
                 success: false,
@@ -368,7 +418,10 @@ Ket qua tra ve:
           });
 
           if (!student) {
-            return JSON.stringify({ success: false, error: 'Khong tim thay hoc sinh' });
+            return JSON.stringify({
+              success: false,
+              error: 'Khong tim thay hoc sinh',
+            });
           }
 
           // Get enrolled classrooms
@@ -391,36 +444,46 @@ Ket qua tra ve:
             attendanceWhere.session = { classroomId };
           }
 
-          const attendanceRecords = await this.prisma.sessionAttendance.findMany({
-            where: attendanceWhere,
-            include: {
-              session: {
-                select: {
-                  id: true,
-                  title: true,
-                  sessionNumber: true,
-                  startTime: true,
-                  classroom: {
-                    select: { id: true, name: true },
+          const attendanceRecords =
+            await this.prisma.sessionAttendance.findMany({
+              where: attendanceWhere,
+              include: {
+                session: {
+                  select: {
+                    id: true,
+                    title: true,
+                    sessionNumber: true,
+                    startTime: true,
+                    classroom: {
+                      select: { id: true, name: true },
+                    },
                   },
                 },
               },
-            },
-            orderBy: { session: { startTime: 'desc' } },
-            take: limit,
-          });
+              orderBy: { session: { startTime: 'desc' } },
+              take: limit,
+            });
 
           // Aggregate stats
-          const overallStats = { present: 0, absent: 0, late: 0, excused: 0, total: 0 };
-          const classroomStats = new Map<string, {
-            classroomId: string;
-            classroomName: string;
-            present: number;
-            absent: number;
-            late: number;
-            excused: number;
-            total: number;
-          }>();
+          const overallStats = {
+            present: 0,
+            absent: 0,
+            late: 0,
+            excused: 0,
+            total: 0,
+          };
+          const classroomStats = new Map<
+            string,
+            {
+              classroomId: string;
+              classroomName: string;
+              present: number;
+              absent: number;
+              late: number;
+              excused: number;
+              total: number;
+            }
+          >();
 
           attendanceRecords.forEach((att) => {
             const status = att.status as keyof typeof overallStats;
@@ -450,21 +513,26 @@ Ket qua tra ve:
 
           // Calculate rates
           const attended = overallStats.present + overallStats.late;
-          const overallRate = overallStats.total > 0
-            ? Math.round((attended / overallStats.total) * 100)
-            : 0;
+          const overallRate =
+            overallStats.total > 0
+              ? Math.round((attended / overallStats.total) * 100)
+              : 0;
 
-          const classroomBreakdown = Array.from(classroomStats.values()).map((c) => ({
-            ...c,
-            attendanceRate: c.total > 0
-              ? Math.round(((c.present + c.late) / c.total) * 100)
-              : 0,
-          }));
+          const classroomBreakdown = Array.from(classroomStats.values()).map(
+            (c) => ({
+              ...c,
+              attendanceRate:
+                c.total > 0
+                  ? Math.round(((c.present + c.late) / c.total) * 100)
+                  : 0,
+            }),
+          );
 
           // Recent history
           const recentHistory = attendanceRecords.slice(0, 20).map((att) => ({
             date: att.session.startTime,
-            sessionTitle: att.session.title || `Buoi ${att.session.sessionNumber}`,
+            sessionTitle:
+              att.session.title || `Buoi ${att.session.sessionNumber}`,
             classroomName: att.session.classroom.name,
             status: att.status,
             checkInTime: att.checkInTime,
@@ -473,7 +541,9 @@ Ket qua tra ve:
 
           // Identify patterns
           const absentStreak = this.calculateAbsentStreak(attendanceRecords);
-          const recentTrend = this.calculateRecentTrend(attendanceRecords.slice(0, 10));
+          const recentTrend = this.calculateRecentTrend(
+            attendanceRecords.slice(0, 10),
+          );
 
           return JSON.stringify({
             success: true,
@@ -528,15 +598,29 @@ Ket qua tra ve:
 - Xu huong tang/giam
 - Bieu do phan tich`,
       schema: z.object({
-        period: z.enum(['week', 'month', 'quarter', 'year']).optional().default('month'),
-        groupBy: z.enum(['classroom', 'course', 'teacher', 'day']).optional().default('classroom'),
+        period: z
+          .enum(['week', 'month', 'quarter', 'year'])
+          .optional()
+          .default('month'),
+        groupBy: z
+          .enum(['classroom', 'course', 'teacher', 'day'])
+          .optional()
+          .default('classroom'),
         courseId: z.string().optional().describe('Loc theo khoa hoc'),
         teacherId: z.string().optional().describe('Loc theo giao vien'),
         includeCharts: z.boolean().optional().default(true),
       }),
-      func: async ({ period = 'month', groupBy = 'classroom', courseId, teacherId, includeCharts = true }) => {
+      func: async ({
+        period = 'month',
+        groupBy = 'classroom',
+        courseId,
+        teacherId,
+        includeCharts = true,
+      }) => {
         try {
-          this.logger.log(`Attendance trends: period=${period}, groupBy=${groupBy}`);
+          this.logger.log(
+            `Attendance trends: period=${period}, groupBy=${groupBy}`,
+          );
 
           const startDate = this.getStartDate(period);
 
@@ -549,7 +633,9 @@ Ket qua tra ve:
           const sessions = await this.prisma.classroomSession.findMany({
             where: {
               startTime: { gte: startDate },
-              ...(Object.keys(classroomWhere).length > 0 ? { classroom: classroomWhere } : {}),
+              ...(Object.keys(classroomWhere).length > 0
+                ? { classroom: classroomWhere }
+                : {}),
             },
             include: {
               classroom: {
@@ -573,19 +659,25 @@ Ket qua tra ve:
           let totalLate = 0;
 
           // Aggregate by group
-          const groupedData = new Map<string, {
-            key: string;
-            name: string;
-            sessions: number;
-            present: number;
-            absent: number;
-            late: number;
-            excused: number;
-            total: number;
-          }>();
+          const groupedData = new Map<
+            string,
+            {
+              key: string;
+              name: string;
+              sessions: number;
+              present: number;
+              absent: number;
+              late: number;
+              excused: number;
+              total: number;
+            }
+          >();
 
           // Daily trend data
-          const dailyTrend = new Map<string, { date: string; attended: number; total: number }>();
+          const dailyTrend = new Map<
+            string,
+            { date: string; attended: number; total: number }
+          >();
 
           sessions.forEach((session) => {
             let groupKey: string;
@@ -598,7 +690,8 @@ Ket qua tra ve:
                 break;
               case 'teacher':
                 groupKey = session.classroom.teacher?.id || 'unknown';
-                groupName = session.classroom.teacher?.displayName || 'Unknown Teacher';
+                groupName =
+                  session.classroom.teacher?.displayName || 'Unknown Teacher';
                 break;
               case 'day':
                 groupKey = session.startTime.toISOString().split('T')[0];
@@ -657,23 +750,26 @@ Ket qua tra ve:
             });
           });
 
-          const overallRate = totalAttendance > 0
-            ? Math.round(((totalPresent + totalLate) / totalAttendance) * 100)
-            : 0;
+          const overallRate =
+            totalAttendance > 0
+              ? Math.round(((totalPresent + totalLate) / totalAttendance) * 100)
+              : 0;
 
           const groupedResults = Array.from(groupedData.values())
             .map((g) => ({
               ...g,
-              attendanceRate: g.total > 0
-                ? Math.round(((g.present + g.late) / g.total) * 100)
-                : 0,
+              attendanceRate:
+                g.total > 0
+                  ? Math.round(((g.present + g.late) / g.total) * 100)
+                  : 0,
             }))
             .sort((a, b) => b.attendanceRate - a.attendanceRate);
 
           const dailyResults = Array.from(dailyTrend.values())
             .map((d) => ({
               ...d,
-              attendanceRate: d.total > 0 ? Math.round((d.attended / d.total) * 100) : 0,
+              attendanceRate:
+                d.total > 0 ? Math.round((d.attended / d.total) * 100) : 0,
             }))
             .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -703,7 +799,10 @@ Ket qua tra ve:
                 chartType: 'line',
                 title: 'Xu huong diem danh theo ngay',
                 data: dailyResults.slice(-14).map((d) => ({
-                  name: new Date(d.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
+                  name: new Date(d.date).toLocaleDateString('vi-VN', {
+                    day: '2-digit',
+                    month: '2-digit',
+                  }),
                   value: d.attendanceRate,
                 })),
                 config: {
@@ -762,14 +861,32 @@ Ket qua tra ve:
 - Phan loai muc do nghiem trong
 - Goi y hanh dong`,
       schema: z.object({
-        threshold: z.number().optional().default(70).describe('Nguong ty le canh bao (%)'),
-        classroomId: z.string().optional().describe('Gioi han trong lop cu the'),
+        threshold: z
+          .number()
+          .optional()
+          .default(70)
+          .describe('Nguong ty le canh bao (%)'),
+        classroomId: z
+          .string()
+          .optional()
+          .describe('Gioi han trong lop cu the'),
         courseId: z.string().optional().describe('Gioi han trong khoa hoc'),
-        consecutiveAbsent: z.number().optional().default(3).describe('So buoi vang lien tiep'),
+        consecutiveAbsent: z
+          .number()
+          .optional()
+          .default(3)
+          .describe('So buoi vang lien tiep'),
       }),
-      func: async ({ threshold = 70, classroomId, courseId, consecutiveAbsent = 3 }) => {
+      func: async ({
+        threshold = 70,
+        classroomId,
+        courseId,
+        consecutiveAbsent = 3,
+      }) => {
         try {
-          this.logger.log(`Low attendance alerts: threshold=${threshold}%, consecutive=${consecutiveAbsent}`);
+          this.logger.log(
+            `Low attendance alerts: threshold=${threshold}%, consecutive=${consecutiveAbsent}`,
+          );
 
           // Build filter
           const classroomWhere: any = { status: 'ongoing' };
@@ -818,12 +935,12 @@ Ket qua tra ve:
             classroom.students.forEach((cs) => {
               const studentId = cs.studentId;
               const studentAttendance = classroom.sessions.flatMap((s) =>
-                s.attendance.filter((a) => a.studentId === studentId)
+                s.attendance.filter((a) => a.studentId === studentId),
               );
 
               // Calculate rate
               const attended = studentAttendance.filter(
-                (a) => a.status === 'present' || a.status === 'late'
+                (a) => a.status === 'present' || a.status === 'late',
               ).length;
               const rate = Math.round((attended / totalSessions) * 100);
 
@@ -831,7 +948,9 @@ Ket qua tra ve:
               let maxConsecutive = 0;
               let currentStreak = 0;
               classroom.sessions.forEach((session) => {
-                const att = session.attendance.find((a) => a.studentId === studentId);
+                const att = session.attendance.find(
+                  (a) => a.studentId === studentId,
+                );
                 if (!att || att.status === 'absent') {
                   currentStreak++;
                   maxConsecutive = Math.max(maxConsecutive, currentStreak);
@@ -846,14 +965,19 @@ Ket qua tra ve:
 
               if (rate < 50 || maxConsecutive >= consecutiveAbsent + 2) {
                 severity = 'critical';
-                reason = rate < 50
-                  ? `Ty le di hoc chi ${rate}%`
-                  : `Vang ${maxConsecutive} buoi lien tiep`;
-              } else if (rate < threshold || maxConsecutive >= consecutiveAbsent) {
+                reason =
+                  rate < 50
+                    ? `Ty le di hoc chi ${rate}%`
+                    : `Vang ${maxConsecutive} buoi lien tiep`;
+              } else if (
+                rate < threshold ||
+                maxConsecutive >= consecutiveAbsent
+              ) {
                 severity = 'warning';
-                reason = rate < threshold
-                  ? `Ty le di hoc ${rate}% (duoi nguong ${threshold}%)`
-                  : `Vang ${maxConsecutive} buoi lien tiep`;
+                reason =
+                  rate < threshold
+                    ? `Ty le di hoc ${rate}% (duoi nguong ${threshold}%)`
+                    : `Vang ${maxConsecutive} buoi lien tiep`;
               } else if (rate < threshold + 10) {
                 severity = 'watch';
                 reason = `Ty le di hoc ${rate}% - can theo doi`;
@@ -879,7 +1003,8 @@ Ket qua tra ve:
           // Sort by severity
           const severityOrder = { critical: 0, warning: 1, watch: 2 };
           alerts.sort((a, b) => {
-            const sevDiff = severityOrder[a.severity] - severityOrder[b.severity];
+            const sevDiff =
+              severityOrder[a.severity] - severityOrder[b.severity];
             if (sevDiff !== 0) return sevDiff;
             return a.attendanceRate - b.attendanceRate;
           });
@@ -931,14 +1056,20 @@ Ket qua tra ve:
   /**
    * Calculate recent attendance trend
    */
-  private calculateRecentTrend(records: any[]): 'improving' | 'declining' | 'stable' {
+  private calculateRecentTrend(
+    records: any[],
+  ): 'improving' | 'declining' | 'stable' {
     if (records.length < 5) return 'stable';
 
     const firstHalf = records.slice(0, Math.floor(records.length / 2));
     const secondHalf = records.slice(Math.floor(records.length / 2));
 
-    const firstRate = firstHalf.filter((r) => r.status === 'present' || r.status === 'late').length / firstHalf.length;
-    const secondRate = secondHalf.filter((r) => r.status === 'present' || r.status === 'late').length / secondHalf.length;
+    const firstRate =
+      firstHalf.filter((r) => r.status === 'present' || r.status === 'late')
+        .length / firstHalf.length;
+    const secondRate =
+      secondHalf.filter((r) => r.status === 'present' || r.status === 'late')
+        .length / secondHalf.length;
 
     if (secondRate - firstRate > 0.2) return 'improving';
     if (firstRate - secondRate > 0.2) return 'declining';
@@ -980,7 +1111,12 @@ Ket qua tra ve:
     totalSessions: number;
     totalStudents: number;
     overallAttendanceRate: number;
-    statusCounts: { present: number; absent: number; late: number; excused: number };
+    statusCounts: {
+      present: number;
+      absent: number;
+      late: number;
+      excused: number;
+    };
     lowAttendanceStudents: any[];
   }) {
     const prompt = `Phan tich diem danh lop hoc:
@@ -1004,12 +1140,18 @@ Format JSON:
 
     try {
       const response = await this.gemini.generateResponse(prompt);
-      const cleaned = response.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      const cleaned = response
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
       return JSON.parse(cleaned);
     } catch {
       return {
         insights: [
-          { text: `Ty le diem danh ${data.overallAttendanceRate}%`, type: data.overallAttendanceRate >= 80 ? 'positive' : 'negative' },
+          {
+            text: `Ty le diem danh ${data.overallAttendanceRate}%`,
+            type: data.overallAttendanceRate >= 80 ? 'positive' : 'negative',
+          },
         ],
         recommendations: [
           { text: 'Theo doi hoc sinh vang nhieu', priority: 'high' },
@@ -1021,16 +1163,25 @@ Format JSON:
   /**
    * Generate recommendations based on alert summary
    */
-  private generateAlertRecommendations(summary: { total: number; critical: number; warning: number; watch: number }) {
+  private generateAlertRecommendations(summary: {
+    total: number;
+    critical: number;
+    warning: number;
+    watch: number;
+  }) {
     const recommendations: string[] = [];
 
     if (summary.critical > 0) {
-      recommendations.push(`Can lien he ngay ${summary.critical} hoc sinh muc critical`);
+      recommendations.push(
+        `Can lien he ngay ${summary.critical} hoc sinh muc critical`,
+      );
       recommendations.push('Thong bao phu huynh ve tinh trang vang hoc');
     }
 
     if (summary.warning > 0) {
-      recommendations.push(`Theo doi sat ${summary.warning} hoc sinh muc warning`);
+      recommendations.push(
+        `Theo doi sat ${summary.warning} hoc sinh muc warning`,
+      );
       recommendations.push('Tim hieu nguyen nhan vang hoc');
     }
 

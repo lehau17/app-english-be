@@ -71,9 +71,7 @@ Returns a JSON object with chart configuration for Recharts rendering.
         },
       };
 
-      this.logger.log(
-        `Chart config generated: ${JSON.stringify(chartConfig)}`,
-      );
+      this.logger.log(`Chart config generated: ${JSON.stringify(chartConfig)}`);
 
       return JSON.stringify({
         success: true,

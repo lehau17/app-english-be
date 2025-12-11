@@ -115,10 +115,6 @@ export class PronunciationAssessmentService {
         enableWordTimeOffsets: true,
         enableWordConfidence: true,
 
-        // Enable pronunciation assessment
-        enableSpokenPunctuation: false,
-        enableSpokenEmojis: false,
-
         // Use enhanced model for better accuracy
         model: 'latest_long',
         useEnhanced: true,

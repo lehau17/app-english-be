@@ -1,5 +1,9 @@
 export interface MediaContext {
-  source: 'course_activity' | 'assignment_activity' | 'podcast' | 'vocabulary_term';
+  source:
+    | 'course_activity'
+    | 'assignment_activity'
+    | 'podcast'
+    | 'vocabulary_term';
   sourceId?: string;
   courseTitle?: string; // For course activity
   lessonTitle?: string; // For course activity

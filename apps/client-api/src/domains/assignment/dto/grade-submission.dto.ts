@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsObject, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class GradeSubmissionDto {
   @ApiProperty({
@@ -40,7 +47,8 @@ export class GradeSubmissionDetailedDto {
   feedback?: string;
 
   @ApiPropertyOptional({
-    description: 'Chấp nhận tất cả điểm AI (nếu true, sẽ dùng AI scores cho các activity chưa có teacher score)',
+    description:
+      'Chấp nhận tất cả điểm AI (nếu true, sẽ dùng AI scores cho các activity chưa có teacher score)',
     default: false,
   })
   @IsOptional()

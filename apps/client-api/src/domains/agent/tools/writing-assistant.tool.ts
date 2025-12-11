@@ -50,7 +50,10 @@ export class WritingAssistantTool {
 Tra ve diem so chi tiet, nhan xet va goi y cai thien.`,
       schema: z.object({
         userId: z.string().describe('ID cua hoc sinh'),
-        essay: z.string().min(50).describe('Noi dung bai viet (toi thieu 50 ky tu)'),
+        essay: z
+          .string()
+          .min(50)
+          .describe('Noi dung bai viet (toi thieu 50 ky tu)'),
         essayType: z
           .enum(['essay', 'paragraph', 'letter', 'email', 'report', 'story'])
           .optional()
@@ -186,7 +189,10 @@ Be constructive and encouraging while being accurate. Use Vietnamese for feedbac
           });
 
           // Generate motivational message
-          const motivation = this.getMotivation(grading.overallScore, gradingScale);
+          const motivation = this.getMotivation(
+            grading.overallScore,
+            gradingScale,
+          );
 
           return JSON.stringify({
             success: true,
@@ -234,7 +240,9 @@ Tra ve danh sach loi va cach sua.`,
       }),
       func: async ({ text, checkLevel = 'intermediate' }) => {
         try {
-          this.logger.log(`Grammar check (${checkLevel}): ${text.substring(0, 50)}...`);
+          this.logger.log(
+            `Grammar check (${checkLevel}): ${text.substring(0, 50)}...`,
+          );
 
           const prompt = `
 You are an expert English grammar checker. Analyze the following text for errors.
@@ -413,7 +421,8 @@ Use Vietnamese for explanations.
           return JSON.stringify({
             success: true,
             originalWordCount: text.split(/\s+/).filter(Boolean).length,
-            improvedWordCount: result.improvedText?.split(/\s+/).filter(Boolean).length || 0,
+            improvedWordCount:
+              result.improvedText?.split(/\s+/).filter(Boolean).length || 0,
             ...result,
           });
         } catch (error) {
@@ -481,7 +490,9 @@ Tra ve de bai voi huong dan va tu vung goi y.`,
         difficulty = 'intermediate',
       }) => {
         try {
-          this.logger.log(`Generating writing prompt: ${type}, ${topic}, ${difficulty}`);
+          this.logger.log(
+            `Generating writing prompt: ${type}, ${topic}, ${difficulty}`,
+          );
 
           const prompt = `
 Generate an English writing prompt for practice.
@@ -615,33 +626,41 @@ Tra ve thong ke va xu huong cai thien.`,
               success: true,
               message: 'Chua co bai viet nao. Hay bat dau luyen tap!',
               attempts: [],
-              suggestion: 'Dung tool get_writing_prompt de lay de bai luyen tap.',
+              suggestion:
+                'Dung tool get_writing_prompt de lay de bai luyen tap.',
             });
           }
 
           // Calculate statistics
           const scores = attempts.filter((a) => a.score).map((a) => a.score);
-          const avgScore = scores.length > 0
-            ? scores.reduce((a, b) => a + b, 0) / scores.length
-            : 0;
+          const avgScore =
+            scores.length > 0
+              ? scores.reduce((a, b) => a + b, 0) / scores.length
+              : 0;
 
-          const totalWords = attempts.reduce((sum, a) => sum + (a.wordCount || 0), 0);
+          const totalWords = attempts.reduce(
+            (sum, a) => sum + (a.wordCount || 0),
+            0,
+          );
 
           // Analyze trend
           const recentScores = scores.slice(0, 5);
           const olderScores = scores.slice(5, 10);
-          const recentAvg = recentScores.length > 0
-            ? recentScores.reduce((a, b) => a + b, 0) / recentScores.length
-            : 0;
-          const olderAvg = olderScores.length > 0
-            ? olderScores.reduce((a, b) => a + b, 0) / olderScores.length
-            : 0;
+          const recentAvg =
+            recentScores.length > 0
+              ? recentScores.reduce((a, b) => a + b, 0) / recentScores.length
+              : 0;
+          const olderAvg =
+            olderScores.length > 0
+              ? olderScores.reduce((a, b) => a + b, 0) / olderScores.length
+              : 0;
 
-          const trend = recentAvg > olderAvg + 5
-            ? 'improving'
-            : recentAvg < olderAvg - 5
-              ? 'declining'
-              : 'stable';
+          const trend =
+            recentAvg > olderAvg + 5
+              ? 'improving'
+              : recentAvg < olderAvg - 5
+                ? 'declining'
+                : 'stable';
 
           // Group by essay type
           const byType = new Map<string, number>();
@@ -672,7 +691,11 @@ Tra ve thong ke va xu huong cai thien.`,
               score: a.score,
               date: a.createdAt,
             })),
-            recommendations: this.getWritingRecommendations(avgScore, trend, attempts),
+            recommendations: this.getWritingRecommendations(
+              avgScore,
+              trend,
+              attempts,
+            ),
           });
         } catch (error) {
           this.logger.error('Writing history error:', error);

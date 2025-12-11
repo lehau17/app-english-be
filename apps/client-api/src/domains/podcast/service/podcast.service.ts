@@ -1,23 +1,23 @@
 import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-    BadRequestException,
-    ForbiddenException,
-    Injectable,
-    Logger,
-    NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { MediaService } from '../../media/service/media.service';
 import {
-    CreatePodcastDto,
-    GetPodcastsQueryDto,
-    GetUserAttemptsQueryDto,
-    UpdatePodcastDto,
-    UpdatePodcastGapDto,
+  CreatePodcastDto,
+  GetPodcastsQueryDto,
+  GetUserAttemptsQueryDto,
+  UpdatePodcastDto,
+  UpdatePodcastGapDto,
 } from '../dto/podcast.dto';
 import {
-    CreateRatingDto,
-    GetRatingsQueryDto,
+  CreateRatingDto,
+  GetRatingsQueryDto,
 } from '../dto/user-interaction.dto';
 import { PodcastRepository } from '../repository/podcast.repository';
 
@@ -247,9 +247,7 @@ export class PodcastService {
   ): Promise<void> {
     // Validate transcript exists
     if (!transcript) {
-      throw new BadRequestException(
-        'Transcript is required to update gaps',
-      );
+      throw new BadRequestException('Transcript is required to update gaps');
     }
 
     const transcriptLength = transcript.length;
@@ -283,7 +281,10 @@ export class PodcastService {
         gap.startIndex,
         gap.endIndex,
       );
-      if (transcriptAnswer.trim().toLowerCase() !== gap.answer.trim().toLowerCase()) {
+      if (
+        transcriptAnswer.trim().toLowerCase() !==
+        gap.answer.trim().toLowerCase()
+      ) {
         throw new BadRequestException(
           `Gap answer "${gap.answer}" does not match transcript at position ${gap.startIndex}-${gap.endIndex}: "${transcriptAnswer}"`,
         );
@@ -311,9 +312,7 @@ export class PodcastService {
       }
     }
 
-    const gapsToDelete = existingGaps.filter(
-      (g) => !newGapIds.has(g.id),
-    );
+    const gapsToDelete = existingGaps.filter((g) => !newGapIds.has(g.id));
 
     // Execute in transaction
     await this.prisma.$transaction(async (tx) => {

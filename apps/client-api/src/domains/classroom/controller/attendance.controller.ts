@@ -1,35 +1,35 @@
 import { ResponseMessage } from '@app/shared';
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    ParseUUIDPipe,
-    Post,
-    Put,
-    Query,
-    Req,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  Query,
+  Req,
 } from '@nestjs/common';
 import {
-    ApiBearerAuth,
-    ApiOperation,
-    ApiParam,
-    ApiQuery,
-    ApiResponse,
-    ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 import {
-    AttendanceStatusDto,
-    AttendanceWithStudentDto,
-    BulkAttendanceDto,
-    ClassroomAttendanceStatsDto,
-    MarkAllAbsentResponseDto,
-    MarkAttendanceDto,
-    PaginatedStudentAttendanceHistoryDto,
-    SessionAttendanceSummaryDto,
-    StudentAttendanceHistoryQueryDto,
-    UnmarkedStudentDto,
+  AttendanceStatusDto,
+  AttendanceWithStudentDto,
+  BulkAttendanceDto,
+  ClassroomAttendanceStatsDto,
+  MarkAllAbsentResponseDto,
+  MarkAttendanceDto,
+  PaginatedStudentAttendanceHistoryDto,
+  SessionAttendanceSummaryDto,
+  StudentAttendanceHistoryQueryDto,
+  UnmarkedStudentDto,
 } from '../dto/attendance.dto';
 import { AttendanceService } from '../services/attendance.service';
 
@@ -44,7 +44,8 @@ export class AttendanceController {
   @Get(':sessionId/attendance')
   @ApiOperation({
     summary: 'Lấy danh sách điểm danh của một buổi học',
-    description: 'Trả về danh sách học sinh đã được điểm danh với thông tin chi tiết',
+    description:
+      'Trả về danh sách học sinh đã được điểm danh với thông tin chi tiết',
   })
   @ApiParam({ name: 'sessionId', description: 'ID của buổi học' })
   @ApiResponse({
@@ -62,7 +63,8 @@ export class AttendanceController {
   @Get(':sessionId/attendance/summary')
   @ApiOperation({
     summary: 'Lấy tổng hợp điểm danh của một buổi học',
-    description: 'Trả về thống kê tổng hợp: có mặt, vắng, muộn, có phép và tỷ lệ',
+    description:
+      'Trả về thống kê tổng hợp: có mặt, vắng, muộn, có phép và tỷ lệ',
   })
   @ApiParam({ name: 'sessionId', description: 'ID của buổi học' })
   @ApiResponse({
@@ -80,7 +82,8 @@ export class AttendanceController {
   @Get(':sessionId/attendance/unmarked')
   @ApiOperation({
     summary: 'Lấy danh sách học sinh chưa điểm danh',
-    description: 'Trả về danh sách học sinh trong lớp nhưng chưa được điểm danh',
+    description:
+      'Trả về danh sách học sinh trong lớp nhưng chưa được điểm danh',
   })
   @ApiParam({ name: 'sessionId', description: 'ID của buổi học' })
   @ApiResponse({
@@ -114,7 +117,11 @@ export class AttendanceController {
     @Param('studentId', new ParseUUIDPipe()) studentId: string,
     @Body() dto: MarkAttendanceDto,
   ) {
-    return this.attendanceService.markAttendance(sessionId, studentId, dto as any);
+    return this.attendanceService.markAttendance(
+      sessionId,
+      studentId,
+      dto as any,
+    );
   }
 
   @Post(':sessionId/attendance/bulk')

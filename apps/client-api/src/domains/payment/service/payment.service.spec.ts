@@ -1,12 +1,12 @@
 import {
-    BadRequestException,
-    ConflictException,
-    NotFoundException,
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
 } from '@nestjs/common';
 import {
-    PaymentProvider,
-    PaymentStatus,
-    TransactionType,
+  PaymentProvider,
+  PaymentStatus,
+  TransactionType,
 } from '@prisma/client';
 import { PaymentRepository } from '../repository/payment.repository';
 import { PaymentService } from './payment.service';
@@ -489,38 +489,82 @@ describe('PaymentService', () => {
     const mockMetadata = {
       courseId: 'course-123',
       classroomId: 'classroom-456',
-      students: [{ firstName: 'John', lastName: 'Doe', email: 'john@example.com', phone: '1234567890' }],
+      students: [
+        {
+          firstName: 'John',
+          lastName: 'Doe',
+          email: 'john@example.com',
+          phone: '1234567890',
+        },
+      ],
     };
     const transactionId = 'txn-789';
     const classroomId = 'classroom-456';
 
     it('should route to enrollExistingUser for existing-user flow', async () => {
-      const metadata = { ...mockMetadata, existingUser: true, userId: 'user-123' };
-      const enrollSpy = jest.spyOn(service as any, 'enrollExistingUser').mockResolvedValue(undefined);
+      const metadata = {
+        ...mockMetadata,
+        existingUser: true,
+        userId: 'user-123',
+      };
+      const enrollSpy = jest
+        .spyOn(service as any, 'enrollExistingUser')
+        .mockResolvedValue(undefined);
 
-      await service['handleEnrollmentByFlowType']('existing-user', metadata, transactionId, classroomId);
+      await service['handleEnrollmentByFlowType'](
+        'existing-user',
+        metadata,
+        transactionId,
+        classroomId,
+      );
 
-      expect(enrollSpy).toHaveBeenCalledWith(metadata.userId, classroomId, metadata);
+      expect(enrollSpy).toHaveBeenCalledWith(
+        metadata.userId,
+        classroomId,
+        metadata,
+      );
       enrollSpy.mockRestore();
     });
 
     it('should route to handleGuestVerifiedEnrollment for guest-verified flow', async () => {
       const metadata = { ...mockMetadata, emailVerified: true };
-      const guestSpy = jest.spyOn(service as any, 'handleGuestVerifiedEnrollment').mockResolvedValue(undefined);
+      const guestSpy = jest
+        .spyOn(service as any, 'handleGuestVerifiedEnrollment')
+        .mockResolvedValue(undefined);
 
-      await service['handleEnrollmentByFlowType']('guest-verified', metadata, transactionId, classroomId);
+      await service['handleEnrollmentByFlowType'](
+        'guest-verified',
+        metadata,
+        transactionId,
+        classroomId,
+      );
 
-      expect(guestSpy).toHaveBeenCalledWith(metadata, transactionId, classroomId);
+      expect(guestSpy).toHaveBeenCalledWith(
+        metadata,
+        transactionId,
+        classroomId,
+      );
       guestSpy.mockRestore();
     });
 
     it('should route to handleLegacyGuestEnrollment for guest-legacy flow', async () => {
       const metadata = { ...mockMetadata, role: 'student' };
-      const legacySpy = jest.spyOn(service as any, 'handleLegacyGuestEnrollment').mockResolvedValue(undefined);
+      const legacySpy = jest
+        .spyOn(service as any, 'handleLegacyGuestEnrollment')
+        .mockResolvedValue(undefined);
 
-      await service['handleEnrollmentByFlowType']('guest-legacy', metadata, transactionId, classroomId);
+      await service['handleEnrollmentByFlowType'](
+        'guest-legacy',
+        metadata,
+        transactionId,
+        classroomId,
+      );
 
-      expect(legacySpy).toHaveBeenCalledWith(metadata, transactionId, classroomId);
+      expect(legacySpy).toHaveBeenCalledWith(
+        metadata,
+        transactionId,
+        classroomId,
+      );
       legacySpy.mockRestore();
     });
 
@@ -528,7 +572,12 @@ describe('PaymentService', () => {
       const metadata = { ...mockMetadata };
       const loggerSpy = jest.spyOn(service['logger'], 'warn');
 
-      await service['handleEnrollmentByFlowType']('unknown' as any, metadata, transactionId, classroomId);
+      await service['handleEnrollmentByFlowType'](
+        'unknown' as any,
+        metadata,
+        transactionId,
+        classroomId,
+      );
 
       expect(loggerSpy).toHaveBeenCalledWith(
         expect.stringContaining('Unknown enrollment flow type'),
@@ -547,16 +596,24 @@ describe('PaymentService', () => {
     };
 
     it('should UPSERT ClassroomStudent for existing user', async () => {
-      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(undefined);
+      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(
+        undefined,
+      );
 
       await service['enrollExistingUser'](userId, classroomId, metadata);
 
-      expect(paymentRepository.updateStudentPurchaseStatus).toHaveBeenCalledWith(userId, classroomId, true);
+      expect(
+        paymentRepository.updateStudentPurchaseStatus,
+      ).toHaveBeenCalledWith(userId, classroomId, true);
     });
 
     it('should send enrollment confirmation email', async () => {
-      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(undefined);
-      const emailSpy = jest.spyOn(service as any, 'sendEnrollmentConfirmationEmail').mockResolvedValue(undefined);
+      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(
+        undefined,
+      );
+      const emailSpy = jest
+        .spyOn(service as any, 'sendEnrollmentConfirmationEmail')
+        .mockResolvedValue(undefined);
 
       await service['enrollExistingUser'](userId, classroomId, metadata);
 
@@ -571,10 +628,25 @@ describe('PaymentService', () => {
       classroomId: 'classroom-456',
       emailVerified: true,
       students: [
-        { firstName: 'John', lastName: 'Doe', email: 'john@example.com', phone: '1234567890' },
-        { firstName: 'Jane', lastName: 'Smith', email: 'jane@example.com', phone: '0987654321' },
+        {
+          firstName: 'John',
+          lastName: 'Doe',
+          email: 'john@example.com',
+          phone: '1234567890',
+        },
+        {
+          firstName: 'Jane',
+          lastName: 'Smith',
+          email: 'jane@example.com',
+          phone: '0987654321',
+        },
       ],
-      parent: { firstName: 'Bob', lastName: 'Doe', email: 'bob@example.com', phone: '1112223333' },
+      parent: {
+        firstName: 'Bob',
+        lastName: 'Doe',
+        email: 'bob@example.com',
+        phone: '1112223333',
+      },
     };
     const transactionId = 'txn-789';
     const classroomId = 'classroom-456';
@@ -589,12 +661,25 @@ describe('PaymentService', () => {
     });
 
     it('should create users from metadata', async () => {
-      const mockUserResult = { studentIds: ['user-1', 'user-2'], parentId: 'parent-1' };
-      const createUsersSpy = jest.spyOn(service as any, 'createUsersFromMetadata').mockResolvedValue(mockUserResult);
-      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(undefined);
-      const emailSpy = jest.spyOn(service as any, 'sendWelcomeEmails').mockResolvedValue(undefined);
+      const mockUserResult = {
+        studentIds: ['user-1', 'user-2'],
+        parentId: 'parent-1',
+      };
+      const createUsersSpy = jest
+        .spyOn(service as any, 'createUsersFromMetadata')
+        .mockResolvedValue(mockUserResult);
+      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(
+        undefined,
+      );
+      const emailSpy = jest
+        .spyOn(service as any, 'sendWelcomeEmails')
+        .mockResolvedValue(undefined);
 
-      await service['handleGuestVerifiedEnrollment'](metadata, transactionId, classroomId);
+      await service['handleGuestVerifiedEnrollment'](
+        metadata,
+        transactionId,
+        classroomId,
+      );
 
       expect(createUsersSpy).toHaveBeenCalledWith(metadata, transactionId);
       createUsersSpy.mockRestore();
@@ -602,40 +687,87 @@ describe('PaymentService', () => {
     });
 
     it('should enroll all students in classroom', async () => {
-      const mockUserResult = { studentIds: ['user-1', 'user-2'], parentId: 'parent-1' };
-      jest.spyOn(service as any, 'createUsersFromMetadata').mockResolvedValue(mockUserResult);
-      jest.spyOn(service as any, 'sendWelcomeEmails').mockResolvedValue(undefined);
-      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(undefined);
+      const mockUserResult = {
+        studentIds: ['user-1', 'user-2'],
+        parentId: 'parent-1',
+      };
+      jest
+        .spyOn(service as any, 'createUsersFromMetadata')
+        .mockResolvedValue(mockUserResult);
+      jest
+        .spyOn(service as any, 'sendWelcomeEmails')
+        .mockResolvedValue(undefined);
+      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(
+        undefined,
+      );
 
-      await service['handleGuestVerifiedEnrollment'](metadata, transactionId, classroomId);
+      await service['handleGuestVerifiedEnrollment'](
+        metadata,
+        transactionId,
+        classroomId,
+      );
 
       // Should enroll 2 students
-      expect(paymentRepository.updateStudentPurchaseStatus).toHaveBeenCalledTimes(2);
-      expect(paymentRepository.updateStudentPurchaseStatus).toHaveBeenCalledWith('user-1', classroomId, true);
-      expect(paymentRepository.updateStudentPurchaseStatus).toHaveBeenCalledWith('user-2', classroomId, true);
+      expect(
+        paymentRepository.updateStudentPurchaseStatus,
+      ).toHaveBeenCalledTimes(2);
+      expect(
+        paymentRepository.updateStudentPurchaseStatus,
+      ).toHaveBeenCalledWith('user-1', classroomId, true);
+      expect(
+        paymentRepository.updateStudentPurchaseStatus,
+      ).toHaveBeenCalledWith('user-2', classroomId, true);
     });
 
     it('should update transaction with first student ID', async () => {
-      const mockUserResult = { studentIds: ['user-1', 'user-2'], parentId: 'parent-1' };
-      jest.spyOn(service as any, 'createUsersFromMetadata').mockResolvedValue(mockUserResult);
-      jest.spyOn(service as any, 'sendWelcomeEmails').mockResolvedValue(undefined);
-      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(undefined);
+      const mockUserResult = {
+        studentIds: ['user-1', 'user-2'],
+        parentId: 'parent-1',
+      };
+      jest
+        .spyOn(service as any, 'createUsersFromMetadata')
+        .mockResolvedValue(mockUserResult);
+      jest
+        .spyOn(service as any, 'sendWelcomeEmails')
+        .mockResolvedValue(undefined);
+      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(
+        undefined,
+      );
 
-      await service['handleGuestVerifiedEnrollment'](metadata, transactionId, classroomId);
+      await service['handleGuestVerifiedEnrollment'](
+        metadata,
+        transactionId,
+        classroomId,
+      );
 
-      expect(paymentRepository['prisma'].transaction.update).toHaveBeenCalledWith({
+      expect(
+        paymentRepository['prisma'].transaction.update,
+      ).toHaveBeenCalledWith({
         where: { id: transactionId },
         data: { studentId: 'user-1' },
       });
     });
 
     it('should send welcome emails to all users', async () => {
-      const mockUserResult = { studentIds: ['user-1', 'user-2'], parentId: 'parent-1' };
-      jest.spyOn(service as any, 'createUsersFromMetadata').mockResolvedValue(mockUserResult);
-      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(undefined);
-      const emailSpy = jest.spyOn(service as any, 'sendWelcomeEmails').mockResolvedValue(undefined);
+      const mockUserResult = {
+        studentIds: ['user-1', 'user-2'],
+        parentId: 'parent-1',
+      };
+      jest
+        .spyOn(service as any, 'createUsersFromMetadata')
+        .mockResolvedValue(mockUserResult);
+      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(
+        undefined,
+      );
+      const emailSpy = jest
+        .spyOn(service as any, 'sendWelcomeEmails')
+        .mockResolvedValue(undefined);
 
-      await service['handleGuestVerifiedEnrollment'](metadata, transactionId, classroomId);
+      await service['handleGuestVerifiedEnrollment'](
+        metadata,
+        transactionId,
+        classroomId,
+      );
 
       expect(emailSpy).toHaveBeenCalledWith(mockUserResult, metadata);
       emailSpy.mockRestore();
@@ -647,34 +779,69 @@ describe('PaymentService', () => {
       courseId: 'course-123',
       classroomId: 'classroom-456',
       role: 'student' as const,
-      students: [{ firstName: 'Legacy', lastName: 'Student', email: 'legacy@example.com', phone: '5551234567' }],
+      students: [
+        {
+          firstName: 'Legacy',
+          lastName: 'Student',
+          email: 'legacy@example.com',
+          phone: '5551234567',
+        },
+      ],
     };
     const transactionId = 'txn-old-format';
     const classroomId = 'classroom-456';
 
     it('should handle flat metadata structure using legacy method', async () => {
-      const mockUserResult = { studentIds: ['legacy-user-1'], parentId: undefined };
-      const legacyCreateSpy = jest.spyOn(service as any, 'createUsersFromEnrollmentMetadata').mockResolvedValue(mockUserResult);
-      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(undefined);
+      const mockUserResult = {
+        studentIds: ['legacy-user-1'],
+        parentId: undefined,
+      };
+      const legacyCreateSpy = jest
+        .spyOn(service as any, 'createUsersFromEnrollmentMetadata')
+        .mockResolvedValue(mockUserResult);
+      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(
+        undefined,
+      );
       paymentRepository.updateTransactionStudentId.mockResolvedValue(undefined);
-      jest.spyOn(service as any, 'sendWelcomeEmails').mockResolvedValue(undefined);
+      jest
+        .spyOn(service as any, 'sendWelcomeEmails')
+        .mockResolvedValue(undefined);
 
-      await service['handleLegacyGuestEnrollment'](metadata, transactionId, classroomId);
+      await service['handleLegacyGuestEnrollment'](
+        metadata,
+        transactionId,
+        classroomId,
+      );
 
       expect(legacyCreateSpy).toHaveBeenCalledWith(metadata, transactionId);
       legacyCreateSpy.mockRestore();
     });
 
     it('should enroll legacy users in classroom', async () => {
-      const mockUserResult = { studentIds: ['legacy-user-1'], parentId: undefined };
-      jest.spyOn(service as any, 'createUsersFromEnrollmentMetadata').mockResolvedValue(mockUserResult);
+      const mockUserResult = {
+        studentIds: ['legacy-user-1'],
+        parentId: undefined,
+      };
+      jest
+        .spyOn(service as any, 'createUsersFromEnrollmentMetadata')
+        .mockResolvedValue(mockUserResult);
       paymentRepository.updateTransactionStudentId.mockResolvedValue(undefined);
-      jest.spyOn(service as any, 'sendWelcomeEmails').mockResolvedValue(undefined);
-      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(undefined);
+      jest
+        .spyOn(service as any, 'sendWelcomeEmails')
+        .mockResolvedValue(undefined);
+      paymentRepository.updateStudentPurchaseStatus.mockResolvedValue(
+        undefined,
+      );
 
-      await service['handleLegacyGuestEnrollment'](metadata, transactionId, classroomId);
+      await service['handleLegacyGuestEnrollment'](
+        metadata,
+        transactionId,
+        classroomId,
+      );
 
-      expect(paymentRepository.updateStudentPurchaseStatus).toHaveBeenCalledWith('legacy-user-1', classroomId, true);
+      expect(
+        paymentRepository.updateStudentPurchaseStatus,
+      ).toHaveBeenCalledWith('legacy-user-1', classroomId, true);
     });
   });
 
@@ -686,14 +853,25 @@ describe('PaymentService', () => {
         courseId: 'course-123',
         classroomId: 'classroom-456',
         students: [
-          { firstName: 'Alice', lastName: 'Wonder', email: 'alice@example.com', phone: '1231231234' },
-          { firstName: 'Bob', lastName: 'Builder', email: 'bob@example.com', phone: '3213213210' },
+          {
+            firstName: 'Alice',
+            lastName: 'Wonder',
+            email: 'alice@example.com',
+            phone: '1231231234',
+          },
+          {
+            firstName: 'Bob',
+            lastName: 'Builder',
+            email: 'bob@example.com',
+            phone: '3213213210',
+          },
         ],
       };
 
       const mockTx = {
         user: {
-          create: jest.fn()
+          create: jest
+            .fn()
             .mockResolvedValueOnce({ id: 'student-alice' })
             .mockResolvedValueOnce({ id: 'student-bob' }),
           findUnique: jest.fn().mockResolvedValue(null),
@@ -708,7 +886,10 @@ describe('PaymentService', () => {
         $transaction: jest.fn((callback) => callback(mockTx)),
       } as any;
 
-      const result = await service['createUsersFromMetadata'](metadata, transactionId);
+      const result = await service['createUsersFromMetadata'](
+        metadata,
+        transactionId,
+      );
 
       expect(result.studentIds).toEqual(['student-alice', 'student-bob']);
       expect(mockTx.user.create).toHaveBeenCalledTimes(2);
@@ -729,13 +910,26 @@ describe('PaymentService', () => {
         courseId: 'course-123',
         classroomId: 'classroom-456',
         role: 'parent' as const,
-        students: [{ firstName: 'Child', lastName: 'One', email: 'child@example.com', phone: '1111111111' }],
-        parent: { firstName: 'Parent', lastName: 'Guardian', email: 'parent@example.com', phone: '2222222222' },
+        students: [
+          {
+            firstName: 'Child',
+            lastName: 'One',
+            email: 'child@example.com',
+            phone: '1111111111',
+          },
+        ],
+        parent: {
+          firstName: 'Parent',
+          lastName: 'Guardian',
+          email: 'parent@example.com',
+          phone: '2222222222',
+        },
       };
 
       const mockTx = {
         user: {
-          create: jest.fn()
+          create: jest
+            .fn()
             .mockResolvedValueOnce({ id: 'parent-guardian' })
             .mockResolvedValueOnce({ id: 'student-child' }),
           findUnique: jest.fn().mockResolvedValue(null),
@@ -750,7 +944,10 @@ describe('PaymentService', () => {
         $transaction: jest.fn((callback) => callback(mockTx)),
       } as any;
 
-      const result = await service['createUsersFromMetadata'](metadata, transactionId);
+      const result = await service['createUsersFromMetadata'](
+        metadata,
+        transactionId,
+      );
 
       expect(result.studentIds).toEqual(['student-child']);
       expect(result.parentId).toEqual('parent-guardian');
@@ -768,7 +965,14 @@ describe('PaymentService', () => {
       const metadata = {
         courseId: 'course-123',
         classroomId: 'classroom-456',
-        students: [{ firstName: 'Test', lastName: 'User', email: 'test@example.com', phone: '9999999999' }],
+        students: [
+          {
+            firstName: 'Test',
+            lastName: 'User',
+            email: 'test@example.com',
+            phone: '9999999999',
+          },
+        ],
         source: 'landing-page',
         note: 'Test enrollment',
       };

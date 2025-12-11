@@ -7,23 +7,12 @@ import { GradebookExportService, GradebookService } from './service';
 @Module({
   imports: [SharedModule],
   controllers: [GradebookController],
-  providers: [GradebookService, GradebookExportService, GradebookRepository, ExcelExportService],
+  providers: [
+    GradebookService,
+    GradebookExportService,
+    GradebookRepository,
+    ExcelExportService,
+  ],
   exports: [GradebookService, GradebookExportService, GradebookRepository],
 })
 export class GradebookModule {}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

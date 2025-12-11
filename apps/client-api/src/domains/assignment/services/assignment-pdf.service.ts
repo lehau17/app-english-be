@@ -11,7 +11,7 @@ export class AssignmentPdfService {
     assignment: AssignmentWithDetails,
   ): Promise<Buffer> {
     // Use Chrome for Testing (ARM64 version for Mac Silicon)
-    const executablePath = '/usr/bin/google-chrome'
+    const executablePath = '/usr/bin/google-chrome';
 
     const browser = await puppeteer.launch({
       headless: true,
@@ -246,25 +246,27 @@ export class AssignmentPdfService {
           </div>
         </div>
 
-        ${assignment.description
-        ? `
+        ${
+          assignment.description
+            ? `
         <div class="description">
           <h3>Mô tả bài tập:</h3>
           <p>${assignment.description}</p>
         </div>
         `
-        : ''
-      }
+            : ''
+        }
 
-        ${assignment.instructions
-        ? `
+        ${
+          assignment.instructions
+            ? `
         <div class="description">
           <h3>Hướng dẫn làm bài:</h3>
           <p>${assignment.instructions}</p>
         </div>
         `
-        : ''
-      }
+            : ''
+        }
 
         <div class="activities-section">
           <h2>Các câu hỏi trong bài tập:</h2>
@@ -366,18 +368,18 @@ export class AssignmentPdfService {
         <div class="question-text">${question}</div>
         <div class="options">
           ${options
-        .map((option: any, idx: number) => {
-          const letter = String.fromCharCode(65 + idx); // A, B, C, D...
-          const isCorrect = correctAnswers.includes(idx);
-          return `
+            .map((option: any, idx: number) => {
+              const letter = String.fromCharCode(65 + idx); // A, B, C, D...
+              const isCorrect = correctAnswers.includes(idx);
+              return `
               <div class="option ${isCorrect ? 'correct-answer' : ''}">
                 <span class="option-label">${letter}.</span>
                 <span>${option}</span>
                 ${isCorrect ? ' ✓' : ''}
               </div>
             `;
-        })
-        .join('')}
+            })
+            .join('')}
         </div>
         <p><strong>Đáp án đúng:</strong> <span class="correct-answer">${correctAnswers.map((idx: number) => String.fromCharCode(65 + idx)).join(', ')}</span></p>
       </div>
@@ -394,18 +396,18 @@ export class AssignmentPdfService {
         <div class="question-text">${question}</div>
         <div class="options">
           ${options
-        .map((option: any, idx: number) => {
-          const letter = String.fromCharCode(65 + idx); // A, B, C, D...
-          const isCorrect = correctAnswer === idx;
-          return `
+            .map((option: any, idx: number) => {
+              const letter = String.fromCharCode(65 + idx); // A, B, C, D...
+              const isCorrect = correctAnswer === idx;
+              return `
               <div class="option ${isCorrect ? 'correct-answer' : ''}">
                 <span class="option-label">${letter}.</span>
                 <span>${option}</span>
                 ${isCorrect ? ' ✓' : ''}
               </div>
             `;
-        })
-        .join('')}
+            })
+            .join('')}
         </div>
         <p><strong>Đáp án đúng:</strong> <span class="correct-answer">${String.fromCharCode(65 + correctAnswer)}</span></p>
       </div>
@@ -443,24 +445,25 @@ export class AssignmentPdfService {
     return `
       <div class="question">
         <div class="question-text">${question}</div>
-        ${blanks.length > 0
-        ? `
+        ${
+          blanks.length > 0
+            ? `
           <div class="options">
             <p><strong>Đáp án:</strong></p>
             ${blanks
-          .map(
-            (blank: any, idx: number) => `
+              .map(
+                (blank: any, idx: number) => `
               <div class="option">
                 <span class="option-label">${idx + 1}.</span>
                 <span class="correct-answer">${blank.correctAnswer || blank}</span>
               </div>
             `,
-          )
-          .join('')}
+              )
+              .join('')}
           </div>
         `
-        : ''
-      }
+            : ''
+        }
       </div>
     `;
   }
@@ -473,33 +476,35 @@ export class AssignmentPdfService {
     return `
       <div class="question">
         <div class="question-text">${question}</div>
-        ${sampleAnswer
-        ? `
+        ${
+          sampleAnswer
+            ? `
           <div class="options">
             <p><strong>Câu trả lời mẫu:</strong></p>
             <p class="correct-answer">${sampleAnswer}</p>
           </div>
         `
-        : ''
-      }
-        ${criteria.length > 0
-        ? `
+            : ''
+        }
+        ${
+          criteria.length > 0
+            ? `
           <div class="options">
             <p><strong>Tiêu chí chấm điểm:</strong></p>
             ${criteria
-          .map(
-            (criterion: string, idx: number) => `
+              .map(
+                (criterion: string, idx: number) => `
               <div class="option">
                 <span class="option-label">${idx + 1}.</span>
                 <span>${criterion}</span>
               </div>
             `,
-          )
-          .join('')}
+              )
+              .join('')}
           </div>
         `
-        : ''
-      }
+            : ''
+        }
       </div>
     `;
   }
@@ -514,34 +519,36 @@ export class AssignmentPdfService {
       <div class="question">
         <div class="question-text">${question}</div>
         ${audioUrl ? `<p><strong>File âm thanh:</strong> ${audioUrl}</p>` : ''}
-        ${transcript
-        ? `
+        ${
+          transcript
+            ? `
           <div class="options">
             <p><strong>Transcript:</strong></p>
             <p class="correct-answer">${transcript}</p>
           </div>
         `
-        : ''
-      }
-        ${questions.length > 0
-        ? `
+            : ''
+        }
+        ${
+          questions.length > 0
+            ? `
           <div class="options">
             <p><strong>Câu hỏi con:</strong></p>
             ${questions
-          .map(
-            (q: any, idx: number) => `
+              .map(
+                (q: any, idx: number) => `
               <div class="option">
                 <span class="option-label">${idx + 1}.</span>
                 <span>${q.question}</span>
                 ${q.correctAnswer ? `<br><span class="correct-answer">Đáp án: ${q.correctAnswer}</span>` : ''}
               </div>
             `,
-          )
-          .join('')}
+              )
+              .join('')}
           </div>
         `
-        : ''
-      }
+            : ''
+        }
       </div>
     `;
   }
@@ -552,34 +559,36 @@ export class AssignmentPdfService {
 
     return `
       <div class="question">
-        ${passage
-        ? `
+        ${
+          passage
+            ? `
           <div class="options">
             <p><strong>Đoạn văn:</strong></p>
             <p>${passage}</p>
           </div>
         `
-        : ''
-      }
-        ${questions.length > 0
-        ? `
+            : ''
+        }
+        ${
+          questions.length > 0
+            ? `
           <div class="options">
             <p><strong>Câu hỏi:</strong></p>
             ${questions
-          .map(
-            (q: any, idx: number) => `
+              .map(
+                (q: any, idx: number) => `
               <div class="option">
                 <span class="option-label">${idx + 1}.</span>
                 <span>${q.question}</span>
                 ${q.correctAnswer ? `<br><span class="correct-answer">Đáp án: ${q.correctAnswer}</span>` : ''}
               </div>
             `,
-          )
-          .join('')}
+              )
+              .join('')}
           </div>
         `
-        : ''
-      }
+            : ''
+        }
       </div>
     `;
   }
@@ -602,25 +611,26 @@ export class AssignmentPdfService {
         <div class="question-text">${question}</div>
         <div class="options">
           ${options
-        .map((option: any, idx: number) => {
-          const letter = String.fromCharCode(65 + idx); // A, B, C, D...
-          const isCorrect = correctIndex === idx;
-          return `
+            .map((option: any, idx: number) => {
+              const letter = String.fromCharCode(65 + idx); // A, B, C, D...
+              const isCorrect = correctIndex === idx;
+              return `
               <div class="option ${isCorrect ? 'correct-answer' : ''}">
                 <span class="option-label">${letter}.</span>
                 <span>${option}</span>
                 ${isCorrect ? ' ✓' : ''}
               </div>
             `;
-        })
-        .join('')}
+            })
+            .join('')}
         </div>
-        ${typeof correctIndex === 'number'
-        ? `
+        ${
+          typeof correctIndex === 'number'
+            ? `
         <p><strong>Đáp án đúng:</strong> <span class="correct-answer">${String.fromCharCode(65 + correctIndex)}</span></p>
         `
-        : ''
-      }
+            : ''
+        }
       </div>
     `;
   }
@@ -643,25 +653,26 @@ export class AssignmentPdfService {
         <div class="question-text">${question}</div>
         <div class="options">
           ${options
-        .map((option: any, idx: number) => {
-          const letter = String.fromCharCode(65 + idx); // A, B, C, D...
-          const isCorrect = correctIndex === idx;
-          return `
+            .map((option: any, idx: number) => {
+              const letter = String.fromCharCode(65 + idx); // A, B, C, D...
+              const isCorrect = correctIndex === idx;
+              return `
               <div class="option ${isCorrect ? 'correct-answer' : ''}">
                 <span class="option-label">${letter}.</span>
                 <span>${option}</span>
                 ${isCorrect ? ' ✓' : ''}
               </div>
             `;
-        })
-        .join('')}
+            })
+            .join('')}
         </div>
-        ${typeof correctIndex === 'number'
-        ? `
+        ${
+          typeof correctIndex === 'number'
+            ? `
         <p><strong>Đáp án đúng:</strong> <span class="correct-answer">${String.fromCharCode(65 + correctIndex)}</span></p>
         `
-        : ''
-      }
+            : ''
+        }
       </div>
     `;
   }

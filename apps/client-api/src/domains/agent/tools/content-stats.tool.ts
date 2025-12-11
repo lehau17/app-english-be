@@ -33,14 +33,26 @@ export class ContentStatsTool {
 - "phan tich noi dung", "lesson stats"
 OUTPUT: Thong ke chi tiet voi bieu do.`,
       schema: z.object({
-        action: z.enum(['overview', 'courses', 'lessons', 'activities', 'popular']).optional().default('overview').describe('Hanh dong'),
+        action: z
+          .enum(['overview', 'courses', 'lessons', 'activities', 'popular'])
+          .optional()
+          .default('overview')
+          .describe('Hanh dong'),
         category: z.string().optional().describe('Category de loc'),
         level: z.string().optional().describe('Level de loc'),
         limit: z.number().optional().default(10).describe('So luong ket qua'),
         period: z.string().optional().describe('Khoang thoi gian'),
       }),
-      func: async ({ action = 'overview', category, level, limit = 10, period }) => {
-        return this._call(JSON.stringify({ action, category, level, limit, period }));
+      func: async ({
+        action = 'overview',
+        category,
+        level,
+        limit = 10,
+        period,
+      }) => {
+        return this._call(
+          JSON.stringify({ action, category, level, limit, period }),
+        );
       },
     });
   }

@@ -1,5 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 
 export enum ActivityType {
   VOCAB = 'vocab',
@@ -62,7 +71,8 @@ export class GenerateActivitiesDto {
 
   @ApiPropertyOptional({
     description: 'Detailed user prompt describing what content to generate',
-    example: 'Focus on formal greetings used in business settings, include common phrases for meeting new people',
+    example:
+      'Focus on formal greetings used in business settings, include common phrases for meeting new people',
   })
   @IsString()
   @IsOptional()

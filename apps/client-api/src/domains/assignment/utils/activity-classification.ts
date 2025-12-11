@@ -24,11 +24,7 @@ export function isAutoGradable(type: string): boolean {
  * These activities use AI evaluation but teacher can override the score
  */
 export function isAIGradable(type: string): boolean {
-  const aiGradableTypes = [
-    'speaking',
-    'writing',
-    'pronunciation',
-  ];
+  const aiGradableTypes = ['speaking', 'writing', 'pronunciation'];
   return aiGradableTypes.includes(type.toLowerCase());
 }
 
@@ -45,7 +41,9 @@ export function requiresManualGrading(type: string): boolean {
  * Get activity classification category
  * Returns: 'auto' | 'ai' | 'manual'
  */
-export function getActivityClassification(type: string): 'auto' | 'ai' | 'manual' {
+export function getActivityClassification(
+  type: string,
+): 'auto' | 'ai' | 'manual' {
   if (isAutoGradable(type)) {
     return 'auto';
   }
@@ -58,7 +56,3 @@ export function getActivityClassification(type: string): 'auto' | 'ai' | 'manual
   // Default to manual for unknown types
   return 'manual';
 }
-
-
-
-

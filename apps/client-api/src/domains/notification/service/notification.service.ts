@@ -24,7 +24,7 @@ export class NotificationService {
     private readonly notificationRepository: NotificationRepository,
     private readonly kafkaService: KafkaService,
     private readonly prisma: PrismaRepository,
-  ) { }
+  ) {}
 
   async create(dto: CreateNotificationDto): Promise<Notification> {
     const notification = await this.notificationRepository.create(dto);

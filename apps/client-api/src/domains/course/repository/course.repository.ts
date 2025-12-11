@@ -14,7 +14,7 @@ const ALLOWED_SORT_BY = new Set<keyof Prisma.CourseOrderByWithRelationInput>([
 
 @Injectable()
 export class CourseRepository {
-  constructor(private readonly prisma: PrismaRepository) { }
+  constructor(private readonly prisma: PrismaRepository) {}
 
   create(data: Prisma.CourseCreateInput): Promise<Course> {
     return this.prisma.course.create({ data });
@@ -59,11 +59,11 @@ export class CourseRepository {
       ...(typeof isPublished === 'boolean' && { isPublished }),
       ...(typeof minPrice === 'number' || typeof maxPrice === 'number'
         ? {
-          price: {
-            gte: typeof minPrice === 'number' ? minPrice : undefined,
-            lte: typeof maxPrice === 'number' ? maxPrice : undefined,
-          },
-        }
+            price: {
+              gte: typeof minPrice === 'number' ? minPrice : undefined,
+              lte: typeof maxPrice === 'number' ? maxPrice : undefined,
+            },
+          }
         : {}),
       ...(language && { language }),
       ...(instructorId && { instructorId }),

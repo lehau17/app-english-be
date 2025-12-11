@@ -16,7 +16,9 @@ import { LandingPageService } from './landing-page.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get('ENROLLMENT_VERIFICATION_SECRET') || config.get('JWT_SECRET'),
+        secret:
+          config.get('ENROLLMENT_VERIFICATION_SECRET') ||
+          config.get('JWT_SECRET'),
         signOptions: { expiresIn: '30m' },
       }),
     }),

@@ -1,17 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import {
-    AlignmentType,
-    Document,
-    HeadingLevel,
-    ImageRun,
-    Packer,
-    Paragraph,
-    Table,
-    TableCell,
-    TableRow,
-    TextRun,
-    WidthType,
+  AlignmentType,
+  Document,
+  HeadingLevel,
+  ImageRun,
+  Packer,
+  Paragraph,
+  Table,
+  TableCell,
+  TableRow,
+  TextRun,
+  WidthType,
 } from 'docx';
 import { promises as fs } from 'fs';
 import { Tool } from 'langchain/tools';
@@ -92,7 +92,7 @@ Returns:
         {
           responseType: 'arraybuffer',
           timeout: 10000,
-        }
+        },
       );
 
       return Buffer.from(response.data);
@@ -109,37 +109,49 @@ Returns:
     const { chartType, data, title } = chart;
 
     // Extract labels and values from data
-    const labels = data.map(d => d.name || d.label || '');
+    const labels = data.map((d) => d.name || d.label || '');
 
     // Get all numeric keys for datasets
     const numericKeys = Object.keys(data[0] || {}).filter(
-      key => key !== 'name' && key !== 'label' && typeof data[0][key] === 'number'
+      (key) =>
+        key !== 'name' && key !== 'label' && typeof data[0][key] === 'number',
     );
 
-    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+    const colors = [
+      '#3b82f6',
+      '#10b981',
+      '#f59e0b',
+      '#ef4444',
+      '#8b5cf6',
+      '#ec4899',
+    ];
 
     // Map chart types
     const chartTypeMap: Record<string, string> = {
-      'bar': 'bar',
-      'line': 'line',
-      'pie': 'pie',
-      'area': 'line',
-      'doughnut': 'doughnut',
+      bar: 'bar',
+      line: 'line',
+      pie: 'pie',
+      area: 'line',
+      doughnut: 'doughnut',
     };
 
     const type = chartTypeMap[chartType] || 'bar';
 
     if (type === 'pie' || type === 'doughnut') {
       // Pie/Doughnut chart
-      const values = data.map(d => d.value || d.Doanh_thu || d['Doanh thu'] || 0);
+      const values = data.map(
+        (d) => d.value || d.Doanh_thu || d['Doanh thu'] || 0,
+      );
       return {
         type,
         data: {
           labels,
-          datasets: [{
-            data: values,
-            backgroundColor: colors.slice(0, data.length),
-          }],
+          datasets: [
+            {
+              data: values,
+              backgroundColor: colors.slice(0, data.length),
+            },
+          ],
         },
         options: {
           plugins: {
@@ -153,8 +165,11 @@ Returns:
     // Bar/Line/Area chart
     const datasets = numericKeys.map((key, index) => ({
       label: key,
-      data: data.map(d => d[key] || 0),
-      backgroundColor: chartType === 'area' ? `${colors[index % colors.length]}80` : colors[index % colors.length],
+      data: data.map((d) => d[key] || 0),
+      backgroundColor:
+        chartType === 'area'
+          ? `${colors[index % colors.length]}80`
+          : colors[index % colors.length],
       borderColor: colors[index % colors.length],
       fill: chartType === 'area',
       tension: chartType === 'line' || chartType === 'area' ? 0.4 : 0,

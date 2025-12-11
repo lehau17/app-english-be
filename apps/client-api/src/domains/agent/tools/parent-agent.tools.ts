@@ -115,7 +115,10 @@ export class ParentAgentTools {
 
             return {
               id: child.id,
-              name: child.displayName || `${child.firstName || ''} ${child.lastName || ''}`.trim() || 'Chưa có tên',
+              name:
+                child.displayName ||
+                `${child.firstName || ''} ${child.lastName || ''}`.trim() ||
+                'Chưa có tên',
               email: child.email,
               phone: child.phone,
               classes,
@@ -148,7 +151,10 @@ export class ParentAgentTools {
       description: `Xem tiến độ học tập của con em. Trả về: số bài đã học, số bài đã hoàn thành, tỷ lệ hoàn thành, điểm trung bình.`,
       schema: z.object({
         childId: z.string().describe('ID của con em'),
-        courseId: z.string().optional().describe('ID khóa học (tùy chọn, nếu không có sẽ lấy tất cả)'),
+        courseId: z
+          .string()
+          .optional()
+          .describe('ID khóa học (tùy chọn, nếu không có sẽ lấy tất cả)'),
       }),
       func: async ({ childId, courseId }) => {
         try {
@@ -222,7 +228,10 @@ export class ParentAgentTools {
       description: `Lấy danh sách bài tập của con em. Trả về: bài tập đã nộp, chưa nộp, quá hạn.`,
       schema: z.object({
         childId: z.string().describe('ID của con em'),
-        status: z.enum(['all', 'submitted', 'pending', 'overdue']).optional().describe('Lọc theo trạng thái'),
+        status: z
+          .enum(['all', 'submitted', 'pending', 'overdue'])
+          .optional()
+          .describe('Lọc theo trạng thái'),
       }),
       func: async ({ childId, status = 'all' }) => {
         try {
@@ -261,7 +270,11 @@ export class ParentAgentTools {
               title: assignment.title,
               dueDate: assignment.dueDate,
               totalPoints: assignment.totalPoints,
-              status: isSubmitted ? 'submitted' : isOverdue ? 'overdue' : 'pending',
+              status: isSubmitted
+                ? 'submitted'
+                : isOverdue
+                  ? 'overdue'
+                  : 'pending',
               score: submission?.score || null,
               submittedAt: submission?.submittedAt || null,
             };
@@ -344,12 +357,15 @@ export class ParentAgentTools {
             assignmentTitle: s.assignment.title,
             score: s.score,
             totalPoints: s.assignment.totalPoints,
-            percentage: Math.round(((s.score || 0) / s.assignment.totalPoints) * 100),
+            percentage: Math.round(
+              ((s.score || 0) / s.assignment.totalPoints) * 100,
+            ),
             submittedAt: s.submittedAt,
           }));
 
           const percentages = scores.map((s) => s.percentage);
-          const avgScore = percentages.reduce((a, b) => a + b, 0) / percentages.length;
+          const avgScore =
+            percentages.reduce((a, b) => a + b, 0) / percentages.length;
           const maxScore = Math.max(...percentages);
           const minScore = Math.min(...percentages);
 
@@ -592,15 +608,23 @@ export class ParentAgentTools {
           }
 
           const childName =
-            child.displayName || `${child.firstName || ''} ${child.lastName || ''}`.trim() || 'Chưa có tên';
+            child.displayName ||
+            `${child.firstName || ''} ${child.lastName || ''}`.trim() ||
+            'Chưa có tên';
 
           const avgScore =
             submissions.length > 0
-              ? submissions.reduce((sum, s) => sum + ((s.score || 0) / s.assignment.totalPoints) * 100, 0) /
-                submissions.length
+              ? submissions.reduce(
+                  (sum, s) =>
+                    sum + ((s.score || 0) / s.assignment.totalPoints) * 100,
+                  0,
+                ) / submissions.length
               : 0;
 
-          const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+          const totalPaid = payments.reduce(
+            (sum, p) => sum + (p.amount || 0),
+            0,
+          );
 
           return JSON.stringify({
             success: true,
@@ -631,4 +655,3 @@ export class ParentAgentTools {
     });
   }
 }
-

@@ -21,7 +21,7 @@ export class StudentService {
     private readonly studentRepository: StudentRepository,
     private readonly uploadService: UploadService,
     private readonly excelExportService: ExcelExportService,
-  ) { }
+  ) {}
 
   /**
    * Creates a new student record in the database.
@@ -88,9 +88,11 @@ export class StudentService {
   async exportStudents(query: FilterStudentRequestDto): Promise<Buffer> {
     const students = await this.studentRepository.listAll(query);
     if (students.length === 0) {
-      return this.excelExportService.generateExcel([], [
-        { header: 'Email', key: 'email', width: 30 },
-      ], 'Danh sách học viên');
+      return this.excelExportService.generateExcel(
+        [],
+        [{ header: 'Email', key: 'email', width: 30 }],
+        'Danh sách học viên',
+      );
     }
 
     const data = students.map((s) => ({
@@ -125,7 +127,8 @@ export class StudentService {
    * Returns a CSV with headers and example rows
    */
   getImportTemplate(): string {
-    const header = 'email,password,firstName,lastName,phone,displayName,gender\n';
+    const header =
+      'email,password,firstName,lastName,phone,displayName,gender\n';
     const exampleRows = [
       'student1@example.com,Password123!,Nguyen,Van A,0901234567,Nguyen Van A,male',
       'student2@example.com,Password123!,Tran,Thi B,0912345678,Tran Thi B,female',
@@ -179,7 +182,8 @@ export class StudentService {
       const firstName = values[firstNameIndex]?.trim();
       const lastName = values[lastNameIndex]?.trim();
       const gender = values[genderIndex]?.trim();
-      const displayName = values[displayNameIndex]?.trim() || `${firstName} ${lastName}`.trim();
+      const displayName =
+        values[displayNameIndex]?.trim() || `${firstName} ${lastName}`.trim();
       const phone = values[phoneIndex]?.trim();
 
       if (email && password && firstName && lastName && phone) {

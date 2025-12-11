@@ -20,15 +20,15 @@ import { NotificationService } from './notification.service';
           port: +process.env.SMTP_PORT,
           secure: false,
           auth: {
-        user: process.env.SMTP_USERNAME,   // username / email gửi
-        pass: process.env.SMTP_PASSWORD,   // mật khẩu / app password
-      },
+            user: process.env.SMTP_USERNAME, // username / email gửi
+            pass: process.env.SMTP_PASSWORD, // mật khẩu / app password
+          },
           tls: {
             rejectUnauthorized: false,
           },
         },
         defaults: {
-          from: "english@eduliagua.com",
+          from: 'english@eduliagua.com',
         },
         template: {
           dir: __dirname + '/templates',

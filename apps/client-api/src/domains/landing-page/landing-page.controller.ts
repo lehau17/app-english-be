@@ -213,7 +213,8 @@ export class LandingPageController {
   @Post('validate-guest-user')
   @ApiOperation({
     summary: 'Kiểm tra email/phone đã tồn tại trước khi đăng ký',
-    description: 'Validate email và phone của học sinh/phụ huynh có bị trùng không',
+    description:
+      'Validate email và phone của học sinh/phụ huynh có bị trùng không',
   })
   @ApiResponse({
     status: 200,
@@ -233,7 +234,10 @@ export class LandingPageController {
       type: 'object',
       properties: {
         statusCode: { type: 'number', example: 400 },
-        message: { type: 'string', example: 'Email hoặc số điện thoại đã được sử dụng' },
+        message: {
+          type: 'string',
+          example: 'Email hoặc số điện thoại đã được sử dụng',
+        },
         conflicts: {
           type: 'object',
           properties: {

@@ -33,10 +33,21 @@ OUTPUT: Tra ve:
         classroomId: z.string().optional().describe('ID lop hoc cu the'),
         classroomName: z.string().optional().describe('Ten lop de tim'),
         teacherId: z.string().optional().describe('ID giao vien de loc lop'),
-        compareAll: z.boolean().optional().default(true).describe('So sanh tat ca lop'),
+        compareAll: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('So sanh tat ca lop'),
       }),
-      func: async ({ classroomId, classroomName, teacherId, compareAll = true }) => {
-        return this._call(JSON.stringify({ classroomId, classroomName, teacherId, compareAll }));
+      func: async ({
+        classroomId,
+        classroomName,
+        teacherId,
+        compareAll = true,
+      }) => {
+        return this._call(
+          JSON.stringify({ classroomId, classroomName, teacherId, compareAll }),
+        );
       },
     });
   }
@@ -45,7 +56,12 @@ OUTPUT: Tra ve:
     try {
       this.logger.log(`🏫 Classroom Analytics Tool called with: ${input}`);
 
-      let params: { classroomId?: string; classroomName?: string; teacherId?: string; compareAll?: boolean } = {};
+      let params: {
+        classroomId?: string;
+        classroomName?: string;
+        teacherId?: string;
+        compareAll?: boolean;
+      } = {};
       try {
         params = JSON.parse(input);
       } catch {
@@ -117,7 +133,12 @@ OUTPUT: Tra ve:
       where,
       include: {
         teacher: {
-          select: { id: true, displayName: true, firstName: true, lastName: true },
+          select: {
+            id: true,
+            displayName: true,
+            firstName: true,
+            lastName: true,
+          },
         },
         students: {
           include: {
@@ -151,18 +172,36 @@ OUTPUT: Tra ve:
           },
         });
 
-        const totalScore = submissions.reduce((sum, s) => sum + (s.score || 0), 0);
-        const avgScore = submissions.length > 0 ? Math.round(totalScore / submissions.length) : 0;
-        const completedCount = submissions.filter((s) => s.status === 'submitted').length;
-        const completionRate = submissions.length > 0 ? Math.round((completedCount / submissions.length) * 100) : 0;
-
-        // Calculate attendance
-        const totalAttendances = classroom.sessions.reduce((sum, s) => sum + s.attendance.length, 0);
-        const presentAttendances = classroom.sessions.reduce(
-          (sum, s) => sum + s.attendance.filter((a) => a.status === 'present').length,
+        const totalScore = submissions.reduce(
+          (sum, s) => sum + (s.score || 0),
           0,
         );
-        const attendanceRate = totalAttendances > 0 ? Math.round((presentAttendances / totalAttendances) * 100) : 0;
+        const avgScore =
+          submissions.length > 0
+            ? Math.round(totalScore / submissions.length)
+            : 0;
+        const completedCount = submissions.filter(
+          (s) => s.status === 'submitted',
+        ).length;
+        const completionRate =
+          submissions.length > 0
+            ? Math.round((completedCount / submissions.length) * 100)
+            : 0;
+
+        // Calculate attendance
+        const totalAttendances = classroom.sessions.reduce(
+          (sum, s) => sum + s.attendance.length,
+          0,
+        );
+        const presentAttendances = classroom.sessions.reduce(
+          (sum, s) =>
+            sum + s.attendance.filter((a) => a.status === 'present').length,
+          0,
+        );
+        const attendanceRate =
+          totalAttendances > 0
+            ? Math.round((presentAttendances / totalAttendances) * 100)
+            : 0;
 
         return {
           id: classroom.id,
@@ -181,14 +220,23 @@ OUTPUT: Tra ve:
       }),
     );
 
-    const totalStudents = classroomStats.reduce((sum, c) => sum + c.studentCount, 0);
+    const totalStudents = classroomStats.reduce(
+      (sum, c) => sum + c.studentCount,
+      0,
+    );
     const avgAttendance =
       classroomStats.length > 0
-        ? Math.round(classroomStats.reduce((sum, c) => sum + c.attendanceRate, 0) / classroomStats.length)
+        ? Math.round(
+            classroomStats.reduce((sum, c) => sum + c.attendanceRate, 0) /
+              classroomStats.length,
+          )
         : 0;
     const avgScore =
       classroomStats.length > 0
-        ? Math.round(classroomStats.reduce((sum, c) => sum + c.avgScore, 0) / classroomStats.length)
+        ? Math.round(
+            classroomStats.reduce((sum, c) => sum + c.avgScore, 0) /
+              classroomStats.length,
+          )
         : 0;
 
     return {
@@ -201,7 +249,9 @@ OUTPUT: Tra ve:
 
   private async analyzeWithAI(data: any): Promise<any> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = this.genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+      });
 
       const prompt = `Phân tích dữ liệu lớp học sau và đưa ra insights:
 
@@ -262,19 +312,30 @@ Trả về JSON với format:
         data: [
           {
             metric: 'Học viên',
-            ...Object.fromEntries(top5.map((c: any) => [c.name.substring(0, 12), c.studentCount * 5])),
+            ...Object.fromEntries(
+              top5.map((c: any) => [
+                c.name.substring(0, 12),
+                c.studentCount * 5,
+              ]),
+            ),
           },
           {
             metric: 'Điểm TB',
-            ...Object.fromEntries(top5.map((c: any) => [c.name.substring(0, 12), c.avgScore])),
+            ...Object.fromEntries(
+              top5.map((c: any) => [c.name.substring(0, 12), c.avgScore]),
+            ),
           },
           {
             metric: 'Attendance',
-            ...Object.fromEntries(top5.map((c: any) => [c.name.substring(0, 12), c.attendanceRate])),
+            ...Object.fromEntries(
+              top5.map((c: any) => [c.name.substring(0, 12), c.attendanceRate]),
+            ),
           },
           {
             metric: 'Completion',
-            ...Object.fromEntries(top5.map((c: any) => [c.name.substring(0, 12), c.completionRate])),
+            ...Object.fromEntries(
+              top5.map((c: any) => [c.name.substring(0, 12), c.completionRate]),
+            ),
           },
         ],
         config: {
@@ -296,7 +357,8 @@ Trả về JSON với format:
     classrooms.forEach((c: any) => {
       if (c.completionRate > 80) completionBuckets['Xuất sắc (>80%)']++;
       else if (c.completionRate > 60) completionBuckets['Tốt (60-80%)']++;
-      else if (c.completionRate > 40) completionBuckets['Trung bình (40-60%)']++;
+      else if (c.completionRate > 40)
+        completionBuckets['Trung bình (40-60%)']++;
       else completionBuckets['Cần cải thiện (<40%)']++;
     });
     charts.push({

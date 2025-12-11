@@ -141,9 +141,7 @@ export class TextChunkerService {
       i += maxWords - overlapWords; // Move forward with overlap
     }
 
-    this.logger.log(
-      `Created ${chunks.length} chunks (word-based splitting)`,
-    );
+    this.logger.log(`Created ${chunks.length} chunks (word-based splitting)`);
     return chunks;
   }
 

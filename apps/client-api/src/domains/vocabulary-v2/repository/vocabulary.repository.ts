@@ -579,7 +579,10 @@ export class VocabularyRepository {
       ),
     );
 
-    const totalTerms = unitCounts.reduce((sum, { termCount }) => sum + termCount, 0);
+    const totalTerms = unitCounts.reduce(
+      (sum, { termCount }) => sum + termCount,
+      0,
+    );
 
     return {
       unitsUpdated: units.length,

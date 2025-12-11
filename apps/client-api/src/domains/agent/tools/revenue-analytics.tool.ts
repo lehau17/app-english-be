@@ -41,10 +41,16 @@ OUTPUT: Tra ve:
         startDate: z.string().optional().describe('Ngay bat dau (ISO string)'),
         endDate: z.string().optional().describe('Ngay ket thuc (ISO string)'),
         courseId: z.string().optional().describe('ID khoa hoc cu the'),
-        period: z.enum(['month', 'quarter', 'year']).optional().default('year').describe('Khoang thoi gian'),
+        period: z
+          .enum(['month', 'quarter', 'year'])
+          .optional()
+          .default('year')
+          .describe('Khoang thoi gian'),
       }),
       func: async ({ startDate, endDate, courseId, period = 'year' }) => {
-        return this._call(JSON.stringify({ startDate, endDate, courseId, period }));
+        return this._call(
+          JSON.stringify({ startDate, endDate, courseId, period }),
+        );
       },
     });
   }
@@ -53,7 +59,12 @@ OUTPUT: Tra ve:
     try {
       this.logger.log(`💰 Revenue Analytics Tool called with: ${input}`);
 
-      let params: { startDate?: string; endDate?: string; courseId?: string; period?: string } = {};
+      let params: {
+        startDate?: string;
+        endDate?: string;
+        courseId?: string;
+        period?: string;
+      } = {};
       try {
         params = JSON.parse(input);
       } catch {
@@ -95,9 +106,16 @@ OUTPUT: Tra ve:
     }
   }
 
-  private async getRevenueData(params: { startDate?: string; endDate?: string; courseId?: string; period?: string }) {
+  private async getRevenueData(params: {
+    startDate?: string;
+    endDate?: string;
+    courseId?: string;
+    period?: string;
+  }) {
     const now = new Date();
-    const startDate = params.startDate ? new Date(params.startDate) : new Date(now.getFullYear(), 0, 1);
+    const startDate = params.startDate
+      ? new Date(params.startDate)
+      : new Date(now.getFullYear(), 0, 1);
     const endDate = params.endDate ? new Date(params.endDate) : now;
 
     // Get transactions
@@ -118,18 +136,42 @@ OUTPUT: Tra ve:
     });
 
     // Calculate totals
-    const completedTransactions = transactions.filter((t) => t.status === 'success');
-    const pendingTransactions = transactions.filter((t) => t.status === 'pending');
-    const failedTransactions = transactions.filter((t) => t.status === 'failed' || t.status === 'cancelled');
+    const completedTransactions = transactions.filter(
+      (t) => t.status === 'success',
+    );
+    const pendingTransactions = transactions.filter(
+      (t) => t.status === 'pending',
+    );
+    const failedTransactions = transactions.filter(
+      (t) => t.status === 'failed' || t.status === 'cancelled',
+    );
 
-    const totalRevenue = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
-    const completedAmount = completedTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
-    const pendingAmount = pendingTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
-    const failedAmount = failedTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
-    const successRate = transactions.length > 0 ? Math.round((completedTransactions.length / transactions.length) * 100) : 0;
+    const totalRevenue = transactions.reduce(
+      (sum, t) => sum + (t.amount || 0),
+      0,
+    );
+    const completedAmount = completedTransactions.reduce(
+      (sum, t) => sum + (t.amount || 0),
+      0,
+    );
+    const pendingAmount = pendingTransactions.reduce(
+      (sum, t) => sum + (t.amount || 0),
+      0,
+    );
+    const failedAmount = failedTransactions.reduce(
+      (sum, t) => sum + (t.amount || 0),
+      0,
+    );
+    const successRate =
+      transactions.length > 0
+        ? Math.round((completedTransactions.length / transactions.length) * 100)
+        : 0;
 
     // Monthly revenue
-    const monthlyRevenue: Record<string, { completed: number; pending: number; total: number }> = {};
+    const monthlyRevenue: Record<
+      string,
+      { completed: number; pending: number; total: number }
+    > = {};
     transactions.forEach((t) => {
       const monthKey = `${t.createdAt.getFullYear()}-${String(t.createdAt.getMonth() + 1).padStart(2, '0')}`;
       if (!monthlyRevenue[monthKey]) {
@@ -144,12 +186,25 @@ OUTPUT: Tra ve:
     });
 
     // Quarterly revenue
-    const quarterlyRevenue: Record<string, { completed: number; pending: number; total: number; transactionCount: number }> = {};
+    const quarterlyRevenue: Record<
+      string,
+      {
+        completed: number;
+        pending: number;
+        total: number;
+        transactionCount: number;
+      }
+    > = {};
     transactions.forEach((t) => {
       const quarter = Math.ceil((t.createdAt.getMonth() + 1) / 3);
       const quarterKey = `${t.createdAt.getFullYear()}-Q${quarter}`;
       if (!quarterlyRevenue[quarterKey]) {
-        quarterlyRevenue[quarterKey] = { completed: 0, pending: 0, total: 0, transactionCount: 0 };
+        quarterlyRevenue[quarterKey] = {
+          completed: 0,
+          pending: 0,
+          total: 0,
+          transactionCount: 0,
+        };
       }
       quarterlyRevenue[quarterKey].total += t.amount || 0;
       quarterlyRevenue[quarterKey].transactionCount++;
@@ -161,11 +216,24 @@ OUTPUT: Tra ve:
     });
 
     // Yearly revenue
-    const yearlyRevenue: Record<string, { completed: number; pending: number; total: number; transactionCount: number }> = {};
+    const yearlyRevenue: Record<
+      string,
+      {
+        completed: number;
+        pending: number;
+        total: number;
+        transactionCount: number;
+      }
+    > = {};
     transactions.forEach((t) => {
       const yearKey = `${t.createdAt.getFullYear()}`;
       if (!yearlyRevenue[yearKey]) {
-        yearlyRevenue[yearKey] = { completed: 0, pending: 0, total: 0, transactionCount: 0 };
+        yearlyRevenue[yearKey] = {
+          completed: 0,
+          pending: 0,
+          total: 0,
+          transactionCount: 0,
+        };
       }
       yearlyRevenue[yearKey].total += t.amount || 0;
       yearlyRevenue[yearKey].transactionCount++;
@@ -178,7 +246,12 @@ OUTPUT: Tra ve:
 
     // Year-over-Year comparison
     const years = Object.keys(yearlyRevenue).sort();
-    const yoyComparison: Array<{ year: string; revenue: number; growth: number | null; growthPercent: string }> = [];
+    const yoyComparison: Array<{
+      year: string;
+      revenue: number;
+      growth: number | null;
+      growthPercent: string;
+    }> = [];
     years.forEach((year, index) => {
       const currentRevenue = yearlyRevenue[year].completed;
       let growth: number | null = null;
@@ -188,9 +261,10 @@ OUTPUT: Tra ve:
         const prevYear = years[index - 1];
         const prevRevenue = yearlyRevenue[prevYear].completed;
         growth = currentRevenue - prevRevenue;
-        growthPercent = prevRevenue > 0
-          ? `${growth >= 0 ? '+' : ''}${((growth / prevRevenue) * 100).toFixed(1)}%`
-          : 'N/A';
+        growthPercent =
+          prevRevenue > 0
+            ? `${growth >= 0 ? '+' : ''}${((growth / prevRevenue) * 100).toFixed(1)}%`
+            : 'N/A';
       }
 
       yoyComparison.push({
@@ -202,7 +276,10 @@ OUTPUT: Tra ve:
     });
 
     // Revenue by course
-    const courseRevenueMap: Record<string, { name: string; revenue: number; count: number }> = {};
+    const courseRevenueMap: Record<
+      string,
+      { name: string; revenue: number; count: number }
+    > = {};
     transactions.forEach((t) => {
       const courseId = t.courseId || 'unknown';
       const courseName = t.course?.title || 'Khác';
@@ -230,10 +307,12 @@ OUTPUT: Tra ve:
         month,
         ...data,
       })),
-      quarterlyRevenue: Object.entries(quarterlyRevenue).map(([quarter, data]) => ({
-        quarter,
-        ...data,
-      })),
+      quarterlyRevenue: Object.entries(quarterlyRevenue).map(
+        ([quarter, data]) => ({
+          quarter,
+          ...data,
+        }),
+      ),
       yearlyRevenue: Object.entries(yearlyRevenue).map(([year, data]) => ({
         year,
         ...data,
@@ -245,7 +324,9 @@ OUTPUT: Tra ve:
 
   private async analyzeWithAI(data: any): Promise<any> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = this.genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+      });
 
       const prompt = `Phân tích dữ liệu doanh thu sau và đưa ra insights:
 
@@ -311,9 +392,7 @@ Trả về JSON với format:
         })),
         config: {
           xAxisKey: 'name',
-          bars: [
-            { dataKey: 'Doanh thu', color: '#8B5CF6' },
-          ],
+          bars: [{ dataKey: 'Doanh thu', color: '#8B5CF6' }],
         },
       });
     }
@@ -352,9 +431,7 @@ Trả về JSON với format:
         })),
         config: {
           xAxisKey: 'name',
-          bars: [
-            { dataKey: 'Doanh thu', color: '#10B981' },
-          ],
+          bars: [{ dataKey: 'Doanh thu', color: '#10B981' }],
         },
       });
     }

@@ -16,7 +16,7 @@ export class ActivityAIController {
     description: 'Activities generated successfully',
   })
   @ResponseMessage('Activities generated successfully')
-  async generateActivities(@Body() dto: GenerateActivitiesDto) :Promise<any>{
+  async generateActivities(@Body() dto: GenerateActivitiesDto): Promise<any> {
     const activities = await this.activityAIService.generateActivities(
       dto.courseTitle,
       dto.courseDescription,

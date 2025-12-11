@@ -22,7 +22,10 @@ export class MediaRepository {
     return this.prisma.mediaFile.create({ data });
   }
 
-  async update(id: string, data: Prisma.MediaFileUpdateInput): Promise<MediaFile> {
+  async update(
+    id: string,
+    data: Prisma.MediaFileUpdateInput,
+  ): Promise<MediaFile> {
     return this.prisma.mediaFile.update({
       where: { id },
       data,
@@ -47,7 +50,15 @@ export class MediaRepository {
     page?: number;
     limit?: number;
   }): Promise<{ data: MediaFile[]; total: number }> {
-    const { page = 1, limit = 20, mimeType, source, sourceId, tags, category } = params;
+    const {
+      page = 1,
+      limit = 20,
+      mimeType,
+      source,
+      sourceId,
+      tags,
+      category,
+    } = params;
     const skip = (page - 1) * limit;
 
     const where: Prisma.MediaFileWhereInput = {};

@@ -24,8 +24,13 @@ Returns:
   ]
 }`,
       schema: z.object({
-        data: z.array(z.record(z.string(), z.unknown())).describe('Array of data objects to analyze'),
-        context: z.string().optional().describe('Context of the report (e.g., student performance)'),
+        data: z
+          .array(z.record(z.string(), z.unknown()))
+          .describe('Array of data objects to analyze'),
+        context: z
+          .string()
+          .optional()
+          .describe('Context of the report (e.g., student performance)'),
       }),
       func: async ({ data, context }) => {
         return this._call(JSON.stringify({ data, context }));

@@ -35,12 +35,37 @@ Ket qua tra ve:
       schema: z.object({
         studentId: z.string().optional().describe('UUID cua hoc sinh'),
         studentName: z.string().optional().describe('Ten hoc sinh de tim kiem'),
-        studentEmail: z.string().optional().describe('Email hoc sinh de tim kiem'),
-        period: z.enum(['week', 'month', 'quarter', 'all']).optional().default('month').describe('Khoang thoi gian phan tich'),
-        includeCharts: z.boolean().optional().default(true).describe('Co tao bieu do khong'),
+        studentEmail: z
+          .string()
+          .optional()
+          .describe('Email hoc sinh de tim kiem'),
+        period: z
+          .enum(['week', 'month', 'quarter', 'all'])
+          .optional()
+          .default('month')
+          .describe('Khoang thoi gian phan tich'),
+        includeCharts: z
+          .boolean()
+          .optional()
+          .default(true)
+          .describe('Co tao bieu do khong'),
       }),
-      func: async ({ studentId, studentName, studentEmail, period = 'month', includeCharts = true }) => {
-        return this._call(JSON.stringify({ studentId, studentName, studentEmail, period, includeCharts }));
+      func: async ({
+        studentId,
+        studentName,
+        studentEmail,
+        period = 'month',
+        includeCharts = true,
+      }) => {
+        return this._call(
+          JSON.stringify({
+            studentId,
+            studentName,
+            studentEmail,
+            period,
+            includeCharts,
+          }),
+        );
       },
     });
   }
@@ -144,7 +169,10 @@ Ket qua tra ve:
         generatedAt: new Date().toISOString(),
       });
     } catch (error) {
-      this.logger.error(`Student analytics error: ${error.message}`, error.stack);
+      this.logger.error(
+        `Student analytics error: ${error.message}`,
+        error.stack,
+      );
       return JSON.stringify({
         success: false,
         error: `Lỗi phân tích học viên: ${error.message}`,
@@ -220,8 +248,8 @@ Ket qua tra ve:
           userId: studentId,
           createdAt: { gte: startDate },
           status: {
-            in: ['completed', 'in_progress', "submitted"],
-          }
+            in: ['completed', 'in_progress', 'submitted'],
+          },
         },
         select: {
           id: true,
@@ -238,8 +266,12 @@ Ket qua tra ve:
           userId: studentId,
           createdAt: { gte: startDate },
           state: {
-            in:   [AiSpeakingSessionState.finished, AiSpeakingSessionState.ai_speaking, AiSpeakingSessionState.user_speaking],
-          }
+            in: [
+              AiSpeakingSessionState.finished,
+              AiSpeakingSessionState.ai_speaking,
+              AiSpeakingSessionState.user_speaking,
+            ],
+          },
         },
         include: {
           turns: {
@@ -271,15 +303,20 @@ Ket qua tra ve:
 
     // Calculate metrics
     const totalAssignments = submissions.length;
-    const completedAssignments = submissions.filter((s) => s.score !== null).length;
+    const completedAssignments = submissions.filter(
+      (s) => s.score !== null,
+    ).length;
     const completionRate =
-      totalAssignments > 0 ? (completedAssignments / totalAssignments) * 100 : 0;
+      totalAssignments > 0
+        ? (completedAssignments / totalAssignments) * 100
+        : 0;
 
     const totalScore = submissions.reduce((sum, s) => {
       const percentage = (s.score / s.assignment.totalPoints) * 100;
       return sum + percentage;
     }, 0);
-    const averageScore = totalAssignments > 0 ? totalScore / totalAssignments : 0;
+    const averageScore =
+      totalAssignments > 0 ? totalScore / totalAssignments : 0;
 
     const studyTime =
       submissions.reduce((sum, s) => sum + (s.timeSpent || 0), 0) +
@@ -295,11 +332,15 @@ Ket qua tra ve:
 
     // Skill breakdown
     const grammarScore = this.calculateSkillScoreByType(submissions, 'grammar');
-    const vocabScore = this.calculateSkillScoreByType(submissions, 'vocabulary') ||
-      (vocabularyMastered > 0 ? Math.min((vocabularyMastered / 100) * 100, 100) : 0);
+    const vocabScore =
+      this.calculateSkillScoreByType(submissions, 'vocabulary') ||
+      (vocabularyMastered > 0
+        ? Math.min((vocabularyMastered / 100) * 100, 100)
+        : 0);
     const listeningScore =
       podcastAttempts.length > 0
-        ? podcastAttempts.reduce((sum, p) => sum + (p.scorePercent || 0), 0) / podcastAttempts.length
+        ? podcastAttempts.reduce((sum, p) => sum + (p.scorePercent || 0), 0) /
+          podcastAttempts.length
         : 0;
     const speakingScore = this.calculateSpeakingScore(speakingSessions);
     const readingScore = this.calculateSkillScoreByType(submissions, 'reading');
@@ -555,7 +596,10 @@ Trả lời bằng tiếng Việt, chuyên nghiệp và dễ hiểu.`;
     return start;
   }
 
-  private calculateSkillScoreByType(submissions: any[], skillKeyword: string): number {
+  private calculateSkillScoreByType(
+    submissions: any[],
+    skillKeyword: string,
+  ): number {
     const filtered = submissions.filter((s) =>
       s.assignment.title.toLowerCase().includes(skillKeyword.toLowerCase()),
     );

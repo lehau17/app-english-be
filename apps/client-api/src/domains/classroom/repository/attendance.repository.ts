@@ -222,7 +222,9 @@ export class AttendanceRepository {
   /**
    * Get attendance summary for a session
    */
-  async getSessionSummary(sessionId: string): Promise<SessionAttendanceSummary> {
+  async getSessionSummary(
+    sessionId: string,
+  ): Promise<SessionAttendanceSummary> {
     // First try to find by ClassroomSession.id
     let session = await this.prisma.classroomSession.findUnique({
       where: { id: sessionId },
@@ -275,13 +277,14 @@ export class AttendanceRepository {
           });
 
           // Filter by metadata.courseSessionScheduleId
-          session = sessions.find((s) => {
-            if (s.metadata && typeof s.metadata === 'object') {
-              const metadata = s.metadata as any;
-              return metadata.courseSessionScheduleId === sessionId;
-            }
-            return false;
-          }) || null;
+          session =
+            sessions.find((s) => {
+              if (s.metadata && typeof s.metadata === 'object') {
+                const metadata = s.metadata as any;
+                return metadata.courseSessionScheduleId === sessionId;
+              }
+              return false;
+            }) || null;
         }
       }
     }
@@ -292,7 +295,7 @@ export class AttendanceRepository {
       );
       throw new NotFoundException(
         `ClassroomSession not found for sessionId: ${sessionId}. ` +
-        `If this is a SessionSchedule ID, please ensure the corresponding ClassroomSession exists.`,
+          `If this is a SessionSchedule ID, please ensure the corresponding ClassroomSession exists.`,
       );
     }
 
@@ -671,7 +674,9 @@ export class AttendanceRepository {
     return {
       totalSessions,
       averageAttendanceRate,
-      studentStats: studentStats.sort((a, b) => b.attendanceRate - a.attendanceRate),
+      studentStats: studentStats.sort(
+        (a, b) => b.attendanceRate - a.attendanceRate,
+      ),
     };
   }
 }

@@ -81,7 +81,9 @@ export class AttendanceService {
   /**
    * Get attendance summary for a session
    */
-  async getSessionSummary(sessionId: string): Promise<SessionAttendanceSummary> {
+  async getSessionSummary(
+    sessionId: string,
+  ): Promise<SessionAttendanceSummary> {
     return this.cacheService.getOrSet(
       ATTENDANCE_CACHE.SESSION_SUMMARY,
       sessionId,

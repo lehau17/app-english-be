@@ -87,7 +87,11 @@ export class AttendanceBlockingService {
     }
 
     // If should not be blocked but currently blocked (auto-blocked), auto-unblock
-    if (!shouldBlock && studentRecord.isBlocked && !studentRecord.blockedReason?.includes('Thủ công')) {
+    if (
+      !shouldBlock &&
+      studentRecord.isBlocked &&
+      !studentRecord.blockedReason?.includes('Thủ công')
+    ) {
       await this.autoUnblock(classroomId, studentId);
       return {
         isBlocked: false,
@@ -342,6 +346,3 @@ export class AttendanceBlockingService {
     });
   }
 }
-
-
-

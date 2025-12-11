@@ -1,38 +1,38 @@
 import { JwtPayload, PayloadToken, ResponseMessage, Roles } from '@app/shared';
 import {
-    Body,
-    Controller,
-    Delete,
-    HttpCode,
-    HttpStatus,
-    Param,
-    Post,
-    Put,
+  Body,
+  Controller,
+  Delete,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Put,
 } from '@nestjs/common';
 import {
-    ApiBearerAuth,
-    ApiOperation,
-    ApiParam,
-    ApiResponse,
-    ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
 import {
-    CreateVocabularyListDto,
-    UpdateVocabularyListDto,
-    VocabularyListResponseDto,
+  CreateVocabularyListDto,
+  UpdateVocabularyListDto,
+  VocabularyListResponseDto,
 } from '../dto/vocabulary-list.dto';
 import {
-    CreateVocabularyTermDto,
-    ImportTermsDto,
-    ReorderTermsDto,
-    UpdateVocabularyTermDto,
-    VocabularyTermResponseDto,
+  CreateVocabularyTermDto,
+  ImportTermsDto,
+  ReorderTermsDto,
+  UpdateVocabularyTermDto,
+  VocabularyTermResponseDto,
 } from '../dto/vocabulary-term.dto';
 import {
-    CreateVocabularyUnitDto,
-    ReorderUnitsDto,
-    UpdateVocabularyUnitDto,
-    VocabularyUnitResponseDto,
+  CreateVocabularyUnitDto,
+  ReorderUnitsDto,
+  UpdateVocabularyUnitDto,
+  VocabularyUnitResponseDto,
 } from '../dto/vocabulary-unit.dto';
 import { VocabularyListService } from '../service/vocabulary-list.service';
 import { VocabularyTermService } from '../service/vocabulary-term.service';
@@ -92,7 +92,10 @@ export class AdminVocabularyController {
   @Post('lists/:listId/units/suggest')
   @ApiOperation({ summary: 'Get AI suggestions for new unit' })
   @ApiParam({ name: 'listId', description: 'List ID' })
-  @ApiResponse({ status: 200, description: 'Returns 3 AI-generated unit suggestions' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns 3 AI-generated unit suggestions',
+  })
   @ResponseMessage('Unit suggestions generated successfully')
   async suggestUnit(
     @Param('listId') listId: string,
@@ -183,8 +186,7 @@ export class AdminVocabularyController {
   @ApiOperation({ summary: 'Auto-complete term data using AI + Google TTS' })
   @ApiResponse({
     status: 200,
-    description:
-      'Returns complete term data with audio URL uploaded to MinIO',
+    description: 'Returns complete term data with audio URL uploaded to MinIO',
   })
   @ResponseMessage('Term auto-completed successfully')
   async autoCompleteTerm(@Body() body: { word: string }): Promise<{

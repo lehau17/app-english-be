@@ -33,6 +33,3 @@ export class VocabularyStatsCron {
     }
   }
 }
-
-
-

@@ -7,7 +7,11 @@ import { LessonRepository } from './repository';
 import { LessonService } from './service';
 
 @Module({
-  imports: [ParentModule, forwardRef(() => CertificateModule), forwardRef(() => ClassroomModule)],
+  imports: [
+    ParentModule,
+    forwardRef(() => CertificateModule),
+    forwardRef(() => ClassroomModule),
+  ],
   controllers: [PrivateLessonController],
   providers: [LessonService, LessonRepository],
 })

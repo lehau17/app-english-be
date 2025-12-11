@@ -25,7 +25,11 @@ export class ProgressTrackerTool {
 - "tu vung da hoc", "podcast da nghe"`,
       schema: z.object({
         userId: z.string().describe('ID cua hoc vien'),
-        period: z.enum(['7d', '30d', '90d', 'all']).optional().default('30d').describe('Khoang thoi gian'),
+        period: z
+          .enum(['7d', '30d', '90d', 'all'])
+          .optional()
+          .default('30d')
+          .describe('Khoang thoi gian'),
       }),
       func: async ({ userId, period = '30d' }) => {
         return this._call(JSON.stringify({ userId, period }));
@@ -238,17 +242,26 @@ export class ProgressTrackerTool {
     });
 
     // Calculate summary
-    const totalStudyTime = studySessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+    const totalStudyTime = studySessions.reduce(
+      (sum, s) => sum + (s.durationMinutes || 0),
+      0,
+    );
     const streak = user.Profile?.studyStreak || 0;
 
     // Course progress calculation
     const courses = classroomStudents.map((cs) => {
       const course = cs.classroom.course;
-      const totalActivities = course.lessons.reduce((sum, l) => sum + l.activities.length, 0);
+      const totalActivities = course.lessons.reduce(
+        (sum, l) => sum + l.activities.length,
+        0,
+      );
       const completedActivities = progressRecords.filter(
         (p) => p.activity.lesson.courseId === course.id && p.state === 'done',
       ).length;
-      const progressPercent = totalActivities > 0 ? Math.round((completedActivities / totalActivities) * 100) : 0;
+      const progressPercent =
+        totalActivities > 0
+          ? Math.round((completedActivities / totalActivities) * 100)
+          : 0;
 
       return {
         id: course.id,
@@ -275,20 +288,29 @@ export class ProgressTrackerTool {
     const podcastStats = {
       totalAttempts: podcastAttempts.length,
       completed: podcastAttempts.filter((p) => p.status === 'completed').length,
-      avgScore: podcastAttempts.length > 0
-        ? Math.round(podcastAttempts.reduce((sum, p) => sum + (p.scorePercent || 0), 0) / podcastAttempts.length)
-        : 0,
+      avgScore:
+        podcastAttempts.length > 0
+          ? Math.round(
+              podcastAttempts.reduce(
+                (sum, p) => sum + (p.scorePercent || 0),
+                0,
+              ) / podcastAttempts.length,
+            )
+          : 0,
     };
 
     // Assignment summary
     const assignmentStats = {
       totalSubmitted: submissions.length,
-      avgScore: submissions.filter((s) => s.score !== null).length > 0
-        ? Math.round(
-            submissions.filter((s) => s.score !== null).reduce((sum, s) => sum + (s.score || 0), 0) /
-              submissions.filter((s) => s.score !== null).length,
-          )
-        : 0,
+      avgScore:
+        submissions.filter((s) => s.score !== null).length > 0
+          ? Math.round(
+              submissions
+                .filter((s) => s.score !== null)
+                .reduce((sum, s) => sum + (s.score || 0), 0) /
+                submissions.filter((s) => s.score !== null).length,
+            )
+          : 0,
       onTime: submissions.filter((s) => !s.isLate).length,
       late: submissions.filter((s) => s.isLate).length,
     };
@@ -330,7 +352,10 @@ export class ProgressTrackerTool {
       .slice(0, 10);
 
     // Daily activity for chart
-    const dailyActivity: Record<string, { activities: number; studyMinutes: number }> = {};
+    const dailyActivity: Record<
+      string,
+      { activities: number; studyMinutes: number }
+    > = {};
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() - i);
@@ -357,20 +382,27 @@ export class ProgressTrackerTool {
 
     return {
       user: {
-        name: user.displayName || `${user.firstName} ${user.lastName}`.trim() || user.email,
+        name:
+          user.displayName ||
+          `${user.firstName} ${user.lastName}`.trim() ||
+          user.email,
         streak,
         totalStudyTime,
       },
       summary: {
         coursesEnrolled: courses.length,
-        activitiesCompleted: progressRecords.filter((p) => p.state === 'done').length,
+        activitiesCompleted: progressRecords.filter((p) => p.state === 'done')
+          .length,
         totalAttempts: attempts.length,
-        avgScore: attempts.filter((a) => a.score !== null).length > 0
-          ? Math.round(
-              attempts.filter((a) => a.score !== null).reduce((sum, a) => sum + (a.score || 0), 0) /
-                attempts.filter((a) => a.score !== null).length,
-            )
-          : 0,
+        avgScore:
+          attempts.filter((a) => a.score !== null).length > 0
+            ? Math.round(
+                attempts
+                  .filter((a) => a.score !== null)
+                  .reduce((sum, a) => sum + (a.score || 0), 0) /
+                  attempts.filter((a) => a.score !== null).length,
+              )
+            : 0,
         streak,
         totalStudyTimeMinutes: totalStudyTime,
       },
@@ -389,7 +421,9 @@ export class ProgressTrackerTool {
 
   private async analyzeWithAI(data: any): Promise<any> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = this.genAI.getGenerativeModel({
+        model: 'gemini-2.0-flash',
+      });
 
       const prompt = `Phân tích tiến độ học tập của học viên và đưa ra nhận xét, gợi ý:
 
@@ -483,14 +517,32 @@ Trả về JSON với format:
 
     // Chart 4: Radar - Skills overview
     const skillsData = [
-      { subject: 'Bài tập', score: data.assignments.avgScore || 0, fullMark: 100 },
+      {
+        subject: 'Bài tập',
+        score: data.assignments.avgScore || 0,
+        fullMark: 100,
+      },
       { subject: 'Podcast', score: data.podcasts.avgScore || 0, fullMark: 100 },
-      { subject: 'Từ vựng', score: data.vocabulary.totalLearned > 0
-          ? Math.round((data.vocabulary.mastered / data.vocabulary.totalLearned) * 100)
-          : 0, fullMark: 100 },
-      { subject: 'Luyện nói', score: data.speaking.totalSessions > 0
-          ? Math.round((data.speaking.completed / data.speaking.totalSessions) * 100)
-          : 0, fullMark: 100 },
+      {
+        subject: 'Từ vựng',
+        score:
+          data.vocabulary.totalLearned > 0
+            ? Math.round(
+                (data.vocabulary.mastered / data.vocabulary.totalLearned) * 100,
+              )
+            : 0,
+        fullMark: 100,
+      },
+      {
+        subject: 'Luyện nói',
+        score:
+          data.speaking.totalSessions > 0
+            ? Math.round(
+                (data.speaking.completed / data.speaking.totalSessions) * 100,
+              )
+            : 0,
+        fullMark: 100,
+      },
     ];
 
     charts.push({
