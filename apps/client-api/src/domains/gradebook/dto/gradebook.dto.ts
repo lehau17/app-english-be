@@ -99,3 +99,6 @@ export interface StudentGradeDetailsDto {
 
 
 
+
+
+

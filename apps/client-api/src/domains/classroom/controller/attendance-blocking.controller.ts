@@ -1,18 +1,14 @@
-import { JwtPayload } from '@app/shared';
-import { GetUser } from '@app/shared/decorators/get-user.decorator';
-import { Roles } from '@app/shared/decorators/roles.decorator';
-import { AccessTokenGuard } from '@app/shared/guards/access-token.guard';
-import { RolesGuard } from '@app/shared/guards/roles.guard';
+import { JwtPayload, PayloadToken, Roles, RolesGuard } from '@app/shared';
 import {
-    BadRequestException,
-    Body,
-    Controller,
-    Get,
-    Logger,
-    Param,
-    Post,
-    Put,
-    UseGuards,
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Logger,
+  Param,
+  Post,
+  Put,
+  UseGuards,
 } from '@nestjs/common';
 import { BlockingStatusDto, BlockStudentDto, UnblockStudentDto, UpdateBlockingConfigDto } from '../dto/attendance-blocking.dto';
 import { AttendanceBlockingService } from '../service/attendance-blocking.service';
@@ -23,7 +19,6 @@ import { ClassroomService } from '../service/classroom.service';
  * Handles blocking configuration and management
  */
 @Controller('private/v1/classrooms')
-@UseGuards(AccessTokenGuard)
 export class AttendanceBlockingController {
   private readonly logger = new Logger(AttendanceBlockingController.name);
 
@@ -76,7 +71,7 @@ export class AttendanceBlockingController {
   async updateBlockingConfig(
     @Param('id') classroomId: string,
     @Body() dto: UpdateBlockingConfigDto,
-    @GetUser() user: JwtPayload,
+    @PayloadToken() user: JwtPayload,
   ) {
     const classroom = await this.classroomService.findById(classroomId);
     if (!classroom) {
@@ -95,7 +90,8 @@ export class AttendanceBlockingController {
       ...(dto.threshold !== undefined && { threshold: dto.threshold }),
     };
 
-    await this.classroomService.update(classroomId, { settings });
+    // Update settings using ClassroomService method
+    await this.classroomService.updateSettings(classroomId, settings);
 
     this.logger.log(
       `Blocking config updated for classroom ${classroomId} by ${user.sub}: ${JSON.stringify(dto)}`,
@@ -120,26 +116,7 @@ export class AttendanceBlockingController {
       throw new BadRequestException('Classroom not found');
     }
 
-    const blockedStudents = await this.classroomService['classroomRepository'].prisma.classroomStudent.findMany({
-      where: {
-        classroomId,
-        isActive: true,
-        isBlocked: true,
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            displayName: true,
-            email: true,
-            avatarUrl: true,
-          },
-        },
-      },
-      orderBy: {
-        blockedAt: 'desc',
-      },
-    });
+    const blockedStudents = await this.attendanceBlockingService.getBlockedStudents(classroomId);
 
     return blockedStudents.map((cs) => ({
       studentId: cs.studentId,
@@ -163,7 +140,7 @@ export class AttendanceBlockingController {
     @Param('id') classroomId: string,
     @Param('studentId') studentId: string,
     @Body() dto: UnblockStudentDto,
-    @GetUser() user: JwtPayload,
+    @PayloadToken() user: JwtPayload,
   ) {
     const classroom = await this.classroomService.findById(classroomId);
     if (!classroom) {
@@ -203,7 +180,7 @@ export class AttendanceBlockingController {
     @Param('id') classroomId: string,
     @Param('studentId') studentId: string,
     @Body() dto: BlockStudentDto,
-    @GetUser() user: JwtPayload,
+    @PayloadToken() user: JwtPayload,
   ) {
     const classroom = await this.classroomService.findById(classroomId);
     if (!classroom) {
@@ -232,3 +209,6 @@ export class AttendanceBlockingController {
     };
   }
 }
+
+
+

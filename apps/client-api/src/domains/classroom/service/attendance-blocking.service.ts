@@ -1,6 +1,6 @@
 import { PrismaRepository } from '@app/database';
 import { Injectable, Logger } from '@nestjs/common';
-import { getBlockingThreshold } from '../../config/attendance-blocking.config';
+import { getBlockingThreshold } from '../../../config/attendance-blocking.config';
 import { BlockingStatusDto } from '../dto/attendance-blocking.dto';
 import { AttendanceStatus } from '../repository/attendance.repository';
 
@@ -315,4 +315,33 @@ export class AttendanceBlockingService {
       `Manually unblocked student ${studentId} in classroom ${classroomId} by ${unblockedBy}: ${reason}`,
     );
   }
+
+  /**
+   * Get list of blocked students in a classroom
+   */
+  async getBlockedStudents(classroomId: string) {
+    return this.prisma.classroomStudent.findMany({
+      where: {
+        classroomId,
+        isActive: true,
+        isBlocked: true,
+      },
+      include: {
+        student: {
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: {
+        blockedAt: 'desc',
+      },
+    });
+  }
 }
+
+
+

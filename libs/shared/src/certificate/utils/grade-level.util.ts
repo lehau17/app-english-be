@@ -44,3 +44,6 @@ export const MIN_CERTIFICATE_SCORE = 70;
 
 
 
+
+
+

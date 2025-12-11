@@ -1,4 +1,4 @@
-import { SharedModule } from '@app/shared';
+import { SharedModule, TokenRepository } from '@app/shared';
 import { RedisCacheService } from '@app/shared/redis/redis-cache.service';
 import { Module } from '@nestjs/common';
 import { EventsGateway } from '../../events/events.gateway';
@@ -10,16 +10,16 @@ import { PaymentModule } from '../payment/payment.module';
 import { PrivateClassroomController } from './controller';
 import { AttendanceBlockingController } from './controller/attendance-blocking.controller';
 import {
-    AttendanceController,
-    ClassroomAttendanceController,
+  AttendanceController,
+  ClassroomAttendanceController,
 } from './controller/attendance.controller';
 import {
-    MakeupRequestAdminController,
-    MakeupRequestStudentController,
+  MakeupRequestAdminController,
+  MakeupRequestStudentController,
 } from './controller/makeup-request.controller';
 import {
-    RescheduleRequestAdminController,
-    RescheduleRequestTeacherController,
+  RescheduleRequestAdminController,
+  RescheduleRequestTeacherController,
 } from './controller/reschedule-request.controller';
 import { ClassroomRepository } from './repository';
 import { AttendanceRepository } from './repository/attendance.repository';
@@ -45,6 +45,7 @@ import { RescheduleRequestService } from './services/reschedule-request.service'
     // Reschedule Request
     RescheduleRequestTeacherController,
     RescheduleRequestAdminController,
+
   ],
   providers: [
     ClassroomService,
@@ -56,6 +57,7 @@ import { RescheduleRequestService } from './services/reschedule-request.service'
     AttendanceService,
     AttendanceRepository,
     AttendanceBlockingService,
+    TokenRepository,
     RedisCacheService,
     // Makeup Request
     MakeupRequestService,

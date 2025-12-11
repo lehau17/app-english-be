@@ -233,6 +233,11 @@ export class ClassroomService {
     return this.classroomRepository.update(id, dto);
   }
 
+  async updateSettings(id: string, settings: any): Promise<Classroom> {
+    await this.findById(id);
+    return this.classroomRepository.update(id, { settings } as any);
+  }
+
   async delete(id: string): Promise<Classroom> {
     const classroom = await this.prisma.classroom.findUnique({
       where: { id },

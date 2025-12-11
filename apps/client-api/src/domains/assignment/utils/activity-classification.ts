@@ -59,3 +59,6 @@ export function getActivityClassification(type: string): 'auto' | 'ai' | 'manual
   return 'manual';
 }
 
+
+
+
