@@ -4,8 +4,10 @@ import {
     BadRequestException,
     ForbiddenException,
     Injectable,
+    Logger,
     NotFoundException,
 } from '@nestjs/common';
+import { MediaService } from '../../media/service/media.service';
 import {
     CreatePodcastDto,
     GetPodcastsQueryDto,
@@ -21,9 +23,12 @@ import { PodcastRepository } from '../repository/podcast.repository';
 
 @Injectable()
 export class PodcastService {
+  private readonly logger = new Logger(PodcastService.name);
+
   constructor(
     private readonly prisma: PrismaRepository,
     private readonly podcastRepository: PodcastRepository,
+    private readonly mediaService?: MediaService,
   ) {}
 
   // ===================== PODCAST CRUD =====================
@@ -72,7 +77,7 @@ export class PodcastService {
       orderNo: g.orderNo || 1,
     }));
 
-    return this.podcastRepository.createPodcast({
+    const podcast = await this.podcastRepository.createPodcast({
       code,
       title: dto.title,
       description: dto.description,
@@ -87,6 +92,61 @@ export class PodcastService {
       author: { connect: { id: authorId } },
       gaps: gapsToCreate.length > 0 ? { create: gapsToCreate } : undefined,
     });
+
+    // Extract media from podcast and create MediaFile records (async, non-blocking)
+    if (this.mediaService) {
+      this.extractMediaFromPodcast(podcast.id, dto).catch((error) => {
+        this.logger.error(
+          `Failed to extract media from podcast ${podcast.id}: ${error.message}`,
+          error,
+        );
+      });
+    }
+
+    return podcast;
+  }
+
+  /**
+   * Extract media from podcast and create MediaFile records
+   */
+  private async extractMediaFromPodcast(
+    podcastId: string,
+    dto: CreatePodcastDto,
+  ): Promise<void> {
+    if (!this.mediaService) return;
+
+    this.logger.log(`Extracting media from podcast ${podcastId}`);
+
+    const mediaUrls: Array<{ url: string; type: 'audio' | 'video' | 'image' }> =
+      [];
+
+    if (dto.audioUrl) {
+      mediaUrls.push({ url: dto.audioUrl, type: 'audio' });
+    }
+    if (dto.videoUrl) {
+      mediaUrls.push({ url: dto.videoUrl, type: 'video' });
+    }
+    if (dto.thumbnailUrl) {
+      mediaUrls.push({ url: dto.thumbnailUrl, type: 'image' });
+    }
+
+    // Create MediaFile for each media URL
+    await Promise.allSettled(
+      mediaUrls.map(async ({ url }) => {
+        try {
+          await this.mediaService.createFromContext(url, {
+            source: 'podcast',
+            sourceId: podcastId,
+            podcastTitle: dto.title,
+            category: dto.category,
+          });
+        } catch (error) {
+          this.logger.warn(
+            `Failed to create MediaFile for URL ${url} in podcast ${podcastId}: ${error.message}`,
+          );
+        }
+      }),
+    );
   }
 
   // Helper method to extract blanks from content format: [word]

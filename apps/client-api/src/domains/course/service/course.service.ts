@@ -1,6 +1,7 @@
 import { PrismaRepository } from '@app/database';
 import {
   ExcelExportService,
+  extractMediaFromActivity,
   KafkaService,
   Neo4jEntityType,
   Neo4jSyncMessage,
@@ -26,6 +27,7 @@ import {
 } from '@prisma/client';
 import { CertificateTemplateService } from '../../certificate/services';
 import { GoogleTranslateFreeService } from '../../google-translate/google-translate.service';
+import { MediaService } from '../../media/service/media.service';
 import {
   CreateCourseDto,
   FilterCourseRequestDto,
@@ -52,6 +54,7 @@ export class CourseService {
         private readonly certificateTemplateService: CertificateTemplateService,
         private readonly ttsService: TtsService,
         private readonly excelExportService: ExcelExportService,
+        private readonly mediaService: MediaService,
     ) { }
 
     // service.ts (đoạn create)
@@ -150,163 +153,213 @@ export class CourseService {
             language?: string;
         }> = [];
 
-        const result = await this.prisma.$transaction(async (tx) => {
-            // Default assignment weights for gradebook calculation
-            // Midterm: 30%, Final: 40%, Tests: 20%, Activities: 10%
-            const defaultWeights = {
-                midterm: 0.3,
-                final: 0.4,
-                tests: 0.2,
-                activities: 0.1,
-            };
+        // Collect media extraction tasks during transaction
+        const pendingMediaExtractions: Array<{
+            activityId: string;
+            activityDto: any;
+            courseTitle: string;
+            lessonTitle: string;
+        }> = [];
 
-            // Tạo Course
-            const course = await tx.course.create({
-                data: {
-                    title: dto.title,
-                    description: dto.description ?? undefined,
-                    orderNo: dto.orderNo ?? undefined,
-                    difficulty: dto.difficulty,
-                    estimatedHours, // DB field là hours
-                    imageUrl: dto.imageUrl ?? undefined,
-                    tags: dto.tags ?? [],
-                    instructor: { connect: { id: currentUserId } },
-                    price: dto.price ?? 0,
-                    currency: normalizeCurrency(dto.currency) ?? 'VND',
-                    maxStudents: dto.maxStudents ?? 20,
-                    language: dto.language ?? LanguageCode.en,
-                    prerequisites: dto.prerequisites ?? [],
-                    isPublished: dto.isPublished ?? false,
-                    plannedSessions: dto.plannedSessions ?? 8, // Mặc định 8 buổi nếu không chỉ định
-                    defaultAssignmentWeights: defaultWeights, // Set default weights for auto-assignment creation
-                },
-            });
+        const transactionStartTime = Date.now();
+        this.logger.log(
+            `Starting course creation transaction for user ${currentUserId}`,
+        );
 
-            let totalLessons = 0;
-            let totalDuration = 0; // minutes
+        let result: Course;
+        try {
+            result = await this.prisma.$transaction(
+                async (tx) => {
+                    // Default assignment weights for gradebook calculation
+                    // Midterm: 30%, Final: 40%, Tests: 20%, Activities: 10%
+                    const defaultWeights = {
+                        midterm: 0.3,
+                        final: 0.4,
+                        tests: 0.2,
+                        activities: 0.1,
+                    };
 
-            // Tạo Lessons và Activities
-            const createdActivities = new Map<string, string>(); // Map title -> id
-
-            for (const lessonDto of dto.lessons) {
-                const lesson = await tx.lesson.create({
+                // Tạo Course
+                const course = await tx.course.create({
                     data: {
-                        course: { connect: { id: course.id } },
-                        title: lessonDto.title,
-                        description: lessonDto.description ?? undefined,
-                        orderNo: lessonDto.orderNo,
-                        difficulty: lessonDto.difficulty ?? dto.difficulty,
-                        estimatedTime: lessonDto.estimatedTime ?? undefined, // minutes
-                        isLocked: lessonDto.isLocked ?? true,
-                        objectives: lessonDto.objectives ?? [],
+                        title: dto.title,
+                        description: dto.description ?? undefined,
+                        orderNo: dto.orderNo ?? undefined,
+                        difficulty: dto.difficulty,
+                        estimatedHours, // DB field là hours
+                        imageUrl: dto.imageUrl ?? undefined,
+                        tags: dto.tags ?? [],
+                        instructor: { connect: { id: currentUserId } },
+                        price: dto.price ?? 0,
+                        currency: normalizeCurrency(dto.currency) ?? 'VND',
+                        maxStudents: dto.maxStudents ?? 20,
+                        language: dto.language ?? LanguageCode.en,
+                        prerequisites: dto.prerequisites ?? [],
+                        isPublished: dto.isPublished ?? false,
+                        plannedSessions: dto.plannedSessions ?? 8, // Mặc định 8 buổi nếu không chỉ định
+                        defaultAssignmentWeights: defaultWeights, // Set default weights for auto-assignment creation
                     },
                 });
 
-                totalLessons++;
-                totalDuration += lessonDto.estimatedTime ?? 0;
+                let totalLessons = 0;
+                let totalDuration = 0; // minutes
 
-                for (const activityDto of lessonDto.activities) {
-                    const createdActivity = await tx.activity.create({
+                // Tạo Lessons và Activities
+                const createdActivities = new Map<string, string>(); // Map title -> id
+
+                for (const lessonDto of dto.lessons) {
+                    const lesson = await tx.lesson.create({
                         data: {
-                            lesson: { connect: { id: lesson.id } },
-                            type: activityDto.type as any, // nếu Prisma enum trùng literal
-                            orderNo: activityDto.orderNo,
-                            title: activityDto.title,
-                            content: activityDto.content as any, // JSONB - content theo cấu trúc mới từ DTO
-                            //   timeLimit: activityDto.timeLimit ?? undefined,
-                            //   maxAttempts: activityDto.maxAttempts ?? undefined,
-                            passingScore: activityDto.passingScore ?? undefined,
-                            difficulty:
-                                activityDto.difficulty ??
-                                lessonDto.difficulty ??
-                                dto.difficulty,
-                            points: activityDto.points ?? 10,
-                            instructions: activityDto.instructions ?? undefined,
-                            hints: activityDto.hints ?? [],
-                            mediaUrls: activityDto.mediaUrls ?? [],
+                            course: { connect: { id: course.id } },
+                            title: lessonDto.title,
+                            description: lessonDto.description ?? undefined,
+                            orderNo: lessonDto.orderNo,
+                            difficulty: lessonDto.difficulty ?? dto.difficulty,
+                            estimatedTime: lessonDto.estimatedTime ?? undefined, // minutes
+                            isLocked: lessonDto.isLocked ?? true,
+                            objectives: lessonDto.objectives ?? [],
                         },
                     });
 
-                    // Lưu ID của activity đã tạo để dùng cho session schedule
-                    // Sử dụng lesson orderNo và activity orderNo để tạo key duy nhất
-                    const activityKey = `L${lessonDto.orderNo}A${activityDto.orderNo}`;
-                    createdActivities.set(activityKey, createdActivity.id);
+                    totalLessons++;
+                    totalDuration += lessonDto.estimatedTime ?? 0;
 
-                    // If this is a vocab activity, check items without audioUrl and schedule generation
-                    if (activityDto.type === 'vocab' && activityDto.content) {
-                        const vocabContent = activityDto.content as any;
-                        const items = vocabContent.items || [];
-                        const indices: number[] = [];
-                        for (let i = 0; i < items.length; i++) {
-                            const it = items[i];
-                            if (!it.audioUrl || it.audioUrl === '') indices.push(i);
-                        }
-                        if (indices.length > 0) {
-                            pendingAudioTasks.push({
-                                activityId: createdActivity.id,
-                                itemsIndex: indices,
-                                language: dto.language ?? 'en',
-                            });
+                    for (const activityDto of lessonDto.activities) {
+                        const createdActivity = await tx.activity.create({
+                            data: {
+                                lesson: { connect: { id: lesson.id } },
+                                type: activityDto.type as any, // nếu Prisma enum trùng literal
+                                orderNo: activityDto.orderNo,
+                                title: activityDto.title,
+                                content: activityDto.content as any, // JSONB - content theo cấu trúc mới từ DTO
+                                //   timeLimit: activityDto.timeLimit ?? undefined,
+                                //   maxAttempts: activityDto.maxAttempts ?? undefined,
+                                passingScore: activityDto.passingScore ?? undefined,
+                                difficulty:
+                                    activityDto.difficulty ??
+                                    lessonDto.difficulty ??
+                                    dto.difficulty,
+                                points: activityDto.points ?? 10,
+                                instructions: activityDto.instructions ?? undefined,
+                                hints: activityDto.hints ?? [],
+                                mediaUrls: activityDto.mediaUrls ?? [],
+                            },
+                        });
+
+                        // Lưu ID của activity đã tạo để dùng cho session schedule
+                        // Sử dụng lesson orderNo và activity orderNo để tạo key duy nhất
+                        const activityKey = `L${lessonDto.orderNo}A${activityDto.orderNo}`;
+                        createdActivities.set(activityKey, createdActivity.id);
+
+                        // Store activity info for media extraction after transaction
+                        pendingMediaExtractions.push({
+                            activityId: createdActivity.id,
+                            activityDto,
+                            courseTitle: course.title,
+                            lessonTitle: lesson.title,
+                        });
+
+                        // If this is a vocab activity, check items without audioUrl and schedule generation
+                        if (activityDto.type === 'vocab' && activityDto.content) {
+                            const vocabContent = activityDto.content as any;
+                            const items = vocabContent.items || [];
+                            const indices: number[] = [];
+                            for (let i = 0; i < items.length; i++) {
+                                const it = items[i];
+                                if (!it.audioUrl || it.audioUrl === '') indices.push(i);
+                            }
+                            if (indices.length > 0) {
+                                pendingAudioTasks.push({
+                                    activityId: createdActivity.id,
+                                    itemsIndex: indices,
+                                    language: dto.language ?? 'en',
+                                });
+                            }
                         }
                     }
                 }
-            }
 
-            await tx.course.update({
-                where: { id: course.id },
-                data: {
-                    totalLessons,
-                    totalDuration, // minutes
-                },
-            });
+                await tx.course.update({
+                    where: { id: course.id },
+                    data: {
+                        totalLessons,
+                        totalDuration, // minutes
+                    },
+                });
 
-            // Tạo SessionSchedules nếu có
-            if (dto.sessionSchedules && dto.sessionSchedules.length > 0) {
-                for (const scheduleDto of dto.sessionSchedules) {
-                    // Tạo session schedule với các activities
-                    await tx.sessionSchedule.create({
-                        data: {
-                            courseId: course.id,
-                            sessionNumber: scheduleDto.sessionNumber,
-                            title: scheduleDto.title,
-                            description: scheduleDto.description,
-                            activities: {
-                                create: scheduleDto.activities
-                                    .map((activityItem) => {
-                                        let actualActivityId: string | undefined;
+                // Tạo SessionSchedules nếu có
+                if (dto.sessionSchedules && dto.sessionSchedules.length > 0) {
+                    for (const scheduleDto of dto.sessionSchedules) {
+                        // Tạo session schedule với các activities
+                        await tx.sessionSchedule.create({
+                            data: {
+                                courseId: course.id,
+                                sessionNumber: scheduleDto.sessionNumber,
+                                title: scheduleDto.title,
+                                description: scheduleDto.description,
+                                activities: {
+                                    create: scheduleDto.activities
+                                        .map((activityItem) => {
+                                            let actualActivityId: string | undefined;
 
-                                        // Kiểm tra xem activityId là UUID hay reference format (L1A2)
-                                        if (activityItem.activityId.match(/^L\d+A\d+$/i)) {
-                                            // Format L1A2 - lấy từ map
-                                            actualActivityId = createdActivities.get(
-                                                activityItem.activityId,
-                                            );
-                                        } else {
-                                            // Assume it's a UUID - kiểm tra xem có trong map không (dành cho trường hợp activity đã tồn tại)
-                                            actualActivityId = activityItem.activityId;
-                                        }
+                                            // Kiểm tra xem activityId là UUID hay reference format (L1A2)
+                                            if (activityItem.activityId.match(/^L\d+A\d+$/i)) {
+                                                // Format L1A2 - lấy từ map
+                                                actualActivityId = createdActivities.get(
+                                                    activityItem.activityId,
+                                                );
+                                            } else {
+                                                // Assume it's a UUID - kiểm tra xem có trong map không (dành cho trường hợp activity đã tồn tại)
+                                                actualActivityId = activityItem.activityId;
+                                            }
 
-                                        if (!actualActivityId) {
-                                            this.logger.warn(
-                                                `Activity với reference ${activityItem.activityId} không tìm thấy`,
-                                            );
-                                            return null;
-                                        }
+                                            if (!actualActivityId) {
+                                                this.logger.warn(
+                                                    `Activity với reference ${activityItem.activityId} không tìm thấy`,
+                                                );
+                                                return null;
+                                            }
 
-                                        return {
-                                            activityId: actualActivityId,
-                                            orderNo: activityItem.orderNo,
-                                        };
-                                    })
-                                    .filter(Boolean), // Lọc bỏ các mục null
+                                            return {
+                                                activityId: actualActivityId,
+                                                orderNo: activityItem.orderNo,
+                                            };
+                                        })
+                                        .filter(Boolean), // Lọc bỏ các mục null
+                                },
                             },
-                        },
-                    });
+                        });
+                    }
                 }
+
+                    return course;
+                },
+                {
+                    maxWait: 10000, // 10 seconds max wait to acquire transaction
+                    timeout: 120000, // 120 seconds (2 minutes) max transaction duration
+                },
+            );
+
+            const transactionDuration = Date.now() - transactionStartTime;
+            this.logger.log(
+                `Course creation transaction completed in ${transactionDuration}ms`,
+            );
+        } catch (error) {
+            const transactionDuration = Date.now() - transactionStartTime;
+            this.logger.error(
+                `Course creation transaction failed after ${transactionDuration}ms: ${error.message}`,
+                error.stack,
+            );
+
+            // Re-throw with more context if it's a transaction error
+            if (error.code === 'P2028') {
+                throw new BadRequestException(
+                    `Transaction timeout: Course creation took too long. Please try again with fewer lessons/activities or contact support.`,
+                );
             }
 
-            return course;
-        });
+            throw error;
+        }
 
         // After transaction commit, process TTS tasks asynchronously in-place
         if (pendingAudioTasks.length > 0) {
@@ -318,6 +371,24 @@ export class CourseService {
             this.processAudioGenerationTasks(pendingAudioTasks).catch((error) => {
                 this.logger.error(
                     `Error in background audio generation: ${error.message}`,
+                    error,
+                );
+            });
+        }
+
+        // Extract media from activities and create MediaFile records
+        if (pendingMediaExtractions.length > 0) {
+            this.logger.log(
+                `Extracting media from ${pendingMediaExtractions.length} activities`,
+            );
+
+            // Process media extraction asynchronously
+            this.extractMediaFromActivities(
+                pendingMediaExtractions,
+                result.title,
+            ).catch((error) => {
+                this.logger.error(
+                    `Error in media extraction: ${error.message}`,
                     error,
                 );
             });
@@ -1281,6 +1352,87 @@ export class CourseService {
                 error.stack,
             );
             // Don't throw error - sync failure shouldn't block the main operation
+        }
+    }
+
+    /**
+     * Extract media from activities and create MediaFile records
+     */
+    private async extractMediaFromActivities(
+        extractions: Array<{
+            activityId: string;
+            activityDto: any;
+            courseTitle: string;
+            lessonTitle: string;
+        }>,
+        courseTitle: string,
+    ): Promise<void> {
+        const startTime = Date.now();
+        this.logger.log(
+            `Starting media extraction for ${extractions.length} activities`,
+        );
+
+        // Process all activities in parallel
+        const results = await Promise.allSettled(
+            extractions.map((extraction) =>
+                this.extractMediaFromActivity(extraction),
+            ),
+        );
+
+        // Log results
+        const successful = results.filter((r) => r.status === 'fulfilled').length;
+        const failed = results.filter((r) => r.status === 'rejected').length;
+        const duration = Date.now() - startTime;
+
+        this.logger.log(
+            `Media extraction completed: ${successful} succeeded, ${failed} failed in ${duration}ms`,
+        );
+
+        // Log errors
+        results.forEach((result, index) => {
+            if (result.status === 'rejected') {
+                this.logger.error(
+                    `Failed to extract media for activity ${extractions[index].activityId}: ${result.reason}`,
+                );
+            }
+        });
+    }
+
+    /**
+     * Extract media from a single activity and create MediaFile records
+     */
+    private async extractMediaFromActivity(extraction: {
+        activityId: string;
+        activityDto: any;
+        courseTitle: string;
+        lessonTitle: string;
+    }): Promise<void> {
+        const { activityId, activityDto, courseTitle, lessonTitle } = extraction;
+
+        // Extract media URLs from activity
+        const media = extractMediaFromActivity({
+            type: activityDto.type,
+            mediaUrls: activityDto.mediaUrls ?? [],
+            content: activityDto.content,
+        });
+
+        // Create MediaFile for each media URL
+        for (const url of media.all) {
+            try {
+                await this.mediaService.createFromContext(url, {
+                    source: 'course_activity',
+                    sourceId: activityId,
+                    courseTitle,
+                    lessonTitle,
+                    activityTitle: activityDto.title,
+                    activityType: activityDto.type,
+                });
+            } catch (error) {
+                this.logger.warn(
+                    `Failed to create MediaFile for URL ${url} in activity ${activityId}: ${error.message}`,
+                );
+                // Continue with other URLs
+            }
         }
     }
 }

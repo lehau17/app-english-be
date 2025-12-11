@@ -3,11 +3,12 @@ import { Module, forwardRef } from '@nestjs/common';
 import { CertificateModule } from '../certificate/certificate.module';
 import { GoogleTranslateModule } from '../google-translate/google-translate.module';
 import { GoogleTranslateFreeService } from '../google-translate/google-translate.service';
+import { MediaModule } from '../media/media.module';
 import { UploadService } from '../upload/upload.service';
 import {
-  CourseController,
-  PublicCourseController,
-  SessionScheduleController,
+    CourseController,
+    PublicCourseController,
+    SessionScheduleController,
 } from './controller';
 import { CourseRepository } from './repository/course.repository';
 import { SessionScheduleRepository } from './repository/session-schedule.repository';
@@ -20,6 +21,7 @@ import { SessionScheduleService } from './service/session-schedule.service';
     GoogleTranslateModule,
     SharedModule,
     forwardRef(() => CertificateModule),
+    MediaModule,
   ],
   controllers: [
     CourseController,

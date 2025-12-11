@@ -1,7 +1,8 @@
 import { GeminiService } from '@app/shared';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { GoogleTranslateFreeService } from '../../google-translate/google-translate.service';
+import { MediaService } from '../../media/service/media.service';
 import { UploadService } from '../../upload/upload.service';
 import {
     CreateVocabularyTermDto,
@@ -12,11 +13,14 @@ import { VocabularyRepository } from '../repository/vocabulary.repository';
 
 @Injectable()
 export class VocabularyTermService {
+  private readonly logger = new Logger(VocabularyTermService.name);
+
   constructor(
     private readonly repository: VocabularyRepository,
     private readonly geminiService: GeminiService,
     private readonly googleTranslateService: GoogleTranslateFreeService,
     private readonly uploadService: UploadService,
+    private readonly mediaService?: MediaService,
   ) {}
 
   /**
@@ -171,6 +175,16 @@ export class VocabularyTermService {
       });
     }
 
+    // Extract media from vocabulary term and create MediaFile records (async, non-blocking)
+    if (this.mediaService) {
+      this.extractMediaFromVocabularyTerm(term.id, dto, unitId).catch((error) => {
+        this.logger.error(
+          `Failed to extract media from vocabulary term ${term.id}: ${error.message}`,
+          error,
+        );
+      });
+    }
+
     return {
       id: term.id,
       unitId: term.unitId,
@@ -227,6 +241,21 @@ export class VocabularyTermService {
     if (dto.difficulty !== undefined) updateData.difficulty = dto.difficulty;
 
     const updated = await this.repository.updateTerm(termId, updateData);
+
+    // Extract media from updated vocabulary term and create MediaFile records (async, non-blocking)
+    if (this.mediaService && (dto.imageUrl !== undefined || dto.audioUrl !== undefined)) {
+      this.extractMediaFromVocabularyTerm(updated.id, {
+        word: updated.word,
+        definition: updated.definition,
+        imageUrl: updated.imageUrl || undefined,
+        audioUrl: updated.audioUrl || undefined,
+      } as CreateVocabularyTermDto, updated.unitId).catch((error) => {
+        this.logger.error(
+          `Failed to extract media from updated vocabulary term ${updated.id}: ${error.message}`,
+          error,
+        );
+      });
+    }
 
     return {
       id: updated.id,
@@ -658,5 +687,46 @@ Return ONLY valid JSON:
     await this.repository.updateList(unit.listId, {
       totalTerms: { increment: terms.length },
     });
+  }
+
+  /**
+   * Extract media from vocabulary term and create MediaFile records
+   */
+  private async extractMediaFromVocabularyTerm(
+    termId: string,
+    dto: CreateVocabularyTermDto,
+    unitId: string,
+  ): Promise<void> {
+    if (!this.mediaService) return;
+
+    this.logger.log(`Extracting media from vocabulary term ${termId}`);
+
+    const mediaUrls: Array<{ url: string }> = [];
+
+    if (dto.imageUrl) {
+      mediaUrls.push({ url: dto.imageUrl });
+    }
+    if (dto.audioUrl) {
+      mediaUrls.push({ url: dto.audioUrl });
+    }
+
+    // Create MediaFile for each media URL
+    await Promise.allSettled(
+      mediaUrls.map(async ({ url }) => {
+        try {
+          await this.mediaService.createFromContext(url, {
+            source: 'vocabulary_term',
+            sourceId: termId,
+            word: dto.word,
+            definition: dto.definition,
+            unitId: unitId,
+          });
+        } catch (error) {
+          this.logger.warn(
+            `Failed to create MediaFile for URL ${url} in vocabulary term ${termId}: ${error.message}`,
+          );
+        }
+      }),
+    );
   }
 }

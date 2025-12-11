@@ -111,6 +111,38 @@ type AssignmentActivityInput = {
   hints?: string[];
 };
 
+export interface BankAssignmentFilters {
+  teacherId?: string;
+  activityType?: string;
+  difficulty?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface BankActivityFilters {
+  type?: string;
+  difficulty?: string;
+  teacherId?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface BankActivityWithAssignment extends AssignmentActivityModel {
+  assignment: {
+    id: string;
+    title: string;
+    teacherId: string;
+    teacher: {
+      id: string;
+      displayName: string | null;
+      firstName: string | null;
+      lastName: string | null;
+    };
+  };
+}
+
 @Injectable()
 export class AssignmentRepository extends PrismaRepository {
   private assignmentInclude = {
@@ -566,5 +598,111 @@ export class AssignmentRepository extends PrismaRepository {
         },
       },
     });
+  }
+
+  // ==================== BANK QUERY METHODS ====================
+
+  async findBankAssignments(
+    filters: BankAssignmentFilters,
+  ): Promise<{ assignments: AssignmentWithDetails[]; total: number }> {
+    const {
+      teacherId,
+      activityType,
+      difficulty,
+      search,
+      page = 1,
+      limit = 20,
+    } = filters;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.AssignmentWhereInput = {};
+
+    if (teacherId) {
+      where.teacherId = teacherId;
+    }
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (activityType || difficulty) {
+      where.assignmentActivities = {
+        some: {
+          ...(activityType && { type: activityType as any }),
+          ...(difficulty && { difficulty: difficulty as DifficultyLevel }),
+        },
+      };
+    }
+
+    const [assignments, total] = await Promise.all([
+      this.assignment.findMany({
+        where,
+        include: this.assignmentInclude,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.assignment.count({ where }),
+    ]);
+
+    return { assignments, total };
+  }
+
+  async findBankActivities(
+    filters: BankActivityFilters,
+  ): Promise<{ activities: BankActivityWithAssignment[]; total: number }> {
+    const { type, difficulty, teacherId, search, page = 1, limit = 20 } =
+      filters;
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.AssignmentActivityWhereInput = {};
+
+    if (type) {
+      where.type = type as any;
+    }
+
+    if (difficulty) {
+      where.difficulty = difficulty as DifficultyLevel;
+    }
+
+    if (search) {
+      where.title = { contains: search, mode: 'insensitive' };
+    }
+
+    if (teacherId) {
+      where.assignment = { teacherId };
+    }
+
+    const [activities, total] = await Promise.all([
+      this.assignmentActivity.findMany({
+        where,
+        include: {
+          assignment: {
+            select: {
+              id: true,
+              title: true,
+              teacherId: true,
+              teacher: {
+                select: {
+                  id: true,
+                  displayName: true,
+                  firstName: true,
+                  lastName: true,
+                },
+              },
+            },
+          },
+        },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.assignmentActivity.count({ where }),
+    ]);
+
+    return { activities, total };
   }
 }

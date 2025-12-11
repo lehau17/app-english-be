@@ -42,6 +42,7 @@ import { UploadModule } from './domains/upload';
 import { UploadService } from './domains/upload/upload.service';
 import { VocabularyV2Module } from './domains/vocabulary-v2/vocabulary-v2.module';
 import { VocabularyModule } from './domains/vocabulary/vocabulary.module';
+import { MediaModule } from './domains/media/media.module';
 import { EventsModule } from './events/events.module';
 
 @Module({
@@ -83,6 +84,7 @@ import { EventsModule } from './events/events.module';
     DictionaryModule,
     VocabularyModule,
     VocabularyV2Module,
+    MediaModule,
     QuizModule,
     LandingPageModule,
     CertificateModule,

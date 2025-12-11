@@ -1398,7 +1398,7 @@ model MakeupAttendanceRequest {
 }
 
 model SessionRescheduleRequest {
-  id            String                          @id @default(uuid())
+  id            String                         @id @default(uuid())
   sessionId     String
   requestedById String // Teacher who requested
   newStartTime  DateTime
@@ -2003,10 +2003,25 @@ model MediaFile {
 
   usageCount Int @default(0)
 
+  // NEW: Metadata from content context
+  tags        String[] @default([]) // Auto-extracted from context
+  description String? // Auto-generated from context
+  category    String? // From podcast category, activity type, etc.
+  source      String? // "course_activity", "assignment_activity", "podcast", "vocabulary_term"
+  sourceId    String? // ID of activity, podcast, vocabulary term
+  context     Json? // Full context: { courseTitle, lessonTitle, activityTitle, activityType, podcastTitle, word, definition, etc. }
+
+  // NEW: PGVector embedding for semantic search
+  embeddingVector Unsupported("vector(768)")? @map("embedding_vector") // Text embedding from description+context
+
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // NEW
 
   @@index([mimeType])
   @@index([isProcessed])
+  @@index([usageCount]) // For cleanup queries (future)
+  @@index([source, sourceId]) // For finding media by source
+  @@index([tags]) // GIN index for array search
 }
 
 // ===================== OLD VOCABULARY MODELS (DEPRECATED) =====================

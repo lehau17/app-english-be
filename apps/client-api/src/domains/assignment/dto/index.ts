@@ -3,3 +3,5 @@ export * from './create-assignment.dto';
 export * from './clone-assignment.dto';
 export * from './import-assignment.dto';
 export * from './update-assignment.dto';
+export * from './query-bank-assignments.dto';
+export * from './query-bank-activities.dto';

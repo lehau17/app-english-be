@@ -28,6 +28,8 @@ import {
   GradeAssignmentDto,
   ImportAssignmentDto,
   QueryAssignmentsDto,
+  QueryBankAssignmentsDto,
+  QueryBankActivitiesDto,
   SubmitAssignmentDto,
   UpdateAssignmentDto,
 } from '../dto';
@@ -233,6 +235,34 @@ export class PrivateAssignmentController {
     @Query() query: QueryAssignmentsDto,
   ) {
     return this.assignmentService.getAssignmentsByTeacher(payload.sub, query);
+  }
+
+  @Get('bank')
+  @ApiOperation({
+    summary: 'Get bank assignments (all assignments)',
+    description:
+      'Retrieve all assignments available in bank. All assignments are automatically in bank. Supports filtering by teacher, activity type, difficulty, and search.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Bank assignments retrieved successfully',
+  })
+  async getBankAssignments(@Query() query: QueryBankAssignmentsDto) {
+    return this.assignmentService.getBankAssignments(query);
+  }
+
+  @Get('bank/activities')
+  @ApiOperation({
+    summary: 'Get bank activities (all activities independently)',
+    description:
+      'Retrieve all activities available in bank. Activities can be reused independently of their parent assignment. Supports filtering by type, difficulty, teacher, and search.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Bank activities retrieved successfully',
+  })
+  async getBankActivities(@Query() query: QueryBankActivitiesDto) {
+    return this.assignmentService.getBankActivities(query);
   }
 
   @Get('classroom/:classroomId')

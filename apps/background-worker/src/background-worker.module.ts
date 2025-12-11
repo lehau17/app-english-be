@@ -13,6 +13,8 @@ import { ClassroomSessionCron } from './classroom/classroom-session.cron';
 import { ClassroomStatusCron } from './classroom/classroom-status.cron';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { LeaderboardWorkerModule } from './leaderboard/leaderboard.module';
+import { MediaProcessingListener } from './media/media-processing.listener';
+import { MediaProcessorService } from './media/media-processor.service';
 import { Neo4jSyncListener } from './neo4j/neo4j-sync.listener';
 import { PodcastGenerationService } from './podcast/podcast-generation.service';
 import { PodcastCron } from './podcast/podcast.cron';
@@ -41,6 +43,8 @@ import { VocabularyModule } from './vocabulary/vocabulary.module';
     // KafkaJS Listeners (replaced NestJS @MessagePattern)
     TtsListener,
     Neo4jSyncListener,
+    MediaProcessingListener,
+    MediaProcessorService,
     // Existing services
     PodcastGenerationService,
     PodcastCron,

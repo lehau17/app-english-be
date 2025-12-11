@@ -1,14 +1,14 @@
 
-import { GeminiService } from '@app/shared';
+import { extractMediaFromActivity, GeminiService } from '@app/shared';
 import { AutoCertificateIssuerService } from '@app/shared/certificate';
 import {
     BadRequestException,
     ForbiddenException,
+    forwardRef,
     Inject,
     Injectable,
     Logger,
     NotFoundException,
-    forwardRef,
 } from '@nestjs/common';
 import { AssignmentStatus, AssignmentType } from '@prisma/client';
 import axios from 'axios';
@@ -16,11 +16,14 @@ import { v4 as uuidv4 } from 'uuid';
 import { EventsGateway } from '../../../events/events.gateway';
 import { EvaluationService } from '../../evaluation/service/evaluation.service';
 import { GradebookService } from '../../gradebook/service';
+import { MediaService } from '../../media/service/media.service';
 import {
     CloneAssignmentDto,
     CreateAssignmentDto,
     GradeAssignmentDto,
     QueryAssignmentsDto,
+    QueryBankActivitiesDto,
+    QueryBankAssignmentsDto,
     SubmitAssignmentDto,
     UpdateAssignmentDto,
 } from '../dto';
@@ -30,6 +33,7 @@ import {
     AssignmentRepository,
     AssignmentSubmissionWithStudent,
     AssignmentWithDetails,
+    BankActivityWithAssignment,
 } from '../repository';
 
 @Injectable()
@@ -44,6 +48,7 @@ export class AssignmentService {
     private readonly gradebookService?: GradebookService,
     @Inject(forwardRef(() => AutoCertificateIssuerService))
     private readonly autoCertificateIssuer?: AutoCertificateIssuerService,
+    private readonly mediaService?: MediaService,
   ) {}
 
   async createAssignment(
@@ -88,7 +93,21 @@ export class AssignmentService {
       weight: dto.weight ?? 0,
     };
 
-    return this.assignmentRepository.createAssignment(assignmentData);
+    const assignment = await this.assignmentRepository.createAssignment(assignmentData);
+
+    // Extract media from activities and create MediaFile records (async, non-blocking)
+    if (this.mediaService && assignment.assignmentActivities) {
+      this.extractMediaFromAssignmentActivities(assignment, dto.activities).catch(
+        (error) => {
+          this.logger.error(
+            `Failed to extract media from assignment ${assignment.id}: ${error.message}`,
+            error,
+          );
+        },
+      );
+    }
+
+    return assignment;
   }
 
   async getAssignmentById(
@@ -156,6 +175,58 @@ export class AssignmentService {
         limit,
       },
     );
+
+    return {
+      ...result,
+      page,
+      limit,
+    };
+  }
+
+  async getBankAssignments(
+    query: QueryBankAssignmentsDto,
+  ): Promise<{
+    assignments: AssignmentWithDetails[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const { page = 1, limit = 20 } = query;
+
+    const result = await this.assignmentRepository.findBankAssignments({
+      teacherId: query.teacherId,
+      activityType: query.activityType,
+      difficulty: query.difficulty,
+      search: query.search,
+      page,
+      limit,
+    });
+
+    return {
+      ...result,
+      page,
+      limit,
+    };
+  }
+
+  async getBankActivities(
+    query: QueryBankActivitiesDto,
+  ): Promise<{
+    activities: BankActivityWithAssignment[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const { page = 1, limit = 20 } = query;
+
+    const result = await this.assignmentRepository.findBankActivities({
+      type: query.type,
+      difficulty: query.difficulty,
+      teacherId: query.teacherId,
+      search: query.search,
+      page,
+      limit,
+    });
 
     return {
       ...result,
@@ -1741,5 +1812,67 @@ export class AssignmentService {
         `Error checking course completion for certificate: ${error.message}`,
       );
     }
+  }
+
+  /**
+   * Extract media from assignment activities and create MediaFile records
+   */
+  private async extractMediaFromAssignmentActivities(
+    assignment: AssignmentWithDetails,
+    activityDtos: AssignmentActivityDto[],
+  ): Promise<void> {
+    if (!this.mediaService || !assignment.assignmentActivities) {
+      return;
+    }
+
+    this.logger.log(
+      `Extracting media from ${assignment.assignmentActivities.length} assignment activities`,
+    );
+
+    // Map activity DTOs to created activities by order
+    const activityMap = new Map<number, AssignmentActivityDto>();
+    activityDtos.forEach((dto, index) => {
+      activityMap.set(index, dto);
+    });
+
+    // Process all activities in parallel
+    const results = await Promise.allSettled(
+      assignment.assignmentActivities.map(async (activity, index) => {
+        const activityDto = activityMap.get(index);
+        if (!activityDto) return;
+
+        // Extract media URLs from activity
+        const media = extractMediaFromActivity({
+          type: activityDto.type,
+          mediaUrls: activityDto.mediaUrls || (typeof activityDto.mediaUrls === 'object' ? Object.values(activityDto.mediaUrls) : []),
+          content: activityDto.content,
+        });
+
+        // Create MediaFile for each media URL
+        for (const url of media.all) {
+          try {
+            await this.mediaService.createFromContext(url, {
+              source: 'assignment_activity',
+              sourceId: activity.id,
+              assignmentTitle: assignment.title,
+              activityTitle: activityDto.title,
+              activityType: activityDto.type,
+            });
+          } catch (error) {
+            this.logger.warn(
+              `Failed to create MediaFile for URL ${url} in assignment activity ${activity.id}: ${error.message}`,
+            );
+            // Continue with other URLs
+          }
+        }
+      }),
+    );
+
+    // Log results
+    const successful = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    this.logger.log(
+      `Media extraction completed: ${successful} succeeded, ${failed} failed`,
+    );
   }
 }

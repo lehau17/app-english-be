@@ -5,6 +5,7 @@ import { CertificateModule } from '../certificate/certificate.module';
 import { EvaluationModule } from '../evaluation/evaluation.module';
 import { EvaluationService } from '../evaluation/service/evaluation.service';
 import { GradebookModule } from '../gradebook';
+import { MediaModule } from '../media/media.module';
 import { PrivateAssignmentController } from './controller';
 import { AssignmentRepository } from './repository';
 import { AssignmentService } from './service';
@@ -18,6 +19,7 @@ import { AssignmentPdfService } from './services/assignment-pdf.service';
     EventsModule,
     GradebookModule,
     forwardRef(() => CertificateModule),
+    MediaModule,
   ],
   controllers: [PrivateAssignmentController],
   providers: [
