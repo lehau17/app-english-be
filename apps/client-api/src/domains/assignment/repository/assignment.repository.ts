@@ -1,13 +1,13 @@
 import { PrismaRepository } from '@app/database';
 import { Injectable } from '@nestjs/common';
 import {
-  Assignment,
-  AssignmentStatus,
-  AssignmentSubmission,
-  AssignmentType,
-  DifficultyLevel,
-  Prisma,
-  AssignmentActivity as PrismaAssignmentActivity,
+    Assignment,
+    AssignmentStatus,
+    AssignmentSubmission,
+    AssignmentType,
+    DifficultyLevel,
+    Prisma,
+    AssignmentActivity as PrismaAssignmentActivity,
 } from '@prisma/client';
 import { ActivityTypeValue } from '../../course/dto';
 
@@ -402,6 +402,9 @@ export class AssignmentRepository extends PrismaRepository {
     data: {
       score: number;
       feedback?: string;
+      aiScore?: number | null;
+      aiFeedback?: string | null;
+      aiGradedAt?: Date | null;
     },
   ) {
     return this.assignmentSubmission.update({
@@ -411,6 +414,9 @@ export class AssignmentRepository extends PrismaRepository {
         feedback: data.feedback,
         gradedAt: new Date(),
         status: 'graded',
+        ...(data.aiScore !== undefined && { aiScore: data.aiScore }),
+        ...(data.aiFeedback !== undefined && { aiFeedback: data.aiFeedback }),
+        ...(data.aiGradedAt !== undefined && { aiGradedAt: data.aiGradedAt }),
       },
       include: {
         student: {
@@ -538,6 +544,11 @@ export class AssignmentRepository extends PrismaRepository {
                 teacherId: true,
               },
             },
+            assignmentActivities: {
+              orderBy: {
+                createdAt: 'asc',
+              },
+            },
           },
         },
         gradedBy: {
@@ -574,6 +585,9 @@ export class AssignmentRepository extends PrismaRepository {
       gradedAt?: Date;
       gradedById?: string;
       status?: string;
+      aiScore?: number | null;
+      aiFeedback?: string | null;
+      aiGradedAt?: Date | null;
     },
   ): Promise<any> {
     return this.assignmentSubmission.update({

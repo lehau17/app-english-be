@@ -2,13 +2,13 @@
 import { extractMediaFromActivity, GeminiService } from '@app/shared';
 import { AutoCertificateIssuerService } from '@app/shared/certificate';
 import {
-    BadRequestException,
-    ForbiddenException,
-    forwardRef,
-    Inject,
-    Injectable,
-    Logger,
-    NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+  forwardRef,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { AssignmentStatus, AssignmentType } from '@prisma/client';
 import axios from 'axios';
@@ -18,23 +18,29 @@ import { EvaluationService } from '../../evaluation/service/evaluation.service';
 import { GradebookService } from '../../gradebook/service';
 import { MediaService } from '../../media/service/media.service';
 import {
-    CloneAssignmentDto,
-    CreateAssignmentDto,
-    GradeAssignmentDto,
-    QueryAssignmentsDto,
-    QueryBankActivitiesDto,
-    QueryBankAssignmentsDto,
-    SubmitAssignmentDto,
-    UpdateAssignmentDto,
+  CloneAssignmentDto,
+  CreateAssignmentDto,
+  GradeAssignmentDto,
+  QueryAssignmentsDto,
+  QueryBankActivitiesDto,
+  QueryBankAssignmentsDto,
+  SubmitAssignmentDto,
+  UpdateAssignmentDto,
 } from '../dto';
 import { AssignmentActivityDto } from '../dto/create-assignment.dto';
 import {
-    AssignmentActivityModel,
-    AssignmentRepository,
-    AssignmentSubmissionWithStudent,
-    AssignmentWithDetails,
-    BankActivityWithAssignment,
+  AssignmentActivityModel,
+  AssignmentRepository,
+  AssignmentSubmissionWithStudent,
+  AssignmentWithDetails,
+  BankActivityWithAssignment,
 } from '../repository';
+import {
+  getActivityClassification,
+  isAIGradable,
+  isAutoGradable,
+  requiresManualGrading,
+} from '../utils/activity-classification';
 
 @Injectable()
 export class AssignmentService {
@@ -514,9 +520,13 @@ export class AssignmentService {
           'Xuất sắc! Bạn đã hoàn thành bài tập với kết quả rất tốt. Tiếp tục phát huy!';
       }
 
+      // Save AI evaluation fields when auto-grading
       const graded = await this.assignmentRepository.gradeSubmission(submission.id, {
         score,
         feedback,
+        aiScore: score, // Preserve AI score
+        aiFeedback: feedback, // Preserve AI feedback
+        aiGradedAt: new Date(), // Record when AI graded
       });
 
       // Invalidate gradebook cache
@@ -1090,6 +1100,172 @@ export class AssignmentService {
   }
 
   /**
+   * Calculate score for a single activity (for auto-graded activities)
+   */
+  private calculateActivityScore(
+    activity: AssignmentActivityModel,
+    studentAnswer: any,
+  ): number {
+    const content = activity.content as any;
+    const activityPoints = activity.points || 10;
+
+    try {
+      switch (activity.type) {
+        case 'quiz':
+          if (content?.questions && Array.isArray(content.questions)) {
+            let correctCount = 0;
+            content.questions.forEach((q: any, qIndex: number) => {
+              const userAnswer = studentAnswer?.[qIndex];
+              if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+                correctCount++;
+              }
+            });
+            return Math.round((correctCount / content.questions.length) * activityPoints);
+          } else if (content?.options && typeof content.correctIndex === 'number') {
+            return studentAnswer === content.correctIndex ? activityPoints : 0;
+          }
+          break;
+
+        case 'fill_blank':
+          if (content?.correctAnswers && Array.isArray(content.correctAnswers)) {
+            let correctCount = 0;
+            if (Array.isArray(studentAnswer)) {
+              content.correctAnswers.forEach((correctAnswer: string, index: number) => {
+                const userAnswer = studentAnswer[index];
+                if (
+                  userAnswer &&
+                  userAnswer.toLowerCase().trim() === correctAnswer.toLowerCase().trim()
+                ) {
+                  correctCount++;
+                }
+              });
+            }
+            return Math.round((correctCount / content.correctAnswers.length) * activityPoints);
+          } else if (content?.correctAnswer && typeof studentAnswer === 'string') {
+            return studentAnswer.toLowerCase().trim() === content.correctAnswer.toLowerCase().trim()
+              ? activityPoints
+              : 0;
+          }
+          break;
+
+        case 'matching':
+          if (typeof studentAnswer === 'object' && studentAnswer !== null) {
+            let correctCount = 0;
+            let totalPairs = 0;
+
+            if (content?.pairs && Array.isArray(content.pairs)) {
+              totalPairs = content.pairs.length;
+              content.pairs.forEach((_pair: any, pairIndex: number) => {
+                const userRightIndex = studentAnswer[pairIndex];
+                if (typeof userRightIndex === 'number' && userRightIndex === pairIndex) {
+                  correctCount++;
+                }
+              });
+            } else if (content?.leftItems && content?.rightItems) {
+              totalPairs = content.leftItems.length;
+              content.leftItems.forEach((_leftItem: string, leftIndex: number) => {
+                const userRightIndex = studentAnswer[leftIndex];
+                if (typeof userRightIndex === 'number' && userRightIndex === leftIndex) {
+                  correctCount++;
+                }
+              });
+            }
+
+            if (totalPairs > 0) {
+              return Math.round((correctCount / totalPairs) * activityPoints);
+            }
+          }
+          break;
+
+        case 'vocab':
+        case 'grammar':
+          if (content?.questions && Array.isArray(content.questions)) {
+            let correctCount = 0;
+            content.questions.forEach((q: any, qIndex: number) => {
+              const userAnswer = studentAnswer?.[qIndex];
+              if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+                correctCount++;
+              }
+            });
+            return Math.round((correctCount / content.questions.length) * activityPoints);
+          } else if (content?.options && typeof content.correctIndex === 'number') {
+            return studentAnswer === content.correctIndex ? activityPoints : 0;
+          }
+          break;
+
+        case 'dictation':
+          if (studentAnswer && content?.transcript) {
+            const userText = String(studentAnswer).toLowerCase().trim();
+            const correctText = content.transcript.toLowerCase().trim();
+            const similarity = this.calculateTextSimilarity(userText, correctText);
+            return Math.round(similarity * activityPoints);
+          }
+          break;
+
+        case 'listening':
+          if (content?.questions && Array.isArray(content.questions)) {
+            let correctCount = 0;
+            content.questions.forEach((q: any, qIndex: number) => {
+              const userAnswer = studentAnswer?.[qIndex];
+              if (typeof userAnswer === 'number' && userAnswer === q.correctIndex) {
+                correctCount++;
+              }
+            });
+            return Math.round((correctCount / content.questions.length) * activityPoints);
+          } else if (content?.options && typeof content.correctIndex === 'number') {
+            return studentAnswer === content.correctIndex ? activityPoints : 0;
+          }
+          break;
+      }
+
+      return 0;
+    } catch (error) {
+      this.logger.error(`Error calculating score for activity ${activity.id}:`, error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get correct answer for a single activity (for grading page)
+   */
+  private getCorrectAnswerForActivity(activity: AssignmentActivityModel): any {
+    const content = activity.content as any;
+
+    try {
+      if (activity.type === 'quiz' && content?.questions) {
+        const answers: any = {};
+        content.questions.forEach((q: any, qIndex: number) => {
+          answers[qIndex] = q.correctIndex;
+        });
+        return answers;
+      } else if (activity.type === 'listening' && content?.questions) {
+        const answers: any = {};
+        content.questions.forEach((q: any, qIndex: number) => {
+          answers[qIndex] = q.correctIndex;
+        });
+        return answers;
+      } else if (activity.type === 'fill_blank' && content?.correctAnswers) {
+        return Array.isArray(content.correctAnswers) ? content.correctAnswers : [content.correctAnswers];
+      } else if (activity.type === 'fill_blank' && content?.correctAnswer) {
+        return content.correctAnswer;
+      } else if (activity.type === 'matching' && content?.pairs) {
+        return content.pairs;
+      } else if (activity.type === 'matching' && content?.leftItems && content?.rightItems) {
+        return { leftItems: content.leftItems, rightItems: content.rightItems };
+      } else if (content?.correctAnswer !== undefined) {
+        return content.correctAnswer;
+      } else if (content?.correctIndex !== undefined) {
+        return content.correctIndex;
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error(`Error getting correct answer for activity ${activity.id}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Normalize activity points to sum = 100
    * Formula: scaleFactor = 100 / sumOfPoints
    * Maintains relative weights between activities
@@ -1219,7 +1395,153 @@ export class AssignmentService {
       );
     }
 
-    return submission;
+    // Enhance response: map answers to activities
+    const assignment = submission.assignment;
+    const activities = assignment.assignmentActivities || [];
+    const answers = submission.answers as Record<string, any> || {};
+
+    // Map answers to activities and calculate scores
+    const activitiesWithAnswers = activities.map((activity: any, index: number) => {
+      // Get student answer (try by ID first, then by index)
+      const studentAnswer = answers[activity.id] || answers[`activity${index}`] || null;
+
+      // Get correct answer for auto-graded activities
+      const correctAnswer = isAutoGradable(activity.type)
+        ? this.getCorrectAnswerForActivity(activity)
+        : null;
+
+      // Classify activity
+      const classification = getActivityClassification(activity.type);
+      const isAutoGraded = isAutoGradable(activity.type);
+      const isAIGraded = isAIGradable(activity.type);
+      const requiresManual = requiresManualGrading(activity.type);
+
+      // Calculate score for auto-graded activities
+      let calculatedScore: number | null = null;
+      if (isAutoGraded && studentAnswer !== null && correctAnswer !== null) {
+        calculatedScore = this.calculateActivityScore(activity, studentAnswer);
+      }
+
+      return {
+        ...activity,
+        studentAnswer,
+        correctAnswer,
+        classification,
+        isAutoGraded,
+        isAIGradable: isAIGraded,
+        requiresManualGrading: requiresManual,
+        calculatedScore, // Score calculated from answers (for auto-graded)
+        // AI score and teacher score will be added if available
+      };
+    });
+
+    return {
+      ...submission,
+      assignment: {
+        ...assignment,
+        activities: activitiesWithAnswers,
+      },
+    };
+  }
+
+  /**
+   * Grade a submission with per-activity scores (detailed grading)
+   * @param submissionId ID của bài nộp
+   * @param dto DTO chứa activity scores và feedback
+   * @param teacherUserId ID của giáo viên chấm bài
+   * @returns Bài nộp đã được chấm
+   */
+  async gradeSubmissionDetailed(
+    submissionId: string,
+    dto: { activityScores: Record<string, number>; feedback?: string; acceptAIScores?: boolean },
+    teacherUserId: string,
+  ): Promise<any> {
+    // 1. Get submission with permission check
+    const submission = await this.getSubmissionDetails(
+      submissionId,
+      teacherUserId,
+    );
+
+    // 2. Get assignment with activities
+    const assignment = submission.assignment;
+    const activities = assignment.assignmentActivities || [];
+
+    // 3. Validate activity scores
+    for (const activity of activities) {
+      const activityScore = dto.activityScores[activity.id];
+      if (activityScore !== undefined) {
+        if (activityScore < 0 || activityScore > (activity.points || 0)) {
+          throw new BadRequestException(
+            `Activity ${activity.id} score (${activityScore}) must be between 0 and ${activity.points || 0}`,
+          );
+        }
+      }
+    }
+
+    // 4. Calculate total score: earned/total * 100
+    let earnedPoints = 0;
+    let totalPoints = 0;
+
+    activities.forEach((activity: any) => {
+      const activityScore = dto.activityScores[activity.id];
+      if (activityScore !== undefined) {
+        earnedPoints += activityScore;
+      }
+      totalPoints += activity.points || 0;
+    });
+
+    // Final score on 100-point scale
+    const finalScore = totalPoints > 0
+      ? Math.round((earnedPoints / totalPoints) * 100)
+      : 0;
+
+    // Validate final score doesn't exceed 100
+    const normalizedScore = Math.min(finalScore, 100);
+
+    // 5. Update submission
+    const gradedSubmission = await this.assignmentRepository.updateSubmission(
+      submissionId,
+      {
+        score: normalizedScore,
+        feedback: dto.feedback || null,
+        gradedAt: new Date(),
+        gradedById: teacherUserId,
+        status: 'GRADED',
+      },
+    );
+
+    // Invalidate gradebook cache
+    if (this.gradebookService && assignment.classroomId) {
+      await this.gradebookService.invalidateCache(
+        submission.studentId,
+        assignment.classroomId,
+      ).catch((err) => {
+        this.logger.warn(`Failed to invalidate gradebook cache: ${err.message}`);
+      });
+    }
+
+    // Check course completion and trigger certificate issuance (async, non-blocking)
+    if (assignment.classroomId) {
+      this.checkCourseCompletionForCertificate(
+        submission.studentId,
+        assignment.classroomId,
+      ).catch((error) => {
+        this.logger.warn(
+          `Failed to check course completion for certificate: ${error.message}`,
+        );
+      });
+    }
+
+    this.logger.log(
+      `Submission ${submissionId} graded by teacher ${teacherUserId}: ${normalizedScore}/100 (earned: ${earnedPoints}/${totalPoints})`,
+    );
+
+    return {
+      ...gradedSubmission,
+      earnedPoints,
+      totalPoints,
+      finalScore: normalizedScore,
+    };
   }
 
   /**
@@ -1513,10 +1835,13 @@ export class AssignmentService {
       feedback = 'Xuất sắc! Bạn đã hoàn thành bài tập với kết quả rất tốt. Tiếp tục phát huy!';
     }
 
-    // Update database
+    // Update database with AI evaluation fields
     await this.assignmentRepository.gradeSubmission(submissionId, {
       score: finalScore,
       feedback,
+      aiScore: finalScore, // Preserve AI score
+      aiFeedback: feedback, // Preserve AI feedback
+      aiGradedAt: new Date(), // Record when AI graded
     });
 
     // Check course completion and trigger certificate issuance (async, non-blocking)

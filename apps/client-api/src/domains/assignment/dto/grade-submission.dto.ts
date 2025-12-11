@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsInt, IsObject, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class GradeSubmissionDto {
   @ApiProperty({
@@ -21,4 +21,28 @@ export class GradeSubmissionDto {
   @IsOptional()
   @IsString({ message: 'Nhận xét phải là chuỗi ký tự' })
   feedback?: string;
+}
+
+export class GradeSubmissionDetailedDto {
+  @ApiProperty({
+    description: 'Điểm số cho từng activity (activityId -> score)',
+    example: { 'activity-1': 8, 'activity-2': 15, 'activity-3': 10 },
+  })
+  @IsObject({ message: 'activityScores phải là object' })
+  activityScores: Record<string, number>;
+
+  @ApiPropertyOptional({
+    description: 'Nhận xét tổng thể của giáo viên',
+    example: 'Bài làm tốt, cần cải thiện phần ngữ pháp.',
+  })
+  @IsOptional()
+  @IsString({ message: 'Nhận xét phải là chuỗi ký tự' })
+  feedback?: string;
+
+  @ApiPropertyOptional({
+    description: 'Chấp nhận tất cả điểm AI (nếu true, sẽ dùng AI scores cho các activity chưa có teacher score)',
+    default: false,
+  })
+  @IsOptional()
+  acceptAIScores?: boolean;
 }

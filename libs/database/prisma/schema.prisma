@@ -1561,6 +1561,13 @@ model AssignmentSubmission {
 
   gradedById String?
 
+  // AI evaluation (preserved when teacher grades)
+  aiScore Int?
+
+  aiFeedback String?
+
+  aiGradedAt DateTime?
+
   // Content
 
   answers Json

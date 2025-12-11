@@ -1,39 +1,39 @@
 import { JwtPayload, PayloadToken } from '@app/shared';
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Query,
-  Res,
-  UploadedFile,
-  UseInterceptors,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Patch,
+    Post,
+    Put,
+    Query,
+    Res,
+    UploadedFile,
+    UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
-  ApiBearerAuth,
-  ApiConsumes,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
+    ApiBearerAuth,
+    ApiConsumes,
+    ApiOperation,
+    ApiResponse,
+    ApiTags,
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import {
-  CloneAssignmentDto,
-  CreateAssignmentDto,
-  GradeAssignmentDto,
-  ImportAssignmentDto,
-  QueryAssignmentsDto,
-  QueryBankAssignmentsDto,
-  QueryBankActivitiesDto,
-  SubmitAssignmentDto,
-  UpdateAssignmentDto,
+    CloneAssignmentDto,
+    CreateAssignmentDto,
+    GradeAssignmentDto,
+    ImportAssignmentDto,
+    QueryAssignmentsDto,
+    QueryBankActivitiesDto,
+    QueryBankAssignmentsDto,
+    SubmitAssignmentDto,
+    UpdateAssignmentDto,
 } from '../dto';
-import { GradeSubmissionDto } from '../dto/grade-submission.dto';
+import { GradeSubmissionDetailedDto, GradeSubmissionDto } from '../dto/grade-submission.dto';
 import { AssignmentService } from '../service';
 import { AssignmentImportService } from '../services/assignment-import.service';
 import { AssignmentPdfService } from '../services/assignment-pdf.service';
@@ -588,6 +588,33 @@ export class PrivateAssignmentController {
       submissionId,
       dto.grade,
       dto.feedback || null,
+      teacherUserId,
+    );
+  }
+
+  @Patch('assignment-submissions/:id/grade-detailed')
+  @ApiOperation({
+    summary: 'Grade an assignment submission with per-activity scores (Teacher only)',
+    description:
+      'Chấm điểm chi tiết theo từng activity. ' +
+      'Tính điểm tổng bằng công thức: (earned/total) * 100. ' +
+      'Cập nhật trạng thái thành GRADED và lưu thông tin người chấm.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Submission graded successfully with activity breakdown',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid activity scores or data' })
+  @ApiResponse({ status: 403, description: 'Forbidden - No permission' })
+  @ApiResponse({ status: 404, description: 'Submission not found' })
+  async gradeSubmissionDetailed(
+    @Param('id') submissionId: string,
+    @Body() dto: GradeSubmissionDetailedDto,
+    @PayloadToken('sub') teacherUserId: string,
+  ) {
+    return this.assignmentService.gradeSubmissionDetailed(
+      submissionId,
+      dto,
       teacherUserId,
     );
   }
