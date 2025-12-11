@@ -89,27 +89,31 @@ export class PronunciationAssessmentService {
   /**
    * Assess pronunciation from audio buffer
    *
-   * @param audioBuffer WAV audio buffer
+   * @param audioBuffer Audio buffer (WEBM OPUS, WAV, etc.)
    * @param referenceText Expected text (optional, for better accuracy)
    * @param languageCode Language code (default: 'en-US')
+   * @param mimeType Audio MIME type (optional, for encoding detection)
    * @returns Detailed pronunciation feedback
    */
   async assessPronunciation(
     audioBuffer: Buffer,
     referenceText?: string,
     languageCode = 'en-US',
+    mimeType?: string,
   ): Promise<PronunciationFeedback> {
     try {
       this.logger.debug(
-        `Assessing pronunciation: ${audioBuffer.length} bytes, reference: ${referenceText}`,
+        `Assessing pronunciation: ${audioBuffer.length} bytes, reference: ${referenceText}, mimeType: ${mimeType}`,
       );
 
       const startTime = Date.now();
 
+      // Detect encoding from mimeType
+      const encoding = this.detectAudioEncoding(mimeType);
+
       // Configure request
       const config: google.cloud.speech.v1.IRecognitionConfig = {
-        encoding: 'LINEAR16' as any,
-        sampleRateHertz: 16000,
+        encoding,
         languageCode,
         enableAutomaticPunctuation: true,
         enableWordTimeOffsets: true,
@@ -119,6 +123,11 @@ export class PronunciationAssessmentService {
         model: 'latest_long',
         useEnhanced: true,
       };
+
+      // For LINEAR16, specify sample rate. For OPUS formats, Google auto-detects from header
+      if (encoding === ('LINEAR16' as any)) {
+        config.sampleRateHertz = 16000;
+      }
 
       // Add reference text for better accuracy
       if (referenceText) {
@@ -469,6 +478,23 @@ export class PronunciationAssessmentService {
   private calculateWPM(wordCount: number, durationSec: number): number {
     if (durationSec === 0) return 0;
     return Math.round((wordCount / durationSec) * 60);
+  }
+
+  /**
+   * Detect audio encoding from MIME type
+   */
+  private detectAudioEncoding(
+    mimeType?: string,
+  ): google.cloud.speech.v1.RecognitionConfig.AudioEncoding {
+    if (mimeType) {
+      if (mimeType.includes('webm')) return 'WEBM_OPUS' as any;
+      if (mimeType.includes('ogg')) return 'OGG_OPUS' as any;
+      if (mimeType.includes('mp3')) return 'MP3' as any;
+      if (mimeType.includes('flac')) return 'FLAC' as any;
+      if (mimeType.includes('wav')) return 'LINEAR16' as any;
+    }
+    // Default to WEBM_OPUS (most common from browser)
+    return 'WEBM_OPUS' as any;
   }
 
   /**
