@@ -1418,7 +1418,8 @@ export class AssignmentService {
 
       // Calculate score for auto-graded activities
       let calculatedScore: number | null = null;
-      if (isAutoGraded && studentAnswer !== null && correctAnswer !== null) {
+      if (isAutoGraded && studentAnswer !== null && studentAnswer !== undefined) {
+        // Calculate score even if correctAnswer is null (we can get it from activity content)
         calculatedScore = this.calculateActivityScore(activity, studentAnswer);
       }
 
