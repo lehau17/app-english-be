@@ -250,12 +250,25 @@ export class PronunciationAssessmentService {
       }
 
       // Extract timing
-      const startTime =
-        wordInfo.startTime?.seconds?.toNumber() ||
-        0 + (wordInfo.startTime?.nanos || 0) / 1e9;
-      const endTime =
-        wordInfo.endTime?.seconds?.toNumber() ||
-        0 + (wordInfo.endTime?.nanos || 0) / 1e9;
+      // Handle seconds as number or Long object
+      const startSeconds =
+        typeof wordInfo.startTime?.seconds === 'number'
+          ? wordInfo.startTime.seconds
+          : typeof wordInfo.startTime?.seconds === 'string'
+            ? Number(wordInfo.startTime.seconds)
+            : wordInfo.startTime?.seconds?.toNumber?.() || 0;
+      const startNanos = wordInfo.startTime?.nanos || 0;
+      const startTime = startSeconds + startNanos / 1e9;
+
+      const endSeconds =
+        typeof wordInfo.endTime?.seconds === 'number'
+          ? wordInfo.endTime.seconds
+          : typeof wordInfo.endTime?.seconds === 'string'
+            ? Number(wordInfo.endTime.seconds)
+            : wordInfo.endTime?.seconds?.toNumber?.() || 0;
+      const endNanos = wordInfo.endTime?.nanos || 0;
+      const endTime = endSeconds + endNanos / 1e9;
+
       const duration = endTime - startTime;
 
       // Estimate phoneme-level (simplified)
@@ -465,9 +478,15 @@ export class PronunciationAssessmentService {
     }
 
     const lastWord = alternative.words[alternative.words.length - 1];
-    const endTime =
-      lastWord.endTime?.seconds?.toNumber() ||
-      0 + (lastWord.endTime?.nanos || 0) / 1e9;
+    // Handle seconds as number, string, or Long object
+    const endSeconds =
+      typeof lastWord.endTime?.seconds === 'number'
+        ? lastWord.endTime.seconds
+        : typeof lastWord.endTime?.seconds === 'string'
+          ? Number(lastWord.endTime.seconds)
+          : lastWord.endTime?.seconds?.toNumber?.() || 0;
+    const endNanos = lastWord.endTime?.nanos || 0;
+    const endTime = endSeconds + endNanos / 1e9;
 
     return endTime;
   }
