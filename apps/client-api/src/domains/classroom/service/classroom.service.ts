@@ -42,6 +42,7 @@ import {
     generateClassCode,
     getCsvTransformStream,
 } from '../utils/classroom.util';
+import { AttendanceBlockingService } from './attendance-blocking.service';
 
 const TIMEZONE_OFFSETS: Record<TimezoneCode, number> = {
   [TimezoneCode.Asia_Ho_Chi_Minh]: 7 * 60,
@@ -61,6 +62,7 @@ export class ClassroomService {
     private readonly prisma: PrismaRepository,
     private readonly autoExamCreationService: AutoExamCreationService,
     private readonly paymentService: PaymentService,
+    private readonly attendanceBlockingService?: AttendanceBlockingService,
   ) { }
 
   async create(dto: CreateClassroomDto): Promise<Classroom> {

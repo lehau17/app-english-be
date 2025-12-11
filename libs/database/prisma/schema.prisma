@@ -1436,6 +1436,13 @@ model ClassroomStudent {
   // Payment status
   isPurchased Boolean @default(false)
 
+  // Attendance blocking
+  isBlocked Boolean @default(false)
+  blockedAt DateTime?
+  blockedReason String?
+  consecutiveAbsences Int @default(0)
+  lastAbsenceDate DateTime?
+
   // Metadata
 
   notes String?
@@ -1449,6 +1456,7 @@ model ClassroomStudent {
   @@id([classroomId, studentId])
   @@index([studentId])
   @@index([isPurchased])
+  @@index([isBlocked])
 }
 
 model Assignment {

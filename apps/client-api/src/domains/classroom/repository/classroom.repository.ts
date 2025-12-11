@@ -1,19 +1,22 @@
 import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, forwardRef } from '@nestjs/common';
 import { Classroom, Prisma } from '@prisma/client';
 import { Readable } from 'stream';
 import { LessonRepository } from '../../lesson/repository/lesson.repository';
 import {
-  ClassroomAnnouncementQueryDto,
-  FilterClassroomRequestDto,
+    ClassroomAnnouncementQueryDto,
+    FilterClassroomRequestDto,
 } from '../dto/classroom.dto';
+import { AttendanceBlockingService } from '../service/attendance-blocking.service';
 
 @Injectable()
 export class ClassroomRepository {
   constructor(
     private readonly prisma: PrismaRepository,
     private readonly lessonRepository: LessonRepository,
+    @Inject(forwardRef(() => AttendanceBlockingService))
+    private readonly attendanceBlockingService?: AttendanceBlockingService,
   ) {}
 
   async create(data: Prisma.ClassroomCreateInput): Promise<Classroom> {
@@ -804,7 +807,13 @@ export class ClassroomRepository {
       include: {
         students: {
           where: { studentId, isActive: true },
-          select: { isPurchased: true },
+          select: {
+            isPurchased: true,
+            isBlocked: true,
+            blockedAt: true,
+            blockedReason: true,
+            consecutiveAbsences: true,
+          },
         },
         course: {
           select: { price: true },
@@ -817,12 +826,28 @@ export class ClassroomRepository {
     const studentRecord = classroom.students[0];
     const needsPayment = classroom.course?.price && classroom.course.price > 0;
 
+    // Get blocking status if service available
+    let blockingStatus = null;
+    if (this.attendanceBlockingService && studentRecord) {
+      blockingStatus = await this.attendanceBlockingService.checkBlockingStatus(
+        classroomId,
+        studentId,
+      );
+    }
+
     return {
       id: classroom.id,
       status: classroom.status,
       isPurchased: studentRecord?.isPurchased || false,
       needsPayment: needsPayment || false,
-      hasAccess: !needsPayment || studentRecord?.isPurchased || false,
+      hasAccess:
+        (!needsPayment || studentRecord?.isPurchased || false) &&
+        !(blockingStatus?.isBlocked || studentRecord?.isBlocked || false),
+      isBlocked: blockingStatus?.isBlocked || studentRecord?.isBlocked || false,
+      blockedAt: blockingStatus?.blockedAt || studentRecord?.blockedAt || null,
+      blockedReason: blockingStatus?.blockedReason || studentRecord?.blockedReason || null,
+      consecutiveAbsences: blockingStatus?.consecutiveAbsences || studentRecord?.consecutiveAbsences || 0,
+      blockingThreshold: blockingStatus?.threshold || null,
     };
   }
 

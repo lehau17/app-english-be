@@ -1,14 +1,19 @@
 import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { Activity, Lesson, Prisma, ProgressState } from '@prisma/client';
+import { AttendanceBlockingService } from '../../classroom/service/attendance-blocking.service';
 import { CreateLessonDto, FilterLessonRequestDto } from '../dto/lesson.dto';
 
 type SortOrder = 'asc' | 'desc';
 
 @Injectable()
 export class LessonRepository {
-    constructor(private readonly prisma: PrismaRepository) { }
+    constructor(
+        private readonly prisma: PrismaRepository,
+        @Inject(forwardRef(() => AttendanceBlockingService))
+        private readonly attendanceBlockingService?: AttendanceBlockingService,
+    ) { }
 
     // ============ CRUD cơ bản ============
 
@@ -264,6 +269,49 @@ export class LessonRepository {
             },
         });
         if (!act) return { allowed: false, reason: 'activity_not_found' };
+
+        // Check attendance blocking (if service available)
+        if (this.attendanceBlockingService) {
+            // Get lesson -> course -> classrooms where student is enrolled
+            const lesson = await this.prisma.lesson.findUnique({
+                where: { id: act.lessonId },
+                select: {
+                    courseId: true,
+                },
+            });
+
+            if (lesson) {
+                // Find classrooms where student is enrolled and has this course
+                const enrollments = await this.prisma.classroomStudent.findMany({
+                    where: {
+                        studentId: userId,
+                        isActive: true,
+                        classroom: {
+                            courseId: lesson.courseId,
+                            isActive: true,
+                        },
+                    },
+                    select: {
+                        classroomId: true,
+                    },
+                });
+
+                // Check blocking for each classroom (if blocked in any, block access)
+                for (const enrollment of enrollments) {
+                    const blockingStatus = await this.attendanceBlockingService.checkBlockingStatus(
+                        enrollment.classroomId,
+                        userId,
+                    );
+
+                    if (blockingStatus.isBlocked) {
+                        return {
+                            allowed: false,
+                            reason: 'attendance_blocked',
+                        };
+                    }
+                }
+            }
+        }
 
         // Check previous activity pass (linear gating)
         if (act.orderNo > 1) {
