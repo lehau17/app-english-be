@@ -56,3 +56,6 @@ export function getActivityClassification(
   // Default to manual for unknown types
   return 'manual';
 }
+
+
+

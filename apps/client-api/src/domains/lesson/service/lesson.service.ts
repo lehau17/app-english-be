@@ -5,10 +5,13 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   forwardRef,
 } from '@nestjs/common';
-import { Lesson, ProgressState } from '@prisma/client';
+import { DifficultyLevel, Lesson, ProgressState } from '@prisma/client';
+import { StudentAnalyticsTool } from '../../agent/tools/student-analytics.tool';
+import { LearningPathService } from '../../learning-path/service/learning-path.service';
 import { ParentNotificationService } from '../../parent/service/parent-notification.service';
 import {
   CanStartActivityRequestDto,
@@ -30,12 +33,16 @@ import { LessonRepository } from '../repository/lesson.repository';
 
 @Injectable()
 export class LessonService {
+  private readonly logger = new Logger(LessonService.name);
+
   constructor(
     private readonly lessonRepository: LessonRepository,
     private readonly parentNotificationService: ParentNotificationService,
     private readonly prisma: PrismaRepository,
     @Inject(forwardRef(() => AutoCertificateIssuerService))
     private readonly autoCertificateIssuer?: AutoCertificateIssuerService,
+    private readonly learningPathService?: LearningPathService,
+    private readonly analyticsTool?: StudentAnalyticsTool,
   ) {}
 
   /** ===== CRUD ===== */
@@ -283,6 +290,14 @@ export class LessonService {
       },
     );
 
+    // Update learning path progress if lesson is part of active path (async, non-blocking)
+    this.updateLearningPathProgress(userId, activityId).catch((error) => {
+      // Log error but don't fail activity completion
+      this.logger.warn(
+        `Failed to update learning path progress: ${error.message}`,
+      );
+    });
+
     return {
       state: p.state as ProgressState,
       score: p.score ?? null,
@@ -359,11 +374,77 @@ export class LessonService {
   }
 
   /**
+   * Smart next lesson logic with learning path support
+   * Priority: Active Learning Path > Weak Areas > Level Matching > Fallback
+   */
+  async findNextLessonForUserSmart(
+    userId: string,
+  ): Promise<NextLessonWithActivityResponseDto | {
+    type: 'enrollment_required';
+    courseId: string;
+    message: string;
+    classrooms: any[];
+  } | null> {
+    try {
+      // 1. Check active learning path
+      if (this.learningPathService) {
+        const activePath = await this.learningPathService.findActiveByUserId(userId);
+        if (activePath && activePath.currentStep < activePath.courseIds.length) {
+          const nextCourseId = activePath.courseIds[activePath.currentStep];
+
+          // 2. Check enrollment (REQUIRED)
+          const enrollment = await this.checkEnrollmentForCourse(userId, nextCourseId);
+          if (!enrollment || !enrollment.isPurchased) {
+            // Find classrooms offering this course
+            const classrooms = await this.findClassroomsByCourse(nextCourseId);
+            return {
+              type: 'enrollment_required',
+              courseId: nextCourseId,
+              message: 'Cần đăng ký lớp học để học course này',
+              classrooms,
+            };
+          }
+
+          // 3. If enrolled, get next lesson from course
+          const nextLesson = await this.getNextLessonFromCourse(nextCourseId, userId);
+          if (nextLesson) {
+            return nextLesson;
+          }
+        }
+      }
+
+      // 4. Analyze student profile (for suggestions)
+      const profile = await this.analyzeStudentProfile(userId);
+
+      // 5. Find matching lessons (only from enrolled classrooms)
+      const candidates = await this.findLessonsMatchingProfile(profile, userId);
+
+      // 6. Score và rank candidates
+      const scored = candidates.map((lesson) => ({
+        lesson,
+        score: this.calculateScore(lesson, profile),
+      }));
+      scored.sort((a, b) => b.score - a.score);
+
+      // 7. Return best match
+      if (scored.length > 0) {
+        return this.buildNextLessonResponse(scored[0].lesson, userId);
+      }
+    } catch (error) {
+      this.logger.warn(`Smart next lesson failed, using fallback: ${error.message}`);
+    }
+
+    // 8. Fallback to simple logic
+    return this.findNextLessonForUser(userId);
+  }
+
+  /**
    * Trả về lesson đầu tiên chưa hoàn thành cho user (dùng cho HomePage)
+   * Fallback method - simple logic
    */
   async findNextLessonForUser(
     userId: string,
-  ): Promise<NextLessonWithActivityResponseDto> {
+  ): Promise<NextLessonWithActivityResponseDto | null> {
     // 1. Lấy danh sách khoá học user đang học
     const courses = await this.lessonRepository.listCoursesOfUser(userId);
     // 2. Lấy tất cả lesson thuộc các khoá học đó
@@ -620,5 +701,364 @@ export class LessonService {
     });
 
     return completedActivities === activities.length;
+  }
+
+  /**
+   * Check if student enrolled in any classroom offering this course
+   */
+  private async checkEnrollmentForCourse(
+    userId: string,
+    courseId: string,
+  ): Promise<{ isPurchased: boolean; classroomId: string } | null> {
+    // Find classrooms offering this course
+    const enrollment = await this.prisma.classroomStudent.findFirst({
+      where: {
+        studentId: userId,
+        isActive: true,
+        isPurchased: true,
+        classroom: {
+          courseId,
+          isActive: true,
+          status: {
+            in: ['ongoing', 'upcoming'],
+          },
+        },
+      },
+      select: {
+        isPurchased: true,
+        classroomId: true,
+      },
+    });
+
+    return enrollment;
+  }
+
+  /**
+   * Find classrooms offering a course
+   */
+  private async findClassroomsByCourse(courseId: string): Promise<any[]> {
+    const classrooms = await this.prisma.classroom.findMany({
+      where: {
+        courseId,
+        isActive: true,
+        status: {
+          in: ['ongoing', 'upcoming'],
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        course: {
+          select: {
+            title: true,
+            price: true,
+          },
+        },
+      },
+    });
+
+    return classrooms;
+  }
+
+  /**
+   * Get next lesson from a specific course
+   */
+  private async getNextLessonFromCourse(
+    courseId: string,
+    userId: string,
+  ): Promise<NextLessonWithActivityResponseDto | null> {
+    const lessons = await this.lessonRepository.listLessonsOfCourse(courseId);
+
+    for (const lesson of lessons) {
+      const summary = await this.lessonRepository.getLessonProgressSummary(
+        lesson.id,
+        userId,
+      );
+      if (summary.completion < 100) {
+        const nextActivity = await this.lessonRepository.getNextActivityForUser(
+          lesson.id,
+          userId,
+        );
+
+        const lessonFull = await this.getFull(lesson.id, userId);
+
+        let activityWithProgress = null;
+        if (nextActivity) {
+          const progress =
+            await this.lessonRepository.getProgressByUserIdAndActivityId(
+              userId,
+              nextActivity.id,
+            );
+          activityWithProgress = {
+            id: nextActivity.id,
+            lessonId: nextActivity.lessonId,
+            type: nextActivity.type,
+            orderNo: nextActivity.orderNo,
+            title: nextActivity.title,
+            content: nextActivity.content,
+            passingScore: nextActivity.passingScore,
+            difficulty: nextActivity.difficulty,
+            points: nextActivity.points,
+            progress: progress
+              ? {
+                  state: progress.state,
+                  score: progress.score,
+                  bestScore: progress.bestScore,
+                  attemptsCount: progress.attemptsCount,
+                  updatedAt: progress.updatedAt,
+                }
+              : null,
+          };
+        }
+
+        return {
+          ...lessonFull,
+          activity: activityWithProgress,
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Analyze student profile
+   */
+  private async analyzeStudentProfile(userId: string): Promise<any> {
+    if (!this.analyticsTool) {
+      return {
+        currentLevel: DifficultyLevel.beginner,
+        weakAreas: [],
+        goals: {},
+      };
+    }
+
+    try {
+      const studentData = await this.analyticsTool.getStudentData(userId, 'all');
+
+      // Determine current level
+      let currentLevel: DifficultyLevel = DifficultyLevel.beginner;
+      if (studentData.averageScore >= 80) {
+        currentLevel = DifficultyLevel.advanced;
+      } else if (studentData.averageScore >= 60) {
+        currentLevel = DifficultyLevel.intermediate;
+      }
+
+      // Identify weak areas
+      const weakAreas: string[] = [];
+      const skillBreakdown = studentData.skillBreakdown || {
+        grammar: 0,
+        vocabulary: 0,
+        listening: 0,
+        speaking: 0,
+        reading: 0,
+        writing: 0,
+      }
+      if (skillBreakdown.grammar < 60) weakAreas.push('grammar');
+      if (skillBreakdown.vocabulary < 60) weakAreas.push('vocabulary');
+      if (skillBreakdown.listening < 60) weakAreas.push('listening');
+      if (skillBreakdown.speaking < 60) weakAreas.push('speaking');
+      if (skillBreakdown.reading < 60) weakAreas.push('reading');
+      if (skillBreakdown.writing < 60) weakAreas.push('writing');
+
+      return {
+        currentLevel,
+        weakAreas: weakAreas.length > 0 ? weakAreas : ['vocabulary'],
+        goals: {
+          targetLevel: currentLevel === DifficultyLevel.beginner
+            ? DifficultyLevel.intermediate
+            : DifficultyLevel.advanced,
+        },
+        skillBreakdown,
+      };
+    } catch (error) {
+      this.logger.warn(`Profile analysis failed: ${error.message}`);
+      return {
+        currentLevel: DifficultyLevel.beginner,
+        weakAreas: ['vocabulary'],
+        goals: {},
+      };
+    }
+  }
+
+  /**
+   * Find lessons matching student profile (only from enrolled classrooms)
+   */
+  private async findLessonsMatchingProfile(
+    profile: any,
+    userId: string,
+  ): Promise<Lesson[]> {
+    // Get enrolled courses
+    const courses = await this.lessonRepository.listCoursesOfUser(userId);
+
+    // Get all lessons from enrolled courses
+    const allLessons: Lesson[] = [];
+    for (const course of courses) {
+      const lessons = await this.lessonRepository.listLessonsOfCourse(course.id);
+      allLessons.push(...lessons);
+    }
+
+    return allLessons;
+  }
+
+  /**
+   * Calculate score for lesson based on profile
+   */
+  private calculateScore(lesson: Lesson, profile: any): number {
+    let score = 0;
+
+    // Level matching (0-30 points)
+    if (lesson.difficulty === profile.currentLevel) {
+      score += 30;
+    } else if (
+      (profile.currentLevel === DifficultyLevel.beginner &&
+        lesson.difficulty === DifficultyLevel.intermediate) ||
+      (profile.currentLevel === DifficultyLevel.intermediate &&
+        lesson.difficulty === DifficultyLevel.advanced)
+    ) {
+      score += 20; // One level up is good
+    }
+
+    // Progress bonus (0-10 points) - prefer in-progress lessons
+    // This will be calculated when we check progress
+
+    return score;
+  }
+
+  /**
+   * Build next lesson response
+   */
+  private async buildNextLessonResponse(
+    lesson: Lesson,
+    userId: string,
+  ): Promise<NextLessonWithActivityResponseDto> {
+    const lessonFull = await this.getFull(lesson.id, userId);
+
+    const nextActivity = await this.lessonRepository.getNextActivityForUser(
+      lesson.id,
+      userId,
+    );
+
+    let activityWithProgress = null;
+    if (nextActivity) {
+      const progress =
+        await this.lessonRepository.getProgressByUserIdAndActivityId(
+          userId,
+          nextActivity.id,
+        );
+      activityWithProgress = {
+        id: nextActivity.id,
+        lessonId: nextActivity.lessonId,
+        type: nextActivity.type,
+        orderNo: nextActivity.orderNo,
+        title: nextActivity.title,
+        content: nextActivity.content,
+        passingScore: nextActivity.passingScore,
+        difficulty: nextActivity.difficulty,
+        points: nextActivity.points,
+        progress: progress
+          ? {
+              state: progress.state,
+              score: progress.score,
+              bestScore: progress.bestScore,
+              attemptsCount: progress.attemptsCount,
+              updatedAt: progress.updatedAt,
+            }
+          : null,
+      };
+    }
+
+    return {
+      ...lessonFull,
+      activity: activityWithProgress,
+    };
+  }
+
+  /**
+   * Update learning path progress when lesson/activity is completed
+   */
+  private async updateLearningPathProgress(
+    userId: string,
+    activityId: string,
+  ): Promise<void> {
+    if (!this.learningPathService) return;
+
+    try {
+      // Get activity to find lesson and course
+      const activity = await this.prisma.activity.findUnique({
+        where: { id: activityId },
+        select: {
+          lessonId: true,
+          lesson: {
+            select: {
+              courseId: true,
+            },
+          },
+        },
+      });
+
+      if (!activity || !activity.lesson?.courseId) return;
+
+      // Get active learning path
+      const activePath = await this.learningPathService.findActiveByUserId(
+        userId,
+      );
+      if (!activePath) return;
+
+      // Check if this course is in the path
+      const courseIndex = activePath.courseIds.indexOf(
+        activity.lesson.courseId,
+      );
+      if (courseIndex === -1) return; // Course not in path
+
+      // Check if this is the current step
+      if (courseIndex !== activePath.currentStep) return; // Not current step
+
+      // Check if lesson is completed
+      const lessonCompleted = await this.isLessonCompleted(
+        activity.lessonId,
+        userId,
+      );
+
+      if (lessonCompleted) {
+        // Check if all lessons in current course are completed
+        const courseLessons = await this.lessonRepository.listLessonsOfCourse(
+          activity.lesson.courseId,
+        );
+
+        let allLessonsCompleted = true;
+        for (const lesson of courseLessons) {
+          const completed = await this.isLessonCompleted(lesson.id, userId);
+          if (!completed) {
+            allLessonsCompleted = false;
+            break;
+          }
+        }
+
+        // If all lessons in current course completed, advance path step
+        if (allLessonsCompleted) {
+          await this.learningPathService.advanceStep(activePath.id, userId);
+
+          // Check if path is completed
+          const updatedPath = await this.learningPathService.findById(
+            activePath.id,
+            userId,
+          );
+          if (updatedPath.isCompleted) {
+            this.logger.log(
+              `Learning path ${activePath.id} completed for user ${userId}`,
+            );
+            // TODO: Generate new recommendations or suggest next path
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error(
+        `Error updating learning path progress: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
   }
 }

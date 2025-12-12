@@ -85,3 +85,6 @@ export class PublicCertificateController {
     return this.certificateService.verifyCertificateByNumber(certificateNumber);
   }
 }
+
+
+

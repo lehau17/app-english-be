@@ -182,8 +182,9 @@ Ket qua tra ve:
 
   /**
    * Get comprehensive student data from database
+   * Public method for use by other services
    */
-  private async getStudentData(studentId: string, period: string) {
+  async getStudentData(studentId: string, period: string) {
     const startDate = this.getStartDate(period);
 
     const [

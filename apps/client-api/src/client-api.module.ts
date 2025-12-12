@@ -44,6 +44,8 @@ import { VocabularyV2Module } from './domains/vocabulary-v2/vocabulary-v2.module
 import { VocabularyModule } from './domains/vocabulary/vocabulary.module';
 import { MediaModule } from './domains/media/media.module';
 import { EventsModule } from './events/events.module';
+import { LearningPathModule } from './domains/learning-path/learning-path.module';
+import { RecommendationModule } from './domains/recommendation/recommendation.module';
 
 @Module({
   imports: [
@@ -88,6 +90,8 @@ import { EventsModule } from './events/events.module';
     QuizModule,
     LandingPageModule,
     CertificateModule,
+    LearningPathModule,
+    RecommendationModule,
   ],
   controllers: [ClientApiController],
   providers: [ClientApiService, UploadService],

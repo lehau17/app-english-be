@@ -1,29 +1,29 @@
 import { ResponseMessage } from '@app/shared';
 import { RequestContext } from '@app/shared/request-context';
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
-  Post,
-  Put,
-  Query,
-  Res,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    ParseUUIDPipe,
+    Patch,
+    Post,
+    Put,
+    Query,
+    Res,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ParentChildrenGradesDto } from '../../gradebook/dto';
 import {
-  GradebookExportService,
-  GradebookService,
+    GradebookExportService,
+    GradebookService,
 } from '../../gradebook/service';
 import { UpdateParentChildSettingsDto } from '../dto';
 import {
-  CreateParentRewardDto,
-  UpdateParentRewardDto,
+    CreateParentRewardDto,
+    UpdateParentRewardDto,
 } from '../dto/parent-reward.dto';
 import { ParentService } from '../service/parent.service';
 
@@ -286,5 +286,91 @@ export class PrivateParentController {
     }
 
     return this.parentService.getPaymentSummary(user.sub);
+  }
+
+  @Get('learning-paths/overview')
+  @ApiOperation({
+    summary: 'Get learning paths overview for all children',
+  })
+  @ResponseMessage('Learning paths overview fetched successfully')
+  getLearningPathsOverview() {
+    const user = RequestContext.getValue('user');
+    if (!user || !user.sub) {
+      throw new Error('User not authenticated');
+    }
+
+    return this.parentService.getAllChildrenLearningPathsOverview(user.sub);
+  }
+
+  @Get('children/:childId/learning-paths')
+  @ApiOperation({ summary: 'Get all learning paths for a child' })
+  @ResponseMessage('Child learning paths fetched successfully')
+  getChildLearningPaths(
+    @Param('childId', new ParseUUIDPipe()) childId: string,
+    @Query('isCompleted') isCompleted?: boolean,
+  ) {
+    const user = RequestContext.getValue('user');
+    if (!user || !user.sub) {
+      throw new Error('User not authenticated');
+    }
+
+    const filters = isCompleted !== undefined ? { isCompleted } : undefined;
+    return this.parentService.getChildLearningPaths(
+      user.sub,
+      childId,
+      filters,
+    );
+  }
+
+  @Get('children/:childId/learning-paths/active')
+  @ApiOperation({ summary: 'Get active learning path for a child' })
+  @ResponseMessage('Active learning path fetched successfully')
+  getChildActiveLearningPath(
+    @Param('childId', new ParseUUIDPipe()) childId: string,
+  ) {
+    const user = RequestContext.getValue('user');
+    if (!user || !user.sub) {
+      throw new Error('User not authenticated');
+    }
+
+    return this.parentService.getChildActiveLearningPath(user.sub, childId);
+  }
+
+  @Get('children/:childId/learning-paths/:pathId')
+  @ApiOperation({ summary: 'Get learning path detail for a child' })
+  @ResponseMessage('Learning path detail fetched successfully')
+  getChildLearningPathDetail(
+    @Param('childId', new ParseUUIDPipe()) childId: string,
+    @Param('pathId', new ParseUUIDPipe()) pathId: string,
+  ) {
+    const user = RequestContext.getValue('user');
+    if (!user || !user.sub) {
+      throw new Error('User not authenticated');
+    }
+
+    return this.parentService.getChildLearningPathDetail(
+      user.sub,
+      childId,
+      pathId,
+    );
+  }
+
+  @Get('children/:childId/learning-paths/:pathId/progress')
+  @ApiOperation({ summary: 'Get learning path progress for a child' })
+  @ResponseMessage('Learning path progress fetched successfully')
+  getChildLearningPathProgress(
+    @Param('childId', new ParseUUIDPipe()) childId: string,
+    @Param('pathId', new ParseUUIDPipe()) pathId: string,
+  ) {
+    const user = RequestContext.getValue('user');
+    if (!user || !user.sub) {
+      throw new Error('User not authenticated');
+    }
+
+    return this.parentService.getChildLearningPathProgress(
+      user.sub,
+      childId,
+      pathId,
+    );
   }
 }

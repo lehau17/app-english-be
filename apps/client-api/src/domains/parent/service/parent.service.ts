@@ -1,17 +1,18 @@
 import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
 } from '@nestjs/common';
 import { ActivityType, Prisma, ProgressState } from '@prisma/client';
+import { LearningPathService } from '../../learning-path/service/learning-path.service';
 import { ParentChildService } from '../../parent-child/service/parent-child.service';
 import { ParentDashboardDto, UpdateParentChildSettingsDto } from '../dto';
 import {
-  CreateParentRewardDto,
-  UiRewardType,
-  UpdateParentRewardDto,
+    CreateParentRewardDto,
+    UiRewardType,
+    UpdateParentRewardDto,
 } from '../dto/parent-reward.dto';
 
 @Injectable()
@@ -19,6 +20,7 @@ export class ParentService {
   constructor(
     private readonly prisma: PrismaRepository,
     private readonly parentChildService: ParentChildService,
+    private readonly learningPathService: LearningPathService,
   ) {}
 
   async getParentDashboard(userId: string): Promise<ParentDashboardDto> {
@@ -828,5 +830,147 @@ export class ParentService {
         children: [],
       };
     }
+  }
+
+  /**
+   * Verify parent has access to child's data
+   */
+  private async verifyParentAccess(
+    parentId: string,
+    childId: string,
+  ): Promise<void> {
+    const parentChild = await this.prisma.parentChild.findUnique({
+      where: {
+        parentId_childId: {
+          parentId,
+          childId,
+        },
+      },
+    });
+
+    if (!parentChild || !parentChild.canViewProgress) {
+      throw new ForbiddenException('Cannot access child learning path');
+    }
+  }
+
+  /**
+   * Get all learning paths for a specific child
+   */
+  async getChildLearningPaths(
+    parentId: string,
+    childId: string,
+    filters?: { isCompleted?: boolean },
+  ) {
+    await this.verifyParentAccess(parentId, childId);
+    return this.learningPathService.findByUserId(childId, filters);
+  }
+
+  /**
+   * Get active learning path for a specific child
+   */
+  async getChildActiveLearningPath(parentId: string, childId: string) {
+    await this.verifyParentAccess(parentId, childId);
+    return this.learningPathService.findActiveByUserId(childId);
+  }
+
+  /**
+   * Get learning path detail for a specific child
+   */
+  async getChildLearningPathDetail(
+    parentId: string,
+    childId: string,
+    pathId: string,
+  ) {
+    await this.verifyParentAccess(parentId, childId);
+    // Use childId as userId to verify ownership
+    return this.learningPathService.findById(pathId, childId);
+  }
+
+  /**
+   * Get learning path progress for a specific child
+   */
+  async getChildLearningPathProgress(
+    parentId: string,
+    childId: string,
+    pathId: string,
+  ) {
+    await this.verifyParentAccess(parentId, childId);
+    // Use childId as userId to verify ownership
+    return this.learningPathService.getProgress(pathId, childId);
+  }
+
+  /**
+   * Get learning paths overview for all children (for dashboard)
+   */
+  async getAllChildrenLearningPathsOverview(parentId: string) {
+    // Get all children
+    const parentChildRelations = await this.prisma.parentChild.findMany({
+      where: { parentId },
+      include: {
+        child: {
+          select: {
+            id: true,
+            displayName: true,
+            firstName: true,
+          },
+        },
+      },
+    });
+
+    const childrenOverview = await Promise.all(
+      parentChildRelations
+        .filter((relation) => relation.canViewProgress)
+        .map(async (relation) => {
+          const childId = relation.child.id;
+          const childName =
+            relation.child.displayName ||
+            relation.child.firstName ||
+            'Unknown';
+
+          try {
+            const activePath =
+              await this.learningPathService.findActiveByUserId(childId);
+            const allPaths = await this.learningPathService.findByUserId(
+              childId,
+            );
+
+            let progress = 0;
+            if (activePath && activePath.courseIds.length > 0) {
+              progress = Math.round(
+                (activePath.currentStep / activePath.courseIds.length) * 100,
+              );
+            }
+
+            return {
+              childId,
+              childName,
+              activePath: activePath
+                ? {
+                    id: activePath.id,
+                    name: activePath.name,
+                    currentStep: activePath.currentStep,
+                    totalSteps: activePath.courseIds.length,
+                    isCompleted: activePath.isCompleted,
+                  }
+                : null,
+              totalPaths: allPaths.length,
+              progress,
+            };
+          } catch (error) {
+            // If access denied or error, return empty data
+            return {
+              childId,
+              childName,
+              activePath: null,
+              totalPaths: 0,
+              progress: 0,
+            };
+          }
+        }),
+    );
+
+    return {
+      children: childrenOverview,
+    };
   }
 }

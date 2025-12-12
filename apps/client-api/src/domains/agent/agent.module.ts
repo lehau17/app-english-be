@@ -111,6 +111,7 @@ import { WordExportTool } from './tools/word-export.tool';
     AutoReindexService,
     RagService,
     LangChainAgentService,
+    StudentAnalyticsTool,
   ],
 })
 export class AgentModule {}

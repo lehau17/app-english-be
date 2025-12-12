@@ -2,26 +2,27 @@ import { DatabaseModule } from '@app/database';
 import { ExcelExportService } from '@app/shared';
 import { Module } from '@nestjs/common';
 import { GradebookModule } from '../gradebook';
+import { LearningPathModule } from '../learning-path';
 import { ParentChildModule } from '../parent-child';
 import {
-  ParentChildLinkRequestRepository,
-  ParentChildRepository,
+    ParentChildLinkRequestRepository,
+    ParentChildRepository,
 } from '../parent-child/repository';
 import { ParentChildService } from '../parent-child/service/parent-child.service';
 import {
-  AdminParentController,
-  PrivateParentController,
-  PrivateParentTransactionController,
+    AdminParentController,
+    PrivateParentController,
+    PrivateParentTransactionController,
 } from './controller';
 import {
-  AdminParentService,
-  ParentService,
-  ParentTransactionService,
+    AdminParentService,
+    ParentService,
+    ParentTransactionService,
 } from './service';
 import { ParentNotificationService } from './service/parent-notification.service';
 
 @Module({
-  imports: [DatabaseModule, ParentChildModule, GradebookModule],
+  imports: [DatabaseModule, ParentChildModule, GradebookModule, LearningPathModule],
   controllers: [
     PrivateParentController,
     AdminParentController,
