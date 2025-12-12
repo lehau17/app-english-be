@@ -33,3 +33,7 @@ export class GenerateLearningPathForNewStudentDto {
   timeframe?: number;
 }
 
+
+
+
+

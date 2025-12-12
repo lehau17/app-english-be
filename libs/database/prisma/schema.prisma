@@ -2563,7 +2563,7 @@ model LearningPath {
 
   // Content
 
-  courseIds String[]
+  activityIds String[]
 
   customContent Json?
 

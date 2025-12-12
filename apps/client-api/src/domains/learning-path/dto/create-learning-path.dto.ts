@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsArray, IsEnum, IsOptional, IsInt, Min } from 'class-validator';
 import { DifficultyLevel } from '@prisma/client';
+import { IsArray, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateLearningPathDto {
   @ApiProperty({ description: 'Learning path name' })
@@ -16,10 +16,10 @@ export class CreateLearningPathDto {
   @IsString({ each: true })
   focusAreas!: string[];
 
-  @ApiProperty({ description: 'Course IDs in order', type: [String] })
+  @ApiProperty({ description: 'Activity IDs in order', type: [String] })
   @IsArray()
   @IsString({ each: true })
-  courseIds!: string[];
+  activityIds!: string[];
 
   @ApiProperty({ description: 'Timeframe in days', required: false })
   @IsOptional()
@@ -31,6 +31,10 @@ export class CreateLearningPathDto {
   @IsOptional()
   customContent?: Record<string, any>;
 }
+
+
+
+
 
 
 

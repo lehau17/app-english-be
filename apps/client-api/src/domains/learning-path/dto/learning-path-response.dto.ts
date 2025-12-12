@@ -21,7 +21,7 @@ export class LearningPathResponseDto {
   timeframe?: number;
 
   @ApiProperty({ type: [String] })
-  courseIds!: string[];
+  activityIds!: string[];
 
   @ApiProperty({ required: false })
   customContent?: Record<string, any>;
@@ -48,6 +48,10 @@ export class LearningPathResponseDto {
     percentage: number;
   };
 }
+
+
+
+
 
 
 

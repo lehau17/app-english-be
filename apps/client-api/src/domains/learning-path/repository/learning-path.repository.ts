@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
 import { PrismaRepository } from '@app/database';
-import { LearningPath, DifficultyLevel } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
+import { DifficultyLevel, LearningPath } from '@prisma/client';
 import { CreateLearningPathDto, UpdateLearningPathDto } from '../dto';
 
 @Injectable()
@@ -67,7 +67,7 @@ export class LearningPathRepository {
     if (!path) throw new Error('Learning path not found');
 
     const newStep = path.currentStep + 1;
-    const isCompleted = newStep >= path.courseIds.length;
+    const isCompleted = newStep >= path.activityIds.length;
 
     return this.prisma.learningPath.update({
       where: { id },
@@ -85,7 +85,7 @@ export class LearningPathRepository {
       throw new Error('Learning path not found');
     }
 
-    const totalSteps = path.courseIds.length;
+    const totalSteps = path.activityIds.length;
     const completedSteps = path.currentStep;
     const percentage = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
 
@@ -98,6 +98,10 @@ export class LearningPathRepository {
     };
   }
 }
+
+
+
+
 
 
 

@@ -1,18 +1,18 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { LearningPathRepository } from '../repository/learning-path.repository';
-import {
-  CreateLearningPathDto,
-  UpdateLearningPathDto,
-} from '../dto';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { LearningPath } from '@prisma/client';
+import {
+    CreateLearningPathDto,
+    UpdateLearningPathDto,
+} from '../dto';
+import { LearningPathRepository } from '../repository/learning-path.repository';
 
 @Injectable()
 export class LearningPathService {
   constructor(private readonly repository: LearningPathRepository) {}
 
   async create(userId: string, dto: CreateLearningPathDto): Promise<LearningPath> {
-    // Validate courseIds exist
-    await this.validateCourses(dto.courseIds);
+    // Validate activityIds exist
+    await this.validateActivities(dto.activityIds);
 
     return this.repository.create(userId, dto);
   }
@@ -46,8 +46,8 @@ export class LearningPathService {
   ): Promise<LearningPath> {
     await this.findById(id, userId); // Check ownership
 
-    if (dto.courseIds) {
-      await this.validateCourses(dto.courseIds);
+    if (dto.activityIds) {
+      await this.validateActivities(dto.activityIds);
     }
 
     return this.repository.update(id, dto);
@@ -68,14 +68,18 @@ export class LearningPathService {
     return this.repository.getProgress(id, userId);
   }
 
-  private async validateCourses(courseIds: string[]): Promise<void> {
-    // TODO: Validate courses exist
-    // const courses = await this.courseRepository.findByIds(courseIds);
-    // if (courses.length !== courseIds.length) {
-    //   throw new BadRequestException('Some courses not found');
+  private async validateActivities(activityIds: string[]): Promise<void> {
+    // TODO: Validate activities exist
+    // const activities = await this.activityRepository.findByIds(activityIds);
+    // if (activities.length !== activityIds.length) {
+    //   throw new BadRequestException('Some activities not found');
     // }
   }
 }
+
+
+
+
 
 
 

@@ -35,7 +35,8 @@ interface SuggestedPath {
   name: string;
   targetLevel: DifficultyLevel;
   focusAreas: string[];
-  courseIds: string[];
+  courseIds: string[]; // Temporary: used to extract activities
+  activityIds?: string[]; // Optional: will be populated by extractActivitiesFromCourses
   reasoning: string;
 }
 
@@ -88,12 +89,19 @@ export class LearningPathGenerationService {
         mergedGoals,
       );
 
-      // 5. Create learning path
+      // 5. Extract activities from courses
+      const activityIds = await this.extractActivitiesFromCourses(
+        suggestedPath.courseIds || [],
+        mergedGoals.focusAreas,
+        userId,
+      );
+
+      // 6. Create learning path
       const path = await this.learningPathService.create(userId, {
         name: suggestedPath.name,
         targetLevel: suggestedPath.targetLevel,
         focusAreas: suggestedPath.focusAreas,
-        courseIds: suggestedPath.courseIds,
+        activityIds: activityIds,
         timeframe: mergedGoals.timeframe,
       });
 
@@ -154,13 +162,20 @@ export class LearningPathGenerationService {
       },
     );
 
-    // Update path
-    await this.learningPathService.update(pathId, userId, {
-      name: suggestedPath.name,
-      targetLevel: suggestedPath.targetLevel,
-      focusAreas: suggestedPath.focusAreas,
-      courseIds: suggestedPath.courseIds,
-    });
+      // Extract activities from courses
+      const activityIds = await this.extractActivitiesFromCourses(
+        suggestedPath.courseIds || [],
+        profile.goals.focusAreas,
+        userId,
+      );
+
+      // Update path
+      await this.learningPathService.update(pathId, userId, {
+        name: suggestedPath.name,
+        targetLevel: suggestedPath.targetLevel,
+        focusAreas: suggestedPath.focusAreas,
+        activityIds: activityIds,
+      });
 
     return pathId;
   }
@@ -374,6 +389,7 @@ ${availableCourses.map((c, i) => `${i + 1}. ${c.title} (ID: ${c.id}) - ${c.diffi
           targetLevel: goals.targetLevel,
           focusAreas: goals.focusAreas,
           courseIds: availableCourses.slice(0, 3).map((c) => c.id),
+          activityIds: [], // Will be populated by extractActivitiesFromCourses
           reasoning: 'Lộ trình được tạo tự động dựa trên trình độ và điểm yếu của học sinh',
         };
       }
@@ -382,7 +398,8 @@ ${availableCourses.map((c, i) => `${i + 1}. ${c.title} (ID: ${c.id}) - ${c.diffi
         name: parsed.name || `Lộ trình từ ${profile.currentLevel} đến ${goals.targetLevel}`,
         targetLevel: parsed.targetLevel || goals.targetLevel,
         focusAreas: parsed.focusAreas || goals.focusAreas,
-        courseIds: validCourseIds.slice(0, 5), // Max 5 courses
+        courseIds: validCourseIds.slice(0, 5), // Max 5 courses (temporary, will extract activities)
+        activityIds: [], // Will be populated by extractActivitiesFromCourses
         reasoning: parsed.reasoning || 'Lộ trình được đề xuất bởi AI',
       };
     } catch (error) {
@@ -393,9 +410,180 @@ ${availableCourses.map((c, i) => `${i + 1}. ${c.title} (ID: ${c.id}) - ${c.diffi
         targetLevel: goals.targetLevel,
         focusAreas: goals.focusAreas,
         courseIds: availableCourses.slice(0, 3).map((c) => c.id),
+        activityIds: [], // Will be populated by extractActivitiesFromCourses
         reasoning: 'Lộ trình được tạo tự động dựa trên trình độ và điểm yếu của học sinh',
       };
     }
   }
+
+  /**
+   * Extract activities from courses
+   * Activities from course.lessons, exams, and uncompleted activities
+   */
+  private async extractActivitiesFromCourses(
+    courseIds: string[],
+    focusAreas: string[],
+    userId?: string,
+  ): Promise<string[]> {
+    if (courseIds.length === 0) {
+      return [];
+    }
+
+    const activityIds: string[] = [];
+
+    // 1. Get activities from course.lessons
+    const courses = await this.prisma.course.findMany({
+      where: {
+        id: { in: courseIds },
+        isPublished: true,
+      },
+      include: {
+        lessons: {
+          where: {
+            isLocked: false, // Only unlocked lessons
+          },
+          include: {
+            activities: {
+              select: {
+                id: true,
+                type: true,
+                title: true,
+                difficulty: true,
+                orderNo: true,
+              },
+              orderBy: {
+                orderNo: 'asc',
+              },
+            },
+          },
+          orderBy: {
+            orderNo: 'asc',
+          },
+        },
+      },
+    });
+
+    courses.forEach((course) => {
+      course.lessons.forEach((lesson) => {
+        lesson.activities.forEach((activity) => {
+          // Filter by focus areas if specified
+          if (focusAreas.length === 0) {
+            activityIds.push(activity.id);
+          } else {
+            const activityType = activity.type?.toLowerCase() || '';
+            const matchesFocus = focusAreas.some((area) =>
+              activityType.includes(area.toLowerCase()),
+            );
+            if (matchesFocus) {
+              activityIds.push(activity.id);
+            }
+          }
+        });
+      });
+    });
+
+    // 2. Add exams (mid-term, final) from assignments
+    if (userId) {
+      const exams = await this.prisma.assignment.findMany({
+        where: {
+          type: {
+            in: ['MIDTERM_EXAM', 'FINAL_EXAM'],
+          },
+          status: 'published',
+          classroom: {
+            students: {
+              some: {
+                studentId: userId,
+              },
+            },
+          },
+        },
+        include: {
+          assignmentActivities: {
+            select: {
+              id: true,
+              type: true,
+            },
+          },
+        },
+      });
+
+      exams.forEach((exam) => {
+        exam.assignmentActivities.forEach((assignmentActivity) => {
+          // Note: AssignmentActivity is separate from Activity
+          // We need to check if there's a corresponding Activity or use AssignmentActivity
+          // For now, we'll skip assignment activities as they're not regular activities
+          // TODO: Map AssignmentActivity to Activity if needed
+        });
+      });
+    }
+
+    // 3. Add uncompleted activities (activities student hasn't completed)
+    if (userId) {
+      // Get all completed activity IDs for this user from Attempt table
+      const completedAttempts = await this.prisma.attempt.findMany({
+        where: {
+          userId,
+          activityId: { not: null },
+          OR: [
+            { score: { gte: 60 } }, // Passed with score >= 60
+            { isCompleted: true }, // Or explicitly completed
+          ],
+        },
+        select: {
+          activityId: true,
+        },
+        distinct: ['activityId'],
+      });
+
+      const completedActivityIds = new Set(
+        completedAttempts
+          .map((a) => a.activityId)
+          .filter((id): id is string => id !== null),
+      );
+
+      // Get all activities from courses that user hasn't completed
+      const allCourseActivities = await this.prisma.activity.findMany({
+        where: {
+          lesson: {
+            course: {
+              id: { in: courseIds },
+              isPublished: true,
+            },
+          },
+        },
+        select: {
+          id: true,
+          type: true,
+        },
+      });
+
+      allCourseActivities.forEach((activity) => {
+        if (!completedActivityIds.has(activity.id)) {
+          // Filter by focus areas if specified
+          if (focusAreas.length === 0) {
+            if (!activityIds.includes(activity.id)) {
+              activityIds.push(activity.id);
+            }
+          } else {
+            const activityType = activity.type?.toLowerCase() || '';
+            const matchesFocus = focusAreas.some((area) =>
+              activityType.includes(area.toLowerCase()),
+            );
+            if (matchesFocus && !activityIds.includes(activity.id)) {
+              activityIds.push(activity.id);
+            }
+          }
+        }
+      });
+    }
+
+    // Remove duplicates and return
+    return Array.from(new Set(activityIds));
+  }
 }
+
+
+
+
 
