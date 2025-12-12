@@ -1,29 +1,29 @@
 import { ResponseMessage } from '@app/shared';
 import { RequestContext } from '@app/shared/request-context';
 import {
-    Body,
-    Controller,
-    Delete,
-    Get,
-    Param,
-    ParseUUIDPipe,
-    Patch,
-    Post,
-    Put,
-    Query,
-    Res,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Put,
+  Query,
+  Res,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ParentChildrenGradesDto } from '../../gradebook/dto';
 import {
-    GradebookExportService,
-    GradebookService,
+  GradebookExportService,
+  GradebookService,
 } from '../../gradebook/service';
 import { UpdateParentChildSettingsDto } from '../dto';
 import {
-    CreateParentRewardDto,
-    UpdateParentRewardDto,
+  CreateParentRewardDto,
+  UpdateParentRewardDto,
 } from '../dto/parent-reward.dto';
 import { ParentService } from '../service/parent.service';
 
@@ -315,11 +315,7 @@ export class PrivateParentController {
     }
 
     const filters = isCompleted !== undefined ? { isCompleted } : undefined;
-    return this.parentService.getChildLearningPaths(
-      user.sub,
-      childId,
-      filters,
-    );
+    return this.parentService.getChildLearningPaths(user.sub, childId, filters);
   }
 
   @Get('children/:childId/learning-paths/active')

@@ -40,10 +40,3 @@ export class RecommendationResponseDto {
   @ApiProperty()
   createdAt!: Date;
 }
-
-
-
-
-
-
-

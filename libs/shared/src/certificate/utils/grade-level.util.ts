@@ -31,10 +31,3 @@ export function isEligibleForCertificate(gradeLevel: GradeLevel): boolean {
  * Get minimum score required for certificate
  */
 export const MIN_CERTIFICATE_SCORE = 70;
-
-
-
-
-
-
-

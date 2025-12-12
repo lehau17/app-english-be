@@ -1,13 +1,23 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { DifficultyLevel } from '@prisma/client';
-import { IsArray, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class CreateLearningPathDto {
   @ApiProperty({ description: 'Learning path name' })
   @IsString()
   name!: string;
 
-  @ApiProperty({ description: 'Target difficulty level', enum: DifficultyLevel })
+  @ApiProperty({
+    description: 'Target difficulty level',
+    enum: DifficultyLevel,
+  })
   @IsEnum(DifficultyLevel)
   targetLevel!: DifficultyLevel;
 
@@ -31,10 +41,3 @@ export class CreateLearningPathDto {
   @IsOptional()
   customContent?: Record<string, any>;
 }
-
-
-
-
-
-
-

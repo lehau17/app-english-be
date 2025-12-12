@@ -48,10 +48,3 @@ export class LearningPathResponseDto {
     percentage: number;
   };
 }
-
-
-
-
-
-
-

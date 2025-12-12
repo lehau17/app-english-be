@@ -7,7 +7,10 @@ import { CreateLearningPathDto, UpdateLearningPathDto } from '../dto';
 export class LearningPathRepository {
   constructor(private readonly prisma: PrismaRepository) {}
 
-  async create(userId: string, dto: CreateLearningPathDto): Promise<LearningPath> {
+  async create(
+    userId: string,
+    dto: CreateLearningPathDto,
+  ): Promise<LearningPath> {
     return this.prisma.learningPath.create({
       data: {
         userId,
@@ -32,7 +35,9 @@ export class LearningPathRepository {
     return this.prisma.learningPath.findMany({
       where: {
         userId,
-        ...(filters?.isCompleted !== undefined && { isCompleted: filters.isCompleted }),
+        ...(filters?.isCompleted !== undefined && {
+          isCompleted: filters.isCompleted,
+        }),
         ...(filters?.targetLevel && { targetLevel: filters.targetLevel }),
       },
       orderBy: { createdAt: 'desc' },
@@ -87,7 +92,8 @@ export class LearningPathRepository {
 
     const totalSteps = path.activityIds.length;
     const completedSteps = path.currentStep;
-    const percentage = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+    const percentage =
+      totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
 
     return {
       totalSteps,
@@ -98,10 +104,3 @@ export class LearningPathRepository {
     };
   }
 }
-
-
-
-
-
-
-

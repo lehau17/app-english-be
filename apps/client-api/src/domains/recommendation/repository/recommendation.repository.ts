@@ -32,13 +32,12 @@ export class RecommendationRepository {
         userId,
         ...(filters?.type && { type: filters.type }),
         ...(filters?.viewed !== undefined && { viewed: filters.viewed }),
-        ...(filters?.dismissed !== undefined && { dismissed: filters.dismissed }),
+        ...(filters?.dismissed !== undefined && {
+          dismissed: filters.dismissed,
+        }),
         expiresAt: { gte: new Date() }, // Only non-expired
       },
-      orderBy: [
-        { confidence: 'desc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy: [{ confidence: 'desc' }, { createdAt: 'desc' }],
     });
   }
 
@@ -72,10 +71,3 @@ export class RecommendationRepository {
     });
   }
 }
-
-
-
-
-
-
-

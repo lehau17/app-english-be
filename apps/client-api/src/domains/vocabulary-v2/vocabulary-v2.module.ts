@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { RedisModule } from '@app/shared';
 import { GoogleTranslateModule } from '../google-translate/google-translate.module';
 import { MediaModule } from '../media/media.module';
 import { NotificationModule } from '../notification/notification.module';
@@ -20,6 +21,7 @@ import { VocabularyUnitService } from './service/vocabulary-unit.service';
     GoogleTranslateModule,
     UploadModule,
     MediaModule,
+    RedisModule,
   ],
   controllers: [
     VocabularyListController,

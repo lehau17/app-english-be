@@ -97,7 +97,6 @@ export class AttendanceBlockingController {
     settings.attendanceBlocking = {
       ...settings.attendanceBlocking,
       ...(dto.enabled !== undefined && { enabled: dto.enabled }),
-      ...(dto.threshold !== undefined && { threshold: dto.threshold }),
     };
 
     // Update settings using ClassroomService method
@@ -224,10 +223,3 @@ export class AttendanceBlockingController {
     };
   }
 }
-
-
-
-
-
-
-

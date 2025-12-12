@@ -54,34 +54,37 @@ export class AttendanceBlockingService {
         isBlocked: false,
         consecutiveAbsences: 0,
         threshold: getBlockingThreshold(classroom.settings as any),
+        pastSessionsCount: 0,
       };
     }
 
-    // Calculate current consecutive absences
-    const consecutiveAbsences = await this.calculateConsecutiveAbsences(
-      classroomId,
-      studentId,
-    );
+    // Calculate current total absences with percentage
+    const { totalSessions, absentCount, absentPercentage, pastSessionsCount } =
+      await this.calculateTotalAbsences(classroomId, studentId);
 
-    // Get threshold
+    // Get threshold (returns percentage like 0.30)
     const threshold = getBlockingThreshold(classroom.settings as any);
 
     // Check if should be blocked (if not already manually blocked)
-    const shouldBlock = this.shouldBlock(consecutiveAbsences, threshold);
+    const shouldBlock = this.shouldBlock(absentPercentage, threshold);
 
     // If should be blocked but not currently blocked, auto-block
     if (shouldBlock && !studentRecord.isBlocked) {
+      const percentageDisplay = Math.round(absentPercentage * 100);
+      const thresholdDisplay = Math.round(threshold * 100);
+
       await this.autoBlock(
         classroomId,
         studentId,
-        `Vắng ${consecutiveAbsences} buổi liên tiếp (ngưỡng: ${threshold})`,
+        `Vắng ${absentCount}/${totalSessions} buổi (${percentageDisplay}%) - vượt ngưỡng ${thresholdDisplay}%`,
       );
       return {
         isBlocked: true,
         blockedAt: new Date(),
-        blockedReason: `Vắng ${consecutiveAbsences} buổi liên tiếp`,
-        consecutiveAbsences,
-        threshold,
+        blockedReason: `Vắng ${absentCount}/${totalSessions} buổi (${percentageDisplay}%)`,
+        consecutiveAbsences: absentCount, // Keep field name for backward compat
+        threshold: thresholdDisplay, // Return as percentage number (30 = 30%)
+        pastSessionsCount, // Number of past sessions used in calculation
         lastAbsenceDate: studentRecord.lastAbsenceDate || undefined,
       };
     }
@@ -95,8 +98,9 @@ export class AttendanceBlockingService {
       await this.autoUnblock(classroomId, studentId);
       return {
         isBlocked: false,
-        consecutiveAbsences,
-        threshold,
+        consecutiveAbsences: absentCount,
+        threshold: Math.round(threshold * 100),
+        pastSessionsCount,
       };
     }
 
@@ -105,38 +109,66 @@ export class AttendanceBlockingService {
       isBlocked: studentRecord.isBlocked,
       blockedAt: studentRecord.blockedAt || undefined,
       blockedReason: studentRecord.blockedReason || undefined,
-      consecutiveAbsences,
-      threshold,
+      consecutiveAbsences: absentCount,
+      threshold: Math.round(threshold * 100),
+      pastSessionsCount,
       lastAbsenceDate: studentRecord.lastAbsenceDate || undefined,
     };
   }
 
   /**
-   * Calculate consecutive absences for a student in a classroom
+   * Calculate total absences for a student in a classroom
+   * Only counts past sessions (startTime <= NOW)
    * Excludes excused absences and sessions with approved makeup requests
+   * Returns: { totalSessions, absentCount, absentPercentage, pastSessionsCount }
    */
-  async calculateConsecutiveAbsences(
+  async calculateTotalAbsences(
     classroomId: string,
     studentId: string,
-  ): Promise<number> {
-    // Get all sessions for this classroom, ordered by startTime DESC (most recent first)
-    const sessions = await this.prisma.classroomSession.findMany({
+  ): Promise<{
+    totalSessions: number;
+    absentCount: number;
+    absentPercentage: number;
+    pastSessionsCount: number;
+  }> {
+    const now = new Date();
+
+    // Get ALL sessions (past + future) for denominator
+    const allSessions = await this.prisma.classroomSession.findMany({
       where: { classroomId },
       select: {
         id: true,
         startTime: true,
       },
-      orderBy: { startTime: 'desc' },
     });
 
-    if (sessions.length === 0) {
-      return 0;
+    const totalSessions = allSessions.length;
+    if (totalSessions === 0) {
+      return {
+        totalSessions: 0,
+        absentCount: 0,
+        absentPercentage: 0,
+        pastSessionsCount: 0,
+      };
     }
 
-    // Get all attendance records for this student
+    // Get only PAST sessions for attendance counting (startTime <= NOW)
+    const pastSessions = allSessions.filter((s) => s.startTime <= now);
+    const pastSessionIds = pastSessions.map((s) => s.id);
+
+    if (pastSessionIds.length === 0) {
+      return {
+        totalSessions,
+        absentCount: 0,
+        absentPercentage: 0,
+        pastSessionsCount: 0,
+      };
+    }
+
+    // Get attendance records for past sessions
     const attendances = await this.prisma.sessionAttendance.findMany({
       where: {
-        sessionId: { in: sessions.map((s) => s.id) },
+        sessionId: { in: pastSessionIds },
         studentId,
       },
       select: {
@@ -150,9 +182,7 @@ export class AttendanceBlockingService {
       where: {
         studentId,
         status: 'approved',
-        session: {
-          classroomId,
-        },
+        sessionId: { in: pastSessionIds },
       },
       select: {
         sessionId: true,
@@ -160,69 +190,67 @@ export class AttendanceBlockingService {
     });
 
     const makeupSessionIds = new Set(approvedMakeups.map((m) => m.sessionId));
+    const attendanceMap = new Map(
+      attendances.map((a) => [a.sessionId, a.status]),
+    );
 
-    // Create map of sessionId -> attendance status
-    const attendanceMap = new Map<string, string>();
-    attendances.forEach((att) => {
-      attendanceMap.set(att.sessionId, att.status);
-    });
+    // Count absences (no attendance record OR status = ABSENT)
+    // Excluding: excused absences and approved makeups
+    let absentCount = 0;
+    let lastAbsenceDate: Date | null = null;
 
-    // Count consecutive absences from most recent session backwards
-    let consecutiveCount = 0;
-    for (const session of sessions) {
-      const attendance = attendanceMap.get(session.id);
-
-      // If no attendance record, count as absent (unless makeup approved)
-      if (!attendance) {
-        if (makeupSessionIds.has(session.id)) {
-          // Approved makeup = present, break streak
-          break;
-        }
-        consecutiveCount++;
+    for (const sessionId of pastSessionIds) {
+      // Skip if approved makeup exists
+      if (makeupSessionIds.has(sessionId)) {
         continue;
       }
 
-      // Check status
-      if (attendance === AttendanceStatus.ABSENT) {
-        consecutiveCount++;
-      } else if (
-        attendance === AttendanceStatus.PRESENT ||
-        attendance === AttendanceStatus.LATE
-      ) {
-        // Present or late = break streak
-        break;
-      } else if (attendance === AttendanceStatus.EXCUSED) {
-        // Excused = don't count, but also don't break streak
-        // Continue to next session
-        continue;
+      const status = attendanceMap.get(sessionId);
+
+      // Count as absent if: no record OR status = ABSENT
+      // Don't count if: status = EXCUSED
+      if (!status || status === AttendanceStatus.ABSENT) {
+        absentCount++;
+        const session = pastSessions.find((s) => s.id === sessionId);
+        if (
+          session &&
+          (!lastAbsenceDate || session.startTime > lastAbsenceDate)
+        ) {
+          lastAbsenceDate = session.startTime;
+        }
       }
     }
 
-    // Update cached count in ClassroomStudent
+    // Calculate percentage based on past sessions only (matches absentCount scope)
+    const absentPercentage =
+      pastSessions.length > 0 ? absentCount / pastSessions.length : 0;
+
+    // Update cached values in ClassroomStudent
     await this.prisma.classroomStudent.update({
       where: {
         classroomId_studentId: { classroomId, studentId },
       },
       data: {
-        consecutiveAbsences: consecutiveCount,
-        lastAbsenceDate:
-          consecutiveCount > 0
-            ? sessions.find((s) => {
-                const att = attendanceMap.get(s.id);
-                return !att || att === AttendanceStatus.ABSENT;
-              })?.startTime || null
-            : null,
+        consecutiveAbsences: absentCount, // Reuse field for total absences
+        lastAbsenceDate: lastAbsenceDate,
       },
     });
 
-    return consecutiveCount;
+    return {
+      totalSessions,
+      absentCount,
+      absentPercentage,
+      pastSessionsCount: pastSessions.length,
+    };
   }
 
   /**
-   * Determine if student should be blocked based on consecutive absences
+   * Determine if student should be blocked based on absence percentage
+   * @param absentPercentage - Percentage of total absences (0.0 to 1.0)
+   * @param threshold - Threshold percentage (e.g., 0.30 for 30%)
    */
-  shouldBlock(consecutiveAbsences: number, threshold: number): boolean {
-    return consecutiveAbsences >= threshold;
+  shouldBlock(absentPercentage: number, threshold: number): boolean {
+    return absentPercentage >= threshold;
   }
 
   /**
@@ -346,10 +374,3 @@ export class AttendanceBlockingService {
     });
   }
 }
-
-
-
-
-
-
-

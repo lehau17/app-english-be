@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NotificationType } from '@prisma/client';
+import { RedisService } from '@app/shared/redis';
 import { NotificationService } from '../../notification/service/notification.service';
 import {
   GetDueCardsQueryDto,
@@ -22,6 +23,7 @@ export class ReviewService {
     private readonly repository: VocabularyRepository,
     private readonly srsService: SRSService,
     private readonly notificationService: NotificationService,
+    private readonly redisService: RedisService,
   ) {}
 
   /**
@@ -134,12 +136,20 @@ export class ReviewService {
   /**
    * Submit review results
    * Updates SRS progress for each term based on quality rating
+   * Supports partial (per-card) and final (session complete) submissions
    */
   async submitReview(
     userId: string,
     dto: SubmitReviewDto,
   ): Promise<SubmitReviewResponseDto> {
-    const { reviews, listId, mode = ReviewMode.FLASHCARD, duration } = dto;
+    const {
+      reviews,
+      listId,
+      mode = ReviewMode.FLASHCARD,
+      duration,
+      partial = false,
+      finalize = false,
+    } = dto;
 
     let correct = 0;
     let wrong = 0;
@@ -149,6 +159,20 @@ export class ReviewService {
     // Process each review
     for (const review of reviews) {
       const { termId, quality } = review;
+
+      // ========== IDEMPOTENCY CHECK ==========
+      // Prevent duplicate submissions within 5-minute window
+      // Key format: review:{userId}:{termId}:{timestamp_rounded_to_minute}
+      const currentMinute = Math.floor(Date.now() / 60000) * 60000; // Round to minute
+      const idempotencyKey = `review:${userId}:${termId}:${currentMinute}`;
+
+      const existing = await this.redisService.get(idempotencyKey);
+      if (existing) {
+        this.logger.warn(
+          `Duplicate review submission detected: ${idempotencyKey}`,
+        );
+        continue; // Skip duplicate submission
+      }
 
       // Get current progress
       const currentProgress = await this.repository.findProgress(
@@ -206,10 +230,14 @@ export class ReviewService {
         wrong++;
         needPractice.push(termId);
       }
+
+      // ========== CACHE IDEMPOTENCY KEY ==========
+      // Store key for 5 minutes to prevent duplicate submissions
+      await this.redisService.set(idempotencyKey, '1', 300);
     }
 
-    // Create review session record
-    if (listId) {
+    // Create review session record ONLY if not partial OR if finalize=true
+    if (listId && (!partial || finalize)) {
       await this.repository.createReviewSession({
         user: { connect: { id: userId } },
         listId,
@@ -221,8 +249,8 @@ export class ReviewService {
       });
     }
 
-    // Update user list progress if listId provided
-    if (listId) {
+    // Update user list progress if listId provided and finalize=true
+    if (listId && finalize) {
       const userList = await this.repository.findUserList(userId, listId);
       if (userList) {
         const stats = await this.repository.getUserListStats(userId, listId);
@@ -235,83 +263,87 @@ export class ReviewService {
       }
     }
 
-    // ========== SEND NOTIFICATIONS ==========
+    // ========== SEND NOTIFICATIONS (ONLY on finalize) ==========
 
-    // 1. Session Complete Notification (if reviewed >= 10 terms)
-    const totalReviewed = correct + wrong;
-    if (totalReviewed >= 10) {
+    if (finalize) {
+      // 1. Session Complete Notification (if reviewed >= 10 terms)
+      const totalReviewed = correct + wrong;
+      if (totalReviewed >= 10) {
+        try {
+          await this.notificationService.create({
+            userId,
+            type: NotificationType.achievement,
+            title: 'Hoàn thành session!',
+            body: `Bạn đã review ${totalReviewed} từ vựng (${correct} đúng, ${wrong} sai)`,
+            data: JSON.stringify({
+              listId,
+              correct,
+              wrong,
+              mode,
+              duration,
+              type: 'vocabulary_session_complete',
+            }),
+            channel: 'socket' as any,
+          });
+          this.logger.log(
+            `Sent session complete notification to user ${userId}`,
+          );
+        } catch (error) {
+          this.logger.error(
+            'Failed to send session complete notification:',
+            error,
+          );
+        }
+      }
+
+      // 2. Mastered Terms Notification
+      if (mastered.length > 0) {
+        try {
+          await this.notificationService.create({
+            userId,
+            type: NotificationType.achievement,
+            title: 'Chúc mừng!',
+            body: `Bạn đã master ${mastered.length} từ vựng mới!`,
+            data: JSON.stringify({
+              listId,
+              masteredCount: mastered.length,
+              masteredTermIds: mastered,
+              type: 'vocabulary_mastered',
+            }),
+            channel: 'socket' as any,
+          });
+          this.logger.log(
+            `Sent mastered notification to user ${userId} (${mastered.length} terms)`,
+          );
+        } catch (error) {
+          this.logger.error('Failed to send mastered notification:', error);
+        }
+      }
+
+      // 3. Milestone Achievement Notification (10, 50, 100, 250, 500, 1000 terms)
       try {
-        await this.notificationService.create({
-          userId,
-          type: NotificationType.achievement,
-          title: 'Hoàn thành session!',
-          body: `Bạn đã review ${totalReviewed} từ vựng (${correct} đúng, ${wrong} sai)`,
-          data: JSON.stringify({
-            listId,
-            correct,
-            wrong,
-            mode,
-            duration,
-            type: 'vocabulary_session_complete',
-          }),
-          channel: 'socket' as any,
-        });
-        this.logger.log(`Sent session complete notification to user ${userId}`);
+        const totalMastered = await this.repository.countMasteredTerms(userId);
+        const milestones = [10, 50, 100, 250, 500, 1000];
+
+        if (milestones.includes(totalMastered)) {
+          await this.notificationService.create({
+            userId,
+            type: NotificationType.achievement,
+            title: '🏆 Thành tựu mới!',
+            body: `Bạn đã master ${totalMastered} từ vựng! Tuyệt vời!`,
+            data: JSON.stringify({
+              milestone: totalMastered,
+              type: 'vocabulary_milestone',
+            }),
+            channel: 'socket' as any,
+          });
+          this.logger.log(
+            `Sent milestone notification to user ${userId} (${totalMastered} terms)`,
+          );
+        }
       } catch (error) {
-        this.logger.error(
-          'Failed to send session complete notification:',
-          error,
-        );
+        this.logger.error('Failed to send milestone notification:', error);
       }
-    }
-
-    // 2. Mastered Terms Notification
-    if (mastered.length > 0) {
-      try {
-        await this.notificationService.create({
-          userId,
-          type: NotificationType.achievement,
-          title: 'Chúc mừng!',
-          body: `Bạn đã master ${mastered.length} từ vựng mới!`,
-          data: JSON.stringify({
-            listId,
-            masteredCount: mastered.length,
-            masteredTermIds: mastered,
-            type: 'vocabulary_mastered',
-          }),
-          channel: 'socket' as any,
-        });
-        this.logger.log(
-          `Sent mastered notification to user ${userId} (${mastered.length} terms)`,
-        );
-      } catch (error) {
-        this.logger.error('Failed to send mastered notification:', error);
-      }
-    }
-
-    // 3. Milestone Achievement Notification (10, 50, 100, 250, 500, 1000 terms)
-    try {
-      const totalMastered = await this.repository.countMasteredTerms(userId);
-      const milestones = [10, 50, 100, 250, 500, 1000];
-
-      if (milestones.includes(totalMastered)) {
-        await this.notificationService.create({
-          userId,
-          type: NotificationType.achievement,
-          title: '🏆 Thành tựu mới!',
-          body: `Bạn đã master ${totalMastered} từ vựng! Tuyệt vời!`,
-          data: JSON.stringify({
-            milestone: totalMastered,
-            type: 'vocabulary_milestone',
-          }),
-          channel: 'socket' as any,
-        });
-        this.logger.log(
-          `Sent milestone notification to user ${userId} (${totalMastered} terms)`,
-        );
-      }
-    } catch (error) {
-      this.logger.error('Failed to send milestone notification:', error);
     }
 
     return {

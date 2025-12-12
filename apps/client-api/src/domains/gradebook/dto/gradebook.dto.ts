@@ -86,10 +86,3 @@ export interface StudentGradeDetailsDto {
   };
   activities: ActivityDetailDto[];
 }
-
-
-
-
-
-
-

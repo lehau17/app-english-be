@@ -1,8 +1,15 @@
 import { PrismaRepository } from '@app/database';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { GeminiService } from '@app/shared';
 import { SpeechClient } from '@google-cloud/speech';
 import type { google } from '@google-cloud/speech/build/protos/protos';
+import {
+  validatePronunciation,
+  ValidationDecision,
+  ValidationResult,
+  SimilarityScores,
+} from '@app/shared/utils/text-similarity.util';
 import {
   EvaluatePronunciationDto,
   EvaluateSpeechDto,
@@ -15,6 +22,7 @@ interface SpeechEvaluationResult {
   score: number;
   feedback: string;
   transcript?: string;
+  contentMatch?: string; // 'none' | 'partial' | 'full' from Gemini
   categories?: EvaluationCategoryDto[];
   detail?: Record<string, any> | null;
 }
@@ -27,8 +35,31 @@ export class EvaluationService {
   constructor(
     private readonly geminiService: GeminiService,
     private readonly prisma: PrismaRepository,
+    private readonly configService: ConfigService,
   ) {
     this.speechClient = this.initializeSpeechClient();
+  }
+
+  // Configuration getters for text similarity validation
+  private get similarityThresholdMin(): number {
+    return this.configService.get<number>(
+      'PRONUNCIATION_SIMILARITY_THRESHOLD_MIN',
+      0.6,
+    );
+  }
+
+  private get similarityThresholdGood(): number {
+    return this.configService.get<number>(
+      'PRONUNCIATION_SIMILARITY_THRESHOLD_GOOD',
+      0.8,
+    );
+  }
+
+  private get enableTextSimilarity(): boolean {
+    return this.configService.get<boolean>(
+      'ENABLE_TEXT_SIMILARITY_VALIDATION',
+      true,
+    );
   }
 
   private initializeSpeechClient(): SpeechClient | null {
@@ -40,6 +71,164 @@ export class EvaluationService {
       );
       return null;
     }
+  }
+
+  /**
+   * Validate pronunciation transcript matches target phrase using text similarity
+   * @returns ValidationResult with decision, scores, and penalty
+   */
+  private validateTranscriptSimilarity(
+    targetPhrase: string,
+    transcript: string,
+  ): ValidationResult {
+    const startTime = Date.now();
+
+    try {
+      const result = validatePronunciation(targetPhrase, transcript, {
+        minThreshold: this.similarityThresholdMin,
+        goodThreshold: this.similarityThresholdGood,
+      });
+
+      const duration = Date.now() - startTime;
+      this.logger.log(
+        `Text similarity validation completed in ${duration}ms: decision=${result.decision}, combined=${result.similarity.combined.toFixed(3)}`,
+      );
+
+      return result;
+    } catch (error) {
+      this.logger.error(
+        `Text similarity validation failed: ${error instanceof Error ? error.message : error}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      // Fallback: accept with penalty if validation fails
+      return {
+        decision: ValidationDecision.ADJUST_SCORE,
+        similarity: {
+          jaroWinkler: 0,
+          cosine: 0,
+          levenshtein: 0,
+          combined: 0.7,
+        },
+        miscues: {
+          extraWords: [],
+          missingWords: [],
+          repeatedWords: [],
+          matchedWords: [],
+        },
+        penalty: 0.85,
+        feedback:
+          'Không thể xác minh hoàn toàn nội dung. Điểm có thể không chính xác.',
+      };
+    }
+  }
+
+  /**
+   * Cross-validate Gemini's contentMatch with algorithmic similarity scores
+   * Returns adjusted decision and penalty
+   */
+  private crossValidateResults(
+    geminiContentMatch: string | undefined,
+    validationResult: ValidationResult,
+    originalScore: number,
+  ): {
+    finalDecision: ValidationDecision;
+    finalPenalty: number;
+    adjustedScore: number;
+    feedback: string;
+  } {
+    const similarity = validationResult.similarity.combined;
+    const geminiMatch = geminiContentMatch || 'unknown';
+
+    let finalDecision = validationResult.decision;
+    let finalPenalty = validationResult.penalty;
+    let feedback = validationResult.feedback;
+
+    // Cross-validation matrix
+    if (geminiMatch === 'none') {
+      if (similarity < 0.6) {
+        // Both agree: reject
+        finalDecision = ValidationDecision.REJECT;
+        finalPenalty = 0;
+        this.logger.log(
+          `Cross-validation: Both reject (Gemini=none, similarity=${similarity.toFixed(3)})`,
+        );
+      } else if (similarity >= 0.6 && similarity < 0.8) {
+        // Gemini says none, but algorithms detect partial match
+        // Trust algorithms with caution
+        finalDecision = ValidationDecision.ADJUST_SCORE;
+        finalPenalty = Math.max(0.5, validationResult.penalty * 0.7); // Heavy penalty
+        feedback =
+          'Nội dung có thể chưa chính xác. ' + validationResult.feedback;
+        this.logger.warn(
+          `Cross-validation mismatch: Gemini=none but similarity=${similarity.toFixed(3)}`,
+        );
+      } else {
+        // Gemini says none, but algorithms confident it's good
+        // Trust algorithms (Gemini may have misheard)
+        finalDecision = ValidationDecision.ADJUST_SCORE;
+        finalPenalty = 0.85; // Minor penalty for inconsistency
+        feedback =
+          'Hệ thống phát hiện nội dung khớp. Điểm được điều chỉnh nhẹ.';
+        this.logger.warn(
+          `Cross-validation override: Gemini=none but similarity=${similarity.toFixed(3)}, trusting algorithms`,
+        );
+      }
+    } else if (geminiMatch === 'partial') {
+      if (similarity < 0.6) {
+        // Algorithms say reject, Gemini says partial
+        // Trust algorithms (stricter)
+        finalDecision = ValidationDecision.REJECT;
+        finalPenalty = 0;
+        feedback = 'Nội dung không khớp với câu mục tiêu. Vui lòng đọc lại.';
+        this.logger.warn(
+          `Cross-validation override: Gemini=partial but similarity=${similarity.toFixed(3)}, rejecting`,
+        );
+      } else {
+        // Both agree on partial/adjust
+        finalDecision = ValidationDecision.ADJUST_SCORE;
+        finalPenalty = validationResult.penalty;
+        this.logger.log(
+          `Cross-validation: Both agree on partial match (similarity=${similarity.toFixed(3)})`,
+        );
+      }
+    } else if (geminiMatch === 'full') {
+      if (similarity < 0.6) {
+        // Gemini says full, algorithms say reject
+        // Trust algorithms (Gemini too lenient)
+        finalDecision = ValidationDecision.ADJUST_SCORE;
+        finalPenalty = 0.55; // Heavy penalty
+        feedback =
+          'Phát hiện một số từ chưa chính xác. ' + validationResult.feedback;
+        this.logger.warn(
+          `Cross-validation override: Gemini=full but similarity=${similarity.toFixed(3)}, applying penalty`,
+        );
+      } else if (similarity >= 0.6 && similarity < 0.8) {
+        // Gemini says full, algorithms say adjust
+        // Apply minor penalty
+        finalDecision = ValidationDecision.ADJUST_SCORE;
+        finalPenalty = Math.max(0.8, validationResult.penalty);
+        this.logger.log(
+          `Cross-validation: Minor adjustment despite Gemini=full (similarity=${similarity.toFixed(3)})`,
+        );
+      } else {
+        // Both agree: accept
+        finalDecision = ValidationDecision.ACCEPT;
+        finalPenalty = 1.0;
+        this.logger.log(
+          `Cross-validation: Both accept (Gemini=full, similarity=${similarity.toFixed(3)})`,
+        );
+      }
+    } else {
+      // Unknown contentMatch from Gemini (shouldn't happen after Phase 2)
+      // Trust algorithms entirely
+      this.logger.warn(
+        `Gemini contentMatch unknown: "${geminiMatch}", relying on algorithms only`,
+      );
+    }
+
+    const adjustedScore = Math.max(0, Math.round(originalScore * finalPenalty));
+
+    return { finalDecision, finalPenalty, adjustedScore, feedback };
   }
 
   async evaluatePronunciation(
@@ -90,7 +279,70 @@ export class EvaluationService {
       );
     }
 
-    // activityId is optional - only persist if provided and valid
+    // Layer 2: Text similarity validation (NEW)
+    if (this.enableTextSimilarity) {
+      const validationResult = this.validateTranscriptSimilarity(
+        dto.phrase,
+        result.transcript || '',
+      );
+
+      // Layer 3: Cross-validate and decide (NEW)
+      const crossValidation = this.crossValidateResults(
+        result.contentMatch,
+        validationResult,
+        result.score,
+      );
+
+      // Log detailed metrics for monitoring
+      this.logger.log({
+        event: 'pronunciation_validation_complete',
+        targetPhrase: dto.phrase,
+        transcript: result.transcript,
+        originalScore: result.score,
+        adjustedScore: crossValidation.adjustedScore,
+        geminiContentMatch: result.contentMatch,
+        similarityScores: {
+          jaroWinkler: validationResult.similarity.jaroWinkler.toFixed(3),
+          cosine: validationResult.similarity.cosine.toFixed(3),
+          levenshtein: validationResult.similarity.levenshtein.toFixed(3),
+          combined: validationResult.similarity.combined.toFixed(3),
+        },
+        miscues: validationResult.miscues,
+        decision: crossValidation.finalDecision,
+        penalty: crossValidation.finalPenalty.toFixed(3),
+      });
+
+      // Handle rejection (content mismatch)
+      if (crossValidation.finalDecision === ValidationDecision.REJECT) {
+        throw new BadRequestException(crossValidation.feedback);
+      }
+
+      // Apply score adjustment if needed
+      if (crossValidation.finalDecision === ValidationDecision.ADJUST_SCORE) {
+        result.score = crossValidation.adjustedScore;
+
+        // Enhance feedback with similarity details
+        if (validationResult.miscues.missingWords.length > 0) {
+          result.feedback += ` Bạn đã bỏ sót: "${validationResult.miscues.missingWords.join('", "')}".`;
+        }
+        if (validationResult.miscues.extraWords.length > 0) {
+          result.feedback += ` Bạn đã nói thêm: "${validationResult.miscues.extraWords.join('", "')}".`;
+        }
+
+        // Update detail object with miscues
+        result.detail = {
+          ...result.detail,
+          missingWords: validationResult.miscues.missingWords,
+          extraWords: validationResult.miscues.extraWords,
+          similarityScore: validationResult.similarity.combined,
+          penaltyApplied: crossValidation.finalPenalty,
+        };
+      }
+    } else {
+      this.logger.warn('Text similarity validation disabled via config');
+    }
+
+    // Layer 4: Persist result
     return this.persistResult(userId, dto.activityId, result);
   }
 

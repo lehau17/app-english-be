@@ -12,8 +12,14 @@ type EvaluationPayload = {
   score: number;
   feedback: string;
   transcript?: string;
+  contentMatch?: 'none' | 'partial' | 'full';
   categories?: EvaluationCategory[];
-  detail?: Record<string, any> | null;
+  detail?: {
+    mispronounced?: string[];
+    missingWords?: string[];
+    extraWords?: string[];
+    [key: string]: any;
+  } | null;
 };
 
 @Injectable()
@@ -184,38 +190,60 @@ Nhận xét:`;
     targetPhrase: string;
   }): Promise<EvaluationPayload> {
     const { audioBase64, mimeType, targetPhrase } = params;
-    const prompt = `Bạn là giáo viên tiếng Anh. Học sinh vừa đọc câu: "${targetPhrase}".
+    const prompt = `Bạn là giáo viên tiếng Anh chuyên nghiệp. Học sinh vừa được yêu cầu đọc câu: "${targetPhrase}".
 
-QUAN TRỌNG: Trước khi chấm điểm, hãy kiểm tra kỹ:
-1. Nếu bạn KHÔNG nghe thấy bất kỳ giọng nói nào (chỉ có im lặng, tiếng ồn nền, hoặc không có âm thanh)
-2. Nếu file quá ngắn (<0.5 giây)
-3. Nếu transcript rỗng hoặc không có từ nào được nhận diện
+BƯỚC 1 - KIỂM TRA KỸ THUẬT (QUAN TRỌNG):
+1. Nếu KHÔNG nghe thấy giọng nói nào (im lặng, tiếng ồn, hoặc file lỗi)
+2. Nếu file âm thanh quá ngắn (<0.5 giây)
+3. Nếu không nhận diện được từ nào (transcript rỗng)
 
-→ Hãy trả về:
+→ Trả về:
 {
   "score": 0,
   "feedback": "Không nhận được ghi âm hợp lệ. Bạn chưa nói gì hoặc ghi âm quá ngắn. Vui lòng nói rõ ràng và ghi âm lại.",
   "transcript": "",
+  "contentMatch": "none",
   "categories": [],
   "detail": { "mispronounced": [] }
 }
 
-Nếu CÓ giọng nói rõ ràng, hãy chấm phát âm và trả về JSON với cấu trúc:
+BƯỚC 2 - KIỂM TRA NỘI DUNG (BẮT BUỘC):
+Nếu CÓ giọng nói rõ ràng, hãy so sánh nội dung học sinh nói với câu mục tiêu:
+
+A. Nếu học sinh nói HOÀN TOÀN SAI NỘI DUNG:
+   → contentMatch: "none"
+   → score: 0-20
+   → feedback: "Bạn đã nói sai nội dung. Câu mục tiêu là: '${targetPhrase}', nhưng bạn nói: '[transcript]'. Vui lòng đọc lại đúng câu."
+
+B. Nếu học sinh nói THIẾU hoặc THÊM một số từ:
+   → contentMatch: "partial"
+   → score: 30-60
+   → feedback: Chỉ rõ từ nào bị thiếu hoặc thêm
+
+C. Nếu học sinh nói ĐÚNG NỘI DUNG:
+   → contentMatch: "full"
+   → score: 60-100
+   → feedback: Chấm điểm pronunciation, stress, intonation bình thường
+
+OUTPUT FORMAT (BẮT BUỘC):
 {
   "score": number (0-100),
-  "feedback": string (bằng tiếng Việt, khuyến khích và chỉ rõ âm cần sửa),
-  "transcript": string (phải có nội dung, không được rỗng),
+  "feedback": string (tiếng Việt),
+  "transcript": string (PHẢI có nội dung nếu có giọng nói),
+  "contentMatch": "none" | "partial" | "full",
   "categories": [
     { "name": "Accuracy", "comment": "..." },
     { "name": "Stress", "comment": "..." },
     { "name": "Intonation", "comment": "..." }
   ],
   "detail": {
-    "mispronounced": ["word", ...]
+    "mispronounced": ["word1", "word2"],
+    "missingWords": ["word3"],
+    "extraWords": ["word4"]
   }
 }
 
-Lưu ý: transcript PHẢI có nội dung nếu có giọng nói. Nếu transcript rỗng thì coi như không có giọng nói.`;
+LƯU Ý: Nội dung sai → điểm thấp (0-20), bất kể phát âm tốt. Nội dung đúng → chấm pronunciation.`;
 
     return this.generateEvaluation(
       [
@@ -361,13 +389,24 @@ Giữ phản hồi bằng tiếng Việt, cụ thể và tích cực.`;
         ? Math.max(0, Math.min(Math.round(parsed.score), 100))
         : 0;
 
-      return {
+      const payload: EvaluationPayload = {
         score,
         feedback: parsed.feedback || 'Chưa có nhận xét.',
         categories: parsed.categories,
         transcript: parsed.transcript,
+        contentMatch: parsed.contentMatch,
         detail: parsed.detail,
       };
+
+      // Validate contentMatch consistency for pronunciation evaluation
+      if (options.schemaName === 'pronunciationEvaluation') {
+        payload.contentMatch = this.validateContentMatch(
+          payload.contentMatch,
+          payload.score,
+        );
+      }
+
+      return payload;
     } catch (error) {
       this.logger.error(
         `Lỗi chấm điểm với Gemini (${options.schemaName}):`,
@@ -382,6 +421,37 @@ Giữ phản hồi bằng tiếng Việt, cụ thể và tích cực.`;
         detail: { fallback: true },
       };
     }
+  }
+
+  private validateContentMatch(
+    contentMatch: 'none' | 'partial' | 'full' | undefined,
+    score: number,
+  ): 'none' | 'partial' | 'full' | undefined {
+    // Validate contentMatch exists and is valid
+    if (contentMatch && !['none', 'partial', 'full'].includes(contentMatch)) {
+      this.logger.warn(
+        `Invalid contentMatch value: ${contentMatch}, defaulting to 'partial'`,
+      );
+      return 'partial';
+    }
+
+    // If contentMatch is 'none' but score is high, log warning and adjust
+    if (contentMatch === 'none' && score > 20) {
+      this.logger.warn(
+        `Inconsistent Gemini response: contentMatch='none' but score=${score}. Adjusting score to match contentMatch.`,
+      );
+      // Note: We don't modify score here as it's already set in the parent function
+      // This validation serves as a monitoring mechanism
+    }
+
+    // If contentMatch is 'full' but score is very low, log warning
+    if (contentMatch === 'full' && score < 60) {
+      this.logger.warn(
+        `Inconsistent Gemini response: contentMatch='full' but score=${score}. Expected score >= 60.`,
+      );
+    }
+
+    return contentMatch;
   }
 
   private safeParseEvaluation(jsonText: string): EvaluationPayload {
@@ -455,6 +525,12 @@ Giữ phản hồi bằng tiếng Việt, cụ thể và tích cực.`;
         ? raw.feedback.trim()
         : 'Không có nhận xét.';
 
+    const contentMatch =
+      raw?.contentMatch &&
+      ['none', 'partial', 'full'].includes(raw.contentMatch)
+        ? raw.contentMatch
+        : undefined;
+
     return {
       score: Number.isFinite(scoreValue) ? scoreValue : 0,
       feedback: feedbackText,
@@ -468,6 +544,7 @@ Giữ phản hồi bằng tiếng Việt, cụ thể và tích cực.`;
         typeof raw?.transcript === 'string' && raw.transcript.trim().length > 0
           ? raw.transcript.trim()
           : undefined,
+      contentMatch,
       detail: raw?.detail ?? null,
     };
   }

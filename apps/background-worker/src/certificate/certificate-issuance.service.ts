@@ -253,10 +253,3 @@ export class CertificateIssuanceService implements ICertificateIssuer {
     return `CERT-${coursePrefix}-${timestamp}-${random}`;
   }
 }
-
-
-
-
-
-
-

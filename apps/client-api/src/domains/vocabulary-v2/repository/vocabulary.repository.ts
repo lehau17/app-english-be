@@ -274,6 +274,32 @@ export class VocabularyRepository {
     });
   }
 
+  /**
+   * Batch fetch vocabulary progress for multiple terms
+   * Optimized for bulk queries to avoid N+1 performance issues
+   * @param userId - User ID
+   * @param termIds - Array of term IDs to fetch progress for
+   * @returns Map of termId -> UserVocabularyProgress
+   */
+  async findProgressBatch(
+    userId: string,
+    termIds: string[],
+  ): Promise<Map<string, UserVocabularyProgress>> {
+    if (termIds.length === 0) {
+      return new Map();
+    }
+
+    const progressRecords = await this.prisma.userVocabularyProgress.findMany({
+      where: {
+        userId,
+        termId: { in: termIds },
+      },
+    });
+
+    // Convert array to Map for O(1) lookup
+    return new Map(progressRecords.map((record) => [record.termId, record]));
+  }
+
   async deleteProgress(userId: string, termId: string): Promise<boolean> {
     try {
       await this.prisma.userVocabularyProgress.delete({

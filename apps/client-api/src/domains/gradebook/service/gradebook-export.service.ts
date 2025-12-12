@@ -116,10 +116,3 @@ export class GradebookExportService {
     );
   }
 }
-
-
-
-
-
-
-

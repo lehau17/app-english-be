@@ -1,23 +1,12 @@
+import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
 import {
-    Body,
-    Controller,
-    Get,
-    Param,
-    Post,
-    Query,
-    Req,
-} from '@nestjs/common';
-import {
-    ApiBearerAuth,
-    ApiOperation,
-    ApiQuery,
-    ApiResponse,
-    ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiQuery,
+  ApiResponse,
+  ApiTags,
 } from '@nestjs/swagger';
-import {
-    CreateRecommendationDto,
-    RecommendationResponseDto,
-} from '../dto';
+import { CreateRecommendationDto, RecommendationResponseDto } from '../dto';
 import { RecommendationGenerationService } from '../service/recommendation-generation.service';
 import { RecommendationService } from '../service/recommendation.service';
 
@@ -83,22 +72,17 @@ export class RecommendationController {
   }
 
   @Post('generate')
-  @ApiOperation({ summary: 'Generate personalized recommendations for current user' })
+  @ApiOperation({
+    summary: 'Generate personalized recommendations for current user',
+  })
   @ApiResponse({ status: 201, description: 'Array of recommendation IDs' })
-  async generate(
-    @Req() req,
-    @Body() body?: { limit?: number },
-  ) {
+  async generate(@Req() req, @Body() body?: { limit?: number }) {
     const userId = req.user.id;
     const limit = body?.limit || 10;
-    const recommendationIds = await this.generationService.generateForUser(userId, limit);
+    const recommendationIds = await this.generationService.generateForUser(
+      userId,
+      limit,
+    );
     return { recommendationIds, count: recommendationIds.length };
   }
 }
-
-
-
-
-
-
-

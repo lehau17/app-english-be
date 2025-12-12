@@ -16,10 +16,3 @@ import { GradebookExportService, GradebookService } from './service';
   exports: [GradebookService, GradebookExportService, GradebookRepository],
 })
 export class GradebookModule {}
-
-
-
-
-
-
-

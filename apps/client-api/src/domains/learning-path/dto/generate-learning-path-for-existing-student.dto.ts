@@ -12,8 +12,3 @@ export class GenerateLearningPathForExistingStudentDto {
   @MinLength(3)
   updateReason!: string;
 }
-
-
-
-
-

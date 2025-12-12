@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { RecommendationRepository } from '../repository/recommendation.repository';
 import { CreateRecommendationDto } from '../dto';
 import { Recommendation } from '@prisma/client';
@@ -28,7 +32,9 @@ export class RecommendationService {
       throw new NotFoundException(`Recommendation with id ${id} not found`);
     }
     if (recommendation.userId !== userId) {
-      throw new ForbiddenException('You do not have access to this recommendation');
+      throw new ForbiddenException(
+        'You do not have access to this recommendation',
+      );
     }
     return recommendation;
   }
@@ -48,10 +54,3 @@ export class RecommendationService {
     return this.repository.dismiss(id, userId);
   }
 }
-
-
-
-
-
-
-

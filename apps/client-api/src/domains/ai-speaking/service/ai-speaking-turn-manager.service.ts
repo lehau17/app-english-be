@@ -2,11 +2,11 @@ import { GeminiService } from '@app/shared';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
-    AiSpeakingSessionState,
-    AiSpeakingTurnRole,
-    AiSpeakingTurnStatus,
-    DifficultyLevel,
-    Prisma,
+  AiSpeakingSessionState,
+  AiSpeakingTurnRole,
+  AiSpeakingTurnStatus,
+  DifficultyLevel,
+  Prisma,
 } from '@prisma/client';
 import { AiSpeakingGateway } from '../gateway/ai-speaking.gateway';
 import { AiSpeakingRepository } from '../repository/ai-speaking.repository';

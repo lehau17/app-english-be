@@ -9,14 +9,11 @@ import { RecommendationService } from './service/recommendation.service';
 @Module({
   imports: [AgentModule, SharedModule],
   controllers: [RecommendationController],
-  providers: [RecommendationService, RecommendationRepository, RecommendationGenerationService],
+  providers: [
+    RecommendationService,
+    RecommendationRepository,
+    RecommendationGenerationService,
+  ],
   exports: [RecommendationService, RecommendationGenerationService],
 })
 export class RecommendationModule {}
-
-
-
-
-
-
-

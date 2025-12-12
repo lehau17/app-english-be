@@ -1,26 +1,26 @@
 /**
  * Attendance Blocking Configuration
- * Default threshold for consecutive absences before blocking
+ * Default threshold for absence percentage before blocking
  */
 export const ATTENDANCE_BLOCKING_CONFIG = {
   /**
-   * Default consecutive absences threshold
-   * Can be overridden per classroom via Classroom.settings.attendanceBlocking.threshold
+   * Default absence percentage threshold (0.30 = 30%)
+   * Blocks when (total_absences / total_sessions) >= this value
+   * Can be overridden per classroom via Classroom.settings.attendanceBlocking.absencePercentageThreshold
    */
-  DEFAULT_CONSECUTIVE_ABSENCES_THRESHOLD: parseInt(
-    process.env.ATTENDANCE_BLOCKING_THRESHOLD || '3',
-    10,
+  DEFAULT_ABSENCE_PERCENTAGE_THRESHOLD: parseFloat(
+    process.env.ATTENDANCE_BLOCKING_PERCENTAGE_THRESHOLD || '0.30',
   ),
 
   /**
-   * Minimum threshold (safety check)
+   * Minimum threshold (safety check) - 10%
    */
-  MIN_THRESHOLD: 1,
+  MIN_THRESHOLD: 0.1,
 
   /**
-   * Maximum threshold (safety check)
+   * Maximum threshold (safety check) - 50%
    */
-  MAX_THRESHOLD: 10,
+  MAX_THRESHOLD: 0.5,
 
   /**
    * Feature flag to enable/disable blocking globally
@@ -30,16 +30,17 @@ export const ATTENDANCE_BLOCKING_CONFIG = {
 
 /**
  * Get blocking threshold for a classroom
+ * Returns percentage threshold (e.g., 0.30 for 30%)
  * Checks classroom settings first, then falls back to default
  */
 export function getBlockingThreshold(classroomSettings?: any): number {
   if (!ATTENDANCE_BLOCKING_CONFIG.ENABLED) {
-    return 999; // Effectively disabled
+    return 1.0; // 100% - effectively disabled
   }
 
   const threshold =
-    classroomSettings?.attendanceBlocking?.threshold ??
-    ATTENDANCE_BLOCKING_CONFIG.DEFAULT_CONSECUTIVE_ABSENCES_THRESHOLD;
+    classroomSettings?.attendanceBlocking?.absencePercentageThreshold ??
+    ATTENDANCE_BLOCKING_CONFIG.DEFAULT_ABSENCE_PERCENTAGE_THRESHOLD;
 
   // Validate threshold
   if (threshold < ATTENDANCE_BLOCKING_CONFIG.MIN_THRESHOLD) {
@@ -51,10 +52,3 @@ export function getBlockingThreshold(classroomSettings?: any): number {
 
   return threshold;
 }
-
-
-
-
-
-
-

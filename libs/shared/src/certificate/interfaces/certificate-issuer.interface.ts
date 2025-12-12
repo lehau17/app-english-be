@@ -12,10 +12,3 @@ export interface ICertificateIssuer {
     totalHours: number;
   }): Promise<any>;
 }
-
-
-
-
-
-
-

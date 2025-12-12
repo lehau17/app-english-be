@@ -129,45 +129,50 @@ Return ONLY valid JSON in this exact format:
   ): Promise<VocabularyUnitResponseDto[]> {
     const units = await this.repository.findUnitsByListId(listId, true); // Include terms
 
-    return Promise.all(
-      units.map(async (unit) => {
-        let completedTerms = 0;
+    // Optimization: Batch fetch all progress at once instead of N+1 queries
+    let progressMap: Map<string, any> = new Map();
+    if (userId) {
+      const allTermIds = units.flatMap(
+        (unit) => unit.terms?.map((term) => term.id) || [],
+      );
+      progressMap = await this.repository.findProgressBatch(userId, allTermIds);
+    }
 
-        // Calculate user progress if authenticated
-        if (userId && unit.terms) {
-          const termIds = unit.terms.map((t) => t.id);
+    // Calculate progress per unit using pre-fetched progress map
+    return units.map((unit) => {
+      let completedTerms = 0;
 
-          // Count how many terms have progress
-          for (const termId of termIds) {
-            const progress = await this.repository.findProgress(userId, termId);
-            if (
-              progress &&
-              (progress.status === 'mastered' || progress.status === 'review')
-            ) {
-              completedTerms++;
+      if (userId && unit.terms) {
+        completedTerms = unit.terms.filter((term) => {
+          const progress = progressMap.get(term.id);
+          // Count terms that have been reviewed at least once (any status except 'new')
+          return (
+            progress &&
+            (progress.status === 'learning' ||
+              progress.status === 'review' ||
+              progress.status === 'mastered')
+          );
+        }).length;
+      }
+
+      return {
+        id: unit.id,
+        listId: unit.listId,
+        title: unit.title,
+        description: unit.description || undefined,
+        orderIndex: unit.orderIndex,
+        termCount: unit.termCount,
+        createdAt: unit.createdAt,
+        updatedAt: unit.updatedAt,
+        // Add progress info
+        userProgress: userId
+          ? {
+              completedTerms,
+              totalTerms: unit.termCount,
             }
-          }
-        }
-
-        return {
-          id: unit.id,
-          listId: unit.listId,
-          title: unit.title,
-          description: unit.description || undefined,
-          orderIndex: unit.orderIndex,
-          termCount: unit.termCount,
-          createdAt: unit.createdAt,
-          updatedAt: unit.updatedAt,
-          // Add progress info
-          userProgress: userId
-            ? {
-                completedTerms,
-                totalTerms: unit.termCount,
-              }
-            : undefined,
-        };
-      }),
-    );
+          : undefined,
+      };
+    });
   }
 
   /**

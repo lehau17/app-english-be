@@ -1,6 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { DifficultyLevel } from '@prisma/client';
-import { IsArray, IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
 export class GenerateLearningPathForNewStudentDto {
   @ApiPropertyOptional({
@@ -32,8 +39,3 @@ export class GenerateLearningPathForNewStudentDto {
   @Min(1)
   timeframe?: number;
 }
-
-
-
-
-

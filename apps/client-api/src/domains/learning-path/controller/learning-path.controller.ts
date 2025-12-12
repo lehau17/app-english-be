@@ -55,7 +55,10 @@ export class LearningPathController {
     @PayloadToken() payload: JwtPayload,
     @Query('isCompleted') isCompleted?: string,
   ) {
-    const filters = isCompleted !== undefined ? { isCompleted: isCompleted === 'true' } : undefined;
+    const filters =
+      isCompleted !== undefined
+        ? { isCompleted: isCompleted === 'true' }
+        : undefined;
     return this.service.findByUserId(payload.sub, filters);
   }
 
@@ -69,10 +72,7 @@ export class LearningPathController {
   @Get(':id')
   @ApiOperation({ summary: 'Get learning path by ID' })
   @ApiResponse({ status: 200, type: LearningPathResponseDto })
-  async findById(
-    @Param('id') id: string,
-    @PayloadToken() payload: JwtPayload,
-  ) {
+  async findById(@Param('id') id: string, @PayloadToken() payload: JwtPayload) {
     return this.service.findById(id, payload.sub);
   }
 
@@ -90,10 +90,7 @@ export class LearningPathController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete learning path' })
-  async delete(
-    @Param('id') id: string,
-    @PayloadToken() payload: JwtPayload,
-  ) {
+  async delete(@Param('id') id: string, @PayloadToken() payload: JwtPayload) {
     await this.service.delete(id, payload.sub);
   }
 
@@ -118,18 +115,31 @@ export class LearningPathController {
 
   @Post('generate/new-student')
   @ApiOperation({ summary: 'Auto-generate learning path for new student' })
-  @ApiResponse({ status: 201, description: 'Learning path ID', schema: { type: 'object', properties: { pathId: { type: 'string' } } } })
+  @ApiResponse({
+    status: 201,
+    description: 'Learning path ID',
+    schema: { type: 'object', properties: { pathId: { type: 'string' } } },
+  })
   async generateForNewStudent(
     @PayloadToken() payload: JwtPayload,
     @Body() dto: GenerateLearningPathForNewStudentDto,
   ) {
-    const pathId = await this.generationService.generateForNewStudent(payload.sub, dto);
+    const pathId = await this.generationService.generateForNewStudent(
+      payload.sub,
+      dto,
+    );
     return { pathId };
   }
 
   @Post('generate/existing-student')
-  @ApiOperation({ summary: 'Auto-generate or update learning path for existing student' })
-  @ApiResponse({ status: 201, description: 'Learning path ID', schema: { type: 'object', properties: { pathId: { type: 'string' } } } })
+  @ApiOperation({
+    summary: 'Auto-generate or update learning path for existing student',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Learning path ID',
+    schema: { type: 'object', properties: { pathId: { type: 'string' } } },
+  })
   async generateForExistingStudent(
     @PayloadToken() payload: JwtPayload,
     @Body() dto: GenerateLearningPathForExistingStudentDto,
@@ -141,10 +151,3 @@ export class LearningPathController {
     return { pathId };
   }
 }
-
-
-
-
-
-
-

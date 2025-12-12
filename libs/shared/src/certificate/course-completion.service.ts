@@ -162,10 +162,3 @@ export class CourseCompletionService {
     return completion.isCompleted;
   }
 }
-
-
-
-
-
-
-

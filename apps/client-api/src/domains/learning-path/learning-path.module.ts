@@ -9,14 +9,11 @@ import { LearningPathService } from './service/learning-path.service';
 @Module({
   imports: [AgentModule, SharedModule],
   controllers: [LearningPathController],
-  providers: [LearningPathService, LearningPathRepository, LearningPathGenerationService],
+  providers: [
+    LearningPathService,
+    LearningPathRepository,
+    LearningPathGenerationService,
+  ],
   exports: [LearningPathService, LearningPathGenerationService],
 })
 export class LearningPathModule {}
-
-
-
-
-
-
-

@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNumber,
@@ -105,6 +106,22 @@ export class SubmitReviewDto {
   @IsOptional()
   @IsNumber()
   duration?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Incremental submission flag (true = per-card, false = session complete)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  partial?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Finalize session flag (true = send notifications, create session record)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  finalize?: boolean;
 }
 
 export class ReviewStatsDto {

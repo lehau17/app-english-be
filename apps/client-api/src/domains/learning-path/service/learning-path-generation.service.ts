@@ -108,7 +108,10 @@ export class LearningPathGenerationService {
       this.logger.log(`Learning path created: ${path.id}`);
       return path.id;
     } catch (error) {
-      this.logger.error(`Error generating path for new student: ${error.message}`, error.stack);
+      this.logger.error(
+        `Error generating path for new student: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -120,10 +123,13 @@ export class LearningPathGenerationService {
     userId: string,
     updateReason: string,
   ): Promise<string> {
-    this.logger.log(`Generating learning path for existing student: ${userId}, reason: ${updateReason}`);
+    this.logger.log(
+      `Generating learning path for existing student: ${userId}, reason: ${updateReason}`,
+    );
 
     // Check if already has active path
-    const activePath = await this.learningPathService.findActiveByUserId(userId);
+    const activePath =
+      await this.learningPathService.findActiveByUserId(userId);
     if (activePath) {
       // Update existing path
       return this.updatePath(userId, activePath.id, updateReason);
@@ -162,20 +168,20 @@ export class LearningPathGenerationService {
       },
     );
 
-      // Extract activities from courses
-      const activityIds = await this.extractActivitiesFromCourses(
-        suggestedPath.courseIds || [],
-        profile.goals.focusAreas,
-        userId,
-      );
+    // Extract activities from courses
+    const activityIds = await this.extractActivitiesFromCourses(
+      suggestedPath.courseIds || [],
+      profile.goals.focusAreas,
+      userId,
+    );
 
-      // Update path
-      await this.learningPathService.update(pathId, userId, {
-        name: suggestedPath.name,
-        targetLevel: suggestedPath.targetLevel,
-        focusAreas: suggestedPath.focusAreas,
-        activityIds: activityIds,
-      });
+    // Update path
+    await this.learningPathService.update(pathId, userId, {
+      name: suggestedPath.name,
+      targetLevel: suggestedPath.targetLevel,
+      focusAreas: suggestedPath.focusAreas,
+      activityIds: activityIds,
+    });
 
     return pathId;
   }
@@ -206,7 +212,8 @@ export class LearningPathGenerationService {
       writing: 0,
     };
     const rawSkillBreakdown = studentData.skillBreakdown;
-    const skillBreakdown: SkillBreakdown = rawSkillBreakdown &&
+    const skillBreakdown: SkillBreakdown =
+      rawSkillBreakdown &&
       typeof rawSkillBreakdown === 'object' &&
       'grammar' in rawSkillBreakdown &&
       'vocabulary' in rawSkillBreakdown &&
@@ -214,8 +221,8 @@ export class LearningPathGenerationService {
       'speaking' in rawSkillBreakdown &&
       'reading' in rawSkillBreakdown &&
       'writing' in rawSkillBreakdown
-      ? (rawSkillBreakdown as SkillBreakdown)
-      : defaultSkillBreakdown;
+        ? (rawSkillBreakdown as SkillBreakdown)
+        : defaultSkillBreakdown;
     if (skillBreakdown.grammar < 60) weakAreas.push('grammar');
     if (skillBreakdown.vocabulary < 60) weakAreas.push('vocabulary');
     if (skillBreakdown.listening < 60) weakAreas.push('listening');
@@ -243,9 +250,10 @@ export class LearningPathGenerationService {
       currentLevel,
       weakAreas,
       goals: {
-        targetLevel: currentLevel === DifficultyLevel.beginner
-          ? DifficultyLevel.intermediate
-          : DifficultyLevel.advanced,
+        targetLevel:
+          currentLevel === DifficultyLevel.beginner
+            ? DifficultyLevel.intermediate
+            : DifficultyLevel.advanced,
         focusAreas: weakAreas,
       },
       progress: {
@@ -390,12 +398,15 @@ ${availableCourses.map((c, i) => `${i + 1}. ${c.title} (ID: ${c.id}) - ${c.diffi
           focusAreas: goals.focusAreas,
           courseIds: availableCourses.slice(0, 3).map((c) => c.id),
           activityIds: [], // Will be populated by extractActivitiesFromCourses
-          reasoning: 'Lộ trình được tạo tự động dựa trên trình độ và điểm yếu của học sinh',
+          reasoning:
+            'Lộ trình được tạo tự động dựa trên trình độ và điểm yếu của học sinh',
         };
       }
 
       return {
-        name: parsed.name || `Lộ trình từ ${profile.currentLevel} đến ${goals.targetLevel}`,
+        name:
+          parsed.name ||
+          `Lộ trình từ ${profile.currentLevel} đến ${goals.targetLevel}`,
         targetLevel: parsed.targetLevel || goals.targetLevel,
         focusAreas: parsed.focusAreas || goals.focusAreas,
         courseIds: validCourseIds.slice(0, 5), // Max 5 courses (temporary, will extract activities)
@@ -403,7 +414,9 @@ ${availableCourses.map((c, i) => `${i + 1}. ${c.title} (ID: ${c.id}) - ${c.diffi
         reasoning: parsed.reasoning || 'Lộ trình được đề xuất bởi AI',
       };
     } catch (error) {
-      this.logger.warn(`AI path suggestion failed, using fallback: ${error.message}`);
+      this.logger.warn(
+        `AI path suggestion failed, using fallback: ${error.message}`,
+      );
       // Fallback: use top courses
       return {
         name: `Lộ trình từ ${profile.currentLevel} đến ${goals.targetLevel}`,
@@ -411,7 +424,8 @@ ${availableCourses.map((c, i) => `${i + 1}. ${c.title} (ID: ${c.id}) - ${c.diffi
         focusAreas: goals.focusAreas,
         courseIds: availableCourses.slice(0, 3).map((c) => c.id),
         activityIds: [], // Will be populated by extractActivitiesFromCourses
-        reasoning: 'Lộ trình được tạo tự động dựa trên trình độ và điểm yếu của học sinh',
+        reasoning:
+          'Lộ trình được tạo tự động dựa trên trình độ và điểm yếu của học sinh',
       };
     }
   }
@@ -525,10 +539,7 @@ ${availableCourses.map((c, i) => `${i + 1}. ${c.title} (ID: ${c.id}) - ${c.diffi
         where: {
           userId,
           activityId: { not: null },
-          OR: [
-            { score: { gte: 60 } }, // Passed with score >= 60
-            { isCompleted: true }, // Or explicitly completed
-          ],
+          score: { gte: 60 }, // Passed with score >= 60
         },
         select: {
           activityId: true,
@@ -582,8 +593,3 @@ ${availableCourses.map((c, i) => `${i + 1}. ${c.title} (ID: ${c.id}) - ${c.diffi
     return Array.from(new Set(activityIds));
   }
 }
-
-
-
-
-

@@ -1,12 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsOptional, IsNumber, Min, Max, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsNumber,
+  Min,
+  Max,
+  IsObject,
+} from 'class-validator';
 
 export class CreateRecommendationDto {
   @ApiProperty({ description: 'User ID' })
   @IsString()
   userId!: string;
 
-  @ApiProperty({ description: 'Recommendation type (course, lesson, activity, podcast)' })
+  @ApiProperty({
+    description: 'Recommendation type (course, lesson, activity, podcast)',
+  })
   @IsString()
   type!: string;
 
@@ -19,7 +28,11 @@ export class CreateRecommendationDto {
   @IsString()
   description?: string;
 
-  @ApiProperty({ description: 'Confidence score (0-1)', minimum: 0, maximum: 1 })
+  @ApiProperty({
+    description: 'Confidence score (0-1)',
+    minimum: 0,
+    maximum: 1,
+  })
   @IsNumber()
   @Min(0)
   @Max(1)
@@ -30,7 +43,10 @@ export class CreateRecommendationDto {
   @IsString()
   reasoning?: string;
 
-  @ApiProperty({ description: 'Target data (courseId, lessonId, etc.)', required: false })
+  @ApiProperty({
+    description: 'Target data (courseId, lessonId, etc.)',
+    required: false,
+  })
   @IsOptional()
   @IsObject()
   targetData?: Record<string, any>;
@@ -39,10 +55,3 @@ export class CreateRecommendationDto {
   @IsOptional()
   expiresAt?: Date;
 }
-
-
-
-
-
-
-

@@ -1,16 +1,20 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { LearningPath } from '@prisma/client';
 import {
-    CreateLearningPathDto,
-    UpdateLearningPathDto,
-} from '../dto';
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { LearningPath } from '@prisma/client';
+import { CreateLearningPathDto, UpdateLearningPathDto } from '../dto';
 import { LearningPathRepository } from '../repository/learning-path.repository';
 
 @Injectable()
 export class LearningPathService {
   constructor(private readonly repository: LearningPathRepository) {}
 
-  async create(userId: string, dto: CreateLearningPathDto): Promise<LearningPath> {
+  async create(
+    userId: string,
+    dto: CreateLearningPathDto,
+  ): Promise<LearningPath> {
     // Validate activityIds exist
     await this.validateActivities(dto.activityIds);
 
@@ -30,7 +34,9 @@ export class LearningPathService {
       throw new NotFoundException(`Learning path with id ${id} not found`);
     }
     if (path.userId !== userId) {
-      throw new ForbiddenException('You do not have access to this learning path');
+      throw new ForbiddenException(
+        'You do not have access to this learning path',
+      );
     }
     return path;
   }
@@ -76,10 +82,3 @@ export class LearningPathService {
     // }
   }
 }
-
-
-
-
-
-
-

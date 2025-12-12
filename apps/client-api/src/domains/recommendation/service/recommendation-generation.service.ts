@@ -1,7 +1,12 @@
 import { PrismaRepository } from '@app/database';
 import { GeminiService } from '@app/shared';
 import { Injectable, Logger } from '@nestjs/common';
-import { Course, DifficultyLevel, Lesson, RecommendationType } from '@prisma/client';
+import {
+  Course,
+  DifficultyLevel,
+  Lesson,
+  RecommendationType,
+} from '@prisma/client';
 import { StudentAnalyticsTool } from '../../agent/tools/student-analytics.tool';
 import { CreateRecommendationDto } from '../dto';
 import { RecommendationService } from './recommendation.service';
@@ -31,7 +36,9 @@ export class RecommendationGenerationService {
    * Generate recommendations for user
    */
   async generateForUser(userId: string, limit: number = 10): Promise<string[]> {
-    this.logger.log(`Generating recommendations for user: ${userId}, limit: ${limit}`);
+    this.logger.log(
+      `Generating recommendations for user: ${userId}, limit: ${limit}`,
+    );
 
     try {
       // 1. Analyze progress
@@ -41,7 +48,10 @@ export class RecommendationGenerationService {
       const weakAreas = this.identifyWeakAreas(profile);
 
       // 3. Generate recommendations based on weak areas
-      const weakAreaRecs = await this.generateBasedOnWeakAreas(userId, weakAreas);
+      const weakAreaRecs = await this.generateBasedOnWeakAreas(
+        userId,
+        weakAreas,
+      );
 
       // 4. Generate recommendations based on goals
       const goalRecs = await this.generateBasedOnGoals(userId, profile);
@@ -75,7 +85,10 @@ export class RecommendationGenerationService {
       this.logger.log(`Generated ${recommendationIds.length} recommendations`);
       return recommendationIds;
     } catch (error) {
-      this.logger.error(`Error generating recommendations: ${error.message}`, error.stack);
+      this.logger.error(
+        `Error generating recommendations: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -89,7 +102,9 @@ export class RecommendationGenerationService {
   ): Promise<RecommendationCandidate[]> {
     if (weakAreas.length === 0) return [];
 
-    this.logger.log(`Generating recommendations for weak areas: ${weakAreas.join(', ')}`);
+    this.logger.log(
+      `Generating recommendations for weak areas: ${weakAreas.join(', ')}`,
+    );
 
     // Get student level
     const studentData = await this.analyticsTool.getStudentData(userId, 'all');
@@ -104,7 +119,11 @@ export class RecommendationGenerationService {
     const courses = await this.findRelevantCourses(weakAreas, currentLevel);
 
     // Find relevant lessons (from enrolled courses)
-    const lessons = await this.findRelevantLessons(userId, weakAreas, currentLevel);
+    const lessons = await this.findRelevantLessons(
+      userId,
+      weakAreas,
+      currentLevel,
+    );
 
     // Build candidates
     const candidates: RecommendationCandidate[] = [];
@@ -145,7 +164,8 @@ export class RecommendationGenerationService {
     const candidates: RecommendationCandidate[] = [];
 
     // Get target level from profile or default
-    const targetLevel = profile.goals?.targetLevel || DifficultyLevel.intermediate;
+    const targetLevel =
+      profile.goals?.targetLevel || DifficultyLevel.intermediate;
     const focusAreas = profile.goals?.focusAreas || [];
 
     // Find courses matching goals
@@ -173,7 +193,10 @@ export class RecommendationGenerationService {
    * Analyze student progress
    */
   private async analyzeProgress(userId: string): Promise<any> {
-    const studentData = await (this.analyticsTool as any).getStudentData(userId, 'all');
+    const studentData = await (this.analyticsTool as any).getStudentData(
+      userId,
+      'all',
+    );
     return studentData;
   }
 
@@ -366,9 +389,12 @@ export class RecommendationGenerationService {
   /**
    * Calculate confidence score for course
    */
-  private calculateCourseConfidence(course: Course, weakAreas: string[]): number {
+  private calculateCourseConfidence(
+    course: Course,
+    weakAreas: string[],
+  ): number {
     // Base confidence: 50
-    let confidence = 50;
+    const confidence = 50;
 
     // Add points for level match
     // Add points for weak area match (handled in findRelevantCourses)
@@ -379,9 +405,12 @@ export class RecommendationGenerationService {
   /**
    * Calculate confidence score for lesson
    */
-  private calculateLessonConfidence(lesson: Lesson, weakAreas: string[]): number {
+  private calculateLessonConfidence(
+    lesson: Lesson,
+    weakAreas: string[],
+  ): number {
     // Base confidence: 60 (lessons are more specific)
-    let confidence = 60;
+    const confidence = 60;
 
     // Add points for weak area match (handled in findRelevantLessons)
 
@@ -398,17 +427,17 @@ export class RecommendationGenerationService {
     const unique = new Map<string, RecommendationCandidate>();
     candidates.forEach((candidate) => {
       const key = `${candidate.type}-${candidate.courseId || candidate.lessonId || candidate.activityId || candidate.podcastId}`;
-      if (!unique.has(key) || unique.get(key)!.confidence < candidate.confidence) {
+      if (
+        !unique.has(key) ||
+        unique.get(key)!.confidence < candidate.confidence
+      ) {
         unique.set(key, candidate);
       }
     });
 
     // Sort by confidence
-    return Array.from(unique.values()).sort((a, b) => b.confidence - a.confidence);
+    return Array.from(unique.values()).sort(
+      (a, b) => b.confidence - a.confidence,
+    );
   }
 }
-
-
-
-
-

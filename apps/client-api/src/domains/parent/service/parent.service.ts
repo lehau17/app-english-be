@@ -1,18 +1,18 @@
 import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
-    ForbiddenException,
-    Injectable,
-    NotFoundException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { ActivityType, Prisma, ProgressState } from '@prisma/client';
 import { LearningPathService } from '../../learning-path/service/learning-path.service';
 import { ParentChildService } from '../../parent-child/service/parent-child.service';
 import { ParentDashboardDto, UpdateParentChildSettingsDto } from '../dto';
 import {
-    CreateParentRewardDto,
-    UiRewardType,
-    UpdateParentRewardDto,
+  CreateParentRewardDto,
+  UiRewardType,
+  UpdateParentRewardDto,
 } from '../dto/parent-reward.dto';
 
 @Injectable()
@@ -923,16 +923,13 @@ export class ParentService {
         .map(async (relation) => {
           const childId = relation.child.id;
           const childName =
-            relation.child.displayName ||
-            relation.child.firstName ||
-            'Unknown';
+            relation.child.displayName || relation.child.firstName || 'Unknown';
 
           try {
             const activePath =
               await this.learningPathService.findActiveByUserId(childId);
-            const allPaths = await this.learningPathService.findByUserId(
-              childId,
-            );
+            const allPaths =
+              await this.learningPathService.findByUserId(childId);
 
             let progress = 0;
             if (activePath && activePath.courseIds.length > 0) {

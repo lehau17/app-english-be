@@ -284,7 +284,7 @@ export class LessonService {
     this.checkCourseCompletionForCertificate(userId, activityId).catch(
       (error) => {
         // Log error but don't fail activity completion
-        console.error(
+        this.logger.error(
           `Failed to check course completion for certificate: ${error.message}`,
         );
       },
@@ -367,7 +367,7 @@ export class LessonService {
       );
     } catch (error) {
       // Silently fail - don't break activity completion
-      console.error(
+      this.logger.error(
         `Error checking course completion for certificate: ${error.message}`,
       );
     }
@@ -377,39 +377,106 @@ export class LessonService {
    * Smart next lesson logic with learning path support
    * Priority: Active Learning Path > Weak Areas > Level Matching > Fallback
    */
-  async findNextLessonForUserSmart(
-    userId: string,
-  ): Promise<NextLessonWithActivityResponseDto | {
-    type: 'enrollment_required';
-    courseId: string;
-    message: string;
-    classrooms: any[];
-  } | null> {
+  async findNextLessonForUserSmart(userId: string): Promise<
+    | NextLessonWithActivityResponseDto
+    | {
+        type: 'enrollment_required';
+        courseId: string;
+        message: string;
+        classrooms: any[];
+      }
+    | null
+  > {
     try {
       // 1. Check active learning path
       if (this.learningPathService) {
-        const activePath = await this.learningPathService.findActiveByUserId(userId);
-        if (activePath && activePath.currentStep < activePath.courseIds.length) {
-          const nextCourseId = activePath.courseIds[activePath.currentStep];
+        const activePath =
+          await this.learningPathService.findActiveByUserId(userId);
+        if (
+          activePath &&
+          activePath.currentStep < activePath.activityIds.length
+        ) {
+          const nextActivityId = activePath.activityIds[activePath.currentStep];
+
+          // Map activity to lesson and course
+          const activity = await this.prisma.activity.findUnique({
+            where: { id: nextActivityId },
+            include: {
+              lesson: {
+                select: {
+                  id: true,
+                  courseId: true,
+                },
+              },
+            },
+          });
+
+          if (!activity || !activity.lesson) {
+            this.logger.warn(
+              `Activity ${nextActivityId} not found or has no lesson. Advancing path step.`,
+            );
+            // Advance to next step since this activity is invalid
+            if (this.learningPathService) {
+              await this.learningPathService.advanceStep(activePath.id, userId);
+            }
+            // Continue with fallback logic
+            return null;
+          }
+
+          const courseId = activity.lesson.courseId;
+          const lessonId = activity.lesson.id;
 
           // 2. Check enrollment (REQUIRED)
-          const enrollment = await this.checkEnrollmentForCourse(userId, nextCourseId);
+          const enrollment = await this.checkEnrollmentForCourse(
+            userId,
+            courseId,
+          );
           if (!enrollment || !enrollment.isPurchased) {
             // Find classrooms offering this course
-            const classrooms = await this.findClassroomsByCourse(nextCourseId);
+            const classrooms = await this.findClassroomsByCourse(courseId);
             return {
               type: 'enrollment_required',
-              courseId: nextCourseId,
+              courseId: courseId,
               message: 'Cần đăng ký lớp học để học course này',
               classrooms,
             };
           }
 
-          // 3. If enrolled, get next lesson from course
-          const nextLesson = await this.getNextLessonFromCourse(nextCourseId, userId);
-          if (nextLesson) {
-            return nextLesson;
-          }
+          // 3. If enrolled, get the specific lesson containing this activity
+          const lessonFull = await this.getFull(lessonId, userId);
+
+          // Get progress for the next activity
+          const progress =
+            await this.lessonRepository.getProgressByUserIdAndActivityId(
+              userId,
+              nextActivityId,
+            );
+
+          const activityWithProgress = {
+            id: activity.id,
+            lessonId: activity.lessonId,
+            type: activity.type,
+            orderNo: activity.orderNo,
+            title: activity.title,
+            content: activity.content,
+            passingScore: activity.passingScore,
+            difficulty: activity.difficulty,
+            points: activity.points,
+            progress: progress
+              ? {
+                  state: progress.state,
+                  score: progress.score,
+                  bestScore: progress.bestScore,
+                  attemptsCount: progress.attemptsCount,
+                  updatedAt: progress.updatedAt,
+                }
+              : null,
+          };
+
+          return {
+            ...lessonFull,
+            activity: activityWithProgress,
+          };
         }
       }
 
@@ -431,7 +498,9 @@ export class LessonService {
         return this.buildNextLessonResponse(scored[0].lesson, userId);
       }
     } catch (error) {
-      this.logger.warn(`Smart next lesson failed, using fallback: ${error.message}`);
+      this.logger.warn(
+        `Smart next lesson failed, using fallback: ${error.message}`,
+      );
     }
 
     // 8. Fallback to simple logic
@@ -607,7 +676,7 @@ export class LessonService {
       });
     } catch (error) {
       // Don't fail the main operation if notification fails
-      console.error('Failed to send parent notification:', error);
+      this.logger.error('Failed to send parent notification:', error);
     }
   }
 
@@ -835,7 +904,10 @@ export class LessonService {
     }
 
     try {
-      const studentData = await this.analyticsTool.getStudentData(userId, 'all');
+      const studentData = await this.analyticsTool.getStudentData(
+        userId,
+        'all',
+      );
 
       // Determine current level
       let currentLevel: DifficultyLevel = DifficultyLevel.beginner;
@@ -854,7 +926,7 @@ export class LessonService {
         speaking: 0,
         reading: 0,
         writing: 0,
-      }
+      };
       if (skillBreakdown.grammar < 60) weakAreas.push('grammar');
       if (skillBreakdown.vocabulary < 60) weakAreas.push('vocabulary');
       if (skillBreakdown.listening < 60) weakAreas.push('listening');
@@ -866,9 +938,10 @@ export class LessonService {
         currentLevel,
         weakAreas: weakAreas.length > 0 ? weakAreas : ['vocabulary'],
         goals: {
-          targetLevel: currentLevel === DifficultyLevel.beginner
-            ? DifficultyLevel.intermediate
-            : DifficultyLevel.advanced,
+          targetLevel:
+            currentLevel === DifficultyLevel.beginner
+              ? DifficultyLevel.intermediate
+              : DifficultyLevel.advanced,
         },
         skillBreakdown,
       };
@@ -895,7 +968,9 @@ export class LessonService {
     // Get all lessons from enrolled courses
     const allLessons: Lesson[] = [];
     for (const course of courses) {
-      const lessons = await this.lessonRepository.listLessonsOfCourse(course.id);
+      const lessons = await this.lessonRepository.listLessonsOfCourse(
+        course.id,
+      );
       allLessons.push(...lessons);
     }
 
@@ -985,80 +1060,71 @@ export class LessonService {
     if (!this.learningPathService) return;
 
     try {
-      // Get activity to find lesson and course
+      // Get active learning path
+      const activePath =
+        await this.learningPathService.findActiveByUserId(userId);
+      if (!activePath) return;
+
+      // Check if this activity is in the path
+      const activityIndex = activePath.activityIds.indexOf(activityId);
+      if (activityIndex === -1) {
+        // Activity not in path, no action needed
+        return;
+      }
+
+      // Check if this is the current step
+      if (activityIndex !== activePath.currentStep) {
+        // Not the current step, user might be working ahead or behind
+        this.logger.debug(
+          `Activity ${activityId} at index ${activityIndex} but current step is ${activePath.currentStep}`,
+        );
+        return;
+      }
+
+      // Get activity to find lesson (for completion check)
       const activity = await this.prisma.activity.findUnique({
         where: { id: activityId },
         select: {
           lessonId: true,
-          lesson: {
-            select: {
-              courseId: true,
-            },
-          },
         },
       });
 
-      if (!activity || !activity.lesson?.courseId) return;
+      if (!activity) {
+        this.logger.warn(`Activity ${activityId} not found in database`);
+        return;
+      }
 
-      // Get active learning path
-      const activePath = await this.learningPathService.findActiveByUserId(
-        userId,
-      );
-      if (!activePath) return;
-
-      // Check if this course is in the path
-      const courseIndex = activePath.courseIds.indexOf(
-        activity.lesson.courseId,
-      );
-      if (courseIndex === -1) return; // Course not in path
-
-      // Check if this is the current step
-      if (courseIndex !== activePath.currentStep) return; // Not current step
-
-      // Check if lesson is completed
+      // Check if lesson containing this activity is completed
       const lessonCompleted = await this.isLessonCompleted(
         activity.lessonId,
         userId,
       );
 
       if (lessonCompleted) {
-        // Check if all lessons in current course are completed
-        const courseLessons = await this.lessonRepository.listLessonsOfCourse(
-          activity.lesson.courseId,
+        // Advance to next step in learning path
+        await this.learningPathService.advanceStep(activePath.id, userId);
+
+        this.logger.log(
+          `Advanced learning path ${activePath.id} from step ${activePath.currentStep} to ${activePath.currentStep + 1}`,
         );
 
-        let allLessonsCompleted = true;
-        for (const lesson of courseLessons) {
-          const completed = await this.isLessonCompleted(lesson.id, userId);
-          if (!completed) {
-            allLessonsCompleted = false;
-            break;
-          }
-        }
-
-        // If all lessons in current course completed, advance path step
-        if (allLessonsCompleted) {
-          await this.learningPathService.advanceStep(activePath.id, userId);
-
-          // Check if path is completed
-          const updatedPath = await this.learningPathService.findById(
-            activePath.id,
-            userId,
+        // Check if path is completed
+        const updatedPath = await this.learningPathService.findById(
+          activePath.id,
+          userId,
+        );
+        if (updatedPath.isCompleted) {
+          this.logger.log(
+            `Learning path ${activePath.id} completed for user ${userId}`,
           );
-          if (updatedPath.isCompleted) {
-            this.logger.log(
-              `Learning path ${activePath.id} completed for user ${userId}`,
-            );
-            // TODO: Generate new recommendations or suggest next path
-          }
+          // TODO: Generate new recommendations or suggest next path
         }
       }
     } catch (error) {
-      this.logger.error(
-        `Error updating learning path progress: ${error.message}`,
-        error.stack,
+      // Silent failure - don't break activity completion
+      this.logger.warn(
+        `Failed to update learning path progress: ${error.message}`,
       );
-      throw error;
     }
   }
 }

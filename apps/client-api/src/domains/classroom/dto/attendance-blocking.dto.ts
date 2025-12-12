@@ -9,7 +9,19 @@ import {
 } from 'class-validator';
 
 /**
- * Blocking status response
+ * Blocking status response DTO
+ *
+ * Returns attendance blocking information for a student in a classroom.
+ * Calculation uses PAST sessions only (startTime <= now), excluding future sessions.
+ *
+ * @example
+ * {
+ *   isBlocked: true,
+ *   consecutiveAbsences: 3,
+ *   threshold: 30,
+ *   pastSessionsCount: 10,
+ *   lastAbsenceDate: "2025-12-10T10:00:00Z"
+ * }
  */
 export class BlockingStatusDto {
   @ApiProperty({ description: 'Whether student is currently blocked' })
@@ -21,11 +33,29 @@ export class BlockingStatusDto {
   @ApiPropertyOptional({ description: 'Reason for blocking' })
   blockedReason?: string;
 
-  @ApiProperty({ description: 'Current consecutive absences count' })
+  @ApiProperty({
+    description:
+      'Total absence count from PAST sessions only (field name kept for backward compatibility). ' +
+      'Percentage calculated as: absentCount / pastSessionsCount',
+    example: 3,
+  })
   consecutiveAbsences: number;
 
-  @ApiProperty({ description: 'Threshold for blocking' })
+  @ApiProperty({
+    description:
+      'Absence percentage threshold as integer (e.g., 30 = 30%). ' +
+      'Student blocked when (absentCount/pastSessions) >= (threshold/100)',
+    example: 30,
+    minimum: 10,
+    maximum: 50,
+  })
   threshold: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Number of past sessions (denominator for percentage calculation)',
+  })
+  pastSessionsCount?: number;
 
   @ApiPropertyOptional({ description: 'Date of last absence' })
   lastAbsenceDate?: Date;
@@ -43,15 +73,14 @@ export class UpdateBlockingConfigDto {
   enabled?: boolean;
 
   @ApiPropertyOptional({
-    description: 'Consecutive absences threshold (1-10)',
-    minimum: 1,
-    maximum: 10,
+    description:
+      'Absence percentage threshold as decimal (0.1 to 0.5 for 10% to 50%)',
+    minimum: 0.1,
+    maximum: 0.5,
+    example: 0.3,
   })
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  @Max(10)
-  threshold?: number;
+  absencePercentageThreshold?: number;
 }
 
 /**
@@ -81,10 +110,3 @@ export class BlockStudentDto {
   @IsString()
   notes?: string;
 }
-
-
-
-
-
-
-
