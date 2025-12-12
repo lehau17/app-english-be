@@ -36,7 +36,7 @@ export class BlockingStatusDto {
   @ApiProperty({
     description:
       'Total absence count from PAST sessions only (field name kept for backward compatibility). ' +
-      'Percentage calculated as: absentCount / pastSessionsCount',
+      'Percentage calculated as: absentCount / totalSessions',
     example: 3,
   })
   consecutiveAbsences: number;
@@ -44,7 +44,7 @@ export class BlockingStatusDto {
   @ApiProperty({
     description:
       'Absence percentage threshold as integer (e.g., 30 = 30%). ' +
-      'Student blocked when (absentCount/pastSessions) >= (threshold/100)',
+      'Student blocked when (absentCount/totalSessions) >= (threshold/100)',
     example: 30,
     minimum: 10,
     maximum: 50,

@@ -16,7 +16,24 @@ export class ActivityRepository {
   }
 
   async findById(id: string): Promise<Activity | null> {
-    return this.prisma.activity.findUnique({ where: { id } });
+    return this.prisma.activity.findUnique({
+      where: { id },
+      include: {
+        lesson: {
+          include: {
+            course: {
+              include: {
+                classrooms: {
+                  where: { isActive: true },
+                  take: 1,
+                  select: { id: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
   }
 
   async update(

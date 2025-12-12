@@ -16,12 +16,21 @@ export class ActivityService {
     return this.activityRepository.create(dto);
   }
 
-  async findById(id: string): Promise<Activity> {
+  async findById(id: string): Promise<Activity & { classroomId?: string }> {
     const activity = await this.activityRepository.findById(id);
     if (!activity) {
       throw new NotFoundException(`Activity with id ${id} not found`);
     }
-    return activity;
+
+    // Extract classroomId from nested relations
+    const classroomId =
+      (activity as any)?.lesson?.course?.classrooms?.[0]?.id || null;
+
+    // Return activity with classroomId
+    return {
+      ...activity,
+      classroomId,
+    };
   }
 
   async update(id: string, dto: UpdateActivityDto): Promise<Activity> {

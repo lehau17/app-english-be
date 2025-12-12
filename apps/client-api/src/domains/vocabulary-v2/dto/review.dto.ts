@@ -126,30 +126,48 @@ export class SubmitReviewDto {
 
 export class ReviewStatsDto {
   @ApiProperty({ description: 'Tổng số từ' })
+  @IsInt()
+  @Min(0)
   totalTerms: number;
 
   @ApiProperty({ description: 'Số từ mới' })
+  @IsInt()
+  @Min(0)
   newCount: number;
 
   @ApiProperty({ description: 'Số từ đang học' })
+  @IsInt()
+  @Min(0)
   learningCount: number;
 
   @ApiProperty({ description: 'Số từ đang ôn tập' })
+  @IsInt()
+  @Min(0)
   reviewCount: number;
 
   @ApiProperty({ description: 'Số từ đã thành thạo' })
+  @IsInt()
+  @Min(0)
   masteredCount: number;
 
   @ApiProperty({ description: 'Số từ cần ôn hôm nay' })
+  @IsInt()
+  @Min(0)
   dueToday: number;
 
   @ApiProperty({ description: 'Chuỗi ngày học hiện tại' })
+  @IsInt()
+  @Min(0)
   currentStreak: number;
 
   @ApiProperty({ description: 'Chuỗi ngày học dài nhất' })
+  @IsInt()
+  @Min(0)
   longestStreak: number;
 
   @ApiProperty({ description: 'Tổng số lần ôn tập' })
+  @IsInt()
+  @Min(0)
   totalReviews: number;
 
   @ApiPropertyOptional({ description: 'Lần học gần nhất' })
@@ -179,12 +197,24 @@ export class ReviewSessionResponseDto {
   terms: any[]; // VocabularyTermResponseDto[]
 
   @ApiProperty({ description: 'Tổng số từ cần ôn' })
+  @IsInt()
+  @Min(0)
   totalDue: number;
 
+  @ApiPropertyOptional({ description: 'Số từ thực tế trả về trong session' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  returnedCount?: number;
+
   @ApiProperty({ description: 'Số từ mới' })
+  @IsInt()
+  @Min(0)
   newCount: number;
 
   @ApiProperty({ description: 'Số từ đang review' })
+  @IsInt()
+  @Min(0)
   reviewCount: number;
 
   @ApiProperty({ description: 'Chế độ review', enum: ReviewMode })

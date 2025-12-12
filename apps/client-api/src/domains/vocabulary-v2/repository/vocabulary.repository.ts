@@ -363,6 +363,7 @@ export class VocabularyRepository {
     params?: {
       listId?: string;
       limit?: number;
+      statusFilter?: ('learning' | 'review')[];
     },
   ) {
     const where: Prisma.UserVocabularyProgressWhereInput = {
@@ -380,6 +381,10 @@ export class VocabularyRepository {
       };
     }
 
+    if (params?.statusFilter?.length) {
+      where.status = { in: params.statusFilter };
+    }
+
     return this.prisma.userVocabularyProgress.findMany({
       where,
       take: params?.limit || 20,
@@ -392,6 +397,33 @@ export class VocabularyRepository {
         },
       },
     });
+  }
+
+  /**
+   * Count due cards for review
+   * Returns total count without limit for accurate stats
+   */
+  async countDueCards(
+    userId: string,
+    params?: {
+      listId?: string;
+      statusFilter?: ('learning' | 'review')[];
+    },
+  ): Promise<number> {
+    const where: Prisma.UserVocabularyProgressWhereInput = {
+      userId,
+      nextReviewAt: { lte: new Date() },
+    };
+
+    if (params?.listId) {
+      where.term = { unit: { listId: params.listId } };
+    }
+
+    if (params?.statusFilter?.length) {
+      where.status = { in: params.statusFilter };
+    }
+
+    return this.prisma.userVocabularyProgress.count({ where });
   }
 
   async findNewCards(
@@ -614,5 +646,22 @@ export class VocabularyRepository {
       unitsUpdated: units.length,
       totalTerms,
     };
+  }
+
+  // ==================== MONITORING ====================
+
+  /**
+   * Detect orphaned progress records
+   * Returns count of user_vocabulary_progress entries with non-existent term_id
+   */
+  async detectOrphanedProgress(): Promise<number> {
+    const result = await this.prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(*) as count
+      FROM user_vocabulary_progress uvp
+      LEFT JOIN vocabulary_term vt ON uvp.term_id = vt.id
+      WHERE vt.id IS NULL
+    `;
+
+    return Number(result[0].count);
   }
 }

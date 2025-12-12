@@ -8,6 +8,9 @@ export class LearningPathResponseDto {
   @ApiProperty()
   userId!: string;
 
+  @ApiProperty({ required: false })
+  classroomId?: string;
+
   @ApiProperty()
   name!: string;
 

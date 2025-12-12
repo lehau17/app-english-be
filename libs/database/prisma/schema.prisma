@@ -1231,6 +1231,9 @@ model Classroom {
   // Certificates
   certificates IssuedCertificate[]
 
+  // Learning paths
+  learningPaths LearningPath[]
+
   @@index([courseId])
   @@index([teacherId])
   @@index([classCode])
@@ -1708,6 +1711,12 @@ model ParentChildLinkRequest {
   resolvedAt   DateTime?
   resolvedById String?
 
+  // NEW FIELDS for student-initiated invitations
+  initiatedBy    LinkInitiatedBy @default(ADMIN)
+  invitationCode String?         @unique
+  invitedEmail   String?
+  expiresAt      DateTime?
+
   // Relations
   parent     User  @relation("ParentLinkRequests", fields: [parentId], references: [id], onDelete: Cascade)
   student    User  @relation("StudentLinkRequests", fields: [studentId], references: [id], onDelete: Cascade)
@@ -1717,6 +1726,7 @@ model ParentChildLinkRequest {
   @@index([parentId])
   @@index([studentId])
   @@index([status])
+  @@index([invitationCode])
   @@map("parent_child_link_requests")
 }
 
@@ -2290,7 +2300,7 @@ model UserVocabularyProgress {
 
   // Relations
   user User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  term VocabularyTerm @relation(fields: [termId], references: [id], onDelete: Cascade)
+  term VocabularyTerm @relation(fields: [termId], references: [id], onDelete: Cascade) // CASCADE DELETE to prevent orphaned records
 
   @@id([userId, termId])
   @@index([userId, nextReviewAt]) // Query review queue
@@ -2551,6 +2561,8 @@ model LearningPath {
 
   userId String
 
+  classroomId String? // Optional classroom context
+
   name String
 
   // Path configuration
@@ -2563,9 +2575,12 @@ model LearningPath {
 
   // Content
 
-  activityIds String[]
+  activityIds String[] // Legacy field - kept for backward compatibility
 
   customContent Json?
+
+  // NEW: Dynamic path features
+  isDynamic Boolean @default(true) // true = AI-generated, false = course-based template
 
   // Progress
 
@@ -2579,8 +2594,211 @@ model LearningPath {
 
   updatedAt DateTime @updatedAt
 
+  // Relations
+  classroom Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+
+  // NEW: Relations for dynamic learning paths
+  steps  LearningPathStep[]
+  events LearningPathEvent[]
+
   @@index([userId])
   @@index([isCompleted])
+  @@index([classroomId])
+  @@index([isDynamic])
+  @@index([userId, isDynamic])
+}
+
+// ===================== DYNAMIC LEARNING PATH SYSTEM =====================
+
+// Step in a learning path queue
+model LearningPathStep {
+  id String @id @default(uuid())
+
+  learningPathId String
+  activityId     String?        // Reference to existing activity
+  variantId      String?        // Reference to AI-generated variant
+  orderNo        Int            // Position in queue (0, 1, 2, ...)
+  status         StepStatus     @default(pending)
+  difficulty     DifficultyLevel
+
+  // Step metadata
+  title       String?
+  description String?
+
+  // Performance tracking
+  score           Int?
+  completedAt     DateTime?
+  timeSpent       Int? // seconds
+  attemptCount    Int       @default(0)
+  lastAttemptedAt DateTime?
+
+  // Adaptivity data
+  wasSkipped       Boolean @default(false)
+  skipReason       String?
+  recommendedNext  String[] // Activity IDs for next steps
+  adaptivityReason String? // Why this step was chosen
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  learningPath    LearningPath      @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
+  activityVariant ActivityVariant?  @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  skillProgress   SkillProgress[]   @relation("StepSkillProgress")
+
+  @@unique([learningPathId, orderNo])
+  @@index([learningPathId, status])
+  @@index([variantId])
+  @@index([learningPathId, orderNo])
+}
+
+enum StepStatus {
+  pending
+  in_progress
+  completed
+  skipped
+  failed
+}
+
+// Skill progress tracking with SRS
+model SkillProgress {
+  id String @id @default(uuid())
+
+  userId String
+  skill  String // "vocabulary", "grammar", "listening", etc.
+
+  // SRS algorithm (SM-2)
+  easeFactor  Float @default(2.5) // 1.3 - 2.5+
+  interval    Int   @default(1) // days
+  repetitions Int   @default(0) // consecutive correct count
+
+  // Performance stats
+  correctCount   Int @default(0)
+  incorrectCount Int @default(0)
+  totalAttempts  Int @default(0)
+
+  // Proficiency level
+  level      String   @default("beginner") // beginner, intermediate, advanced
+  confidence Float    @default(0.5) // 0.0 - 1.0
+  masteryScore Float  @default(0) // 0 - 100
+
+  // Timestamps
+  lastReviewAt DateTime  @default(now())
+  nextReviewAt DateTime // When to review next
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  steps LearningPathStep[] @relation("StepSkillProgress")
+
+  @@unique([userId, skill])
+  @@index([userId])
+  @@index([userId, nextReviewAt])
+  @@index([userId, skill])
+}
+
+// AI-generated activity variants storage
+model ActivityVariant {
+  id String @id @default(uuid())
+
+  // Source
+  baseActivityId  String? // Original activity it's based on (if any)
+  activityType    ActivityType
+  difficulty      DifficultyLevel
+  skill           String // Primary skill targeted
+
+  // Content
+  title       String
+  description String?
+  content     Json // Full activity content (questions, answers, media URLs)
+  mediaUrls   String[]
+
+  // Generation metadata
+  promptTemplateId String? // Which prompt generated this
+  generationParams Json? // Parameters used for generation
+  aiModel          String? // "gemini-2.5-flash", etc.
+
+  // Quality tracking
+  usageCount    Int     @default(0)
+  averageScore  Float?
+  feedbackCount Int     @default(0)
+  isApproved    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  steps            LearningPathStep[]
+  promptTemplate   PromptTemplate?    @relation(fields: [promptTemplateId], references: [id], onDelete: SetNull)
+
+  @@index([activityType, difficulty])
+  @@index([skill])
+  @@index([promptTemplateId])
+  @@index([isApproved, usageCount])
+}
+
+// Prompt templates for AI activity generation
+model PromptTemplate {
+  id String @id @default(uuid())
+
+  name        String @unique
+  description String?
+
+  // Template content
+  systemPrompt String @db.Text
+  userPrompt   String @db.Text
+
+  // Configuration
+  activityType ActivityType
+  difficulty   DifficultyLevel?
+  skill        String?
+
+  // Model settings
+  modelName   String  @default("gemini-2.5-flash")
+  temperature Float   @default(0.7)
+  maxTokens   Int     @default(2048)
+  parameters  Json? // Additional parameters
+
+  // Metadata
+  version    Int     @default(1)
+  isActive   Boolean @default(true)
+  usageCount Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  variants ActivityVariant[]
+
+  @@index([activityType])
+  @@index([isActive])
+}
+
+// Audit trail for learning path events
+model LearningPathEvent {
+  id String @id @default(uuid())
+
+  learningPathId String
+  eventType      LearningPathEventType
+  metadata       Json? // Event-specific data
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  learningPath LearningPath @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
+
+  @@index([learningPathId, createdAt])
+  @@index([eventType])
+}
+
+enum LearningPathEventType {
+  created
+  step_added
+  step_completed
+  step_skipped
+  adapted // Path adapted based on performance
+  completed
+  abandoned
 }
 
 model StudySession {
@@ -3324,8 +3542,17 @@ enum LinkRequestStatus {
   PENDING
   APPROVED
   REJECTED
+  CANCELLED
 
   @@map("LinkRequestStatus")
+}
+
+enum LinkInitiatedBy {
+  STUDENT
+  PARENT
+  ADMIN
+
+  @@map("LinkInitiatedBy")
 }
 
 // Template chứng chỉ cho mỗi course

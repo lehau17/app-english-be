@@ -9,6 +9,7 @@ import { VocabularyListController } from './controller/vocabulary-list.controlle
 import { VocabularyReviewController } from './controller/vocabulary-review.controller';
 import { VocabularyUnitController } from './controller/vocabulary-unit.controller';
 import { VocabularyRepository } from './repository/vocabulary.repository';
+import { VocabularyMonitoringService } from './service/monitoring.service';
 import { ReviewService } from './service/review.service';
 import { SRSService } from './service/srs.service';
 import { VocabularyListService } from './service/vocabulary-list.service';
@@ -36,6 +37,7 @@ import { VocabularyUnitService } from './service/vocabulary-unit.service';
     VocabularyUnitService,
     VocabularyTermService,
     ReviewService,
+    VocabularyMonitoringService,
   ],
   exports: [
     VocabularyListService,

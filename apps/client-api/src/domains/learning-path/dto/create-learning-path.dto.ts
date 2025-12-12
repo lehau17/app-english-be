@@ -14,6 +14,11 @@ export class CreateLearningPathDto {
   @IsString()
   name!: string;
 
+  @ApiProperty({ description: 'Classroom ID (optional)', required: false })
+  @IsOptional()
+  @IsString()
+  classroomId?: string;
+
   @ApiProperty({
     description: 'Target difficulty level',
     enum: DifficultyLevel,

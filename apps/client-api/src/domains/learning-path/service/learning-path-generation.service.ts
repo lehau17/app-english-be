@@ -96,6 +96,9 @@ export class LearningPathGenerationService {
         userId,
       );
 
+      // 5.5. Derive classroomId from user's enrollment
+      const classroomId = await this.deriveUserClassroom(userId);
+
       // 6. Create learning path
       const path = await this.learningPathService.create(userId, {
         name: suggestedPath.name,
@@ -103,6 +106,7 @@ export class LearningPathGenerationService {
         focusAreas: suggestedPath.focusAreas,
         activityIds: activityIds,
         timeframe: mergedGoals.timeframe,
+        classroomId,
       });
 
       this.logger.log(`Learning path created: ${path.id}`);
@@ -590,5 +594,45 @@ ${availableCourses.map((c, i) => `${i + 1}. ${c.title} (ID: ${c.id}) - ${c.diffi
 
     // Remove duplicates and return
     return Array.from(new Set(activityIds));
+  }
+
+  /**
+   * Derive classroom ID from user's active enrollment
+   */
+  private async deriveUserClassroom(userId: string): Promise<string | null> {
+    try {
+      // Find user's most recent active classroom enrollment
+      const enrollment = await this.prisma.classroomStudent.findFirst({
+        where: {
+          studentId: userId,
+          isActive: true,
+          classroom: {
+            isActive: true,
+          },
+        },
+        select: {
+          classroomId: true,
+        },
+        orderBy: {
+          joinedAt: 'desc',
+        },
+      });
+
+      if (enrollment) {
+        this.logger.debug(
+          `Found classroom ${enrollment.classroomId} for user ${userId}`,
+        );
+        return enrollment.classroomId;
+      }
+
+      this.logger.debug(`No active classroom found for user ${userId}`);
+      return null;
+    } catch (error) {
+      this.logger.error(
+        `Error deriving classroom for user ${userId}: ${error.message}`,
+        error.stack,
+      );
+      return null;
+    }
   }
 }

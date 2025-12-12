@@ -6,4 +6,5 @@ export enum KafkaTopic {
   EMAIL_WELCOME_NEW_USER = 'email-welcome-new-user',
   EMAIL_ENROLLMENT_CONFIRMATION = 'email-enrollment-confirmation',
   MEDIA_PROCESSING = 'media-processing',
+  ACTIVITY_GENERATION = 'activity-generation',
 }

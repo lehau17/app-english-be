@@ -49,12 +49,20 @@ export class ReviewService {
 
     // Get due cards (review)
     if (includeReview) {
-      const due = await this.repository.findDueCards(userId, {
+      // Get true due count (no limit) for accurate stats
+      const totalDueCount = await this.repository.countDueCards(userId, {
         listId,
-        limit,
+        statusFilter: ['learning', 'review'],
       });
 
-      dueCards = due.length;
+      // Fetch cards with limit
+      const due = await this.repository.findDueCards(userId, {
+        listId,
+        limit: Math.min(totalDueCount, limit),
+        statusFilter: ['learning', 'review'],
+      });
+
+      dueCards = totalDueCount; // Use true count, not fetched count
 
       terms.push(
         ...due.map((progress) => ({
@@ -127,6 +135,7 @@ export class ReviewService {
     return {
       terms,
       totalDue: dueCards,
+      returnedCount: terms.length, // Actual cards returned in session
       newCount: newCards,
       reviewCount: dueCards,
       mode,
@@ -386,15 +395,26 @@ export class ReviewService {
     });
 
     // Calculate new terms (never studied)
-    const studiedCount = progressList.length;
-    const newTermsCount = totalTerms - studiedCount;
+    // Fix: Prevent negative newCount by using actual status counts
+    const studiedTermsCount =
+      stats.learningCount + stats.reviewCount + stats.masteredCount;
+    const newTermsCount = Math.max(0, totalTerms - studiedTermsCount);
 
-    // Get due today count
-    const dueCards = await this.repository.findDueCards(userId, {
+    // Log warning if mismatch detected
+    if (totalTerms < studiedTermsCount) {
+      this.logger.warn('Stats count mismatch detected', {
+        userId,
+        listId,
+        totalTerms,
+        studiedCount: studiedTermsCount,
+      });
+    }
+
+    // Get due today count (use countDueCards for accurate total)
+    const dueToday = await this.repository.countDueCards(userId, {
       listId,
-      limit: 1000,
+      statusFilter: ['learning', 'review'],
     });
-    const dueToday = dueCards.length;
 
     // Calculate streaks (computed from review sessions, not stored in DB)
     const reviewSessions = await this.repository.findUserReviewSessions(

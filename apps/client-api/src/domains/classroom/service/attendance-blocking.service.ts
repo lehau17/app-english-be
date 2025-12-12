@@ -117,10 +117,11 @@ export class AttendanceBlockingService {
   }
 
   /**
-   * Calculate total absences for a student in a classroom
-   * Only counts past sessions (startTime <= NOW)
-   * Excludes excused absences and sessions with approved makeup requests
-   * Returns: { totalSessions, absentCount, absentPercentage, pastSessionsCount }
+   * Calculate total absences and absence percentage for student across entire course
+   * - Counts absences from past sessions only (startTime <= NOW)
+   * - Calculates percentage relative to ALL scheduled sessions (totalSessions)
+   * - Excludes excused absences and sessions with approved makeup requests
+   * @returns { totalSessions, absentCount, absentPercentage (absences/total), pastSessionsCount }
    */
   async calculateTotalAbsences(
     classroomId: string,
@@ -221,9 +222,9 @@ export class AttendanceBlockingService {
       }
     }
 
-    // Calculate percentage based on past sessions only (matches absentCount scope)
+    // Calculate percentage based on total course sessions (all scheduled sessions)
     const absentPercentage =
-      pastSessions.length > 0 ? absentCount / pastSessions.length : 0;
+      totalSessions > 0 ? absentCount / totalSessions : 0;
 
     // Update cached values in ClassroomStudent
     await this.prisma.classroomStudent.update({
@@ -246,8 +247,9 @@ export class AttendanceBlockingService {
 
   /**
    * Determine if student should be blocked based on absence percentage
-   * @param absentPercentage - Percentage of total absences (0.0 to 1.0)
-   * @param threshold - Threshold percentage (e.g., 0.30 for 30%)
+   * @param absentPercentage - Percentage of absences relative to total course sessions (0.0 to 1.0)
+   * @param threshold - Blocking threshold percentage (e.g., 0.30 for 30%)
+   * @returns True if student should be blocked (absentPercentage >= threshold)
    */
   shouldBlock(absentPercentage: number, threshold: number): boolean {
     return absentPercentage >= threshold;

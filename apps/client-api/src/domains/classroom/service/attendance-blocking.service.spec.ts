@@ -40,7 +40,7 @@ describe('AttendanceBlockingService', () => {
     const classroomId = 'classroom-1';
     const studentId = 'student-1';
 
-    it('should calculate 100% when student missed all past sessions', async () => {
+    it('should calculate 50% when student missed 1 session out of 2 total', async () => {
       // Arrange: 2 total sessions, 1 past session, 1 absent
       const now = new Date('2025-12-12T12:00:00Z');
       const sessions = [
@@ -62,10 +62,10 @@ describe('AttendanceBlockingService', () => {
       // Assert
       expect(result.totalSessions).toBe(2);
       expect(result.absentCount).toBe(1); // only 1 past session, counted as absent
-      expect(result.absentPercentage).toBe(1.0); // 1/1 = 100%
+      expect(result.absentPercentage).toBe(0.5); // 1/2 total = 50%
     });
 
-    it('should calculate 33.33% when student missed 1 of 3 past sessions', async () => {
+    it('should calculate 12.5% when student missed 1 session out of 8 total', async () => {
       // Arrange: 8 total, 3 past, 1 absent
       const sessions = [
         { id: 's1', startTime: new Date('2025-12-01T10:00:00Z') }, // past
@@ -98,16 +98,20 @@ describe('AttendanceBlockingService', () => {
       // Assert
       expect(result.totalSessions).toBe(8);
       expect(result.absentCount).toBe(1);
-      expect(result.absentPercentage).toBeCloseTo(0.333, 2); // 1/3 = 33.33%
+      expect(result.absentPercentage).toBe(0.125); // 1/8 total = 12.5%
     });
 
-    it('should calculate 50% when student missed 2 of 4 past sessions', async () => {
-      // Arrange: 4 past sessions, 2 absent
+    it('should calculate 25% when student missed 2 sessions out of 8 total', async () => {
+      // Arrange: 8 total sessions (4 past, 4 future), 2 absent from past
       const sessions = [
         { id: 's1', startTime: new Date('2025-12-01T10:00:00Z') }, // past
         { id: 's2', startTime: new Date('2025-12-02T10:00:00Z') }, // past
         { id: 's3', startTime: new Date('2025-12-03T10:00:00Z') }, // past
         { id: 's4', startTime: new Date('2025-12-04T10:00:00Z') }, // past
+        { id: 's5', startTime: new Date('2025-12-20T10:00:00Z') }, // future
+        { id: 's6', startTime: new Date('2025-12-21T10:00:00Z') }, // future
+        { id: 's7', startTime: new Date('2025-12-22T10:00:00Z') }, // future
+        { id: 's8', startTime: new Date('2025-12-23T10:00:00Z') }, // future
       ];
 
       const attendances = [
@@ -129,13 +133,13 @@ describe('AttendanceBlockingService', () => {
       );
 
       // Assert
-      expect(result.totalSessions).toBe(4);
+      expect(result.totalSessions).toBe(8);
       expect(result.absentCount).toBe(2);
-      expect(result.absentPercentage).toBe(0.5); // 2/4 = 50%
+      expect(result.absentPercentage).toBe(0.25); // 2/8 total = 25%
     });
 
     it('should calculate 0% when student attended all past sessions', async () => {
-      // Arrange: 8 total, 3 past, 0 absent
+      // Arrange: 5 total sessions (3 past, 2 future), 0 absent
       const sessions = [
         { id: 's1', startTime: new Date('2025-12-01T10:00:00Z') }, // past
         { id: 's2', startTime: new Date('2025-12-02T10:00:00Z') }, // past
@@ -164,10 +168,10 @@ describe('AttendanceBlockingService', () => {
       // Assert
       expect(result.totalSessions).toBe(5);
       expect(result.absentCount).toBe(0);
-      expect(result.absentPercentage).toBe(0); // 0/3 = 0%
+      expect(result.absentPercentage).toBe(0); // 0/5 total = 0%
     });
 
-    it('should ignore future sessions in calculation', async () => {
+    it('should include future sessions in total for percentage calculation', async () => {
       // Arrange: 8 total, 2 past (6 future), 1 absent
       const sessions = [
         { id: 's1', startTime: new Date('2025-12-01T10:00:00Z') }, // past
@@ -199,7 +203,7 @@ describe('AttendanceBlockingService', () => {
       // Assert
       expect(result.totalSessions).toBe(8);
       expect(result.absentCount).toBe(1);
-      expect(result.absentPercentage).toBe(0.5); // 1/2 = 50% (NOT 1/8 = 12.5%)
+      expect(result.absentPercentage).toBe(0.125); // 1/8 total = 12.5% (includes future sessions)
     });
   });
 
@@ -499,6 +503,7 @@ describe('AttendanceBlockingService', () => {
 
       const attendances = [
         { sessionId: 's1', status: AttendanceStatus.ABSENT },
+        // s2 has no record = counted as absent too
       ];
 
       prisma.classroomSession.findMany.mockResolvedValue(sessions as any);
@@ -513,8 +518,8 @@ describe('AttendanceBlockingService', () => {
           classroomId_studentId: { classroomId, studentId },
         },
         data: {
-          consecutiveAbsences: 1,
-          lastAbsenceDate: sessions[0].startTime,
+          consecutiveAbsences: 2, // Both s1 and s2 are absent
+          lastAbsenceDate: sessions[1].startTime, // s2 is most recent
         },
       });
     });

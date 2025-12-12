@@ -3,10 +3,12 @@ import { PageResponseDto } from '@app/shared/payload/response/page-response.dto'
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { LinkRequestStatus, ParentChild, UserRole } from '@prisma/client';
+import { LinkInitiatedBy, LinkRequestStatus, ParentChild, UserRole } from '@prisma/client';
+import { randomBytes } from 'crypto';
 import {
   CreateParentChildDto,
   FilterParentChildRequestDto,
@@ -93,6 +95,31 @@ export class ParentChildService {
         `ParentChild with parentId ${parentId} and childId ${childId} not found`,
       );
     }
+  }
+
+  private generateInvitationCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const codeLength = 8;
+    let code = '';
+
+    const randomValues = randomBytes(codeLength);
+    for (let i = 0; i < codeLength; i++) {
+      code += chars[randomValues[i] % chars.length];
+    }
+
+    return code;
+  }
+
+  private getInvitationExpiration(): Date {
+    const expirationDays = 7;
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + expirationDays);
+    return expiresAt;
+  }
+
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
   }
 
   // ==================== LINK REQUEST METHODS ====================
@@ -282,5 +309,137 @@ export class ParentChildService {
     // await this.kafkaProducerService.send(...)
 
     return updatedRequest;
+  }
+
+  // ==================== STUDENT-INITIATED INVITATION METHODS ====================
+
+  async createStudentInvitation(studentId: string, invitedEmail: string) {
+    if (!this.isValidEmail(invitedEmail)) {
+      throw new BadRequestException('Invalid email format');
+    }
+
+    let parentUser = await this.prisma.user.findUnique({
+      where: { email: invitedEmail },
+    });
+
+    let parentId: string;
+    if (parentUser && parentUser.role === UserRole.parent) {
+      parentId = parentUser.id;
+
+      const existingLink = await this.parentChildRepository.findById(
+        parentId,
+        studentId,
+      );
+      if (existingLink) {
+        throw new ConflictException('Parent already linked to this student');
+      }
+    } else {
+      parentId = 'pending';
+    }
+
+    await this.linkRequestRepository.cancelPendingByEmail(
+      studentId,
+      invitedEmail,
+    );
+
+    const invitationCode = this.generateInvitationCode();
+    const expiresAt = this.getInvitationExpiration();
+
+    const invitation = await this.linkRequestRepository.create({
+      parentId,
+      studentId,
+      initiatedBy: LinkInitiatedBy.STUDENT,
+      invitationCode,
+      invitedEmail,
+      expiresAt,
+      status: LinkRequestStatus.PENDING,
+    });
+
+    return invitation;
+  }
+
+  async acceptInvitationByCode(parentId: string, invitationCode: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const invitation = await tx.parentChildLinkRequest.findUnique({
+        where: { invitationCode },
+        include: { student: true },
+      });
+
+      if (!invitation) {
+        throw new NotFoundException('Invalid invitation code');
+      }
+
+      if (invitation.expiresAt && invitation.expiresAt < new Date()) {
+        throw new BadRequestException('Invitation code has expired');
+      }
+
+      if (invitation.status !== LinkRequestStatus.PENDING) {
+        throw new BadRequestException(
+          `Invitation already ${invitation.status.toLowerCase()}`,
+        );
+      }
+
+      const existingLink = await tx.parentChild.findUnique({
+        where: {
+          parentId_childId: {
+            parentId,
+            childId: invitation.studentId,
+          },
+        },
+      });
+
+      if (existingLink) {
+        throw new ConflictException('Parent already linked to this student');
+      }
+
+      const updatedInvitation = await tx.parentChildLinkRequest.update({
+        where: { id: invitation.id },
+        data: {
+          parentId,
+          status: LinkRequestStatus.APPROVED,
+          resolvedAt: new Date(),
+          resolvedById: parentId,
+        },
+      });
+
+      const parentChild = await tx.parentChild.create({
+        data: {
+          parentId,
+          childId: invitation.studentId,
+        },
+      });
+
+      return { linkRequest: updatedInvitation, parentChild };
+    });
+  }
+
+  async getStudentPendingInvitations(studentId: string) {
+    return this.linkRequestRepository.findManyByStudent(
+      studentId,
+      LinkRequestStatus.PENDING,
+    );
+  }
+
+  async cancelInvitation(invitationId: string, studentId: string) {
+    const invitation = await this.linkRequestRepository.findById(invitationId);
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    if (invitation.studentId !== studentId) {
+      throw new ForbiddenException(
+        'Cannot cancel another student\'s invitation',
+      );
+    }
+
+    if (invitation.status !== LinkRequestStatus.PENDING) {
+      throw new BadRequestException('Can only cancel pending invitations');
+    }
+
+    return this.linkRequestRepository.update(invitationId, {
+      status: LinkRequestStatus.CANCELLED,
+      resolvedAt: new Date(),
+    });
   }
 }

@@ -2,6 +2,7 @@ import { PrismaRepository } from '@app/database';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import { Injectable } from '@nestjs/common';
 import {
+  LinkInitiatedBy,
   LinkRequestStatus,
   ParentChildLinkRequest,
   Prisma,
@@ -10,6 +11,11 @@ import {
 export interface CreateLinkRequestDto {
   parentId: string;
   studentId: string;
+  initiatedBy?: LinkInitiatedBy;
+  invitationCode?: string;
+  invitedEmail?: string;
+  expiresAt?: Date;
+  status?: LinkRequestStatus;
 }
 
 export interface FilterLinkRequestDto {
@@ -152,6 +158,56 @@ export class ParentChildLinkRequestRepository {
   async delete(id: string): Promise<ParentChildLinkRequest> {
     return this.prisma.parentChildLinkRequest.delete({
       where: { id },
+    });
+  }
+
+  async cancelPendingByEmail(
+    studentId: string,
+    invitedEmail: string,
+  ): Promise<void> {
+    await this.prisma.parentChildLinkRequest.updateMany({
+      where: {
+        studentId,
+        invitedEmail,
+        status: LinkRequestStatus.PENDING,
+      },
+      data: {
+        status: LinkRequestStatus.CANCELLED,
+        resolvedAt: new Date(),
+      },
+    });
+  }
+
+  async findManyByStudent(
+    studentId: string,
+    status?: LinkRequestStatus,
+  ): Promise<ParentChildLinkRequest[]> {
+    return this.prisma.parentChildLinkRequest.findMany({
+      where: {
+        studentId,
+        ...(status && { status }),
+      },
+      orderBy: { requestedAt: 'desc' },
+      include: {
+        parent: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        student: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
     });
   }
 }

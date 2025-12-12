@@ -2,10 +2,10 @@
  * E2E Integration Tests: Attendance Blocking API
  *
  * Tests the blocking-status endpoint with real database operations
- * to verify the bug fix: absent percentage calculated based on PAST sessions only.
+ * to verify the bug fix: absent percentage calculated based on TOTAL sessions (not just past).
  *
- * Bug Fix: 1 absent / 1 past session = 100% (should block at 30% threshold)
- * Previously: 1 absent / 8 total sessions = 12.5% (incorrectly NOT blocked)
+ * Correct Behavior: 1 absent / 8 total sessions = 12.5% (should NOT block at 30% threshold)
+ * Previous (WRONG): 1 absent / 1 past session = 100% (incorrectly blocked)
  */
 
 import { Test, TestingModule } from '@nestjs/testing';
@@ -180,7 +180,9 @@ describe('Attendance Blocking API (E2E)', () => {
 
       // Act: Get blocking status
       const response = await request(app.getHttpServer())
-        .get(`/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`)
+        .get(
+          `/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`,
+        )
         .expect(200);
 
       // Assert
@@ -278,7 +280,9 @@ describe('Attendance Blocking API (E2E)', () => {
 
       // Act: Get blocking status
       const response = await request(app.getHttpServer())
-        .get(`/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`)
+        .get(
+          `/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`,
+        )
         .expect(200);
 
       // Assert
@@ -357,7 +361,9 @@ describe('Attendance Blocking API (E2E)', () => {
 
       // Act: Get blocking status
       const response = await request(app.getHttpServer())
-        .get(`/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`)
+        .get(
+          `/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`,
+        )
         .expect(200);
 
       // Assert
@@ -419,7 +425,9 @@ describe('Attendance Blocking API (E2E)', () => {
 
       // Act: Get blocking status
       const response = await request(app.getHttpServer())
-        .get(`/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`)
+        .get(
+          `/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`,
+        )
         .expect(200);
 
       // Assert
@@ -504,7 +512,9 @@ describe('Attendance Blocking API (E2E)', () => {
 
       // Act: Get blocking status
       const response = await request(app.getHttpServer())
-        .get(`/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`)
+        .get(
+          `/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`,
+        )
         .expect(200);
 
       // Assert
@@ -581,7 +591,9 @@ describe('Attendance Blocking API (E2E)', () => {
 
       // Act: Get blocking status
       const response = await request(app.getHttpServer())
-        .get(`/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`)
+        .get(
+          `/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`,
+        )
         .expect(200);
 
       // Assert
@@ -658,7 +670,9 @@ describe('Attendance Blocking API (E2E)', () => {
 
       // Act: Call blocking status endpoint (should trigger auto-block)
       const response = await request(app.getHttpServer())
-        .get(`/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`)
+        .get(
+          `/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`,
+        )
         .expect(200);
 
       // Assert: Student should be auto-blocked
@@ -743,7 +757,9 @@ describe('Attendance Blocking API (E2E)', () => {
 
       // Act: Call blocking status endpoint (should trigger auto-unblock)
       const response = await request(app.getHttpServer())
-        .get(`/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`)
+        .get(
+          `/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`,
+        )
         .expect(200);
 
       // Assert: Student should be auto-unblocked
@@ -824,7 +840,9 @@ describe('Attendance Blocking API (E2E)', () => {
 
       // Act: Call blocking status endpoint
       const response = await request(app.getHttpServer())
-        .get(`/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`)
+        .get(
+          `/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`,
+        )
         .expect(200);
 
       // Assert: Student should remain blocked (manual block)
@@ -866,7 +884,9 @@ describe('Attendance Blocking API (E2E)', () => {
 
       // Act: Get blocking status for non-enrolled student
       const response = await request(app.getHttpServer())
-        .get(`/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`)
+        .get(
+          `/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`,
+        )
         .expect(200);
 
       // Assert
@@ -941,7 +961,9 @@ describe('Attendance Blocking API (E2E)', () => {
 
       // Act: Get blocking status
       const response = await request(app.getHttpServer())
-        .get(`/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`)
+        .get(
+          `/api/private/v1/classrooms/${classroom.id}/students/${testUserId}/blocking-status`,
+        )
         .expect(200);
 
       // Assert: Only 1 absence (excused not counted)
