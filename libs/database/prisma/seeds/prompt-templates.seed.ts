@@ -698,8 +698,12 @@ export async function seedPromptTemplates() {
     }
   }
 
-  console.log(`\n✨ Prompt templates seeded: ${created} created, ${skipped} skipped`);
-  console.log(`📊 Total templates in DB: ${await prisma.promptTemplate.count()}`);
+  console.log(
+    `\n✨ Prompt templates seeded: ${created} created, ${skipped} skipped`,
+  );
+  console.log(
+    `📊 Total templates in DB: ${await prisma.promptTemplate.count()}`,
+  );
 }
 
 // Run seed if executed directly

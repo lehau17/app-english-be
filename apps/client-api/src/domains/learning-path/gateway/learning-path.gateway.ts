@@ -43,9 +43,7 @@ export class LearningPathGateway
       client.join(this.pathRoom(pathId));
       this.logger.debug(`Client ${client.id} joined learning path ${pathId}`);
     } else {
-      this.logger.warn(
-        `Client ${client.id} connected without pathId`,
-      );
+      this.logger.warn(`Client ${client.id} connected without pathId`);
     }
   }
 
@@ -88,7 +86,9 @@ export class LearningPathGateway
 
   emitStepAdded(pathId: string, step: any) {
     this.server.to(this.pathRoom(pathId)).emit('step-added', step);
-    this.logger.debug(`Emitted step-added for path ${pathId}`, { stepId: step?.id });
+    this.logger.debug(`Emitted step-added for path ${pathId}`, {
+      stepId: step?.id,
+    });
   }
 
   emitDifficultyAdjusted(
@@ -101,7 +101,12 @@ export class LearningPathGateway
 
   emitMasteryAchieved(
     pathId: string,
-    data: { skillId: string; skillName: string; masteryLevel: number; timestamp: string },
+    data: {
+      skillId: string;
+      skillName: string;
+      masteryLevel: number;
+      timestamp: string;
+    },
   ) {
     this.server.to(this.pathRoom(pathId)).emit('mastery-achieved', data);
     this.logger.debug(`Emitted mastery-achieved for path ${pathId}`, data);
@@ -109,7 +114,12 @@ export class LearningPathGateway
 
   emitMilestoneReached(
     pathId: string,
-    data: { percentage: number; badge: string; unlockedAt: string; message: string },
+    data: {
+      percentage: number;
+      badge: string;
+      unlockedAt: string;
+      message: string;
+    },
   ) {
     this.server.to(this.pathRoom(pathId)).emit('milestone-reached', data);
     this.logger.debug(`Emitted milestone-reached for path ${pathId}`, data);

@@ -11,7 +11,7 @@ export class PrerequisiteService {
   private readonly logger = new Logger(PrerequisiteService.name);
 
   // Minimum mastery threshold for prerequisites
-  private readonly PREREQUISITE_THRESHOLD = 0.70; // 70%
+  private readonly PREREQUISITE_THRESHOLD = 0.7; // 70%
 
   constructor(
     private readonly graphService: Neo4jGraphService,
@@ -36,9 +36,8 @@ export class PrerequisiteService {
   }> {
     try {
       // Get all direct prerequisites
-      const prerequisites = await this.graphService.getDirectPrerequisites(
-        conceptId,
-      );
+      const prerequisites =
+        await this.graphService.getDirectPrerequisites(conceptId);
 
       if (prerequisites.length === 0) {
         return { met: true, missing: [] };
@@ -230,7 +229,11 @@ export class PrerequisiteService {
 
       // Check if adding this prerequisite would create a cycle
       // Temporarily add the relationship and check for cycles
-      await this.graphService.createPrerequisite(conceptId, prerequisiteId, 0.1);
+      await this.graphService.createPrerequisite(
+        conceptId,
+        prerequisiteId,
+        0.1,
+      );
 
       const hasCycle = await this.graphService.hasCircularDependency(conceptId);
 

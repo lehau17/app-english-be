@@ -82,7 +82,9 @@ export class Neo4jGraphService {
 
     await this.neo4j.runQuery(cypher, { conceptId, skillId });
 
-    this.logger.debug(`Created teaches relationship: ${conceptId} -> ${skillId}`);
+    this.logger.debug(
+      `Created teaches relationship: ${conceptId} -> ${skillId}`,
+    );
   }
 
   /**
@@ -307,12 +309,14 @@ export class Neo4jGraphService {
       depth: number;
     }>(cypher, { conceptId });
 
-    return result[0] || {
-      prerequisiteCount: 0,
-      dependentCount: 0,
-      skillsTaughtCount: 0,
-      depth: 0,
-    };
+    return (
+      result[0] || {
+        prerequisiteCount: 0,
+        dependentCount: 0,
+        skillsTaughtCount: 0,
+        depth: 0,
+      }
+    );
   }
 
   /**
@@ -399,11 +403,13 @@ export class Neo4jGraphService {
       teachesCount: number;
     }>(cypher);
 
-    return result[0] || {
-      conceptCount: 0,
-      skillCount: 0,
-      prerequisiteCount: 0,
-      teachesCount: 0,
-    };
+    return (
+      result[0] || {
+        conceptCount: 0,
+        skillCount: 0,
+        prerequisiteCount: 0,
+        teachesCount: 0,
+      }
+    );
   }
 }

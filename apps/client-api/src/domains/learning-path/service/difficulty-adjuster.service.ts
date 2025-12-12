@@ -43,11 +43,12 @@ export class DifficultyAdjusterService {
   ): Promise<string | null> {
     try {
       // Get recent performance
-      const performance = await this.performanceTracker.getRecentOverallPerformance(
-        userId,
-        learningPathId,
-        5, // Last 5 activities
-      );
+      const performance =
+        await this.performanceTracker.getRecentOverallPerformance(
+          userId,
+          learningPathId,
+          5, // Last 5 activities
+        );
 
       // Determine target difficulty
       const targetDifficulty = this.calculateTargetDifficulty(
@@ -119,11 +120,12 @@ export class DifficultyAdjusterService {
     reason: string;
     shouldAdjust: boolean;
   }> {
-    const performance = await this.performanceTracker.getRecentOverallPerformance(
-      userId,
-      learningPathId,
-      5,
-    );
+    const performance =
+      await this.performanceTracker.getRecentOverallPerformance(
+        userId,
+        learningPathId,
+        5,
+      );
 
     // Determine current difficulty from recent activities
     const currentDifficulty = this.inferCurrentDifficulty(
@@ -192,7 +194,10 @@ export class DifficultyAdjusterService {
    * Determine if user is in "flow state" (optimal challenge level)
    * Based on Csikszentmihalyi's flow theory
    */
-  isInFlowState(successRate: number, averageScore: number): {
+  isInFlowState(
+    successRate: number,
+    averageScore: number,
+  ): {
     inFlow: boolean;
     zone: 'boredom' | 'flow' | 'anxiety';
     recommendation: string;
@@ -202,7 +207,8 @@ export class DifficultyAdjusterService {
       return {
         inFlow: true,
         zone: 'flow',
-        recommendation: 'Maintain current difficulty - user is in optimal learning zone',
+        recommendation:
+          'Maintain current difficulty - user is in optimal learning zone',
       };
     }
 
@@ -244,11 +250,12 @@ export class DifficultyAdjusterService {
     const variantIds: string[] = [];
 
     // Get performance to determine base difficulty
-    const performance = await this.performanceTracker.getRecentOverallPerformance(
-      userId,
-      learningPathId,
-      5,
-    );
+    const performance =
+      await this.performanceTracker.getRecentOverallPerformance(
+        userId,
+        learningPathId,
+        5,
+      );
 
     const baseDifficulty = this.calculateTargetDifficulty(
       performance.successRate,
@@ -293,9 +300,7 @@ export class DifficultyAdjusterService {
   /**
    * Get adjacent difficulty levels for variety
    */
-  private getAdjacentDifficulties(
-    current: DifficultyLevel,
-  ): DifficultyLevel[] {
+  private getAdjacentDifficulties(current: DifficultyLevel): DifficultyLevel[] {
     const levels: DifficultyLevel[] = ['beginner', 'intermediate', 'advanced'];
     return levels.filter((l) => l !== current);
   }

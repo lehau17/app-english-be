@@ -68,9 +68,8 @@ describe('Vocabulary Review Integration Tests', () => {
     await app.init();
 
     reviewService = moduleFixture.get<ReviewService>(ReviewService);
-    vocabularyRepository = moduleFixture.get<VocabularyRepository>(
-      VocabularyRepository,
-    );
+    vocabularyRepository =
+      moduleFixture.get<VocabularyRepository>(VocabularyRepository);
   });
 
   afterAll(async () => {
@@ -122,11 +121,13 @@ describe('Vocabulary Review Integration Tests', () => {
         totalUnits: 3,
       });
 
-      jest.spyOn(vocabularyRepository, 'findUserProgress').mockResolvedValue([
-        ...Array(10).fill({ status: 'learning' }),
-        ...Array(8).fill({ status: 'review' }),
-        ...Array(12).fill({ status: 'mastered' }),
-      ] as any);
+      jest
+        .spyOn(vocabularyRepository, 'findUserProgress')
+        .mockResolvedValue([
+          ...Array(10).fill({ status: 'learning' }),
+          ...Array(8).fill({ status: 'review' }),
+          ...Array(12).fill({ status: 'mastered' }),
+        ] as any);
 
       jest
         .spyOn(vocabularyRepository, 'countDueCards')
@@ -211,11 +212,13 @@ describe('Vocabulary Review Integration Tests', () => {
         totalUnits: 10,
       });
 
-      jest.spyOn(vocabularyRepository, 'findUserProgress').mockResolvedValue([
-        ...Array(50).fill({ status: 'learning' }),
-        ...Array(50).fill({ status: 'review' }),
-        ...Array(50).fill({ status: 'mastered' }),
-      ] as any);
+      jest
+        .spyOn(vocabularyRepository, 'findUserProgress')
+        .mockResolvedValue([
+          ...Array(50).fill({ status: 'learning' }),
+          ...Array(50).fill({ status: 'review' }),
+          ...Array(50).fill({ status: 'mastered' }),
+        ] as any);
 
       jest
         .spyOn(vocabularyRepository, 'countDueCards')
@@ -264,9 +267,9 @@ describe('Vocabulary Review Integration Tests', () => {
         totalUnits: 2,
       });
 
-      jest.spyOn(vocabularyRepository, 'findUserProgress').mockResolvedValue([
-        ...Array(30).fill({ status: 'mastered' }),
-      ] as any);
+      jest
+        .spyOn(vocabularyRepository, 'findUserProgress')
+        .mockResolvedValue([...Array(30).fill({ status: 'mastered' })] as any);
 
       jest.spyOn(vocabularyRepository, 'countDueCards').mockResolvedValue(0);
       jest
@@ -312,11 +315,13 @@ describe('Vocabulary Review Integration Tests', () => {
         totalUnits: 3,
       });
 
-      jest.spyOn(vocabularyRepository, 'findUserProgress').mockResolvedValue([
-        ...Array(15).fill({ status: 'learning' }),
-        ...Array(10).fill({ status: 'review' }),
-        ...Array(8).fill({ status: 'mastered' }),
-      ] as any);
+      jest
+        .spyOn(vocabularyRepository, 'findUserProgress')
+        .mockResolvedValue([
+          ...Array(15).fill({ status: 'learning' }),
+          ...Array(10).fill({ status: 'review' }),
+          ...Array(8).fill({ status: 'mastered' }),
+        ] as any);
 
       jest.spyOn(vocabularyRepository, 'countDueCards').mockResolvedValue(12);
       jest
@@ -344,9 +349,8 @@ describe('Vocabulary Review Integration Tests', () => {
       });
 
       // Assert - Verify statusFilter is consistent
-      const countDueCalls = (
-        vocabularyRepository.countDueCards as jest.Mock
-      ).mock.calls;
+      const countDueCalls = (vocabularyRepository.countDueCards as jest.Mock)
+        .mock.calls;
 
       expect(countDueCalls.length).toBe(2);
       expect(countDueCalls[0][1].statusFilter).toEqual(expectedStatusFilter);
@@ -366,10 +370,12 @@ describe('Vocabulary Review Integration Tests', () => {
         totalUnits: 1,
       });
 
-      jest.spyOn(vocabularyRepository, 'findUserProgress').mockResolvedValue([
-        ...Array(10).fill({ status: 'learning' }),
-        ...Array(5).fill({ status: 'review' }),
-      ] as any);
+      jest
+        .spyOn(vocabularyRepository, 'findUserProgress')
+        .mockResolvedValue([
+          ...Array(10).fill({ status: 'learning' }),
+          ...Array(5).fill({ status: 'review' }),
+        ] as any);
 
       jest.spyOn(vocabularyRepository, 'countDueCards').mockResolvedValue(8);
       jest
@@ -432,11 +438,13 @@ describe('Vocabulary Review Integration Tests', () => {
         totalUnits: 4,
       });
 
-      jest.spyOn(vocabularyRepository, 'findUserProgress').mockResolvedValue([
-        ...Array(20).fill({ status: 'learning' }),
-        ...Array(15).fill({ status: 'review' }),
-        ...Array(10).fill({ status: 'mastered' }),
-      ] as any);
+      jest
+        .spyOn(vocabularyRepository, 'findUserProgress')
+        .mockResolvedValue([
+          ...Array(20).fill({ status: 'learning' }),
+          ...Array(15).fill({ status: 'review' }),
+          ...Array(10).fill({ status: 'mastered' }),
+        ] as any);
 
       jest.spyOn(vocabularyRepository, 'countDueCards').mockResolvedValue(20);
       jest

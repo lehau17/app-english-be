@@ -12,10 +12,7 @@ export class SkillProgressRepository {
   /**
    * Find or create skill progress for a user
    */
-  async findOrCreate(
-    userId: string,
-    skill: string,
-  ): Promise<SkillProgress> {
+  async findOrCreate(userId: string, skill: string): Promise<SkillProgress> {
     const existing = await this.prisma.skillProgress.findUnique({
       where: {
         userId_skill: {

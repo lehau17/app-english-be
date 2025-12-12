@@ -192,11 +192,14 @@ describe('VocabularyRepository', () => {
       const afterCall = new Date();
 
       // Assert
-      const callArgs = (prisma.userVocabularyProgress.count as jest.Mock).mock.calls[0][0];
+      const callArgs = (prisma.userVocabularyProgress.count as jest.Mock).mock
+        .calls[0][0];
       const nextReviewAt = callArgs.where.nextReviewAt.lte;
 
       expect(nextReviewAt).toBeInstanceOf(Date);
-      expect(nextReviewAt.getTime()).toBeGreaterThanOrEqual(beforeCall.getTime());
+      expect(nextReviewAt.getTime()).toBeGreaterThanOrEqual(
+        beforeCall.getTime(),
+      );
       expect(nextReviewAt.getTime()).toBeLessThanOrEqual(afterCall.getTime());
     });
 
@@ -381,9 +384,9 @@ describe('VocabularyRepository', () => {
       const userId = 'user-13';
       const listId = 'list-13';
 
-      jest.spyOn(prisma.userVocabularyProgress, 'groupBy').mockResolvedValue([
-        { status: 'learning', _count: 5 },
-      ] as any);
+      jest
+        .spyOn(prisma.userVocabularyProgress, 'groupBy')
+        .mockResolvedValue([{ status: 'learning', _count: 5 }] as any);
 
       jest.spyOn(prisma.userVocabularyProgress, 'count').mockResolvedValue(3);
 

@@ -7,7 +7,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { LinkInitiatedBy, LinkRequestStatus, ParentChild, UserRole } from '@prisma/client';
+import {
+  LinkInitiatedBy,
+  LinkRequestStatus,
+  ParentChild,
+  UserRole,
+} from '@prisma/client';
 import { randomBytes } from 'crypto';
 import {
   CreateParentChildDto,
@@ -318,7 +323,7 @@ export class ParentChildService {
       throw new BadRequestException('Invalid email format');
     }
 
-    let parentUser = await this.prisma.user.findUnique({
+    const parentUser = await this.prisma.user.findUnique({
       where: { email: invitedEmail },
     });
 
@@ -429,7 +434,7 @@ export class ParentChildService {
 
     if (invitation.studentId !== studentId) {
       throw new ForbiddenException(
-        'Cannot cancel another student\'s invitation',
+        "Cannot cancel another student's invitation",
       );
     }
 

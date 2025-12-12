@@ -447,16 +447,22 @@ export class LandingPageService {
   /**
    * FLOW MỚI - Step 1: Verify email và gửi verification link
    * Check email conflicts và gửi email với JWT token
+   * NOTE: Cho phép existing users tiếp tục thanh toán, nhưng không gửi password sau khi thanh toán
    */
   async verifyEnrollmentEmail(payload: VerifyEnrollmentEmailDto): Promise<{
     message: string;
     email: string;
     expiresIn: number;
+    existingUsers?: { students: number[]; parent: boolean };
   }> {
     const { role, students, parent, courseId, classroomId } = payload;
 
-    // 1. CHECK CONFLICTS - Không cho phép nếu email đã tồn tại
-    for (const student of students) {
+    // 1. CHECK EXISTING USERS - Track existing accounts but allow them to proceed
+    const existingStudentIndexes: number[] = [];
+    let existingParent = false;
+
+    for (let i = 0; i < students.length; i++) {
+      const student = students[i];
       const existingUser = await this.prisma.user.findFirst({
         where: {
           OR: [{ email: student.email }, { phone: student.phone }],
@@ -464,36 +470,26 @@ export class LandingPageService {
       });
 
       if (existingUser) {
-        throw new BadRequestException({
-          code: 'ACCOUNT_EXISTS',
-          message: 'Email hoặc số điện thoại đã có tài khoản trong hệ thống.',
-          action: 'LOGIN_REQUIRED',
-          loginUrl: `${this.configService.get('APP_URL')}/login?redirect=/classrooms/${classroomId}/enroll`,
-          hint: 'Vui lòng đăng nhập để đăng ký lớp học này.',
-          conflicts: {
-            email: existingUser.email === student.email,
-            phone: existingUser.phone === student.phone,
-          },
-        });
+        existingStudentIndexes.push(i);
+        this.logger.log(
+          `Student ${student.email} already exists in system - will proceed without creating new account`,
+        );
       }
     }
 
     // Check parent (if role = parent)
     if (role === GuestEnrollmentRole.parent && parent) {
-      const existingParent = await this.prisma.user.findFirst({
+      const existingParentUser = await this.prisma.user.findFirst({
         where: {
           OR: [{ email: parent.email }, { phone: parent.phone }],
         },
       });
 
-      if (existingParent) {
-        throw new BadRequestException({
-          code: 'ACCOUNT_EXISTS',
-          message: 'Thông tin phụ huynh đã có tài khoản trong hệ thống.',
-          action: 'LOGIN_REQUIRED',
-          loginUrl: `${this.configService.get('APP_URL')}/login`,
-          hint: 'Vui lòng đăng nhập để đăng ký.',
-        });
+      if (existingParentUser) {
+        existingParent = true;
+        this.logger.log(
+          `Parent ${parent.email} already exists in system - will proceed without creating new account`,
+        );
       }
     }
 
@@ -554,6 +550,9 @@ export class LandingPageService {
       source: payload.source,
       note: payload.note,
       timestamp: Date.now(),
+      // Track which users already exist (won't receive credentials after payment)
+      existingStudentIndexes,
+      existingParent,
     };
 
     const token = this.jwtService.sign(enrollmentData, {
@@ -608,11 +607,22 @@ export class LandingPageService {
       );
     }
 
+    // Build response with existing users info
+    const hasExistingUsers =
+      existingStudentIndexes.length > 0 || existingParent;
+
     return {
-      message:
-        'Email xác thực đã được gửi. Vui lòng kiểm tra hộp thư và click vào link để tiếp tục thanh toán.',
+      message: hasExistingUsers
+        ? 'Email xác thực đã được gửi. Lưu ý: Một số tài khoản đã tồn tại trong hệ thống, sau thanh toán sẽ không gửi thông tin đăng nhập mới.'
+        : 'Email xác thực đã được gửi. Vui lòng kiểm tra hộp thư và click vào link để tiếp tục thanh toán.',
       email: recipientEmail,
       expiresIn: 1800, // 30 minutes in seconds
+      ...(hasExistingUsers && {
+        existingUsers: {
+          students: existingStudentIndexes,
+          parent: existingParent,
+        },
+      }),
     };
   }
 

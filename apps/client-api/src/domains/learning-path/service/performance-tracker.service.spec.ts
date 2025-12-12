@@ -122,10 +122,7 @@ describe('PerformanceTrackerService', () => {
     });
 
     it('should detect struggling patterns', async () => {
-      const result = await service.detectStrugglingPatterns(
-        'user-1',
-        'path-1',
-      );
+      const result = await service.detectStrugglingPatterns('user-1', 'path-1');
 
       expect(result.isStruggling).toBe(true);
       expect(result.patterns.length).toBeGreaterThan(0);

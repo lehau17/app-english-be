@@ -210,4 +210,32 @@ export class ParentChildLinkRequestRepository {
       },
     });
   }
+
+  async findByInvitationCode(
+    invitationCode: string,
+  ): Promise<ParentChildLinkRequest | null> {
+    return this.prisma.parentChildLinkRequest.findUnique({
+      where: { invitationCode },
+      include: {
+        parent: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        student: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+  }
 }

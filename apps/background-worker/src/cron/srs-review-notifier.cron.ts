@@ -223,7 +223,9 @@ export class SRSReviewNotifierCron {
         },
       });
 
-      this.logger.log(`🧹 Cleaned up ${deleted.count} old skill progress records`);
+      this.logger.log(
+        `🧹 Cleaned up ${deleted.count} old skill progress records`,
+      );
     } catch (error) {
       this.logger.error(
         `Failed to clean up old SRS records: ${error.message}`,

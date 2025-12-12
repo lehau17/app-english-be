@@ -1440,11 +1440,11 @@ model ClassroomStudent {
   isPurchased Boolean @default(false)
 
   // Attendance blocking
-  isBlocked Boolean @default(false)
-  blockedAt DateTime?
-  blockedReason String?
-  consecutiveAbsences Int @default(0)
-  lastAbsenceDate DateTime?
+  isBlocked           Boolean   @default(false)
+  blockedAt           DateTime?
+  blockedReason       String?
+  consecutiveAbsences Int       @default(0)
+  lastAbsenceDate     DateTime?
 
   // Metadata
 
@@ -2615,10 +2615,10 @@ model LearningPathStep {
   id String @id @default(uuid())
 
   learningPathId String
-  activityId     String?        // Reference to existing activity
-  variantId      String?        // Reference to AI-generated variant
-  orderNo        Int            // Position in queue (0, 1, 2, ...)
-  status         StepStatus     @default(pending)
+  activityId     String? // Reference to existing activity
+  variantId      String? // Reference to AI-generated variant
+  orderNo        Int // Position in queue (0, 1, 2, ...)
+  status         StepStatus      @default(pending)
   difficulty     DifficultyLevel
 
   // Step metadata
@@ -2633,7 +2633,7 @@ model LearningPathStep {
   lastAttemptedAt DateTime?
 
   // Adaptivity data
-  wasSkipped       Boolean @default(false)
+  wasSkipped       Boolean  @default(false)
   skipReason       String?
   recommendedNext  String[] // Activity IDs for next steps
   adaptivityReason String? // Why this step was chosen
@@ -2642,9 +2642,9 @@ model LearningPathStep {
   updatedAt DateTime @updatedAt
 
   // Relations
-  learningPath    LearningPath      @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
-  activityVariant ActivityVariant?  @relation(fields: [variantId], references: [id], onDelete: SetNull)
-  skillProgress   SkillProgress[]   @relation("StepSkillProgress")
+  learningPath    LearningPath     @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
+  activityVariant ActivityVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  skillProgress   SkillProgress[]  @relation("StepSkillProgress")
 
   @@unique([learningPathId, orderNo])
   @@index([learningPathId, status])
@@ -2678,15 +2678,15 @@ model SkillProgress {
   totalAttempts  Int @default(0)
 
   // Proficiency level
-  level      String   @default("beginner") // beginner, intermediate, advanced
-  confidence Float    @default(0.5) // 0.0 - 1.0
+  level        String @default("beginner") // beginner, intermediate, advanced
+  confidence   Float  @default(0.5) // 0.0 - 1.0
   masteryScore Float  @default(0) // 0 - 100
 
   // Timestamps
-  lastReviewAt DateTime  @default(now())
+  lastReviewAt DateTime @default(now())
   nextReviewAt DateTime // When to review next
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
   steps LearningPathStep[] @relation("StepSkillProgress")
@@ -2702,10 +2702,10 @@ model ActivityVariant {
   id String @id @default(uuid())
 
   // Source
-  baseActivityId  String? // Original activity it's based on (if any)
-  activityType    ActivityType
-  difficulty      DifficultyLevel
-  skill           String // Primary skill targeted
+  baseActivityId String? // Original activity it's based on (if any)
+  activityType   ActivityType
+  difficulty     DifficultyLevel
+  skill          String // Primary skill targeted
 
   // Content
   title       String
@@ -2728,8 +2728,8 @@ model ActivityVariant {
   updatedAt DateTime @updatedAt
 
   // Relations
-  steps            LearningPathStep[]
-  promptTemplate   PromptTemplate?    @relation(fields: [promptTemplateId], references: [id], onDelete: SetNull)
+  steps          LearningPathStep[]
+  promptTemplate PromptTemplate?    @relation(fields: [promptTemplateId], references: [id], onDelete: SetNull)
 
   @@index([activityType, difficulty])
   @@index([skill])
@@ -2741,7 +2741,7 @@ model ActivityVariant {
 model PromptTemplate {
   id String @id @default(uuid())
 
-  name        String @unique
+  name        String  @unique
   description String?
 
   // Template content
@@ -2754,9 +2754,9 @@ model PromptTemplate {
   skill        String?
 
   // Model settings
-  modelName   String  @default("gemini-2.5-flash")
-  temperature Float   @default(0.7)
-  maxTokens   Int     @default(2048)
+  modelName   String @default("gemini-2.5-flash")
+  temperature Float  @default(0.7)
+  maxTokens   Int    @default(2048)
   parameters  Json? // Additional parameters
 
   // Metadata

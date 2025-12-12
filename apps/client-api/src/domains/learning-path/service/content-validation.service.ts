@@ -288,7 +288,11 @@ Return JSON:
         const path = prefix ? `${prefix}.${key}` : key;
         checkValue(value, path);
 
-        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        if (
+          typeof value === 'object' &&
+          value !== null &&
+          !Array.isArray(value)
+        ) {
           traverse(value, path);
         }
       });

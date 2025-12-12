@@ -294,9 +294,8 @@ describe('LearningPathRepository', () => {
 
       (prisma.learningPathStep.findMany as jest.Mock).mockResolvedValue(steps);
 
-      const result = await repository.findStepsByLearningPathId(
-        mockLearningPathId,
-      );
+      const result =
+        await repository.findStepsByLearningPathId(mockLearningPathId);
 
       expect(result).toEqual(steps);
       expect(prisma.learningPathStep.findMany).toHaveBeenCalledWith({

@@ -36,7 +36,9 @@ async function main() {
   console.log('='.repeat(80));
   console.log('Cleanup Orphaned Vocabulary Progress Records');
   console.log('='.repeat(80));
-  console.log(`Mode: ${isDryRun ? 'DRY RUN (no changes)' : 'LIVE (will delete)'}`);
+  console.log(
+    `Mode: ${isDryRun ? 'DRY RUN (no changes)' : 'LIVE (will delete)'}`,
+  );
   console.log(`Started at: ${new Date().toISOString()}`);
   console.log();
 
@@ -59,7 +61,9 @@ async function main() {
 
   // Step 2: Show affected users
   console.log('\nStep 2: Analyzing affected users...');
-  const affectedUsers = await prisma.$queryRaw<Array<{ user_id: string; orphaned_records: bigint }>>`
+  const affectedUsers = await prisma.$queryRaw<
+    Array<{ user_id: string; orphaned_records: bigint }>
+  >`
     SELECT uvp."userId" as user_id, COUNT(*) as orphaned_records
     FROM user_vocabulary_progress uvp
     LEFT JOIN vocabulary_terms vt ON uvp."termId" = vt.id
@@ -71,7 +75,9 @@ async function main() {
 
   console.log(`Affected users (top 10):`);
   affectedUsers.forEach((row, idx) => {
-    console.log(`  ${idx + 1}. User ${row.user_id}: ${row.orphaned_records} orphaned records`);
+    console.log(
+      `  ${idx + 1}. User ${row.user_id}: ${row.orphaned_records} orphaned records`,
+    );
   });
 
   // Step 3: Sample orphaned records
@@ -86,9 +92,11 @@ async function main() {
   `;
 
   sampleRecords.forEach((record, idx) => {
-    console.log(`  ${idx + 1}. User: ${record.user_id.substring(0, 8)}..., ` +
-      `Term: ${record.term_id.substring(0, 8)}..., Status: ${record.status}, ` +
-      `Created: ${record.created_at.toISOString()}`);
+    console.log(
+      `  ${idx + 1}. User: ${record.user_id.substring(0, 8)}..., ` +
+        `Term: ${record.term_id.substring(0, 8)}..., Status: ${record.status}, ` +
+        `Created: ${record.created_at.toISOString()}`,
+    );
   });
 
   if (isDryRun) {

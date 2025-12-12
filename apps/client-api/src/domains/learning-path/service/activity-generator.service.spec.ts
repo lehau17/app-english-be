@@ -100,9 +100,15 @@ describe('ActivityGeneratorService', () => {
 
     service = module.get<ActivityGeneratorService>(ActivityGeneratorService);
     geminiService = module.get<GeminiService>(GeminiService);
-    promptTemplateService = module.get<PromptTemplateService>(PromptTemplateService);
-    contentValidationService = module.get<ContentValidationService>(ContentValidationService);
-    activityVariantRepository = module.get<ActivityVariantRepository>(ActivityVariantRepository);
+    promptTemplateService = module.get<PromptTemplateService>(
+      PromptTemplateService,
+    );
+    contentValidationService = module.get<ContentValidationService>(
+      ContentValidationService,
+    );
+    activityVariantRepository = module.get<ActivityVariantRepository>(
+      ActivityVariantRepository,
+    );
     kafkaProducer = module.get<KafkaProducerService>(KafkaProducerService);
   });
 
@@ -117,15 +123,17 @@ describe('ActivityGeneratorService', () => {
         systemPrompt: 'System prompt',
         userPrompt: 'User prompt',
       });
-      jest.spyOn(geminiService, 'generateJSONResponse').mockResolvedValue(
-        JSON.stringify(mockGeneratedContent),
-      );
+      jest
+        .spyOn(geminiService, 'generateJSONResponse')
+        .mockResolvedValue(JSON.stringify(mockGeneratedContent));
       jest.spyOn(contentValidationService, 'validate').mockResolvedValue({
         isValid: true,
         qualityScore: 92,
         issues: [],
       });
-      jest.spyOn(activityVariantRepository, 'create').mockResolvedValue(mockVariant);
+      jest
+        .spyOn(activityVariantRepository, 'create')
+        .mockResolvedValue(mockVariant);
       jest.spyOn(promptTemplateService, 'incrementUsage').mockResolvedValue();
 
       const result = await service.generateSync({
@@ -142,7 +150,9 @@ describe('ActivityGeneratorService', () => {
       expect(geminiService.generateJSONResponse).toHaveBeenCalled();
       expect(contentValidationService.validate).toHaveBeenCalled();
       expect(activityVariantRepository.create).toHaveBeenCalled();
-      expect(promptTemplateService.incrementUsage).toHaveBeenCalledWith('template-1');
+      expect(promptTemplateService.incrementUsage).toHaveBeenCalledWith(
+        'template-1',
+      );
     });
 
     it('should auto-approve high quality variants (score >= 95)', async () => {
@@ -151,23 +161,29 @@ describe('ActivityGeneratorService', () => {
         systemPrompt: 'System',
         userPrompt: 'User',
       });
-      jest.spyOn(geminiService, 'generateJSONResponse').mockResolvedValue(
-        JSON.stringify(mockGeneratedContent),
-      );
+      jest
+        .spyOn(geminiService, 'generateJSONResponse')
+        .mockResolvedValue(JSON.stringify(mockGeneratedContent));
       jest.spyOn(contentValidationService, 'validate').mockResolvedValue({
         isValid: true,
         qualityScore: 96,
         issues: [],
       });
-      jest.spyOn(activityVariantRepository, 'create').mockResolvedValue(mockVariant);
-      jest.spyOn(activityVariantRepository, 'approve').mockResolvedValue(mockVariant);
+      jest
+        .spyOn(activityVariantRepository, 'create')
+        .mockResolvedValue(mockVariant);
+      jest
+        .spyOn(activityVariantRepository, 'approve')
+        .mockResolvedValue(mockVariant);
 
       await service.generateSync({
         activityType: 'VOCAB',
         difficulty: 'MEDIUM',
       });
 
-      expect(activityVariantRepository.approve).toHaveBeenCalledWith('variant-1');
+      expect(activityVariantRepository.approve).toHaveBeenCalledWith(
+        'variant-1',
+      );
     });
 
     it('should not auto-approve medium quality variants', async () => {
@@ -176,15 +192,17 @@ describe('ActivityGeneratorService', () => {
         systemPrompt: 'System',
         userPrompt: 'User',
       });
-      jest.spyOn(geminiService, 'generateJSONResponse').mockResolvedValue(
-        JSON.stringify(mockGeneratedContent),
-      );
+      jest
+        .spyOn(geminiService, 'generateJSONResponse')
+        .mockResolvedValue(JSON.stringify(mockGeneratedContent));
       jest.spyOn(contentValidationService, 'validate').mockResolvedValue({
         isValid: true,
         qualityScore: 85,
         issues: [],
       });
-      jest.spyOn(activityVariantRepository, 'create').mockResolvedValue(mockVariant);
+      jest
+        .spyOn(activityVariantRepository, 'create')
+        .mockResolvedValue(mockVariant);
 
       await service.generateSync({
         activityType: 'VOCAB',
@@ -199,15 +217,17 @@ describe('ActivityGeneratorService', () => {
         systemPrompt: 'System',
         userPrompt: 'User',
       });
-      jest.spyOn(geminiService, 'generateJSONResponse').mockResolvedValue(
-        JSON.stringify(mockGeneratedContent),
-      );
+      jest
+        .spyOn(geminiService, 'generateJSONResponse')
+        .mockResolvedValue(JSON.stringify(mockGeneratedContent));
       jest.spyOn(contentValidationService, 'validate').mockResolvedValue({
         isValid: false,
         qualityScore: 60,
         issues: ['Missing examples'],
       });
-      jest.spyOn(activityVariantRepository, 'create').mockResolvedValue(mockVariant);
+      jest
+        .spyOn(activityVariantRepository, 'create')
+        .mockResolvedValue(mockVariant);
 
       const result = await service.generateSync({
         activityType: 'VOCAB',
@@ -228,15 +248,17 @@ describe('ActivityGeneratorService', () => {
         systemPrompt: 'System',
         userPrompt: 'User',
       });
-      jest.spyOn(geminiService, 'generateJSONResponse').mockResolvedValue(
-        JSON.stringify(multiActivityContent),
-      );
+      jest
+        .spyOn(geminiService, 'generateJSONResponse')
+        .mockResolvedValue(JSON.stringify(multiActivityContent));
       jest.spyOn(contentValidationService, 'validate').mockResolvedValue({
         isValid: true,
         qualityScore: 90,
         issues: [],
       });
-      jest.spyOn(activityVariantRepository, 'create').mockResolvedValue(mockVariant);
+      jest
+        .spyOn(activityVariantRepository, 'create')
+        .mockResolvedValue(mockVariant);
 
       const result = await service.generateSync({
         activityType: 'VOCAB',
@@ -271,7 +293,9 @@ describe('ActivityGeneratorService', () => {
     });
 
     it('should throw error if Kafka message fails', async () => {
-      jest.spyOn(kafkaProducer, 'sendMessage').mockRejectedValue(new Error('Kafka error'));
+      jest
+        .spyOn(kafkaProducer, 'sendMessage')
+        .mockRejectedValue(new Error('Kafka error'));
 
       await expect(
         service.generateAsync({
@@ -335,27 +359,37 @@ describe('ActivityGeneratorService', () => {
         },
       };
 
-      jest.spyOn(activityVariantRepository, 'findById').mockResolvedValue(existingVariant);
+      jest
+        .spyOn(activityVariantRepository, 'findById')
+        .mockResolvedValue(existingVariant);
       jest.spyOn(service, 'generateSync').mockResolvedValue({
         variants: [mockVariant],
         qualityScore: 95,
         generationTime: 1000,
         promptTemplateId: 'template-1',
       });
-      jest.spyOn(activityVariantRepository, 'delete').mockResolvedValue(existingVariant);
+      jest
+        .spyOn(activityVariantRepository, 'delete')
+        .mockResolvedValue(existingVariant);
 
       const result = await service.regenerateVariant('variant-1');
 
-      expect(activityVariantRepository.findById).toHaveBeenCalledWith('variant-1');
+      expect(activityVariantRepository.findById).toHaveBeenCalledWith(
+        'variant-1',
+      );
       expect(service.generateSync).toHaveBeenCalled();
-      expect(activityVariantRepository.delete).toHaveBeenCalledWith('variant-1');
+      expect(activityVariantRepository.delete).toHaveBeenCalledWith(
+        'variant-1',
+      );
       expect(result).toEqual(mockVariant);
     });
 
     it('should throw error if variant not found', async () => {
       jest.spyOn(activityVariantRepository, 'findById').mockResolvedValue(null);
 
-      await expect(service.regenerateVariant('non-existent')).rejects.toThrow('Variant not found');
+      await expect(service.regenerateVariant('non-existent')).rejects.toThrow(
+        'Variant not found',
+      );
     });
   });
 

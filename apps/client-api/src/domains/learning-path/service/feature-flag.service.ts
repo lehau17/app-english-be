@@ -27,7 +27,9 @@ export class FeatureFlagService {
       const flag = await this.getFeatureFlag(flagName);
 
       if (!flag) {
-        this.logger.warn(`Feature flag ${flagName} not found, defaulting to false`);
+        this.logger.warn(
+          `Feature flag ${flagName} not found, defaulting to false`,
+        );
         return false;
       }
 
@@ -83,7 +85,10 @@ export class FeatureFlagService {
   /**
    * Check if user falls within percentage rollout
    */
-  private checkPercentageRollout(userId: string | undefined, percentage: number): boolean {
+  private checkPercentageRollout(
+    userId: string | undefined,
+    percentage: number,
+  ): boolean {
     if (percentage === 0) return false;
     if (percentage === 100) return true;
     if (!userId) return false;
@@ -166,7 +171,9 @@ export class FeatureFlagService {
     });
 
     this.cache.delete(name); // Invalidate cache
-    this.logger.log(`Feature flag ${name} ${isEnabled ? 'enabled' : 'disabled'}`);
+    this.logger.log(
+      `Feature flag ${name} ${isEnabled ? 'enabled' : 'disabled'}`,
+    );
   }
 
   /**

@@ -56,7 +56,9 @@ describe('PromptTemplateService', () => {
 
   describe('findTemplate', () => {
     it('should find exact match template', async () => {
-      jest.spyOn(prisma.promptTemplate, 'findFirst').mockResolvedValue(mockTemplate);
+      jest
+        .spyOn(prisma.promptTemplate, 'findFirst')
+        .mockResolvedValue(mockTemplate);
 
       const result = await service.findTemplate({
         activityType: 'VOCAB',
@@ -93,7 +95,9 @@ describe('PromptTemplateService', () => {
 
   describe('selectBestTemplate', () => {
     it('should select exact match template (priority 1)', async () => {
-      jest.spyOn(prisma.promptTemplate, 'findFirst').mockResolvedValue(mockTemplate);
+      jest
+        .spyOn(prisma.promptTemplate, 'findFirst')
+        .mockResolvedValue(mockTemplate);
 
       const result = await service.selectBestTemplate({
         activityType: 'VOCAB',
@@ -162,7 +166,9 @@ describe('PromptTemplateService', () => {
 
   describe('buildPrompt', () => {
     it('should build complete prompt with variables', async () => {
-      jest.spyOn(prisma.promptTemplate, 'findFirst').mockResolvedValue(mockTemplate);
+      jest
+        .spyOn(prisma.promptTemplate, 'findFirst')
+        .mockResolvedValue(mockTemplate);
 
       const result = await service.buildPrompt({
         activityType: 'VOCAB',
@@ -178,7 +184,9 @@ describe('PromptTemplateService', () => {
     });
 
     it('should include default variables', async () => {
-      jest.spyOn(prisma.promptTemplate, 'findFirst').mockResolvedValue(mockTemplate);
+      jest
+        .spyOn(prisma.promptTemplate, 'findFirst')
+        .mockResolvedValue(mockTemplate);
 
       const result = await service.buildPrompt({
         activityType: 'VOCAB',
@@ -211,7 +219,9 @@ describe('PromptTemplateService', () => {
 
   describe('listTemplates', () => {
     it('should list all templates without filters', async () => {
-      jest.spyOn(prisma.promptTemplate, 'findMany').mockResolvedValue([mockTemplate]);
+      jest
+        .spyOn(prisma.promptTemplate, 'findMany')
+        .mockResolvedValue([mockTemplate]);
 
       const result = await service.listTemplates();
 
@@ -223,7 +233,9 @@ describe('PromptTemplateService', () => {
     });
 
     it('should filter templates by activity type', async () => {
-      jest.spyOn(prisma.promptTemplate, 'findMany').mockResolvedValue([mockTemplate]);
+      jest
+        .spyOn(prisma.promptTemplate, 'findMany')
+        .mockResolvedValue([mockTemplate]);
 
       const result = await service.listTemplates({ activityType: 'VOCAB' });
 

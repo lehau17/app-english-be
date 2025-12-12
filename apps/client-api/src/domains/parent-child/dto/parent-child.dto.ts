@@ -1,12 +1,14 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { LinkRequestStatus } from '@prisma/client';
+import { LinkRequestStatus, LinkInitiatedBy } from '@prisma/client';
 import {
+  IsEmail,
   IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
+  Length,
 } from 'class-validator';
 
 export class CreateParentChildDto {
@@ -73,4 +75,65 @@ export class GetPendingRequestsDto extends RequestPagingDto {
   @IsOptional()
   @IsUUID()
   studentId?: string;
+}
+
+// ==================== STUDENT-INITIATED INVITATION DTOs ====================
+
+export class StudentInviteParentDto {
+  @ApiProperty({
+    description: 'Parent email address',
+    example: 'parent@example.com',
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  invitedEmail: string;
+}
+
+export class AcceptInvitationCodeDto {
+  @ApiProperty({
+    description: '8-character invitation code',
+    example: 'A3K9M2P7',
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Length(8, 8)
+  invitationCode: string;
+}
+
+export class InvitationResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  invitationCode: string;
+
+  @ApiProperty()
+  invitedEmail: string;
+
+  @ApiProperty({ enum: LinkRequestStatus })
+  status: LinkRequestStatus;
+
+  @ApiProperty({ enum: LinkInitiatedBy })
+  initiatedBy: LinkInitiatedBy;
+
+  @ApiProperty()
+  expiresAt: Date;
+
+  @ApiProperty()
+  requestedAt: Date;
+
+  @ApiPropertyOptional()
+  studentName?: string;
+}
+
+export class AcceptInvitationResponseDto {
+  @ApiProperty()
+  linkRequest: InvitationResponseDto;
+
+  @ApiProperty()
+  parentChild: {
+    parentId: string;
+    childId: string;
+    linkedAt: Date;
+  };
 }

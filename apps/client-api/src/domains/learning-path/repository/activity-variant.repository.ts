@@ -216,10 +216,7 @@ export class ActivityVariantRepository {
         ...(options.difficulty && { difficulty: options.difficulty }),
         ...(options.skill && { skill: options.skill }),
       },
-      orderBy: [
-        { averageScore: 'desc' },
-        { usageCount: 'desc' },
-      ],
+      orderBy: [{ averageScore: 'desc' }, { usageCount: 'desc' }],
       take: options.limit || 10,
     });
   }

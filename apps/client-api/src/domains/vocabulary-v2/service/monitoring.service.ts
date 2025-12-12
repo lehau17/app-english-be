@@ -24,12 +24,17 @@ export class VocabularyMonitoringService {
       const count = await this.repository.detectOrphanedProgress();
 
       if (count > 0) {
-        this.logger.error(`Orphaned records detected: ${count} progress entries without valid terms`, {
-          count,
-          timestamp: new Date().toISOString(),
-        });
+        this.logger.error(
+          `Orphaned records detected: ${count} progress entries without valid terms`,
+          {
+            count,
+            timestamp: new Date().toISOString(),
+          },
+        );
       } else {
-        this.logger.log('Hourly orphaned records check completed: No orphans detected');
+        this.logger.log(
+          'Hourly orphaned records check completed: No orphans detected',
+        );
       }
     } catch (error) {
       this.logger.error(
@@ -79,16 +84,24 @@ export class VocabularyMonitoringService {
       `;
 
       if (negativeCountsQuery.length > 0) {
-        this.logger.error('Negative counts detected in user vocabulary progress', {
-          count: negativeCountsQuery.length,
-          samples: negativeCountsQuery.slice(0, 5),
-          timestamp: new Date().toISOString(),
-        });
+        this.logger.error(
+          'Negative counts detected in user vocabulary progress',
+          {
+            count: negativeCountsQuery.length,
+            samples: negativeCountsQuery.slice(0, 5),
+            timestamp: new Date().toISOString(),
+          },
+        );
       }
 
       // Check for mismatched total terms in user lists
       const mismatchedListsQuery = await this.repository.prisma.$queryRaw<
-        { userId: string; listId: string; cachedTotal: number; actualTotal: number }[]
+        {
+          userId: string;
+          listId: string;
+          cachedTotal: number;
+          actualTotal: number;
+        }[]
       >`
         SELECT
           uvl.user_id as "userId",
@@ -104,16 +117,19 @@ export class VocabularyMonitoringService {
       `;
 
       if (mismatchedListsQuery.length > 0) {
-        this.logger.warn('Total terms mismatch detected in user vocabulary lists', {
-          count: mismatchedListsQuery.length,
-          samples: mismatchedListsQuery.map((item) => ({
-            userId: item.userId,
-            listId: item.listId,
-            cachedTotal: item.cachedTotal,
-            actualTotal: Number(item.actualTotal),
-          })),
-          timestamp: new Date().toISOString(),
-        });
+        this.logger.warn(
+          'Total terms mismatch detected in user vocabulary lists',
+          {
+            count: mismatchedListsQuery.length,
+            samples: mismatchedListsQuery.map((item) => ({
+              userId: item.userId,
+              listId: item.listId,
+              cachedTotal: item.cachedTotal,
+              actualTotal: Number(item.actualTotal),
+            })),
+            timestamp: new Date().toISOString(),
+          },
+        );
       }
 
       this.logger.log('Daily stats consistency validation completed', {

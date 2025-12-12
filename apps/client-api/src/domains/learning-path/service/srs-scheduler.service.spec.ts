@@ -196,7 +196,9 @@ describe('SRSSchedulerService', () => {
         },
       ];
 
-      skillProgressRepo.findDueForReview.mockResolvedValue(mockDueSkills as any);
+      skillProgressRepo.findDueForReview.mockResolvedValue(
+        mockDueSkills as any,
+      );
 
       const result = await service.getDueSkills('user-1', 10);
 

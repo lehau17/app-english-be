@@ -753,6 +753,9 @@ export class PaymentService {
             );
           }
           parentId = existingParent.id;
+          this.logger.log(
+            `Using existing parent user: ${parentId} (${email}) - no credentials will be sent`,
+          );
         } else {
           // Generate default password: First8CharsOfEmail@123
           const defaultPassword = `${email.split('@')[0].slice(0, 8)}@123`;
@@ -792,6 +795,9 @@ export class PaymentService {
             );
           }
           studentIds.push(existingStudent.id);
+          this.logger.log(
+            `Using existing student user: ${existingStudent.id} (${email}) - no credentials will be sent`,
+          );
         } else {
           // Generate default password: First8CharsOfEmail@123
           const defaultPassword = `${email.split('@')[0].slice(0, 8)}@123`;

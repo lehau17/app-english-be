@@ -85,11 +85,13 @@ describe('ReviewService', () => {
         totalUnits: 5,
       });
 
-      jest.spyOn(repository, 'findUserProgress').mockResolvedValue([
-        ...Array(10).fill({ status: 'learning' }),
-        ...Array(20).fill({ status: 'review' }),
-        ...Array(30).fill({ status: 'mastered' }),
-      ] as any);
+      jest
+        .spyOn(repository, 'findUserProgress')
+        .mockResolvedValue([
+          ...Array(10).fill({ status: 'learning' }),
+          ...Array(20).fill({ status: 'review' }),
+          ...Array(30).fill({ status: 'mastered' }),
+        ] as any);
 
       jest.spyOn(repository, 'countDueCards').mockResolvedValue(15);
       jest.spyOn(repository, 'findUserReviewSessions').mockResolvedValue([]);
@@ -121,11 +123,13 @@ describe('ReviewService', () => {
         totalUnits: 3,
       });
 
-      jest.spyOn(repository, 'findUserProgress').mockResolvedValue([
-        ...Array(10).fill({ status: 'learning' }),
-        ...Array(15).fill({ status: 'review' }),
-        ...Array(25).fill({ status: 'mastered' }),
-      ] as any);
+      jest
+        .spyOn(repository, 'findUserProgress')
+        .mockResolvedValue([
+          ...Array(10).fill({ status: 'learning' }),
+          ...Array(15).fill({ status: 'review' }),
+          ...Array(25).fill({ status: 'mastered' }),
+        ] as any);
 
       jest.spyOn(repository, 'countDueCards').mockResolvedValue(8);
       jest.spyOn(repository, 'findUserReviewSessions').mockResolvedValue([]);
@@ -153,11 +157,13 @@ describe('ReviewService', () => {
         totalUnits: 1,
       });
 
-      jest.spyOn(repository, 'findUserProgress').mockResolvedValue([
-        ...Array(5).fill({ status: 'learning' }),
-        ...Array(4).fill({ status: 'review' }),
-        ...Array(6).fill({ status: 'mastered' }),
-      ] as any);
+      jest
+        .spyOn(repository, 'findUserProgress')
+        .mockResolvedValue([
+          ...Array(5).fill({ status: 'learning' }),
+          ...Array(4).fill({ status: 'review' }),
+          ...Array(6).fill({ status: 'mastered' }),
+        ] as any);
 
       jest.spyOn(repository, 'countDueCards').mockResolvedValue(3);
       jest.spyOn(repository, 'findUserReviewSessions').mockResolvedValue([]);
@@ -195,9 +201,9 @@ describe('ReviewService', () => {
         totalUnits: 2,
       });
 
-      jest.spyOn(repository, 'findUserProgress').mockResolvedValue([
-        ...Array(12).fill({ status: 'learning' }),
-      ] as any);
+      jest
+        .spyOn(repository, 'findUserProgress')
+        .mockResolvedValue([...Array(12).fill({ status: 'learning' })] as any);
 
       jest.spyOn(repository, 'countDueCards').mockResolvedValue(12);
       jest.spyOn(repository, 'findUserReviewSessions').mockResolvedValue([]);
@@ -252,7 +258,9 @@ describe('ReviewService', () => {
       });
 
       jest.spyOn(repository, 'countDueCards').mockResolvedValue(6);
-      jest.spyOn(repository, 'findDueCards').mockResolvedValue(mockDueCards as any);
+      jest
+        .spyOn(repository, 'findDueCards')
+        .mockResolvedValue(mockDueCards as any);
 
       // Act
       const result = await service.startSession(userId, dto);
@@ -305,7 +313,9 @@ describe('ReviewService', () => {
       });
 
       jest.spyOn(repository, 'countDueCards').mockResolvedValue(100);
-      jest.spyOn(repository, 'findDueCards').mockResolvedValue(mockDueCards as any);
+      jest
+        .spyOn(repository, 'findDueCards')
+        .mockResolvedValue(mockDueCards as any);
 
       // Act
       const result = await service.startSession(userId, dto);
@@ -366,8 +376,12 @@ describe('ReviewService', () => {
       });
 
       jest.spyOn(repository, 'countDueCards').mockResolvedValue(10);
-      jest.spyOn(repository, 'findDueCards').mockResolvedValue(mockDueCards as any);
-      jest.spyOn(repository, 'findNewCards').mockResolvedValue(mockNewCards as any);
+      jest
+        .spyOn(repository, 'findDueCards')
+        .mockResolvedValue(mockDueCards as any);
+      jest
+        .spyOn(repository, 'findNewCards')
+        .mockResolvedValue(mockNewCards as any);
 
       // Act
       const result = await service.startSession(userId, dto);
@@ -440,11 +454,13 @@ describe('ReviewService', () => {
         totalUnits: 3,
       });
 
-      jest.spyOn(repository, 'findUserProgress').mockResolvedValue([
-        ...Array(20).fill({ status: 'learning' }),
-        ...Array(15).fill({ status: 'review' }),
-        ...Array(10).fill({ status: 'mastered' }),
-      ] as any);
+      jest
+        .spyOn(repository, 'findUserProgress')
+        .mockResolvedValue([
+          ...Array(20).fill({ status: 'learning' }),
+          ...Array(15).fill({ status: 'review' }),
+          ...Array(10).fill({ status: 'mastered' }),
+        ] as any);
 
       jest.spyOn(repository, 'countDueCards').mockResolvedValue(12);
       jest.spyOn(repository, 'findUserReviewSessions').mockResolvedValue([]);

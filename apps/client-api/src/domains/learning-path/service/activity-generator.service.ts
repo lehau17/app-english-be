@@ -70,9 +70,8 @@ export class ActivityGeneratorService {
 
       // 2. Generate content with Gemini
       const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
-      const rawContent = await this.geminiService.generateJSONResponse(
-        fullPrompt,
-      );
+      const rawContent =
+        await this.geminiService.generateJSONResponse(fullPrompt);
       const content = JSON.parse(rawContent);
 
       // 3. Validate generated content

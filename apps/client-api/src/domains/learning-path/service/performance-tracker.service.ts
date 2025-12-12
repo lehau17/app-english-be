@@ -124,7 +124,10 @@ export class PerformanceTrackerService {
       }
 
       // Calculate metrics
-      const totalScore = steps.reduce((sum, step) => sum + (step.score || 0), 0);
+      const totalScore = steps.reduce(
+        (sum, step) => sum + (step.score || 0),
+        0,
+      );
       const totalTimeSpent = steps.reduce(
         (sum, step) => sum + (step.timeSpent || 0),
         0,
@@ -199,7 +202,10 @@ export class PerformanceTrackerService {
         };
       }
 
-      const totalScore = steps.reduce((sum, step) => sum + (step.score || 0), 0);
+      const totalScore = steps.reduce(
+        (sum, step) => sum + (step.score || 0),
+        0,
+      );
       const successfulSteps = steps.filter((step) => (step.score || 0) >= 60);
 
       const recentActivities = steps.map((step) => ({
@@ -230,7 +236,9 @@ export class PerformanceTrackerService {
   /**
    * Calculate performance trend
    */
-  private calculateTrend(scores: number[]): 'improving' | 'stable' | 'declining' {
+  private calculateTrend(
+    scores: number[],
+  ): 'improving' | 'stable' | 'declining' {
     if (scores.length < 3) return 'stable';
 
     // Split into first half and second half
@@ -320,11 +328,15 @@ export class PerformanceTrackerService {
             ? Math.round(totalScore / completedSteps.length)
             : 0,
         totalTimeSpent: Math.round(totalTimeSpent / 60), // Convert to minutes
-        completionRate: steps.length > 0 ? completedSteps.length / steps.length : 0,
+        completionRate:
+          steps.length > 0 ? completedSteps.length / steps.length : 0,
         skillBreakdown,
       };
     } catch (error) {
-      this.logger.error(`Failed to get analytics: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to get analytics: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }

@@ -77,9 +77,7 @@ export class PromptTemplateService {
         where: { activityType, difficulty, skill: null },
       });
       if (typeDiff) {
-        this.logger.debug(
-          `Found type+difficulty template: ${typeDiff.name}`,
-        );
+        this.logger.debug(`Found type+difficulty template: ${typeDiff.name}`);
         return typeDiff;
       }
     }
@@ -219,9 +217,7 @@ export class PromptTemplateService {
   /**
    * Map difficulty level to proficiency level (A1-C2)
    */
-  private mapDifficultyToProficiency(
-    difficulty?: DifficultyLevel,
-  ): string {
+  private mapDifficultyToProficiency(difficulty?: DifficultyLevel): string {
     if (!difficulty) return 'B1';
 
     const mapping: Record<DifficultyLevel, string> = {

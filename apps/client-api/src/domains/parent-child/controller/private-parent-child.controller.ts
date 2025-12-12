@@ -11,12 +11,21 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ParentChild, UserRole } from '@prisma/client';
 import {
+  AcceptInvitationCodeDto,
+  AcceptInvitationResponseDto,
   CreateParentChildDto,
   FilterParentChildRequestDto,
   GetPendingRequestsDto,
+  InvitationResponseDto,
+  StudentInviteParentDto,
 } from '../dto/parent-child.dto';
 import { ParentChildService } from '../service/parent-child.service';
 
@@ -107,5 +116,173 @@ export class PrivateParentChildController {
     @PayloadToken('sub') adminUserId: string,
   ) {
     return this.parentChildService.rejectLinkRequest(requestId, adminUserId);
+  }
+
+  // ==================== STUDENT-INITIATED INVITATION ENDPOINTS ====================
+
+  @Post('student-invite')
+  @ApiOperation({
+    summary: '[Student] Invite parent via email',
+    description:
+      'Student sends invitation to parent email. Generates invitation code for sharing.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Invitation created successfully',
+    type: InvitationResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid email or duplicate invitation',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid token',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Parent already linked to student',
+  })
+  @ResponseMessage('Invitation created successfully')
+  async studentInviteParent(
+    @PayloadToken('sub') studentId: string,
+    @Body() dto: StudentInviteParentDto,
+  ): Promise<InvitationResponseDto> {
+    const invitation = await this.parentChildService.createStudentInvitation(
+      studentId,
+      dto.invitedEmail,
+    );
+
+    return {
+      id: invitation.id,
+      invitationCode: invitation.invitationCode,
+      invitedEmail: invitation.invitedEmail,
+      status: invitation.status,
+      initiatedBy: invitation.initiatedBy,
+      expiresAt: invitation.expiresAt,
+      requestedAt: invitation.requestedAt,
+    };
+  }
+
+  @Post('accept-code')
+  @ApiOperation({
+    summary: '[Parent] Accept invitation via code',
+    description:
+      'Parent enters invitation code. Auto-creates parent-child link if valid.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Invitation accepted successfully',
+    type: AcceptInvitationResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Invalid or expired invitation code',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid token',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Invitation not found',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Parent already linked to student',
+  })
+  @ResponseMessage('Invitation accepted successfully')
+  async acceptInvitationCode(
+    @PayloadToken('sub') parentId: string,
+    @Body() dto: AcceptInvitationCodeDto,
+  ): Promise<AcceptInvitationResponseDto> {
+    const result = await this.parentChildService.acceptInvitationByCode(
+      parentId,
+      dto.invitationCode,
+    );
+
+    return {
+      linkRequest: {
+        id: result.linkRequest.id,
+        invitationCode: result.linkRequest.invitationCode,
+        invitedEmail: result.linkRequest.invitedEmail,
+        status: result.linkRequest.status,
+        initiatedBy: result.linkRequest.initiatedBy,
+        expiresAt: result.linkRequest.expiresAt,
+        requestedAt: result.linkRequest.requestedAt,
+      },
+      parentChild: {
+        parentId: result.parentChild.parentId,
+        childId: result.parentChild.childId,
+        linkedAt: result.parentChild.linkedAt,
+      },
+    };
+  }
+
+  @Get('pending-invitations')
+  @ApiOperation({
+    summary: '[Student] Get pending invitations',
+    description: 'Returns list of invitations student sent to parents.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Pending invitations retrieved successfully',
+    type: [InvitationResponseDto],
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid token',
+  })
+  @ResponseMessage('Pending invitations retrieved successfully')
+  async getPendingInvitations(
+    @PayloadToken('sub') studentId: string,
+  ): Promise<InvitationResponseDto[]> {
+    const invitations =
+      await this.parentChildService.getStudentPendingInvitations(studentId);
+
+    return invitations.map((inv) => ({
+      id: inv.id,
+      invitationCode: inv.invitationCode,
+      invitedEmail: inv.invitedEmail,
+      status: inv.status,
+      initiatedBy: inv.initiatedBy,
+      expiresAt: inv.expiresAt,
+      requestedAt: inv.requestedAt,
+    }));
+  }
+
+  @Delete('invitation/:id')
+  @ApiOperation({
+    summary: '[Student] Cancel invitation',
+    description: 'Student cancels pending invitation before parent accepts.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Invitation cancelled successfully',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Cannot cancel non-pending invitation',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid token',
+  })
+  @ApiResponse({
+    status: 403,
+    description: "Cannot cancel another student's invitation",
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Invitation not found',
+  })
+  @ResponseMessage('Invitation cancelled successfully')
+  async cancelInvitation(
+    @PayloadToken('sub') studentId: string,
+    @Param('id', new ParseUUIDPipe()) invitationId: string,
+  ): Promise<{ message: string }> {
+    await this.parentChildService.cancelInvitation(invitationId, studentId);
+
+    return { message: 'Invitation cancelled successfully' };
   }
 }

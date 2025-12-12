@@ -13,9 +13,7 @@ export class MasteryGateService {
   // Default mastery threshold (85%)
   private readonly DEFAULT_THRESHOLD = 0.85;
 
-  constructor(
-    private readonly skillProgressRepo: SkillProgressRepository,
-  ) {}
+  constructor(private readonly skillProgressRepo: SkillProgressRepository) {}
 
   /**
    * Check if user can advance based on mastery thresholds
@@ -227,7 +225,8 @@ export class MasteryGateService {
     }
 
     // Weighted sum
-    const urgency = masteryUrgency * 0.5 + attemptUrgency * 0.3 + timeUrgency * 0.2;
+    const urgency =
+      masteryUrgency * 0.5 + attemptUrgency * 0.3 + timeUrgency * 0.2;
 
     return Math.min(Math.round(urgency), 100);
   }
@@ -242,7 +241,8 @@ export class MasteryGateService {
     met: boolean;
     missing: Array<{ skill: string; current: number; required: number }>;
   }> {
-    const missing: Array<{ skill: string; current: number; required: number }> = [];
+    const missing: Array<{ skill: string; current: number; required: number }> =
+      [];
 
     for (const prereq of prerequisites) {
       const progress = await this.skillProgressRepo.findByUserIdAndSkill(
@@ -277,7 +277,8 @@ export class MasteryGateService {
     weakSkills: number;
     atRiskSkills: number;
   }> {
-    const overall = await this.skillProgressRepo.calculateOverallProgress(userId);
+    const overall =
+      await this.skillProgressRepo.calculateOverallProgress(userId);
 
     // Count at-risk skills (< 60% mastery)
     const allProgress = await this.skillProgressRepo.findByUserId(userId);

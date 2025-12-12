@@ -14,9 +14,7 @@ export class SRSSchedulerService {
   private readonly DEFAULT_EASE_FACTOR = 2.5;
   private readonly MIN_INTERVAL = 1; // 1 day minimum
 
-  constructor(
-    private readonly skillProgressRepo: SkillProgressRepository,
-  ) {}
+  constructor(private readonly skillProgressRepo: SkillProgressRepository) {}
 
   /**
    * Calculate SM-2 interval based on quality rating
@@ -47,7 +45,8 @@ export class SRSSchedulerService {
     let repetitions = 0;
 
     // Calculate new ease factor
-    easeFactor = easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+    easeFactor =
+      easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
 
     // Ensure ease factor doesn't go below minimum
     if (easeFactor < this.MIN_EASE_FACTOR) {
@@ -165,7 +164,8 @@ export class SRSSchedulerService {
     const successRate = correctCount / totalAttempts;
 
     // Ease factor contribution (normalized to 0-1)
-    const easeFactorContribution = (easeFactor - this.MIN_EASE_FACTOR) / (3.0 - this.MIN_EASE_FACTOR);
+    const easeFactorContribution =
+      (easeFactor - this.MIN_EASE_FACTOR) / (3.0 - this.MIN_EASE_FACTOR);
 
     // Repetitions contribution (capped at 10 repetitions)
     const repetitionsContribution = Math.min(repetitions / 10, 1);

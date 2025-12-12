@@ -213,7 +213,9 @@ describe('SkillProgressRepository', () => {
         { ...mockSkillProgress, id: 'progress-456', masteryScore: 50 },
       ];
 
-      (prisma.skillProgress.findMany as jest.Mock).mockResolvedValue(weakSkills);
+      (prisma.skillProgress.findMany as jest.Mock).mockResolvedValue(
+        weakSkills,
+      );
 
       const result = await repository.findWeakestSkills(mockUserId, 5);
 

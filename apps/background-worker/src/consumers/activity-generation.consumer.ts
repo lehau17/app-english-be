@@ -9,9 +9,7 @@ import { ActivityGeneratorService } from '../../../client-api/src/domains/learni
 export class ActivityGenerationConsumer {
   private readonly logger = new Logger(ActivityGenerationConsumer.name);
 
-  constructor(
-    private readonly activityGenerator: ActivityGeneratorService,
-  ) {}
+  constructor(private readonly activityGenerator: ActivityGeneratorService) {}
 
   /**
    * Handle activity generation job
@@ -20,7 +18,9 @@ export class ActivityGenerationConsumer {
   async handleActivityGeneration(message: any): Promise<void> {
     const { jobId, params, timestamp } = message;
 
-    this.logger.log(`Processing generation job: ${jobId} (queued at ${timestamp})`);
+    this.logger.log(
+      `Processing generation job: ${jobId} (queued at ${timestamp})`,
+    );
 
     try {
       const startTime = Date.now();
