@@ -538,7 +538,6 @@ ${availableCourses.map((c, i) => `${i + 1}. ${c.title} (ID: ${c.id}) - ${c.diffi
       const completedAttempts = await this.prisma.attempt.findMany({
         where: {
           userId,
-          activityId: { not: null },
           score: { gte: 60 }, // Passed with score >= 60
         },
         select: {
