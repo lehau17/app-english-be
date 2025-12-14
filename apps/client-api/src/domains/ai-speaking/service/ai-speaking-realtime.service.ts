@@ -142,6 +142,59 @@ export class AiSpeakingRealtimeService {
     }
   }
 
+  /**
+   * Stream AI turn with multi-voice support
+   * Generates audio for all voices in parallel and returns all URLs
+   */
+  async streamAiTurnMultiVoice(
+    sessionId: string,
+    turnId: string,
+    text: string,
+    options: StreamAiTurnOptions = {},
+  ): Promise<void> {
+    try {
+      const result = await this.ttsService.synthesizeMultiVoice({
+        sessionId,
+        turnId,
+        text,
+        primaryVoice: options.voice,
+      });
+
+      const updates: Prisma.AiSpeakingTurnUpdateInput = {
+        state: AiSpeakingTurnStatus.waiting_user,
+      };
+
+      if (result.primaryAudioUrl) {
+        updates.aiAudioUrl = result.primaryAudioUrl;
+      }
+
+      // Store all audio URLs in metadata for retrieval
+      updates.metadata = {
+        multiVoiceAudioUrls: result.audioUrls,
+      };
+
+      await this.repository.updateTurn(turnId, updates);
+
+      this.gateway.emitToSession(sessionId, 'ai-speaking:tts-end', {
+        turnId,
+        audioUrl: result.primaryAudioUrl,
+        audioUrls: result.audioUrls, // All voice audio URLs
+        primaryVoice: result.primaryVoice,
+        text,
+        multiVoice: true,
+      });
+    } catch (error) {
+      this.logger.error(
+        `Multi-voice TTS failed for session=${sessionId} turn=${turnId}: ${error.message}`,
+        error as Record<string, unknown>,
+      );
+      this.gateway.emitToSession(sessionId, 'ai-speaking:tts-error', {
+        turnId,
+        message: error instanceof Error ? error.message : 'Multi-voice TTS failed',
+      });
+    }
+  }
+
   async handleUserAudioChunk(params: {
     sessionId: string;
     turnId: string;

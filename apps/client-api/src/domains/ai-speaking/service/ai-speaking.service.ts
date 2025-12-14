@@ -137,15 +137,25 @@ export class AiSpeakingService {
     );
 
     // Wait for TTS to complete so response includes audio URL
-    await this.realtimeService.streamAiTurn(
-      session.id,
-      openingTurnId,
-      openingPlan.prompt,
-      {
-        voiceHint: openingPlan.metadata?.voice as string | undefined,
-        voice,
-      },
-    );
+    const multiVoice = dto.multiVoice ?? false;
+    if (multiVoice) {
+      await this.realtimeService.streamAiTurnMultiVoice(
+        session.id,
+        openingTurnId,
+        openingPlan.prompt,
+        { voice },
+      );
+    } else {
+      await this.realtimeService.streamAiTurn(
+        session.id,
+        openingTurnId,
+        openingPlan.prompt,
+        {
+          voiceHint: openingPlan.metadata?.voice as string | undefined,
+          voice,
+        },
+      );
+    }
 
     // Fetch session with updated audio URL from opening turn
     const sessionWithRelations = await this.repository.findSessionById(

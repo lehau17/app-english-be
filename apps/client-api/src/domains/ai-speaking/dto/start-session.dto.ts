@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DifficultyLevel } from '@prisma/client';
 import {
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -71,4 +72,12 @@ export class StartAiSpeakingSessionDto {
   @IsOptional()
   @IsEnum(TtsVoice)
   voice?: TtsVoice;
+
+  @ApiPropertyOptional({
+    description: 'Enable multi-voice generation (generates audio in all voices per message)',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  multiVoice?: boolean;
 }

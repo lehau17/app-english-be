@@ -5,7 +5,7 @@ import axios, { AxiosResponse } from 'axios';
 import { spawn } from 'child_process';
 import { UploadService } from '../../upload/upload.service';
 import { AiSpeakingGateway } from '../gateway/ai-speaking.gateway';
-import { TtsVoice, parseVoice, getLanguageCodeFromVoice } from '../dto/tts-voice.dto';
+import { TtsVoice, parseVoice, getLanguageCodeFromVoice, VOICE_CATALOG } from '../dto/tts-voice.dto';
 
 interface SynthesizeAndStreamParams {
   sessionId: string;
@@ -17,6 +17,12 @@ interface SynthesizeAndStreamParams {
 
 interface SynthesizeAndStreamResult {
   audioUrl?: string | null;
+}
+
+interface MultiVoiceResult {
+  audioUrls: Record<TtsVoice, string | null>;
+  primaryVoice: TtsVoice;
+  primaryAudioUrl: string | null;
 }
 
 @Injectable()
@@ -81,6 +87,117 @@ export class RealtimeTtsService {
 
     // Priority 2: Google Cloud TTS (fallback)
     return await this.synthesizeViaGoogleCloudTts(params);
+  }
+
+  /**
+   * Synthesize text in multiple voices using Promise.all
+   * Returns audio URLs for all voices to let user choose
+   */
+  async synthesizeMultiVoice(params: {
+    sessionId: string;
+    turnId: string;
+    text: string;
+    primaryVoice?: TtsVoice;
+    voiceSubset?: TtsVoice[]; // Optional: limit to specific voices
+  }): Promise<MultiVoiceResult> {
+    const primaryVoice = params.primaryVoice ?? TtsVoice.US_FEMALE_AMY;
+    const voicesToSynthesize = params.voiceSubset ?? VOICE_CATALOG.map((v) => v.id);
+
+    this.logger.debug(
+      `Multi-voice synthesis: ${voicesToSynthesize.length} voices for turn=${params.turnId}`,
+    );
+
+    // Emit start event for primary voice (for streaming)
+    this.gateway.emitToSession(params.sessionId, 'ai-speaking:tts-start', {
+      turnId: params.turnId,
+      voice: primaryVoice,
+      multiVoice: true,
+    });
+
+    // Generate all voices in parallel using Promise.allSettled
+    const synthesisPromises = voicesToSynthesize.map(async (voice) => {
+      try {
+        const result = await this.synthesizeSingleVoiceNoStream({
+          sessionId: params.sessionId,
+          turnId: params.turnId,
+          text: params.text,
+          voice,
+        });
+        return { voice, audioUrl: result.audioUrl ?? null };
+      } catch (error) {
+        this.logger.warn(`Multi-voice synthesis failed for ${voice}: ${error.message}`);
+        return { voice, audioUrl: null };
+      }
+    });
+
+    const results = await Promise.all(synthesisPromises);
+
+    // Build audioUrls map
+    const audioUrls = {} as Record<TtsVoice, string | null>;
+    for (const result of results) {
+      audioUrls[result.voice] = result.audioUrl;
+    }
+
+    const primaryAudioUrl = audioUrls[primaryVoice] ?? null;
+
+    this.logger.debug(
+      `Multi-voice synthesis completed: ${results.filter((r) => r.audioUrl).length}/${voicesToSynthesize.length} succeeded`,
+    );
+
+    return {
+      audioUrls,
+      primaryVoice,
+      primaryAudioUrl,
+    };
+  }
+
+  /**
+   * Synthesize single voice without streaming (for multi-voice parallel calls)
+   */
+  private async synthesizeSingleVoiceNoStream(params: {
+    sessionId: string;
+    turnId: string;
+    text: string;
+    voice: TtsVoice;
+  }): Promise<SynthesizeAndStreamResult> {
+    const { model, speakerId } = parseVoice(params.voice);
+
+    try {
+      const response = await axios.post(
+        `${this.piperHttpUrl}/api/tts`,
+        {
+          text: params.text,
+          voice: model,
+          speakerId: speakerId,
+          lengthScale: 1.0,
+          noiseScale: 0.667,
+          noiseW: 0.8,
+        },
+        {
+          responseType: 'arraybuffer',
+          timeout: 30000,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+
+      if (!response.data) {
+        return { audioUrl: null };
+      }
+
+      const audioBuffer = Buffer.from(response.data);
+
+      // Upload with voice-specific filename
+      const upload = await this.uploadService.uploadBuffer(
+        audioBuffer,
+        `ai-speaking-${params.sessionId}-${params.turnId}-${params.voice}.wav`,
+        'audio/wav',
+      );
+
+      return { audioUrl: upload.url };
+    } catch (error) {
+      this.logger.error(`Single voice synthesis failed for ${params.voice}: ${error.message}`);
+      throw error;
+    }
   }
 
   /**
