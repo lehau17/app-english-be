@@ -2,26 +2,26 @@ import { IsEnum, IsNotEmpty, IsOptional, IsString, IsInt, Min, Max } from 'class
 
 /**
  * Piper TTS voice models for AI Speaking
- * 10 diverse English voices (US/GB/AU accents, male/female, multi-speaker)
+ * 10 diverse English voices (US/GB accents, male/female, multi-speaker)
+ * Reference: https://github.com/rhasspy/piper/blob/master/VOICES.md
+ * NOTE: No Australian (en_AU) voices available in Piper
  */
 export enum TtsVoice {
   // US English
   US_FEMALE_AMY = 'en_US-amy-medium',
   US_MALE_JOHN = 'en_US-john-medium',
   US_FEMALE_LESSAC = 'en_US-lessac-medium',
+  US_MALE_RYAN = 'en_US-ryan-medium',
 
   // British English
   GB_MALE_ALAN = 'en_GB-alan-medium',
-  GB_MALE_JON = 'en_GB-jon-medium',
+  GB_FEMALE_CORI = 'en_GB-cori-medium',
+  GB_FEMALE_JENNY = 'en_GB-jenny_dioco-medium',
 
-  // Australian English
-  AU_FEMALE_KARLA = 'en_AU-karla-medium',
-
-  // Multi-speaker LibriTTS (US)
-  US_NATIVE_1 = 'en_US-libritts-medium:0',
-  US_NATIVE_2 = 'en_US-libritts-medium:142',
-  US_NATIVE_3 = 'en_US-libritts-medium:508',
-  US_NATIVE_4 = 'en_US-libritts-medium:721',
+  // Multi-speaker LibriTTS (US) - libritts_r for medium quality
+  US_NATIVE_1 = 'en_US-libritts_r-medium:0',
+  US_NATIVE_2 = 'en_US-libritts_r-medium:142',
+  US_NATIVE_3 = 'en_US-libritts_r-medium:508',
 }
 
 /**
@@ -30,7 +30,7 @@ export enum TtsVoice {
 export interface VoiceMetadata {
   id: TtsVoice;
   label: string;
-  accent: 'US' | 'GB' | 'AU';
+  accent: 'US' | 'GB';
   gender: 'M' | 'F' | 'Neutral';
   model: string;
   speakerId: number;
@@ -83,7 +83,7 @@ export class VoicePreviewDto {
 }
 
 /**
- * Voice catalog for frontend
+ * Voice catalog for frontend - 10 verified Piper voices
  */
 export const VOICE_CATALOG: VoiceMetadata[] = [
   {
@@ -114,6 +114,15 @@ export const VOICE_CATALOG: VoiceMetadata[] = [
     description: 'Alternative US female voice',
   },
   {
+    id: TtsVoice.US_MALE_RYAN,
+    label: 'American Male (Ryan)',
+    accent: 'US',
+    gender: 'M',
+    model: 'en_US-ryan-medium',
+    speakerId: 0,
+    description: 'Natural US male voice',
+  },
+  {
     id: TtsVoice.GB_MALE_ALAN,
     label: 'British Male (Alan)',
     accent: 'GB',
@@ -123,29 +132,29 @@ export const VOICE_CATALOG: VoiceMetadata[] = [
     description: 'Received Pronunciation (RP) British accent',
   },
   {
-    id: TtsVoice.GB_MALE_JON,
-    label: 'British Male (Jon)',
+    id: TtsVoice.GB_FEMALE_CORI,
+    label: 'British Female (Cori)',
     accent: 'GB',
-    gender: 'M',
-    model: 'en_GB-jon-medium',
+    gender: 'F',
+    model: 'en_GB-cori-medium',
     speakerId: 0,
-    description: 'Northern British accent',
+    description: 'Clear British female voice',
   },
   {
-    id: TtsVoice.AU_FEMALE_KARLA,
-    label: 'Australian Female (Karla)',
-    accent: 'AU',
+    id: TtsVoice.GB_FEMALE_JENNY,
+    label: 'British Female (Jenny)',
+    accent: 'GB',
     gender: 'F',
-    model: 'en_AU-karla-medium',
+    model: 'en_GB-jenny_dioco-medium',
     speakerId: 0,
-    description: 'Australian English accent',
+    description: 'Natural British female voice',
   },
   {
     id: TtsVoice.US_NATIVE_1,
     label: 'Native Speaker 1',
     accent: 'US',
     gender: 'Neutral',
-    model: 'en_US-libritts-medium',
+    model: 'en_US-libritts_r-medium',
     speakerId: 0,
     description: 'Natural US speaker from LibriTTS dataset',
   },
@@ -154,7 +163,7 @@ export const VOICE_CATALOG: VoiceMetadata[] = [
     label: 'Native Speaker 2',
     accent: 'US',
     gender: 'Neutral',
-    model: 'en_US-libritts-medium',
+    model: 'en_US-libritts_r-medium',
     speakerId: 142,
     description: 'Natural US speaker from LibriTTS dataset',
   },
@@ -163,17 +172,8 @@ export const VOICE_CATALOG: VoiceMetadata[] = [
     label: 'Native Speaker 3',
     accent: 'US',
     gender: 'Neutral',
-    model: 'en_US-libritts-medium',
+    model: 'en_US-libritts_r-medium',
     speakerId: 508,
-    description: 'Natural US speaker from LibriTTS dataset',
-  },
-  {
-    id: TtsVoice.US_NATIVE_4,
-    label: 'Native Speaker 4',
-    accent: 'US',
-    gender: 'Neutral',
-    model: 'en_US-libritts-medium',
-    speakerId: 721,
     description: 'Natural US speaker from LibriTTS dataset',
   },
 ];

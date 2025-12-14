@@ -10,15 +10,20 @@ BASE_URL="https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0"
 echo "Creating voice models directory: $VOICES_DIR"
 mkdir -p "$VOICES_DIR"
 
-# Voice models with speaker IDs
+# Voice models - VERIFIED to exist in HuggingFace rhasspy/piper-voices
+# Reference: https://github.com/rhasspy/piper/blob/master/VOICES.md
 declare -A VOICES=(
+  # US English voices
   ["en_US-amy-medium"]="0"
   ["en_US-john-medium"]="0"
   ["en_US-lessac-medium"]="0"
+  ["en_US-ryan-medium"]="0"
+  # British English voices (no Australian voices available in Piper)
   ["en_GB-alan-medium"]="0"
-  ["en_GB-jon-medium"]="0"
-  ["en_AU-karla-medium"]="0"
-  ["en_US-libritts-medium"]="0,142,508,721"
+  ["en_GB-cori-medium"]="0"
+  ["en_GB-jenny_dioco-medium"]="0"
+  # Multi-speaker LibriTTS (US) - NOTE: libritts_r for medium quality
+  ["en_US-libritts_r-medium"]="0,142,508,721"
 )
 
 download_voice() {

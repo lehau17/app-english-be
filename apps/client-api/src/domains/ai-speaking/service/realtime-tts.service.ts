@@ -162,17 +162,17 @@ export class RealtimeTtsService {
     }
 
     // Use Google Cloud voice mapping for fallback
-    const voiceMapping = {
+    const voiceMapping: Record<TtsVoice, string> = {
       [TtsVoice.US_FEMALE_AMY]: 'en-US-Neural2-F',
       [TtsVoice.US_MALE_JOHN]: 'en-US-Neural2-D',
-      [TtsVoice.GB_MALE_ALAN]: 'en-GB-Neural2-B',
-      [TtsVoice.AU_FEMALE_KARLA]: 'en-AU-Neural2-C',
       [TtsVoice.US_FEMALE_LESSAC]: 'en-US-Neural2-F',
-      [TtsVoice.GB_MALE_JON]: 'en-GB-Neural2-B',
+      [TtsVoice.US_MALE_RYAN]: 'en-US-Neural2-D',
+      [TtsVoice.GB_MALE_ALAN]: 'en-GB-Neural2-B',
+      [TtsVoice.GB_FEMALE_CORI]: 'en-GB-Neural2-C',
+      [TtsVoice.GB_FEMALE_JENNY]: 'en-GB-Neural2-C',
       [TtsVoice.US_NATIVE_1]: 'en-US-Neural2-F',
       [TtsVoice.US_NATIVE_2]: 'en-US-Neural2-D',
       [TtsVoice.US_NATIVE_3]: 'en-US-Neural2-F',
-      [TtsVoice.US_NATIVE_4]: 'en-US-Neural2-D',
     };
 
     const googleVoice = voiceMapping[params.voice] || 'en-US-Neural2-F';
