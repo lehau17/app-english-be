@@ -23,19 +23,39 @@ declare -A VOICES=(
 
 download_voice() {
   local voice=$1
-  local url_prefix="${BASE_URL}/${voice}"
+
+  # Parse voice name: en_US-amy-medium -> en/en_US/amy/medium
+  local lang_full=$(echo "$voice" | cut -d'-' -f1)      # en_US
+  local lang_short=$(echo "$lang_full" | cut -d'_' -f1)  # en
+  local speaker=$(echo "$voice" | cut -d'-' -f2)         # amy
+  local quality=$(echo "$voice" | cut -d'-' -f3)         # medium
+
+  # Correct HuggingFace URL structure
+  local url_prefix="${BASE_URL}/${lang_short}/${lang_full}/${speaker}/${quality}"
 
   echo "Downloading $voice..."
+  echo "  URL: $url_prefix/${voice}.onnx"
 
-  # Download ONNX model
-  wget -q --show-progress \
+  # Download ONNX model with verbose progress
+  wget --progress=bar:force:noscroll \
+    --timeout=120 \
+    --tries=3 \
+    --retry-connrefused \
     "${url_prefix}/${voice}.onnx" \
-    -O "${VOICES_DIR}/${voice}.onnx"
+    -O "${VOICES_DIR}/${voice}.onnx" 2>&1 || {
+      echo "❌ Failed to download ${voice}.onnx"
+      return 1
+    }
 
   # Download JSON config
-  wget -q --show-progress \
+  wget --progress=bar:force:noscroll \
+    --timeout=30 \
+    --tries=3 \
     "${url_prefix}/${voice}.onnx.json" \
-    -O "${VOICES_DIR}/${voice}.onnx.json"
+    -O "${VOICES_DIR}/${voice}.onnx.json" 2>&1 || {
+      echo "❌ Failed to download ${voice}.onnx.json"
+      return 1
+    }
 
   echo "✓ $voice downloaded successfully"
 }
