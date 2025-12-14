@@ -46,7 +46,6 @@ export class TopicsService {
       await this.redis.set(
         cacheKey,
         JSON.stringify(response),
-        'EX',
         this.CACHE_TTL,
       );
     } catch (error) {
@@ -79,7 +78,6 @@ export class TopicsService {
       await this.redis.set(
         cacheKey,
         JSON.stringify(response),
-        'EX',
         this.CACHE_TTL,
       );
     } catch (error) {
