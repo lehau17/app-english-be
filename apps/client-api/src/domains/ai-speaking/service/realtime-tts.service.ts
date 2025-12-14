@@ -5,7 +5,7 @@ import axios, { AxiosResponse } from 'axios';
 import { spawn } from 'child_process';
 import { UploadService } from '../../upload/upload.service';
 import { AiSpeakingGateway } from '../gateway/ai-speaking.gateway';
-import { TtsVoice, parseVoice, getLanguageCodeFromVoice, VOICE_CATALOG } from '../dto/tts-voice.dto';
+import { TtsVoice, parseVoice, getLanguageCodeFromVoice, MULTI_VOICE_SUBSET, MULTI_VOICE_CONCURRENCY } from '../dto/tts-voice.dto';
 
 interface SynthesizeAndStreamParams {
   sessionId: string;
@@ -90,8 +90,8 @@ export class RealtimeTtsService {
   }
 
   /**
-   * Synthesize text in multiple voices using Promise.all
-   * Returns audio URLs for all voices to let user choose
+   * Synthesize text in multiple voices with concurrency control
+   * Uses MULTI_VOICE_SUBSET (5 voices) and processes in batches for performance
    */
   async synthesizeMultiVoice(params: {
     sessionId: string;
@@ -101,10 +101,11 @@ export class RealtimeTtsService {
     voiceSubset?: TtsVoice[]; // Optional: limit to specific voices
   }): Promise<MultiVoiceResult> {
     const primaryVoice = params.primaryVoice ?? TtsVoice.US_FEMALE_AMY;
-    const voicesToSynthesize = params.voiceSubset ?? VOICE_CATALOG.map((v) => v.id);
+    // Use optimized subset (5 voices) for better performance
+    const voicesToSynthesize = params.voiceSubset ?? MULTI_VOICE_SUBSET;
 
     this.logger.debug(
-      `Multi-voice synthesis: ${voicesToSynthesize.length} voices for turn=${params.turnId}`,
+      `Multi-voice synthesis: ${voicesToSynthesize.length} voices for turn=${params.turnId} (concurrency=${MULTI_VOICE_CONCURRENCY})`,
     );
 
     // Emit start event for primary voice (for streaming)
@@ -114,23 +115,31 @@ export class RealtimeTtsService {
       multiVoice: true,
     });
 
-    // Generate all voices in parallel using Promise.allSettled
-    const synthesisPromises = voicesToSynthesize.map(async (voice) => {
-      try {
-        const result = await this.synthesizeSingleVoiceNoStream({
-          sessionId: params.sessionId,
-          turnId: params.turnId,
-          text: params.text,
-          voice,
-        });
-        return { voice, audioUrl: result.audioUrl ?? null };
-      } catch (error) {
-        this.logger.warn(`Multi-voice synthesis failed for ${voice}: ${error.message}`);
-        return { voice, audioUrl: null };
-      }
-    });
+    // Process voices with concurrency limit using batching
+    const results: Array<{ voice: TtsVoice; audioUrl: string | null }> = [];
 
-    const results = await Promise.all(synthesisPromises);
+    // Split into batches based on concurrency limit
+    for (let i = 0; i < voicesToSynthesize.length; i += MULTI_VOICE_CONCURRENCY) {
+      const batch = voicesToSynthesize.slice(i, i + MULTI_VOICE_CONCURRENCY);
+
+      const batchPromises = batch.map(async (voice) => {
+        try {
+          const result = await this.synthesizeSingleVoiceNoStream({
+            sessionId: params.sessionId,
+            turnId: params.turnId,
+            text: params.text,
+            voice,
+          });
+          return { voice, audioUrl: result.audioUrl ?? null };
+        } catch (error) {
+          this.logger.warn(`Multi-voice synthesis failed for ${voice}: ${error.message}`);
+          return { voice, audioUrl: null };
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+    }
 
     // Build audioUrls map
     const audioUrls = {} as Record<TtsVoice, string | null>;

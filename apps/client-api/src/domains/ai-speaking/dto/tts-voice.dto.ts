@@ -179,6 +179,22 @@ export const VOICE_CATALOG: VoiceMetadata[] = [
 ];
 
 /**
+ * Multi-voice subset for performance optimization
+ * Generates 5 voices instead of 10 for faster response time
+ * Includes best quality from US/GB male/female
+ */
+export const MULTI_VOICE_SUBSET: TtsVoice[] = [
+  TtsVoice.US_FEMALE_AMY,     // US Female (primary)
+  TtsVoice.US_MALE_RYAN,      // US Male
+  TtsVoice.US_FEMALE_LESSAC,  // US Female (alternative)
+  TtsVoice.GB_MALE_ALAN,      // GB Male
+  TtsVoice.GB_FEMALE_JENNY,   // GB Female
+];
+
+/** Concurrency limit for parallel TTS synthesis */
+export const MULTI_VOICE_CONCURRENCY = 3;
+
+/**
  * Helper function to extract language code from voice (backward compatibility)
  * e.g., 'en-US-Neural2-D' -> 'en-US'
  */

@@ -78,6 +78,7 @@ export class AiSpeakingService {
             config: {
               ...(dto.config as Prisma.JsonObject),
               voice,
+              multiVoice: dto.multiVoice ?? false,
             } as Prisma.JsonObject,
             metadata: openingPlan.metadata as Prisma.JsonObject,
           },

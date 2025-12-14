@@ -384,14 +384,29 @@ export class AiSpeakingRealtimeService {
     });
 
     if (followUp?.followUpTurnId && followUp.followUpPrompt) {
-      void this.streamAiTurn(
-        sessionId,
-        followUp.followUpTurnId,
-        followUp.followUpPrompt,
-        {
-          voiceHint: followUp.followUpVoiceHint ?? undefined,
-        },
-      );
+      // Check session config for multiVoice preference
+      const session = await this.repository.findSessionById(sessionId);
+      const multiVoice = (session?.config as Record<string, unknown>)?.multiVoice ?? false;
+      const voice = (session?.config as Record<string, unknown>)?.voice as TtsVoice | undefined;
+
+      if (multiVoice) {
+        void this.streamAiTurnMultiVoice(
+          sessionId,
+          followUp.followUpTurnId,
+          followUp.followUpPrompt,
+          { voice, voiceHint: followUp.followUpVoiceHint ?? undefined },
+        );
+      } else {
+        void this.streamAiTurn(
+          sessionId,
+          followUp.followUpTurnId,
+          followUp.followUpPrompt,
+          {
+            voice,
+            voiceHint: followUp.followUpVoiceHint ?? undefined,
+          },
+        );
+      }
     }
   }
 
@@ -640,11 +655,26 @@ export class AiSpeakingRealtimeService {
       });
 
       if (recovery.followUpTurnId && recovery.followUpPrompt) {
-        void this.streamAiTurn(
-          sessionId,
-          recovery.followUpTurnId,
-          recovery.followUpPrompt,
-        );
+        // Check session config for multiVoice preference
+        const session = await this.repository.findSessionById(sessionId);
+        const multiVoice = (session?.config as Record<string, unknown>)?.multiVoice ?? false;
+        const voice = (session?.config as Record<string, unknown>)?.voice as TtsVoice | undefined;
+
+        if (multiVoice) {
+          void this.streamAiTurnMultiVoice(
+            sessionId,
+            recovery.followUpTurnId,
+            recovery.followUpPrompt,
+            { voice },
+          );
+        } else {
+          void this.streamAiTurn(
+            sessionId,
+            recovery.followUpTurnId,
+            recovery.followUpPrompt,
+            { voice },
+          );
+        }
       }
     } else {
       this.refreshSilenceTimer(sessionId, turnId, holder);
