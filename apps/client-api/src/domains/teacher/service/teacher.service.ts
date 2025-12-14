@@ -1,3 +1,4 @@
+import { ExcelExportService } from '@app/shared';
 import { PageResponseDto } from '@app/shared/payload/response/page-response.dto';
 import {
   BadRequestException,
@@ -19,6 +20,7 @@ export class TeacherService {
   constructor(
     private readonly teacherRepository: TeacherRepository,
     private readonly uploadService: UploadService,
+    private readonly excelExportService: ExcelExportService,
   ) {}
 
   async create(dto: CreateTeacherDto): Promise<User> {
@@ -64,18 +66,41 @@ export class TeacherService {
     return this.teacherRepository.list(params);
   }
 
-  async exportTeachers(query: FilterTeacherRequestDto): Promise<string> {
+  async exportTeachers(query: FilterTeacherRequestDto): Promise<Buffer> {
     const teachers = await this.teacherRepository.listAll(query);
     if (teachers.length === 0) {
-      return '';
+      return this.excelExportService.generateExcel(
+        [],
+        [{ header: 'Email', key: 'email', width: 30 }],
+        'Danh sach giao vien',
+      );
     }
 
-    const header = 'email,firstName,lastName\n';
-    const rows = teachers
-      .map((t) => `${t.email},${t.firstName},${t.lastName}`)
-      .join('\n');
+    const data = teachers.map((t) => ({
+      email: t.email || '',
+      phone: t.phone || '',
+      firstName: t.firstName || '',
+      lastName: t.lastName || '',
+      displayName: t.displayName || '',
+      gender: this.excelExportService.translateStatus(t.gender || ''),
+      status: this.excelExportService.translateStatus(t.status || ''),
+      createdAt: t.createdAt,
+    }));
 
-    return header + rows;
+    return this.excelExportService.generateExcel(
+      data,
+      [
+        { header: 'Email', key: 'email', width: 30 },
+        { header: 'So dien thoai', key: 'phone', width: 15 },
+        { header: 'Ho', key: 'firstName', width: 15 },
+        { header: 'Ten', key: 'lastName', width: 15 },
+        { header: 'Ten hien thi', key: 'displayName', width: 20 },
+        { header: 'Gioi tinh', key: 'gender', width: 12 },
+        { header: 'Trang thai', key: 'status', width: 15 },
+        { header: 'Ngay tao', key: 'createdAt', width: 18 },
+      ],
+      'Danh sach giao vien',
+    );
   }
 
   async importTeachers(
@@ -153,5 +178,20 @@ export class TeacherService {
     }
 
     return { created: createdCount, errors };
+  }
+
+  /**
+   * Get CSV template for importing teachers
+   * Returns a CSV with headers and example rows
+   */
+  getImportTemplate(): string {
+    const header =
+      'email,password,firstName,lastName,phone,displayName,gender\n';
+    const exampleRows = [
+      'teacher1@example.com,Password123!,Nguyen,Van A,0901234567,Nguyen Van A,male',
+      'teacher2@example.com,Password123!,Tran,Thi B,0912345678,Tran Thi B,female',
+    ].join('\n');
+
+    return header + exampleRows;
   }
 }

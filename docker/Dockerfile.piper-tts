@@ -1,0 +1,35 @@
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    curl \
+    espeak-ng \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Install Piper HTTP server
+RUN pip install --no-cache-dir \
+    piper-tts==1.2.0 \
+    piper-http-server==1.0.0 \
+    gunicorn==21.2.0
+
+# Create directories
+RUN mkdir -p /app/models /app/cache
+
+# Expose API port
+EXPOSE 8000
+
+# Health check script
+COPY docker/scripts/healthcheck.sh /usr/local/bin/healthcheck.sh
+RUN chmod +x /usr/local/bin/healthcheck.sh
+
+# Default command: Start Piper HTTP server with Gunicorn
+CMD ["gunicorn", \
+     "--bind", "0.0.0.0:8000", \
+     "--workers", "4", \
+     "--timeout", "120", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
+     "piper_http_server.app:create_app()"]

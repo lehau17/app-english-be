@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  piper-tts:
+    image: piper-tts-server:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.piper-tts
+    container_name: piper-tts-server
+    restart: always
+    ports:
+      - "${PIPER_PORT:-8000}:8000"
+    volumes:
+      - piper-models:/app/models:ro
+      - piper-cache:/app/cache
+    environment:
+      PIPER_MODEL_DIR: /app/models
+      PIPER_DEFAULT_VOICE: en_US-amy-medium
+      PIPER_CACHE_DIR: /app/cache
+      PIPER_WORKERS: 4
+      PIPER_LOG_LEVEL: info
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+volumes:
+  piper-models:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/piper/models
+      o: bind
+  piper-cache:
+    driver: local

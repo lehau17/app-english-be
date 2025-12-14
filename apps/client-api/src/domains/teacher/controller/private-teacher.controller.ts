@@ -51,16 +51,33 @@ export class PrivateTeacherController {
   }
 
   @Get('export')
-  @ApiOperation({ summary: 'Export teachers to a CSV file' })
+  @ApiOperation({ summary: 'Export teachers to Excel file' })
   @ResponseMessage('Teachers exported successfully')
   async exportTeachers(
     @Res() res: Response,
     @Query() query: FilterTeacherRequestDto,
   ) {
-    const csvData = await this.teacherService.exportTeachers(query);
+    const buffer = await this.teacherService.exportTeachers(query);
+    const filename = `teachers-${new Date().toISOString().split('T')[0]}.xlsx`;
+    res.header(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.header('Content-Disposition', `attachment; filename=${filename}`);
+    return res.send(buffer);
+  }
+
+  @Get('import-template')
+  @ApiOperation({ summary: 'Download CSV template for importing teachers' })
+  @ResponseMessage('Template downloaded successfully')
+  async downloadImportTemplate(@Res() res: Response) {
+    const template = this.teacherService.getImportTemplate();
     res.header('Content-Type', 'text/csv');
-    res.attachment('teachers.csv');
-    return res.send(csvData);
+    res.header(
+      'Content-Disposition',
+      'attachment; filename=teachers-import-template.csv',
+    );
+    return res.send(template);
   }
 
   @Post()

@@ -12,6 +12,12 @@ import { AiSpeakingGateway } from '../gateway/ai-speaking.gateway';
 import { AiSpeakingRepository } from '../repository/ai-speaking.repository';
 import { AiSpeakingCoordinator } from './ai-speaking-coordinator.service';
 import { ConversationDesignerService } from './conversation-designer.service';
+import {
+  calculateNormalizedScore,
+  getDifficultyMultiplier,
+  getNextDifficulty,
+  shouldAdjustDifficulty,
+} from './difficulty-scoring.util';
 import { PronunciationAssessmentService } from './pronunciation-assessment.service';
 
 const DIFFICULTY_ORDER: DifficultyLevel[] = [
@@ -123,11 +129,23 @@ export class AiSpeakingTurnManager {
       // Don't block flow if pronunciation fails
     }
 
+    // NEW: Apply difficulty-weighted scoring
+    const currentDifficulty =
+      session.currentDifficulty ?? session.targetDifficulty;
+    const rawScore = evaluation.score;
+    const { normalizedScore, newDifficulty } = this.processScore(
+      rawScore,
+      currentDifficulty,
+    );
+
     const metrics: Prisma.JsonObject = {
       ...(typeof turn.metrics === 'object' && turn.metrics
         ? (turn.metrics as any)
         : {}),
       evaluationScore: evaluation.score,
+      rawScore, // Store original score
+      normalizedScore, // Store difficulty-adjusted score
+      difficultyMultiplier: getDifficultyMultiplier(currentDifficulty),
       evaluationCreatedAt: new Date().toISOString(),
       durationSec: durationSec ?? null,
       pronunciationScore: pronunciationFeedback?.pronunciationScore ?? null,
@@ -138,7 +156,7 @@ export class AiSpeakingTurnManager {
     const transcript = evaluation.transcript || turn.userTranscript || null;
 
     const updatedTurn = await this.repository.updateTurn(turnId, {
-      score: evaluation.score,
+      score: normalizedScore, // Use normalized score for display
       evaluation: evaluation as unknown as Prisma.JsonObject,
       suggestions,
       userTranscript: transcript,
@@ -152,10 +170,7 @@ export class AiSpeakingTurnManager {
       evaluation,
     });
 
-    const nextDifficulty = this.adjustDifficulty(
-      session.currentDifficulty ?? session.targetDifficulty,
-      evaluation.score,
-    );
+    const nextDifficulty = newDifficulty;
 
     const reachedTurnLimit =
       session.turnCount >= session.maxTurns ||
@@ -266,11 +281,11 @@ export class AiSpeakingTurnManager {
       silenceDetected: true,
     });
 
+    const currentDifficulty =
+      session.currentDifficulty ?? session.targetDifficulty;
     const nextDifficulty = degradeDifficulty
-      ? this.stepDifficultyDown(
-          session.currentDifficulty ?? session.targetDifficulty,
-        )
-      : (session.currentDifficulty ?? session.targetDifficulty);
+      ? getNextDifficulty(currentDifficulty, 'down')
+      : currentDifficulty;
 
     const promptPlan = this.conversationDesigner.buildOpeningPrompt({
       topic: session.topic,
@@ -314,6 +329,46 @@ export class AiSpeakingTurnManager {
     return { followUpTurnId: nextTurn.id, followUpPrompt: promptPlan.prompt };
   }
 
+  /**
+   * NEW: Difficulty-weighted scoring with normalized score calculation.
+   * Applies difficulty multipliers and determines next difficulty level.
+   */
+  private processScore(
+    rawScore: number,
+    currentDifficulty: DifficultyLevel,
+  ): { normalizedScore: number; newDifficulty: DifficultyLevel } {
+    const { normalizedScore, multiplier } = calculateNormalizedScore(
+      rawScore,
+      currentDifficulty,
+    );
+
+    this.logger.log(
+      `Score calculation: raw=${rawScore}, multiplier=${multiplier}, normalized=${normalizedScore}, difficulty=${currentDifficulty}`,
+    );
+
+    const adjustment = shouldAdjustDifficulty(
+      normalizedScore,
+      currentDifficulty,
+    );
+    const newDifficulty =
+      adjustment === 'none'
+        ? currentDifficulty
+        : getNextDifficulty(currentDifficulty, adjustment);
+
+    if (newDifficulty !== currentDifficulty) {
+      this.logger.log(
+        `Difficulty adjustment: ${currentDifficulty} → ${newDifficulty} (score=${normalizedScore}, threshold=${adjustment})`,
+      );
+    }
+
+    return { normalizedScore, newDifficulty };
+  }
+
+  /*
+   * OLD_adjustDifficulty_backup - Commented for backwards reference
+   * This method used fixed thresholds (85/45) regardless of difficulty level.
+   * Replaced by processScore() which uses difficulty-weighted scoring.
+   *
   private adjustDifficulty(
     current: DifficultyLevel,
     score: number,
@@ -340,6 +395,7 @@ export class AiSpeakingTurnManager {
     if (idx <= 0) return DIFFICULTY_ORDER[0];
     return DIFFICULTY_ORDER[idx - 1];
   }
+  */
 
   private async buildFollowUpPrompt(params: {
     sessionTopic?: string | null;

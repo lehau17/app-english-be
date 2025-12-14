@@ -1,15 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { TextToSpeechClient } from '@google-cloud/text-to-speech';
 import axios, { AxiosResponse } from 'axios';
 import { spawn } from 'child_process';
 import { UploadService } from '../../upload/upload.service';
 import { AiSpeakingGateway } from '../gateway/ai-speaking.gateway';
+import { TtsVoice, parseVoice, getLanguageCodeFromVoice } from '../dto/tts-voice.dto';
 
 interface SynthesizeAndStreamParams {
   sessionId: string;
   turnId: string;
   text: string;
   voiceHint?: string;
+  voice?: TtsVoice;
 }
 
 interface SynthesizeAndStreamResult {
@@ -19,6 +22,10 @@ interface SynthesizeAndStreamResult {
 @Injectable()
 export class RealtimeTtsService {
   private readonly logger = new Logger(RealtimeTtsService.name);
+  private readonly piperHttpUrl: string;
+  private readonly usePiper: boolean;
+  private readonly googleTtsClient: TextToSpeechClient | null;
+  // Legacy fields for backward compatibility
   private readonly command: string;
   private readonly modelPath: string | undefined;
   private readonly defaultVoice: string | undefined;
@@ -30,6 +37,16 @@ export class RealtimeTtsService {
     private readonly uploadService: UploadService,
     private readonly gateway: AiSpeakingGateway,
   ) {
+    this.piperHttpUrl = this.configService.get<string>(
+      'AI_SPEAKING_TTS_HTTP_URL',
+      'http://localhost:8000',
+    );
+    this.usePiper = this.configService.get<string>('USE_PIPER_TTS', 'true') === 'true';
+
+    // Initialize Google Cloud TTS as fallback
+    this.googleTtsClient = new TextToSpeechClient();
+
+    // Legacy fields
     this.command = this.configService.get<string>(
       'AI_SPEAKING_TTS_COMMAND',
       'piper',
@@ -50,14 +67,166 @@ export class RealtimeTtsService {
   async synthesizeAndStream(
     params: SynthesizeAndStreamParams,
   ): Promise<SynthesizeAndStreamResult> {
-    if (this.useHttpApi) {
-      return this.synthesizeViaHttpApi(params);
-    } else {
-      return this.synthesizeViaCommand(params);
+    // Priority 1: Piper TTS (primary)
+    if (this.usePiper) {
+      try {
+        return await this.synthesizeViaPiperHttp(params);
+      } catch (error) {
+        this.logger.warn(
+          `Piper TTS failed, falling back to Google Cloud: ${error.message}`,
+        );
+        return await this.synthesizeViaGoogleCloudTts(params);
+      }
+    }
+
+    // Priority 2: Google Cloud TTS (fallback)
+    return await this.synthesizeViaGoogleCloudTts(params);
+  }
+
+  /**
+   * Piper HTTP API synthesis with streaming
+   */
+  private async synthesizeViaPiperHttp(
+    params: SynthesizeAndStreamParams,
+  ): Promise<SynthesizeAndStreamResult> {
+    const voice = params.voice ?? TtsVoice.US_FEMALE_AMY;
+    const { model, speakerId } = parseVoice(voice);
+
+    this.logger.debug(
+      `Piper TTS synthesis: model=${model} speaker=${speakerId} text=${params.text.substring(0, 100)}...`,
+    );
+
+    try {
+      const response = await axios.post(
+        `${this.piperHttpUrl}/api/tts`,
+        {
+          text: params.text,
+          voice: model,
+          speakerId: speakerId,
+          lengthScale: 1.0,
+          noiseScale: 0.667,
+          noiseW: 0.8,
+        },
+        {
+          responseType: 'arraybuffer',
+          timeout: 30000,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      if (!response.data) {
+        this.logger.warn('Piper HTTP returned empty response');
+        throw new Error('Empty audio response from Piper');
+      }
+
+      const audioBuffer = Buffer.from(response.data);
+
+      // Stream in chunks to client
+      const CHUNK_SIZE = 4096;
+      let sequence = 0;
+
+      for (let i = 0; i < audioBuffer.length; i += CHUNK_SIZE) {
+        const chunk = audioBuffer.subarray(i, i + CHUNK_SIZE);
+        this.gateway.emitToSession(params.sessionId, 'ai-speaking:tts-chunk', {
+          turnId: params.turnId,
+          sequence: sequence++,
+          audio: chunk.toString('base64'),
+        });
+      }
+
+      // Upload to MinIO/S3
+      const upload = await this.uploadService.uploadBuffer(
+        audioBuffer,
+        `ai-speaking-${params.sessionId}-${params.turnId}.wav`,
+        'audio/wav',
+      );
+
+      this.logger.debug(`Piper TTS completed: audioUrl=${upload.url}`);
+      return { audioUrl: upload.url };
+    } catch (error) {
+      this.logger.error(`Piper HTTP synthesis failed: ${error.message}`, error.stack);
+      throw error;
     }
   }
 
-  private async synthesizeViaHttpApi(
+  /**
+   * Google Cloud TTS fallback (unchanged from current implementation)
+   */
+  private async synthesizeViaGoogleCloudTts(
+    params: SynthesizeAndStreamParams,
+  ): Promise<SynthesizeAndStreamResult> {
+    if (!this.googleTtsClient) {
+      throw new Error('Google Cloud TTS client not initialized');
+    }
+
+    // Use Google Cloud voice mapping for fallback
+    const voiceMapping = {
+      [TtsVoice.US_FEMALE_AMY]: 'en-US-Neural2-F',
+      [TtsVoice.US_MALE_JOHN]: 'en-US-Neural2-D',
+      [TtsVoice.GB_MALE_ALAN]: 'en-GB-Neural2-B',
+      [TtsVoice.AU_FEMALE_KARLA]: 'en-AU-Neural2-C',
+      [TtsVoice.US_FEMALE_LESSAC]: 'en-US-Neural2-F',
+      [TtsVoice.GB_MALE_JON]: 'en-GB-Neural2-B',
+      [TtsVoice.US_NATIVE_1]: 'en-US-Neural2-F',
+      [TtsVoice.US_NATIVE_2]: 'en-US-Neural2-D',
+      [TtsVoice.US_NATIVE_3]: 'en-US-Neural2-F',
+      [TtsVoice.US_NATIVE_4]: 'en-US-Neural2-D',
+    };
+
+    const googleVoice = voiceMapping[params.voice] || 'en-US-Neural2-F';
+    const languageCode = googleVoice.substring(0, 5); // 'en-US'
+
+    this.logger.debug(`Google Cloud TTS fallback: voice=${googleVoice}`);
+
+    try {
+      const [response] = await this.googleTtsClient.synthesizeSpeech({
+        input: { text: params.text },
+        voice: {
+          languageCode: languageCode,
+          name: googleVoice,
+        },
+        audioConfig: {
+          audioEncoding: 'MP3',
+          speakingRate: 1.0,
+          pitch: 0.0,
+        },
+      });
+
+      const audioBuffer = Buffer.from(response.audioContent as Uint8Array);
+
+      // Stream chunks
+      const CHUNK_SIZE = 4096;
+      let sequence = 0;
+
+      for (let i = 0; i < audioBuffer.length; i += CHUNK_SIZE) {
+        const chunk = audioBuffer.subarray(i, i + CHUNK_SIZE);
+        this.gateway.emitToSession(params.sessionId, 'ai-speaking:tts-chunk', {
+          turnId: params.turnId,
+          sequence: sequence++,
+          audio: chunk.toString('base64'),
+        });
+      }
+
+      const upload = await this.uploadService.uploadBuffer(
+        audioBuffer,
+        `ai-speaking-${params.sessionId}-${params.turnId}.mp3`,
+        'audio/mpeg',
+      );
+
+      return { audioUrl: upload.url };
+    } catch (error) {
+      this.logger.error(`Google Cloud TTS failed: ${error.message}`, error.stack);
+      throw error;
+    }
+  }
+
+  /**
+   * OLD IMPLEMENTATION - Piper TTS HTTP API (backup)
+   * @deprecated Use Google Cloud TTS (synthesizeViaGoogleCloudTts) instead
+   */
+  private async OLD_synthesizeViaHttpApi_backup(
     params: SynthesizeAndStreamParams,
   ): Promise<SynthesizeAndStreamResult> {
     if (!this.httpApiUrl) {
@@ -128,14 +297,18 @@ export class RealtimeTtsService {
         this.logger.warn(
           'TTS HTTP API unavailable, falling back to command line',
         );
-        return this.synthesizeViaCommand(params);
+        return this.OLD_synthesizeViaCommand_backup(params);
       }
 
       throw error;
     }
   }
 
-  private async synthesizeViaCommand(
+  /**
+   * OLD IMPLEMENTATION - Piper TTS command line (backup)
+   * @deprecated Use Google Cloud TTS (synthesizeViaGoogleCloudTts) instead
+   */
+  private async OLD_synthesizeViaCommand_backup(
     params: SynthesizeAndStreamParams,
   ): Promise<SynthesizeAndStreamResult> {
     if (!this.modelPath) {

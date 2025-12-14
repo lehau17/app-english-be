@@ -8,6 +8,7 @@ import {
 } from '@prisma/client';
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import { UploadService } from '../../upload/upload.service';
+import { TtsVoice } from '../dto/tts-voice.dto';
 import { AiSpeakingGateway } from '../gateway/ai-speaking.gateway';
 import { AiSpeakingRepository } from '../repository/ai-speaking.repository';
 import { AiSpeakingTurnManager } from './ai-speaking-turn-manager.service';
@@ -19,6 +20,7 @@ import { RealtimeTtsService } from './realtime-tts.service';
 
 interface StreamAiTurnOptions {
   voiceHint?: string;
+  voice?: TtsVoice;
 }
 
 interface ActiveAsrSession {
@@ -110,6 +112,7 @@ export class AiSpeakingRealtimeService {
         turnId,
         text,
         voiceHint: options.voiceHint,
+        voice: options.voice,
       });
 
       const updates: Prisma.AiSpeakingTurnUpdateInput = {

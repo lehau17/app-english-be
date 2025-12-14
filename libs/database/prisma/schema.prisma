@@ -645,6 +645,9 @@ model User {
   vocabularyProgress  UserVocabularyProgress[]
   vocabReviewSessions VocabularyReviewSession[]
 
+  // Topic usage for AI Speaking
+  topicUsages TopicUsage[] @relation("UserTopicUsage")
+
   @@index([status])
   @@index([provider, providerId])
   @@index([lastActiveAt])
@@ -2885,6 +2888,8 @@ model AiSpeakingSession {
 
   topic String?
 
+  topicId String?
+
   goal String?
 
   state AiSpeakingSessionState @default(pending)
@@ -2923,9 +2928,12 @@ model AiSpeakingSession {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  topicRef Topic? @relation(fields: [topicId], references: [id])
+
   turns AiSpeakingTurn[]
 
   @@index([userId, createdAt])
+  @@index([topicId])
   @@index([userId, conversationId])
   @@index([state, lastActivityAt])
   @@map("ai_speaking_sessions")
@@ -3647,4 +3655,43 @@ model IssuedCertificate {
   @@index([verificationCode])
   @@index([completionDate])
   @@map("issued_certificates")
+}
+
+// ===================== AI SPEAKING TOPICS =====================
+
+model Topic {
+  id          String          @id @default(uuid())
+  name        String          @unique
+  description String?         @db.Text
+  category    String?         // e.g., "daily_life", "business", "travel"
+  difficulty  DifficultyLevel @default(beginner)
+  isActive    Boolean         @default(true)
+  isFeatured  Boolean         @default(false)
+  usageCount  Int             @default(0)
+  trendScore  Float           @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  usages   TopicUsage[]
+  sessions AiSpeakingSession[]
+
+  @@index([category])
+  @@index([difficulty])
+  @@index([isActive])
+  @@index([trendScore])
+  @@map("topics")
+}
+
+model TopicUsage {
+  id        String   @id @default(uuid())
+  topicId   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  user  User  @relation("UserTopicUsage", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([topicId, createdAt])
+  @@index([userId, createdAt])
+  @@map("topic_usages")
 }

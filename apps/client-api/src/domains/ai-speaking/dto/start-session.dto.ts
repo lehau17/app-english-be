@@ -10,6 +10,7 @@ import {
   Max,
   Min,
 } from 'class-validator';
+import { TtsVoice } from './tts-voice.dto';
 
 export class StartAiSpeakingSessionDto {
   @ApiProperty({
@@ -61,4 +62,13 @@ export class StartAiSpeakingSessionDto {
   @IsOptional()
   @IsObject()
   config?: Record<string, unknown>;
+
+  @ApiPropertyOptional({
+    enum: TtsVoice,
+    description: 'TTS voice preference (Piper voices with accent variants)',
+    default: TtsVoice.US_FEMALE_AMY,
+  })
+  @IsOptional()
+  @IsEnum(TtsVoice)
+  voice?: TtsVoice;
 }

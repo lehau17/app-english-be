@@ -19,6 +19,7 @@ import {
   AiSpeakingSessionResponseDto,
 } from '../dto/session-response.dto';
 import { StartAiSpeakingSessionDto } from '../dto/start-session.dto';
+import { TtsVoice } from '../dto/tts-voice.dto';
 import { AiSpeakingRepository } from '../repository/ai-speaking.repository';
 import { AiSpeakingCoordinator } from './ai-speaking-coordinator.service';
 import { AiSpeakingRealtimeService } from './ai-speaking-realtime.service';
@@ -54,6 +55,7 @@ export class AiSpeakingService {
 
     const targetDifficulty = dto.targetDifficulty ?? DifficultyLevel.beginner;
     const maxTurns = dto.maxTurns ?? 8;
+    const voice = dto.voice ?? TtsVoice.US_FEMALE_AMY;
 
     const openingPlan = this.conversationDesigner.buildOpeningPrompt({
       topic: dto.topic,
@@ -73,7 +75,10 @@ export class AiSpeakingService {
             turnCount: 0,
             targetDifficulty,
             currentDifficulty: targetDifficulty,
-            config: (dto.config as Prisma.JsonObject) ?? {},
+            config: {
+              ...(dto.config as Prisma.JsonObject),
+              voice,
+            } as Prisma.JsonObject,
             metadata: openingPlan.metadata as Prisma.JsonObject,
           },
           tx,
@@ -131,15 +136,18 @@ export class AiSpeakingService {
       },
     );
 
-    void this.realtimeService.streamAiTurn(
+    // Wait for TTS to complete so response includes audio URL
+    await this.realtimeService.streamAiTurn(
       session.id,
       openingTurnId,
       openingPlan.prompt,
       {
         voiceHint: openingPlan.metadata?.voice as string | undefined,
+        voice,
       },
     );
 
+    // Fetch session with updated audio URL from opening turn
     const sessionWithRelations = await this.repository.findSessionById(
       session.id,
     );

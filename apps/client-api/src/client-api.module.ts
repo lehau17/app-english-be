@@ -46,6 +46,7 @@ import { MediaModule } from './domains/media/media.module';
 import { EventsModule } from './events/events.module';
 import { LearningPathModule } from './domains/learning-path/learning-path.module';
 import { RecommendationModule } from './domains/recommendation/recommendation.module';
+import { TopicsModule } from './domains/topics/topics.module';
 
 @Module({
   imports: [
@@ -92,6 +93,7 @@ import { RecommendationModule } from './domains/recommendation/recommendation.mo
     CertificateModule,
     LearningPathModule,
     RecommendationModule,
+    TopicsModule,
   ],
   controllers: [ClientApiController],
   providers: [ClientApiService, UploadService],

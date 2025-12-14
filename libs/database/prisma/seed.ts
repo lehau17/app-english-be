@@ -9,6 +9,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import { seedTopics } from './seeds/topics.seed';
 
 const prisma = new PrismaClient();
 
@@ -106,6 +107,9 @@ async function main() {
   console.log('   - parent@gmail.com (Parent)');
   console.log('   - teacher2@gmail.com (Teacher)');
   console.log('   - Password for all: 123456aA@');
+
+  await seedTopics();
+
   console.log('Seed completed successfully!');
 }
 

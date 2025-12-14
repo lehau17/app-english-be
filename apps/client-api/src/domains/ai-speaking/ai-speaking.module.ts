@@ -16,6 +16,7 @@ import { ConversationDesignerService } from './service/conversation-designer.ser
 import { PronunciationAssessmentService } from './service/pronunciation-assessment.service';
 import { RealtimeAsrService } from './service/realtime-asr.service';
 import { RealtimeTtsService } from './service/realtime-tts.service';
+import { SuggestionService } from './service/suggestion.service';
 
 @Module({
   imports: [DatabaseModule, SharedModule, ProfanityModule, ConfigModule],
@@ -33,6 +34,7 @@ import { RealtimeTtsService } from './service/realtime-tts.service';
     AiSpeakingRepository,
     AiSpeakingGateway,
     UploadService,
+    SuggestionService,
   ],
   exports: [AiSpeakingService],
 })
