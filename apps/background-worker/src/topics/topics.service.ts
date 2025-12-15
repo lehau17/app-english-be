@@ -1,11 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '@libs/database';
+import { PrismaRepository } from '@app/database';
 
 @Injectable()
 export class TopicsService {
   private readonly logger = new Logger(TopicsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaRepository) {}
 
   async calculateTrending(): Promise<void> {
     this.logger.log('Calculating trending scores for all active topics');

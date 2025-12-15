@@ -36,8 +36,8 @@ export class AiSpeakingController {
   @Get('voices')
   @ApiOperation({ summary: 'Get available TTS voices' })
   @ResponseMessage('Available TTS voices')
-  getVoices(): { data: VoiceMetadata[] } {
-    return { data: VOICE_CATALOG };
+  getVoices(): VoiceMetadata[] {
+    return VOICE_CATALOG;
   }
 
   /**

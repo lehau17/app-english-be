@@ -10,6 +10,7 @@ import {
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { seedTopics } from './seeds/topics.seed';
+import { seedSpeakingPracticeLessons } from './seeds/speaking-practice-lessons.seed';
 
 const prisma = new PrismaClient();
 
@@ -109,6 +110,7 @@ async function main() {
   console.log('   - Password for all: 123456aA@');
 
   await seedTopics();
+  await seedSpeakingPracticeLessons();
 
   console.log('Seed completed successfully!');
 }

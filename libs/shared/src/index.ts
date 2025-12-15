@@ -11,6 +11,7 @@ export * from './shared.module';
 export * from './types/media-processing.interface';
 export * from './types/neo4j-sync.interface';
 export * from './types/tts-task.interface';
+export * from './types/speaking-practice.events';
 export * from './utils/hash.util';
 
 export * from './certificate';

@@ -5,8 +5,9 @@ import { SharedModule } from '@app/shared';
 import { BackgroundWorkerController } from './background-worker.controller';
 import { BackgroundWorkerService } from './background-worker.service';
 import { DashboardModule } from './dashboard/dashboard.module';
-import { LeaderboardModule } from './leaderboard/leaderboard.module';
+import { LeaderboardWorkerModule } from './leaderboard/leaderboard.module';
 import { TopicsModule } from './topics/topics.module';
+import { SpeakingPracticeModule } from './speaking-practice/speaking-practice.module';
 
 @Module({
   imports: [
@@ -14,8 +15,9 @@ import { TopicsModule } from './topics/topics.module';
     SharedModule,
     ScheduleModule.forRoot(),
     DashboardModule,
-    LeaderboardModule,
+    LeaderboardWorkerModule,
     TopicsModule,
+    SpeakingPracticeModule,
   ],
   controllers: [BackgroundWorkerController],
   providers: [BackgroundWorkerService],

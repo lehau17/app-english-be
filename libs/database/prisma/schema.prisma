@@ -648,6 +648,11 @@ model User {
   // Topic usage for AI Speaking
   topicUsages TopicUsage[] @relation("UserTopicUsage")
 
+  // Speaking Practice (Progress-Based)
+  speakingPracticeProgress SpeakingPracticeProgress? @relation("SpeakingPracticeProgressUser")
+  mispronounceWords        MispronounceWord[]        @relation("MispronounceWordUser")
+  personalizedDrills       PersonalizedDrill[]       @relation("PersonalizedDrillUser")
+
   @@index([status])
   @@index([provider, providerId])
   @@index([lastActiveAt])
@@ -3696,4 +3701,193 @@ model TopicUsage {
   @@index([topicId, createdAt])
   @@index([userId, createdAt])
   @@map("topic_usages")
+}
+
+// ===================== SPEAKING PRACTICE (Progress-Based) =====================
+
+model SpeakingPracticeProgress {
+  id String @id @default(uuid())
+
+  userId String @unique // 1 user = 1 progress record
+
+  // Current state (user vào là tiếp tục ngay)
+  currentLevel     Int     @default(1) // 1-5
+  currentLessonId  String? // Bài đang làm dở
+  currentItemIndex Int     @default(0) // Câu hỏi thứ mấy trong bài
+
+  // Completed tracking
+  completedLessons String[] // IDs of finished lessons
+  levelProgress    Json     @default("{}") // { "1": 8, "2": 3, ... } số bài hoàn thành per level
+
+  // Weakness tracking (quick access)
+  weakPhonemes   String[]
+  strongPhonemes String[]
+
+  // Stats
+  totalPracticeTime Int      @default(0) // seconds
+  totalAttempts     Int      @default(0)
+  totalCorrect      Int      @default(0)
+  successRate       Float    @default(0)
+  streak            Int      @default(0) // consecutive days
+  longestStreak     Int      @default(0)
+  lastPracticedAt   DateTime?
+
+  // Relations
+  user     User                      @relation("SpeakingPracticeProgressUser", fields: [userId], references: [id], onDelete: Cascade)
+  attempts SpeakingPracticeAttempt[]
+  drills   PersonalizedDrill[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([lastPracticedAt])
+  @@map("speaking_practice_progress")
+}
+
+model SpeakingPracticeAttempt {
+  id         String @id @default(uuid())
+  progressId String
+  lessonId   String
+
+  // Results
+  score       Float // 0-100
+  verdict     String // "pass" | "fail" | "skip"
+  turnResults Json // [{ itemIndex, score, transcript, feedback }]
+
+  // Metadata
+  duration     Int // seconds
+  level        Int
+  itemCount    Int
+  correctCount Int
+
+  // Relations
+  progress SpeakingPracticeProgress @relation(fields: [progressId], references: [id], onDelete: Cascade)
+  lesson   SpeakingPracticeLesson   @relation(fields: [lessonId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([progressId, createdAt])
+  @@index([lessonId])
+  @@map("speaking_practice_attempts")
+}
+
+model SpeakingPracticeLesson {
+  id String @id @default(uuid())
+
+  // Level Configuration
+  level      Int             // 1-5 (Words, Phrases, Sentences, Dialogues, Free)
+  levelName  String // "Words", "Phrases", etc.
+  difficulty DifficultyLevel // beginner, elementary, etc.
+  orderIndex Int             @default(0) // Order within level
+
+  // Content
+  type    String // "word", "phrase", "sentence", "dialogue", "free"
+  title   String // "Animals", "Greetings", etc.
+  content Json // { items: [...], ai_prompts: [...], expected_responses: [...] }
+
+  // Pass Criteria
+  passThreshold Int @default(80) // percentage
+  minAttempts   Int @default(3)
+  maxRetries    Int @default(3)
+
+  // Difficulty Reduction Strategy
+  reductionConfig Json? // { speechRate: 0.8, showTranscript: true, ... }
+
+  // Targeting
+  targetPhonemes String[] // Focus on specific phonemes (for remedial)
+  tags           String[] // ["animals", "family", "colors", etc.]
+
+  // Metadata
+  isTemplate Boolean @default(true)
+  isActive   Boolean @default(true)
+
+  // Relations
+  attempts SpeakingPracticeAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([level, difficulty, orderIndex])
+  @@index([targetPhonemes])
+  @@index([isActive, isTemplate])
+  @@map("speaking_practice_lessons")
+}
+
+model MispronounceWord {
+  id     String @id @default(uuid())
+  userId String
+
+  // Từ cụ thể user sai
+  word                  String // "birthday", "three", etc.
+  expectedPronunciation String? // IPA: "ˈbɜːrθ.deɪ"
+  userPronunciation     String? // Cách user nói (transcript)
+
+  // Context
+  contextSentence String? // "Happy birthday to you"
+  source          String // "free_chat" | "practice"
+
+  // Tracking
+  errorCount    Int       @default(1)
+  correctCount  Int       @default(0)
+  lastErrorAt   DateTime  @default(now())
+  lastCorrectAt DateTime?
+
+  // Error analysis
+  errorType          String? // "missing_sound", "wrong_stress", "substitution"
+  problematicPhoneme String? // "/θ/", "/ð/", etc.
+
+  // SM-2 for word review
+  easeFactor     Float    @default(2.5)
+  interval       Int      @default(1) // days
+  repetitions    Int      @default(0) // SM-2 consecutive correct count
+  nextReviewDate DateTime @default(now())
+  lastReviewedAt DateTime? // Last time word was reviewed
+
+  // Relations
+  user User @relation("MispronounceWordUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, word])
+  @@index([userId, errorCount])
+  @@index([userId, nextReviewDate])
+  @@index([source])
+  @@map("mispronounce_words")
+}
+
+model PersonalizedDrill {
+  id         String  @id @default(uuid())
+  userId     String
+  progressId String?
+
+  // LLM output
+  generatedBy     String   @default("llm") // "llm" | "rule_based"
+  analysis        String // "User yếu âm /θ/, /ð/..."
+  targetWords     String[] // ["three", "birthday", "think"]
+  targetSentences String[] // ["I think my birthday..."]
+  targetPhonemes  String[] // ["/θ/", "/ð/"]
+
+  // Source words that triggered this drill
+  sourceWordIds String[] // MispronounceWord IDs
+
+  // Status
+  status   String @default("pending") // "pending" | "in_progress" | "completed" | "skipped"
+  priority Int    @default(1)
+
+  // Progress
+  wordsCompleted String[]  @default([])
+  completedAt    DateTime?
+
+  // Relations
+  user     User                      @relation("PersonalizedDrillUser", fields: [userId], references: [id], onDelete: Cascade)
+  progress SpeakingPracticeProgress? @relation(fields: [progressId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, status])
+  @@index([progressId])
+  @@map("personalized_drills")
 }

@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { DatabaseModule } from '@libs/database';
+import { DatabaseModule } from '@app/database';
 import { TopicsService } from './topics.service';
 import { TopicTrendingCron } from './topic-trending.cron';
 

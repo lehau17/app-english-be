@@ -151,7 +151,7 @@ export class PromptTemplateService {
     // Add default variables
     const allVariables = {
       activityType,
-      difficulty: difficulty || 'MEDIUM',
+      difficulty: difficulty || DifficultyLevel.intermediate,
       skill: skill || 'general',
       proficiencyLevel: this.mapDifficultyToProficiency(difficulty),
       ...variables,
@@ -221,9 +221,12 @@ export class PromptTemplateService {
     if (!difficulty) return 'B1';
 
     const mapping: Record<DifficultyLevel, string> = {
-      EASY: 'A2',
-      MEDIUM: 'B1',
-      HARD: 'B2',
+      beginner: 'A1',
+      elementary: 'A2',
+      intermediate: 'B1',
+      upper_intermediate: 'B2',
+      advanced: 'C1',
+      expert: 'C2',
     };
 
     return mapping[difficulty] || 'B1';

@@ -7,4 +7,7 @@ export enum KafkaTopic {
   EMAIL_ENROLLMENT_CONFIRMATION = 'email-enrollment-confirmation',
   MEDIA_PROCESSING = 'media-processing',
   ACTIVITY_GENERATION = 'activity-generation',
+  // Speaking Practice (Word-Based + LLM Personalization)
+  AI_SPEAKING_SESSION_COMPLETED = 'ai-speaking.session.completed',
+  SPEAKING_PRACTICE_ATTEMPT_COMPLETED = 'speaking-practice.attempt.completed',
 }

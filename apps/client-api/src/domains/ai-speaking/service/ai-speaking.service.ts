@@ -1,5 +1,9 @@
 import { PrismaRepository } from '@app/database';
-import { ProfanityBanService } from '@app/shared';
+import {
+  ProfanityBanService,
+  KafkaProducerService,
+  KafkaTopic,
+} from '@app/shared';
 import {
   ForbiddenException,
   Injectable,
@@ -36,6 +40,7 @@ export class AiSpeakingService {
     private readonly realtimeService: AiSpeakingRealtimeService,
     private readonly conversationDesigner: ConversationDesignerService,
     private readonly profanityBan: ProfanityBanService,
+    private readonly kafkaProducer: KafkaProducerService,
   ) {}
 
   async startSession(userId: string, dto: StartAiSpeakingSessionDto) {
@@ -213,6 +218,21 @@ export class AiSpeakingService {
       endedAt: new Date(),
       lastActivityAt: new Date(),
     });
+
+    // Emit Kafka event for mispronounce word collection (fire-and-forget)
+    this.kafkaProducer.emit(
+      KafkaTopic.AI_SPEAKING_SESSION_COMPLETED,
+      {
+        sessionId: session.id,
+        userId: session.userId,
+        source: 'free_chat' as const,
+        completedAt: new Date().toISOString(),
+      },
+      session.id,
+    );
+    this.logger.log(
+      `Emitted AI_SPEAKING_SESSION_COMPLETED for session ${session.id}`,
+    );
 
     return AiSpeakingSessionPresenter.toDto(updated);
   }

@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaRepository } from '@app/database';
-import { KafkaProducer } from '@app/shared/kafka/kafka.producer';
+import { KafkaProducerService } from '@app/shared';
+import { Status, UserRole } from '@prisma/client';
 
 /**
  * SRS Review Notifier Cron Job
@@ -15,7 +16,7 @@ export class SRSReviewNotifierCron {
 
   constructor(
     private readonly prisma: PrismaRepository,
-    private readonly kafkaProducer: KafkaProducer,
+    private readonly kafkaProducer: KafkaProducerService,
   ) {}
 
   /**
@@ -24,25 +25,16 @@ export class SRSReviewNotifierCron {
    */
   @Cron(CronExpression.EVERY_DAY_AT_9AM)
   async notifyDueReviews() {
-    this.logger.log('🔔 Starting SRS review notification job...');
+    this.logger.log('Starting SRS review notification job...');
 
     try {
       const now = new Date();
 
-      // Find all users with skills due for review
+      // Find all skills due for review
       const dueSkills = await this.prisma.skillProgress.findMany({
         where: {
           nextReviewAt: {
             lte: now,
-          },
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              email: true,
-              fullName: true,
-            },
           },
         },
         orderBy: {
@@ -83,7 +75,11 @@ export class SRSReviewNotifierCron {
       let notificationCount = 0;
 
       for (const [userId, skills] of userSkillsMap.entries()) {
-        const user = dueSkills.find((s) => s.userId === userId)?.user;
+        // Get user info separately (SkillProgress doesn't have user relation)
+        const user = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { id: true, email: true, displayName: true },
+        });
 
         if (!user) continue;
 
@@ -104,11 +100,8 @@ export class SRSReviewNotifierCron {
           channels: ['push', 'email'],
         };
 
-        // Send to Kafka notification topic
-        await this.kafkaProducer.produce('notifications', {
-          key: userId,
-          value: notificationPayload,
-        });
+        // Send to Kafka notification topic using emit method
+        this.kafkaProducer.emit('notifications', notificationPayload, userId);
 
         notificationCount++;
 
@@ -118,7 +111,7 @@ export class SRSReviewNotifierCron {
       }
 
       this.logger.log(
-        `✅ Sent ${notificationCount} SRS review notifications to users`,
+        `Sent ${notificationCount} SRS review notifications to users`,
       );
     } catch (error) {
       this.logger.error(
@@ -134,16 +127,16 @@ export class SRSReviewNotifierCron {
    */
   @Cron(CronExpression.EVERY_DAY_AT_8AM)
   async generateDailySummary() {
-    this.logger.log('📊 Generating SRS daily summary...');
+    this.logger.log('Generating SRS daily summary...');
 
     try {
       const now = new Date();
 
-      // Get counts
+      // Get counts - using status enum for active users
       const totalUsers = await this.prisma.user.count({
         where: {
-          deletedAt: null,
-          role: 'STUDENT',
+          status: Status.active,
+          role: UserRole.student,
         },
       });
 
@@ -182,16 +175,13 @@ export class SRSReviewNotifierCron {
             : 0,
       };
 
-      this.logger.log('📊 SRS Daily Summary:');
+      this.logger.log('SRS Daily Summary:');
       this.logger.log(`   - Total Students: ${summary.totalUsers}`);
       this.logger.log(
         `   - Users with Due Reviews: ${summary.usersWithDueReviews} (${summary.reviewRate}%)`,
       );
       this.logger.log(`   - Total Skills Due: ${summary.totalDueSkills}`);
       this.logger.log(`   - Average Mastery: ${summary.averageMastery}%`);
-
-      // Optionally: Send summary to admins via notification
-      // await this.sendAdminSummary(summary);
     } catch (error) {
       this.logger.error(
         `Failed to generate SRS daily summary: ${error.message}`,
@@ -206,26 +196,32 @@ export class SRSReviewNotifierCron {
    */
   @Cron(CronExpression.EVERY_WEEK)
   async cleanupOldRecords() {
-    this.logger.log('🧹 Cleaning up old SRS records...');
+    this.logger.log('Cleaning up old SRS records...');
 
     try {
-      // Delete skill progress for deleted users (older than 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const deleted = await this.prisma.skillProgress.deleteMany({
+      // Delete skill progress for inactive/banned users
+      const inactiveUsers = await this.prisma.user.findMany({
         where: {
-          user: {
-            deletedAt: {
-              lte: thirtyDaysAgo,
-            },
+          status: {
+            in: [Status.inactive, Status.banned],
           },
         },
+        select: { id: true },
       });
 
-      this.logger.log(
-        `🧹 Cleaned up ${deleted.count} old skill progress records`,
-      );
+      const inactiveUserIds = inactiveUsers.map((u) => u.id);
+
+      if (inactiveUserIds.length > 0) {
+        const deleted = await this.prisma.skillProgress.deleteMany({
+          where: {
+            userId: { in: inactiveUserIds },
+          },
+        });
+
+        this.logger.log(`Cleaned up ${deleted.count} skill progress records for inactive users`);
+      } else {
+        this.logger.log('No skill progress records to clean up');
+      }
     } catch (error) {
       this.logger.error(
         `Failed to clean up old SRS records: ${error.message}`,

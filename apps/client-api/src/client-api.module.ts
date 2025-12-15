@@ -47,6 +47,7 @@ import { EventsModule } from './events/events.module';
 import { LearningPathModule } from './domains/learning-path/learning-path.module';
 import { RecommendationModule } from './domains/recommendation/recommendation.module';
 import { TopicsModule } from './domains/topics/topics.module';
+import { SpeakingPracticeModule } from './domains/speaking-practice/speaking-practice.module';
 
 @Module({
   imports: [
@@ -94,6 +95,7 @@ import { TopicsModule } from './domains/topics/topics.module';
     LearningPathModule,
     RecommendationModule,
     TopicsModule,
+    SpeakingPracticeModule,
   ],
   controllers: [ClientApiController],
   providers: [ClientApiService, UploadService],

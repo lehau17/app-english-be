@@ -14,7 +14,7 @@
     "start": "nest start",
     "start:client-api": "node --max-old-space-size=2048 --gc-interval=100 --expose-gc node_modules/.bin/nest start client-api",
     "start:client-api:dev": "nest start client-api --watch",
-    "build:client-api": "nest build client-api",
+    "build:client-api": "node --max-old-space-size=4096 --gc-interval=100 nest build client-api",
     "start:background-worker": "nest start background-worker",
     "start:background-worker:dev": "nest start background-worker --watch",
     "build:background-worker": "nest build background-worker",

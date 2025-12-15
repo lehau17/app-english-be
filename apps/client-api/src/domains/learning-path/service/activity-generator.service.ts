@@ -128,7 +128,7 @@ export class ActivityGeneratorService {
     );
 
     try {
-      await this.kafkaProducer.sendMessage(KafkaTopic.ACTIVITY_GENERATION, {
+      this.kafkaProducer.emit(KafkaTopic.ACTIVITY_GENERATION, {
         jobId,
         timestamp: new Date().toISOString(),
         params,
@@ -158,7 +158,7 @@ export class ActivityGeneratorService {
     for (const activityContent of activities) {
       const variant = await this.activityVariantRepository.create({
         activityType: params.activityType,
-        difficulty: params.difficulty || 'MEDIUM',
+        difficulty: params.difficulty || DifficultyLevel.intermediate,
         skill: params.skill || 'general',
         title: activityContent.title || `${params.activityType} Exercise`,
         description: activityContent.description,

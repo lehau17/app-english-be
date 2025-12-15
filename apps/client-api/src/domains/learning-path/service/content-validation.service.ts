@@ -209,38 +209,37 @@ Return JSON:
     const issues: string[] = [];
 
     switch (activityType) {
-      case 'VOCAB':
-      case 'FLASHCARD':
+      case 'vocab':
         if (!content.words || content.words.length === 0) {
-          issues.push('VOCAB activity must have words array');
+          issues.push('Vocab activity must have words array');
         }
         break;
 
-      case 'QUIZ':
-      case 'FILL_BLANK':
+      case 'fill_blank':
+      case 'dictation':
         if (!content.questions || content.questions.length === 0) {
-          issues.push('Quiz activity must have questions array');
+          issues.push('Fill blank/dictation activity must have questions array');
         }
         if (!content.answers || content.answers.length === 0) {
-          issues.push('Quiz activity must have answers array');
+          issues.push('Fill blank/dictation activity must have answers array');
         }
         break;
 
-      case 'LISTENING':
-      case 'PRONUNCIATION':
+      case 'listening':
+      case 'pronunciation':
+      case 'speaking':
         if (!content.audioUrl && !content.text) {
           issues.push('Audio activity must have audioUrl or text');
         }
         break;
 
-      case 'READING':
-      case 'WRITING':
-        if (!content.text || content.text.trim().length < 50) {
-          issues.push('Reading/Writing activity must have substantial text');
+      case 'mini_game':
+        if (!content.exercises && !content.questions) {
+          issues.push('Mini game must have exercises or questions');
         }
         break;
 
-      case 'MATCHING':
+      case 'matching':
         if (!content.pairs || content.pairs.length < 3) {
           issues.push('Matching activity must have at least 3 pairs');
         }
