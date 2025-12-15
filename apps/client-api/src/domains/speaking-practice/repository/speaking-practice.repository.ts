@@ -32,8 +32,8 @@ export class SpeakingPracticeRepository {
         currentLevel: 1,
         completedLessons: [],
         weakPhonemes: [],
-        streakDays: 0,
-        totalPracticeTimeMinutes: 0,
+        streak: 0,
+        totalPracticeTime: 0,
       },
     });
   }
@@ -247,7 +247,7 @@ export class SpeakingPracticeRepository {
       },
       update: {
         errorCount: { increment: 1 },
-        lastOccurredAt: new Date(),
+        lastErrorAt: new Date(),
         contextSentence: data.contextSentence,
       },
       create: {
@@ -257,7 +257,7 @@ export class SpeakingPracticeRepository {
         problematicPhoneme: data.phoneme,
         contextSentence: data.contextSentence,
         source: data.source,
-        lastOccurredAt: new Date(),
+        lastErrorAt: new Date(),
       },
     });
   }

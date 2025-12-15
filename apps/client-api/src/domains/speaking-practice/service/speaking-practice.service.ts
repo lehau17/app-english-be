@@ -71,9 +71,9 @@ export class SpeakingPracticeService {
       completedLessons: progress.completedLessons || [],
       totalLessonsCompleted: (progress.completedLessons || []).length,
       weakPhonemes: progress.weakPhonemes || [],
-      streakDays: progress.streakDays,
+      streakDays: progress.streak,
       lastPracticedAt: progress.lastPracticedAt,
-      totalPracticeTimeMinutes: progress.totalPracticeTimeMinutes,
+      totalPracticeTimeMinutes: Math.round(progress.totalPracticeTime / 60),
       successRate,
       nextLevelUnlocked,
     };
@@ -241,6 +241,8 @@ export class SpeakingPracticeService {
     }
 
     // Create attempt record
+    const lessonContent = lesson.content as any;
+    const lessonItems = this.extractItems(lessonContent);
     await this.repository.createAttempt({
       progress: { connect: { id: progress.id } },
       lesson: { connect: { id: lesson.id } },
@@ -249,10 +251,14 @@ export class SpeakingPracticeService {
         referenceText: dto.referenceText,
         transcript: scoringResult.transcript,
         score: scoringResult.combinedScore,
+        failedPhonemes: scoringResult.failedPhonemes,
       } as Prisma.JsonObject,
       score: scoringResult.combinedScore,
       verdict: passed ? 'pass' : 'fail',
-      failedPhonemes: scoringResult.failedPhonemes,
+      duration: 0, // Will be updated with actual duration in future
+      level: lesson.level,
+      itemCount: lessonItems.length,
+      correctCount: passed ? 1 : 0,
     });
 
     // Update weak phonemes
