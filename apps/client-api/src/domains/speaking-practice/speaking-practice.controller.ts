@@ -33,7 +33,7 @@ import { SpeakingPracticeService } from './service/speaking-practice.service';
  * - POST /speaking-practice/submit     → Submit practice attempt
  * - GET  /speaking-practice/drills     → Get personalized drills
  */
-@Controller('speaking-practice')
+@Controller('/private/v1/speaking-practice')
 export class SpeakingPracticeController {
   constructor(private readonly service: SpeakingPracticeService) {}
 
