@@ -1,11 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { ActivityGeneratorService } from './activity-generator.service';
 import { GeminiService } from '@app/shared/ai/gemini.service';
 import { KafkaProducerService } from '@app/shared/kafka/kafka-producer.service';
-import { ActivityVariantRepository } from '../repository/activity-variant.repository';
-import { PromptTemplateService } from './prompt-template.service';
-import { ContentValidationService } from './content-validation.service';
+import { Test, TestingModule } from '@nestjs/testing';
 import { ActivityType, DifficultyLevel } from '@prisma/client';
+import { ActivityVariantRepository } from '../repository/activity-variant.repository';
+import { ActivityGeneratorService } from './activity-generator.service';
+import { ContentValidationService } from './content-validation.service';
+import { PromptTemplateService } from './prompt-template.service';
 
 describe('ActivityGeneratorService', () => {
   let service: ActivityGeneratorService;
@@ -46,7 +46,7 @@ describe('ActivityGeneratorService', () => {
     mediaUrls: [],
     promptTemplateId: 'template-1',
     generationParams: {},
-    aiModel: 'gemini-2.5-flash',
+    aiModel: 'gemini-2.5-pro',
     usageCount: 0,
     averageScore: null,
     feedbackCount: 0,

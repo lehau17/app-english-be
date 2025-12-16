@@ -2766,7 +2766,7 @@ model ActivityVariant {
   // Generation metadata
   promptTemplateId String? // Which prompt generated this
   generationParams Json? // Parameters used for generation
-  aiModel          String? // "gemini-2.5-flash", etc.
+  aiModel          String? // "gemini-2.5-pro", etc.
 
   // Quality tracking
   usageCount    Int     @default(0)
@@ -2804,7 +2804,7 @@ model PromptTemplate {
   skill        String?
 
   // Model settings
-  modelName   String @default("gemini-2.5-flash")
+  modelName   String @default("gemini-2.5-pro")
   temperature Float  @default(0.7)
   maxTokens   Int    @default(2048)
   parameters  Json? // Additional parameters

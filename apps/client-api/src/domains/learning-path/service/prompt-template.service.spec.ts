@@ -1,8 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { PromptTemplateService } from './prompt-template.service';
 import { PrismaRepository } from '@app/database';
-import { ActivityType, DifficultyLevel } from '@prisma/client';
 import { NotFoundException } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { ActivityType, DifficultyLevel } from '@prisma/client';
+import { PromptTemplateService } from './prompt-template.service';
 
 describe('PromptTemplateService', () => {
   let service: PromptTemplateService;
@@ -17,7 +17,7 @@ describe('PromptTemplateService', () => {
     skill: null,
     systemPrompt: 'You are a teacher creating {{activityType}} exercises.',
     userPrompt: 'Generate {{count}} words for {{proficiencyLevel}} level.',
-    modelName: 'gemini-2.5-flash',
+    modelName: 'gemini-2.5-pro',
     temperature: 0.7,
     maxTokens: 2048,
     parameters: null,

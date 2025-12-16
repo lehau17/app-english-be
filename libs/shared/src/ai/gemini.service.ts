@@ -54,7 +54,7 @@ export class GeminiService {
   async generateResponse(prompt: string): Promise<string> {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-pro',
         generationConfig: { temperature: 0.7, maxOutputTokens: 10000 },
       });
       const result = await model.generateContent(prompt);
@@ -73,7 +73,7 @@ export class GeminiService {
   async generateJSONResponse(prompt: string): Promise<string> {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-pro',
         generationConfig: {
           temperature: 0.7,
           maxOutputTokens: 10000,
@@ -161,7 +161,7 @@ Yêu cầu:
 Nhận xét:`;
 
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-pro',
         generationConfig: {
           temperature: 0.7,
           maxOutputTokens: 10000,
@@ -349,7 +349,7 @@ Giữ phản hồi bằng tiếng Việt, cụ thể và tích cực.`;
   ): Promise<EvaluationPayload> {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-pro',
         generationConfig: {
           temperature: 0.2,
           maxOutputTokens: 10000,

@@ -39,6 +39,7 @@ import { SqlService } from './sql.service';
 export class LangChainAgentService {
   private readonly logger = new Logger(LangChainAgentService.name);
   private agent!: AgentExecutor;
+  private agentReady: Promise<void>;
 
   constructor(
     private ragService: RagService,
@@ -72,16 +73,16 @@ export class LangChainAgentService {
     private speakingProgress: SpeakingProgressTool,
     private paymentTracker: PaymentTrackerTool,
   ) {
-    // không await trong ctor: gọi initialize() ở nơi thích hợp nếu cần
-    void this.initializeAgent();
+    this.agentReady = this.initializeAgent();
   }
 
   private async initializeAgent() {
+    const startTime = Date.now();
     try {
       this.logger.log('🤖 Khởi tạo LangChain Agent...');
 
       const llm = new ChatGoogleGenerativeAI({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-pro',
         apiKey: process.env.GEMINI_API_KEY,
         temperature: 0.1,
         streaming: true, // Enable streaming
@@ -306,9 +307,36 @@ CÔNG CỤ CÓ SẴN:
    - PDF: Báo cáo chính thức (<50 rows), cần in ấn/lưu trữ
    - Word: Báo cáo chi tiết/phức tạp, nhiều trường (>15 columns)
 
+**📋 ĐỊNH DẠNG KẾT QUẢ (BẮT BUỘC):**
+
+Khi trình bày danh sách dữ liệu (học sinh, giáo viên, khóa học, v.v.), **LUÔN DÙNG BẢNG MARKDOWN**:
+
+| STT | Tên | Email | Vai trò |
+|-----|-----|-------|---------|
+| 1 | Nguyễn Văn A | a@email.com | Học sinh |
+| 2 | Trần Thị B | b@email.com | Giáo viên |
+
+**QUY TẮC:**
+- Danh sách ≥2 items → BẮT BUỘC dùng bảng markdown
+- Luôn có header row và separator row (|---|---|)
+- Cột STT đánh số từ 1
+- Căn chỉnh đẹp, dễ đọc
+- KHÔNG dùng format danh sách bullet points cho dữ liệu bảng
+
+**VÍ DỤ SAI (KHÔNG LÀM):**
+Học sinh:
+- Tên: A, Email: a@email.com
+- Tên: B, Email: b@email.com
+
+**VÍ DỤ ĐÚNG:**
+| STT | Tên | Email |
+|-----|-----|-------|
+| 1 | A | a@email.com |
+| 2 | B | b@email.com |
+
 **LƯU Ý:**
 - Luôn dùng database_query để lấy dữ liệu thực từ DB, KHÔNG bịa số liệu
-- Trả lời ngắn gọn bằng Markdown
+- Trả lời ngắn gọn bằng Markdown, dùng BẢNG cho danh sách
 - Khi query DB, sử dụng tên bảng và cột chính xác từ schema
 - Giải thích rõ ràng dữ liệu đến từ đâu
 `,
@@ -331,10 +359,31 @@ CÔNG CỤ CÓ SẴN:
         returnIntermediateSteps: true,
       });
 
-      this.logger.log('LangChain Agent sẵn sàng');
+      const initTime = Date.now() - startTime;
+      this.logger.log(`LangChain Agent sẵn sàng in ${initTime}ms`);
     } catch (e) {
       this.logger.error('Lỗi init Agent:', e as any);
       throw e;
+    }
+  }
+
+  /**
+   * Ensure agent fully initialized before use
+   */
+  private async ensureAgentReady(): Promise<void> {
+    const timeout = 10000;
+    const timeoutPromise = new Promise<void>((_, reject) => {
+      setTimeout(
+        () => reject(new Error('Agent initialization timeout after 10s')),
+        timeout,
+      );
+    });
+
+    try {
+      await Promise.race([this.agentReady, timeoutPromise]);
+    } catch (error) {
+      this.logger.error('Agent not ready:', error);
+      throw new Error(`Agent not initialized: ${(error as Error).message}`);
     }
   }
 
@@ -344,6 +393,7 @@ CÔNG CỤ CÓ SẴN:
     userRole: string = 'student',
     userInfo: string = '',
   ) {
+    // await this.ensureAgentReady();
     const start = Date.now();
 
     // Convert chat history to LangChain format
@@ -398,6 +448,7 @@ CÔNG CỤ CÓ SẴN:
     chart?: any;
     file?: any;
   }> {
+    // await this.ensureAgentReady();
     const start = Date.now();
 
     try {
@@ -837,6 +888,15 @@ CÔNG CỤ CÓ SẴN:
         })
         .join('\n');
 
+      // Handle empty response (likely rate limiting or model error)
+      if (!fullAnswer || fullAnswer.trim() === '') {
+        this.logger.warn(
+          '⚠️ Empty response received - possible rate limiting or model error',
+        );
+        fullAnswer =
+          'Xin lỗi, hiện tại hệ thống đang quá tải. Vui lòng thử lại sau vài giây. (Error: Empty response from AI model)';
+      }
+
       yield {
         type: 'complete',
         data: {
@@ -849,9 +909,29 @@ CÔNG CỤ CÓ SẴN:
       };
     } catch (error) {
       this.logger.error('Streaming error:', error);
+
+      // Check for specific error types
+      const errorMessage = error.message || 'Unknown error occurred';
+      let userFriendlyMessage = errorMessage;
+
+      if (
+        errorMessage.includes('429') ||
+        errorMessage.includes('RESOURCE_EXHAUSTED') ||
+        errorMessage.includes('quota')
+      ) {
+        userFriendlyMessage =
+          'Hệ thống AI đang quá tải. Vui lòng thử lại sau 30 giây.';
+      } else if (
+        errorMessage.includes('timeout') ||
+        errorMessage.includes('DEADLINE_EXCEEDED')
+      ) {
+        userFriendlyMessage =
+          'Yêu cầu quá thời gian chờ. Vui lòng thử lại với câu hỏi ngắn hơn.';
+      }
+
       yield {
         type: 'error',
-        content: error.message || 'Unknown error occurred',
+        content: userFriendlyMessage,
       };
     }
   }

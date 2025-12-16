@@ -11,6 +11,7 @@ import { SqlService } from './sql.service';
 export class ParentAgentService {
   private readonly logger = new Logger(ParentAgentService.name);
   private agent!: AgentExecutor;
+  private agentReady: Promise<void>;
 
   constructor(
     private prisma: PrismaRepository,
@@ -18,15 +19,16 @@ export class ParentAgentService {
     private sqlService: SqlService,
     private parentTools: ParentAgentTools,
   ) {
-    void this.initializeAgent();
+    this.agentReady = this.initializeAgent();
   }
 
   private async initializeAgent() {
+    const startTime = Date.now();
     try {
       this.logger.log('👨‍👩‍👧 Khởi tạo Parent Agent...');
 
       const llm = new ChatGoogleGenerativeAI({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-2.5-pro',
         apiKey: process.env.GEMINI_API_KEY,
         temperature: 0.1,
         streaming: true,
@@ -60,6 +62,13 @@ CÔNG CỤ:
 9. **get_child_report**: Báo cáo tổng quan về con
 10. **chart_generator**: Tạo biểu đồ trực quan
 
+QUAN TRỌNG - KHI SỬ DỤNG CÔNG CỤ:
+- Câu hỏi về "thống kê", "danh sách", "báo cáo" → LUÔN dùng database_query hoặc knowledge_search
+- Câu hỏi về "tiến độ", "điểm số", "bài tập" → LUÔN dùng get_child_progress hoặc get_child_assignments
+- Câu hỏi về "thanh toán", "học phí" → LUÔN dùng get_payment_status
+- NẾU đây là câu hỏi đầu tiên (chat_history trống) VÀ có từ khóa trên → BẮT BUỘC gọi tool, KHÔNG trả lời trực tiếp
+- Nếu không có dữ liệu con em → yêu cầu phụ huynh cung cấp thêm thông tin
+
 QUY TẮC:
 - Luôn thân thiện, tôn trọng
 - Trả lời bằng tiếng Việt (trừ khi phụ huynh yêu cầu tiếng Anh)
@@ -72,6 +81,16 @@ CÁCH TRẢ LỜI:
 - Sử dụng emoji phù hợp
 - Cung cấp thông tin chi tiết về con em
 - Đề xuất các bước tiếp theo để hỗ trợ con
+
+📋 ĐỊNH DẠNG BẢNG (BẮT BUỘC):
+Khi trình bày danh sách (con em, điểm số, bài tập, v.v.), **LUÔN DÙNG BẢNG MARKDOWN**:
+
+| STT | Tên | Điểm | Trạng thái |
+|-----|-----|------|------------|
+| 1 | Nguyễn Văn A | 8.5 | Tốt |
+
+- Danh sách ≥2 items → BẮT BUỘC dùng bảng
+- KHÔNG dùng bullet points cho dữ liệu bảng
 `,
         ],
         ['placeholder', '{chat_history}'],
@@ -92,11 +111,61 @@ CÁCH TRẢ LỜI:
         maxIterations: 5,
         returnIntermediateSteps: true,
       });
-      this.logger.log('Parent Agent initialized successfully');
+      const initTime = Date.now() - startTime;
+      this.logger.log(`Parent Agent initialized successfully in ${initTime}ms`);
     } catch (error) {
       this.logger.error('Failed to initialize Parent Agent:', error);
       throw error;
     }
+  }
+
+  /**
+   * Ensure agent fully initialized before use
+   */
+  private async ensureAgentReady(): Promise<void> {
+    const timeout = 10000;
+    const timeoutPromise = new Promise<void>((_, reject) => {
+      setTimeout(
+        () => reject(new Error('Agent initialization timeout after 10s')),
+        timeout,
+      );
+    });
+
+    try {
+      await Promise.race([this.agentReady, timeoutPromise]);
+    } catch (error) {
+      this.logger.error('Agent not ready:', error);
+      throw new Error(`Agent not initialized: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Detect if message requires tool usage (statistics/reports)
+   */
+  private isStatisticsQuery(message: string): boolean {
+    const keywords = [
+      'thống kê',
+      'danh sách',
+      'báo cáo',
+      'report',
+      'tiến độ',
+      'progress',
+      'điểm số',
+      'scores',
+      'bài tập',
+      'assignment',
+      'học phí',
+      'thanh toán',
+      'học sinh',
+      'phụ huynh',
+      'giáo viên',
+      'teacher',
+      'student',
+      'parent',
+    ];
+
+    const lowerMessage = message.toLowerCase();
+    return keywords.some((keyword) => lowerMessage.includes(keyword));
   }
 
   /**
@@ -150,7 +219,7 @@ CÁCH TRẢ LỜI:
 
       let context = `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👨‍👩‍👧 THÔNG TIN PHỤ HUYNH: ${parentName}
+THÔNG TIN PHỤ HUYNH: ${parentName}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 CON EM:
@@ -227,12 +296,12 @@ CON EM:
 
       return {
         id: newConversation.id,
-        messages: '',
+        messages: '[NEW_CONVERSATION]',
       };
     } catch (error) {
       this.logger.error('Error managing conversation:', error);
       // Return empty conversation on error
-      return { id: '', messages: '' };
+      return { id: '', messages: '[NEW_CONVERSATION]' };
     }
   }
 
@@ -280,6 +349,7 @@ CON EM:
   }
 
   async processQuery(message: string, userId: string, conversationId?: string) {
+    // await this.ensureAgentReady();
     try {
       const startTime = Date.now();
 
@@ -292,6 +362,18 @@ CON EM:
         conversationId,
       );
 
+      // Detect first message
+      const isFirstMessage =
+        !conversation.messages ||
+        conversation.messages === '[NEW_CONVERSATION]' ||
+        conversation.messages.length === 0;
+
+      // Add tool hint for first message with statistical queries
+      const toolHint =
+        isFirstMessage && this.isStatisticsQuery(message)
+          ? '\n\n⚠️ ĐÂY LÀ CÂU HỎI ĐẦU TIÊN - Hãy SỬ DỤNG CÔNG CỤ để trả lời chính xác. KHÔNG trả lời chung chung.'
+          : '';
+
       // Enhance input with parent profile context
       const enhancedInput = `${parentContext}
 
@@ -299,12 +381,16 @@ CON EM:
 💬 CÂU HỎI CỦA PHỤ HUYNH:
 ${message}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${toolHint}
 
 Hãy trả lời dựa trên thông tin con em ở trên. Nếu phụ huynh hỏi về con cụ thể, hãy sử dụng các tools để lấy thông tin chi tiết.`;
 
       const result = await this.agent.invoke({
         input: enhancedInput,
-        chat_history: conversation.messages,
+        chat_history:
+          conversation.messages === '[NEW_CONVERSATION]'
+            ? ''
+            : conversation.messages,
         userId, // Pass userId to tools
       });
 
@@ -348,6 +434,7 @@ Hãy trả lời dựa trên thông tin con em ở trên. Nếu phụ huynh hỏ
     data?: any;
     chart?: any;
   }> {
+    // await this.ensureAgentReady();
     try {
       // Get personalized parent context
       const parentContext = await this.getParentContext(userId);
@@ -358,6 +445,18 @@ Hãy trả lời dựa trên thông tin con em ở trên. Nếu phụ huynh hỏ
         conversationId,
       );
 
+      // Detect first message
+      const isFirstMessage =
+        !conversation.messages ||
+        conversation.messages === '[NEW_CONVERSATION]' ||
+        conversation.messages.length === 0;
+
+      // Add tool hint for first message with statistical queries
+      const toolHint =
+        isFirstMessage && this.isStatisticsQuery(message)
+          ? '\n\n ĐÂY LÀ CÂU HỎI ĐẦU TIÊN - Hãy SỬ DỤNG CÔNG CỤ để trả lời chính xác. KHÔNG trả lời chung chung.'
+          : '';
+
       // Enhance input with parent profile context
       const enhancedInput = `${parentContext}
 
@@ -365,6 +464,7 @@ Hãy trả lời dựa trên thông tin con em ở trên. Nếu phụ huynh hỏ
 💬 CÂU HỎI CỦA PHỤ HUYNH:
 ${message}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${toolHint}
 
 Hãy trả lời dựa trên thông tin con em ở trên. Nếu phụ huynh hỏi về con cụ thể, hãy sử dụng các tools để lấy thông tin chi tiết.`;
 
@@ -384,7 +484,10 @@ Hãy trả lời dựa trên thông tin con em ở trên. Nếu phụ huynh hỏ
       // Use streamLog for better token-by-token streaming (same as admin agent)
       const stream = await this.agent.streamLog({
         input: enhancedInput,
-        chat_history: conversation.messages,
+        chat_history:
+          conversation.messages === '[NEW_CONVERSATION]'
+            ? ''
+            : conversation.messages,
         userId,
       });
 
@@ -500,6 +603,15 @@ Hãy trả lời dựa trên thông tin con em ở trên. Nếu phụ huynh hỏ
         }
       }
 
+      // Handle empty response (likely rate limiting or model error)
+      if (!fullResponse || fullResponse.trim() === '') {
+        this.logger.warn(
+          '⚠️ Empty response received - possible rate limiting or model error',
+        );
+        fullResponse =
+          'Xin lỗi, hiện tại hệ thống đang quá tải. Vui lòng thử lại sau vài giây.';
+      }
+
       // Send complete event with final answer
       yield {
         type: 'complete',
@@ -516,9 +628,21 @@ Hãy trả lời dựa trên thông tin con em ở trên. Nếu phụ huynh hỏ
       }
     } catch (error) {
       this.logger.error('Error streaming parent query:', error);
+
+      const errorMessage = (error as Error).message || '';
+      let userFriendlyMessage = 'Đã xảy ra lỗi khi xử lý yêu cầu';
+
+      if (
+        errorMessage.includes('429') ||
+        errorMessage.includes('RESOURCE_EXHAUSTED')
+      ) {
+        userFriendlyMessage =
+          'Hệ thống AI đang quá tải. Vui lòng thử lại sau 30 giây.';
+      }
+
       yield {
         type: 'error',
-        content: (error as Error).message || 'Đã xảy ra lỗi khi xử lý yêu cầu',
+        content: userFriendlyMessage,
       };
     }
   }

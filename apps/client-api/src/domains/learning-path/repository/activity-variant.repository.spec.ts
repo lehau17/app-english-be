@@ -1,7 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaRepository } from '@app/database';
-import { ActivityVariantRepository } from './activity-variant.repository';
+import { Test, TestingModule } from '@nestjs/testing';
 import { ActivityType, ActivityVariant, DifficultyLevel } from '@prisma/client';
+import { ActivityVariantRepository } from './activity-variant.repository';
 
 describe('ActivityVariantRepository', () => {
   let repository: ActivityVariantRepository;
@@ -19,7 +19,7 @@ describe('ActivityVariantRepository', () => {
     mediaUrls: [],
     promptTemplateId: null,
     generationParams: null,
-    aiModel: 'gemini-2.5-flash',
+    aiModel: 'gemini-2.5-pro',
     usageCount: 5,
     averageScore: 75,
     feedbackCount: 2,

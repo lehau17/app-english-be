@@ -51,7 +51,7 @@ export class ParentAgentTools {
       ...paymentTracker.getTools(),
 
       // Student analytics (for child analysis with AI insights and charts)
-      this.studentAnalytics,
+      this.studentAnalytics.getTool(),
     ];
   }
 
