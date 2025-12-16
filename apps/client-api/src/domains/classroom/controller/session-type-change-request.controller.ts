@@ -94,6 +94,18 @@ export class SessionTypeChangeRequestAdminController {
     return this.service.getRequestsBySession(sessionId, query);
   }
 
+  @Get('type-change-requests')
+  @ApiOperation({ summary: 'Get all type change requests (Admin)' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of all requests',
+    type: [SessionTypeChangeRequestResponseDto],
+  })
+  @ResponseMessage('All session type change requests')
+  async getAllRequests(@Query() query: QuerySessionTypeChangeRequestDto) {
+    return this.service.getAllRequests(query);
+  }
+
   @Get('type-change-requests/pending')
   @ApiOperation({ summary: 'Get all pending type change requests (Admin)' })
   @ApiResponse({

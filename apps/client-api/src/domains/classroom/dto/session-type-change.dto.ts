@@ -1,10 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
+  Min,
 } from 'class-validator';
 import { SessionType, SessionTypeChangeStatus } from '@prisma/client';
 
@@ -137,4 +140,24 @@ export class QuerySessionTypeChangeRequestDto {
   @IsOptional()
   @IsEnum(SessionTypeChangeStatus)
   status?: SessionTypeChangeStatus;
+
+  @ApiPropertyOptional({
+    description: 'Page number',
+    default: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({
+    description: 'Items per page',
+    default: 20,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  limit?: number;
 }

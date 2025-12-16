@@ -220,6 +220,77 @@ export class SessionTypeChangeRequestService {
   }
 
   /**
+   * Get all requests (Admin) - with optional status filter
+   */
+  async getAllRequests(query: QuerySessionTypeChangeRequestDto) {
+    const where: any = {};
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    const page = query.page || 1;
+    const limit = query.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const [requests, total] = await Promise.all([
+      this.prisma.sessionTypeChangeRequest.findMany({
+        where,
+        include: {
+          requestedBy: {
+            select: {
+              id: true,
+              displayName: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              avatarUrl: true,
+            },
+          },
+          reviewedBy: {
+            select: {
+              id: true,
+              displayName: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          session: {
+            select: {
+              id: true,
+              title: true,
+              startTime: true,
+              endTime: true,
+              type: true,
+              classroomId: true,
+              instructorId: true,
+              classroom: {
+                select: {
+                  id: true,
+                  name: true,
+                  classCode: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.sessionTypeChangeRequest.count({ where }),
+    ]);
+
+    return {
+      data: requests.map((r) => this.mapToResponseDto(r)),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
    * Get all requests by teacher
    */
   async getRequestsByTeacher(
