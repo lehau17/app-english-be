@@ -1,18 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaRepository } from '@app/database';
+import { UploadService } from '../upload/upload.service';
 
 interface MeetingInfo {
   meetingUrl: string;
   roomName: string;
   recordingPath: string;
-}
-
-interface RecordingWebhookPayload {
-  roomName: string;
-  recordingUrl: string;
-  filename: string;
-  uploadedAt: string;
 }
 
 @Injectable()
@@ -26,6 +20,7 @@ export class VideoMeetingService {
   constructor(
     private config: ConfigService,
     private prisma: PrismaRepository,
+    private uploadService: UploadService,
   ) {
     this.jitsiBaseUrl = this.config.get('videoMeeting.jitsiUrl') || 'http://localhost:8080';
     this.enableRecording = this.config.get('videoMeeting.enableRecording') !== false;
@@ -64,18 +59,29 @@ export class VideoMeetingService {
   }
 
   /**
-   * Webhook handler - called when recording upload completes
+   * Webhook handler - receives file from Jibri, uploads to MinIO, saves URL to session
    */
-  async handleRecordingComplete(payload: RecordingWebhookPayload): Promise<void> {
-    const { roomName, recordingUrl, filename, uploadedAt } = payload;
+  async handleRecordingComplete(
+    file: Express.Multer.File,
+    roomName: string,
+  ): Promise<void> {
+    this.logger.log(`Recording webhook received for room: ${roomName}`);
 
-    this.logger.log(`Recording complete webhook received for room: ${roomName}`);
+    // Validate file
+    if (!file) {
+      throw new BadRequestException('Recording file is required');
+    }
+
+    if (!file.mimetype.startsWith('video/')) {
+      throw new BadRequestException(
+        `Invalid file type: ${file.mimetype}. Expected video file.`,
+      );
+    }
 
     // Parse sessionId from roomName: class-{classroomId}-session-{sessionId}
     const sessionIdMatch = roomName.match(/session-([a-z0-9-]+)$/i);
     if (!sessionIdMatch) {
-      this.logger.warn(`Invalid room name format: ${roomName}`);
-      return;
+      throw new BadRequestException(`Invalid room name format: ${roomName}`);
     }
 
     const sessionId = sessionIdMatch[1];
@@ -89,30 +95,43 @@ export class VideoMeetingService {
 
       if (!session) {
         this.logger.warn(`Session not found: ${sessionId}`);
-        return;
+        throw new BadRequestException(`Session not found: ${sessionId}`);
       }
 
-      // Merge with existing metadata
+      // Upload file to MinIO
+      const filename = `recording-${sessionId}-${Date.now()}.mp4`;
+      this.logger.log(
+        `Uploading recording: ${filename} (${(file.size / 1024 / 1024).toFixed(2)}MB)`,
+      );
+
+      const uploadResult = await this.uploadService.uploadBuffer(
+        file.buffer,
+        filename,
+        file.mimetype,
+      );
+
+      this.logger.log(`Recording uploaded to MinIO: ${uploadResult.url}`);
+
+      // Update session with recording URL (direct field + metadata)
       const existingMetadata = (session.metadata as Record<string, any>) || {};
       const updatedMetadata = {
         ...existingMetadata,
-        recordingUrl,
-        recordingFilename: filename,
-        recordingUploadedAt: uploadedAt,
-        recordingBucket: this.recordingBucket,
+        recordingFilename: file.originalname || filename,
+        recordingUploadedAt: new Date().toISOString(),
+        recordingSize: file.size,
       };
 
-      // Update session with recording URL
       await this.prisma.classroomSession.update({
         where: { id: sessionId },
         data: {
+          recordingUrl: uploadResult.url,
           metadata: updatedMetadata,
         },
       });
 
-      this.logger.log(`Recording saved for session ${sessionId}: ${filename}`);
+      this.logger.log(`Recording saved for session ${sessionId}: ${uploadResult.url}`);
     } catch (error) {
-      this.logger.error(`Failed to save recording for session ${sessionId}:`, error);
+      this.logger.error(`Failed to process recording for session ${sessionId}:`, error);
       throw error;
     }
   }
@@ -124,15 +143,10 @@ export class VideoMeetingService {
     try {
       const session = await this.prisma.classroomSession.findUnique({
         where: { id: sessionId },
-        select: { metadata: true },
+        select: { recordingUrl: true },
       });
 
-      if (!session?.metadata) {
-        return null;
-      }
-
-      const metadata = session.metadata as Record<string, any>;
-      return metadata?.recordingUrl || null;
+      return session?.recordingUrl || null;
     } catch (error) {
       this.logger.error(`Failed to get recording URL for session ${sessionId}:`, error);
       return null;
@@ -146,26 +160,29 @@ export class VideoMeetingService {
     recordingUrl: string | null;
     filename: string | null;
     uploadedAt: string | null;
+    size: number | null;
   }> {
     try {
       const session = await this.prisma.classroomSession.findUnique({
         where: { id: sessionId },
-        select: { metadata: true },
+        select: { recordingUrl: true, metadata: true },
       });
 
-      if (!session?.metadata) {
+      if (!session?.recordingUrl) {
         return {
           recordingUrl: null,
           filename: null,
           uploadedAt: null,
+          size: null,
         };
       }
 
-      const metadata = session.metadata as Record<string, any>;
+      const metadata = (session.metadata as Record<string, any>) || {};
       return {
-        recordingUrl: metadata?.recordingUrl || null,
+        recordingUrl: session.recordingUrl,
         filename: metadata?.recordingFilename || null,
         uploadedAt: metadata?.recordingUploadedAt || null,
+        size: metadata?.recordingSize || null,
       };
     } catch (error) {
       this.logger.error(`Failed to get recording metadata for session ${sessionId}:`, error);
@@ -173,6 +190,7 @@ export class VideoMeetingService {
         recordingUrl: null,
         filename: null,
         uploadedAt: null,
+        size: null,
       };
     }
   }
