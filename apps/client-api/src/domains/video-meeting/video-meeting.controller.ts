@@ -88,7 +88,7 @@ export class RecordingWebhookController {
     );
 
     try {
-      await this.videoMeetingService.handleRecordingComplete(file, roomName);
+      await this.videoMeetingService.handleRecordingComplete(file, file?.originalname);
       return { success: true };
     } catch (error) {
       this.logger.error('Failed to process recording webhook:', error);
