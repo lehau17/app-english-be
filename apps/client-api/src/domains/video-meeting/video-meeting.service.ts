@@ -86,6 +86,7 @@ export class VideoMeetingService {
   }
 
     // Parse sessionId from roomName: class-{classroomId}-session-{sessionId}
+    roomName = roomName.split(" - ")[1]
     const sessionIdMatch = roomName.match(/session-([a-z0-9-]+)$/i);
     if (!sessionIdMatch) {
       throw new BadRequestException(`Invalid room name format: ${roomName}`);
