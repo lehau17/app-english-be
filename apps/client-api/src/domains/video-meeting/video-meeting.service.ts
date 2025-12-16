@@ -1,9 +1,9 @@
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { PrismaRepository } from '@app/database';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { UploadService } from '../upload/upload.service';
 
-interface MeetingInfo {
+export interface MeetingInfo {
   meetingUrl: string;
   roomName: string;
   recordingPath: string;

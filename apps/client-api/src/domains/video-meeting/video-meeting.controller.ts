@@ -1,16 +1,16 @@
 import {
-  Controller,
-  Post,
   Body,
-  HttpCode,
+  Controller,
   Get,
-  Param,
+  HttpCode,
   Logger,
-  UseInterceptors,
+  Param,
+  Post,
   UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiResponse, ApiConsumes } from '@nestjs/swagger';
+import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { VideoMeetingService } from './video-meeting.service';
 
 @ApiTags('Video Meeting')
@@ -27,7 +27,7 @@ export class VideoMeetingController {
   @Get('session/:sessionId/url')
   @ApiOperation({ summary: 'Generate Jitsi meeting URL for session' })
   @ApiResponse({ status: 200, description: 'Meeting URL generated successfully' })
-  async generateMeetingUrl(
+  public async generateMeetingUrl(
     @Param('sessionId') sessionId: string,
   ) {
     // In real implementation, fetch session to get classroomId
@@ -62,7 +62,7 @@ export class VideoMeetingController {
 }
 
 @ApiTags('Webhooks')
-@Controller('webhooks/recording')
+@Controller('/public/webhooks/recording')
 export class RecordingWebhookController {
   private readonly logger = new Logger(RecordingWebhookController.name);
 
