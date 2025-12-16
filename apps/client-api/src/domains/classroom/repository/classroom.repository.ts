@@ -172,6 +172,7 @@ export class ClassroomRepository {
         timezone: true,
         durationHours: true,
         meetingUrl: true,
+        recordingUrl: true, // Include recording URL for completed sessions
         agenda: true,
         materials: true,
         metadata: true, // Include metadata với course session schedule info
