@@ -1,8 +1,8 @@
 import { PrismaRepository } from '@app/database';
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { extname } from 'path';
 import { UploadService } from '../upload/upload.service';
-
 export interface MeetingInfo {
   meetingUrl: string;
   roomName: string;
@@ -67,16 +67,23 @@ export class VideoMeetingService {
   ): Promise<void> {
     this.logger.log(`Recording webhook received for room: ${roomName}`);
 
-    // Validate file
-    if (!file) {
-      throw new BadRequestException('Recording file is required');
-    }
+    if (!file) throw new BadRequestException('Recording file is required');
 
-    if (!file.mimetype.startsWith('video/')) {
-      throw new BadRequestException(
-        `Invalid file type: ${file.mimetype}. Expected video file.`,
-      );
-    }
+  const original = (file.originalname || '').toLowerCase();
+  const ext = extname(original);
+
+  const allowedExt = new Set(['.mp4', '.webm', '.mkv', '.mov']);
+  const isVideoMime = !!file.mimetype && file.mimetype.startsWith('video/');
+  const isOctet = file.mimetype === 'application/octet-stream';
+
+  // ✅ Accept if:
+  // - real video mimetype
+  // - OR octet-stream but has a known video extension
+  if (!(isVideoMime || (isOctet && allowedExt.has(ext)))) {
+    throw new BadRequestException(
+      `Invalid file type: ${file.mimetype}. name=${file.originalname}`,
+    );
+  }
 
     // Parse sessionId from roomName: class-{classroomId}-session-{sessionId}
     const sessionIdMatch = roomName.match(/session-([a-z0-9-]+)$/i);
