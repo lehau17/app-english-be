@@ -166,7 +166,16 @@ export class SessionTypeChangeRequestService {
             id: true,
             title: true,
             startTime: true,
+            endTime: true,
             type: true,
+            classroomId: true,
+            classroom: {
+              select: {
+                id: true,
+                name: true,
+                classCode: true,
+              },
+            },
           },
         },
       },
@@ -328,7 +337,16 @@ export class SessionTypeChangeRequestService {
             id: true,
             title: true,
             startTime: true,
+            endTime: true,
             type: true,
+            classroomId: true,
+            classroom: {
+              select: {
+                id: true,
+                name: true,
+                classCode: true,
+              },
+            },
           },
         },
       },
@@ -598,6 +616,7 @@ export class SessionTypeChangeRequestService {
           `${request.requestedBy.firstName || ''} ${request.requestedBy.lastName || ''}`.trim() ||
           'Unknown',
         email: request.requestedBy.email,
+        avatarUrl: request.requestedBy.avatarUrl,
       },
       reviewedBy: request.reviewedBy
         ? {
@@ -612,6 +631,23 @@ export class SessionTypeChangeRequestService {
       reviewNote: request.reviewNote,
       createdAt: request.createdAt,
       updatedAt: request.updatedAt,
+      session: request.session
+        ? {
+            id: request.session.id,
+            title: request.session.title,
+            startTime: request.session.startTime,
+            endTime: request.session.endTime,
+            type: request.session.type,
+            classroomId: request.session.classroomId,
+            classroom: request.session.classroom
+              ? {
+                  id: request.session.classroom.id,
+                  name: request.session.classroom.name,
+                  classCode: request.session.classroom.classCode,
+                }
+              : undefined,
+          }
+        : undefined,
     };
   }
 }
