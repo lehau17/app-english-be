@@ -11,6 +11,14 @@ import {
   SubmitAttemptDto,
 } from '../dto/speaking-practice-api.dto';
 import { FeedbackBand, PronunciationError } from '../dto/feedback.dto';
+import {
+  TopicListResponseDto,
+  TopicWithProgress,
+  LessonsByCategoryResponseDto,
+  LessonWithProgress,
+  LessonRecommendation,
+  TopicProgressSummary,
+} from '../dto/topic-based.dto';
 
 /**
  * Speaking Practice Service
@@ -49,9 +57,15 @@ export class SpeakingPracticeService {
     private readonly feedbackService: FeedbackGeneratorService,
   ) {}
 
+  // Import PrismaRepository for direct DB access
+  private get prisma() {
+    return (this.repository as any).prisma;
+  }
+
   /**
    * Get user's current progress
    * Progress-Based: always returns existing or creates new
+   * NOTE: Level unlock logic removed - now using topic-based progression
    */
   async getCurrentProgress(userId: string): Promise<SpeakingPracticeProgressDto> {
     this.logger.debug(`Getting progress for user ${userId}`);
@@ -59,8 +73,9 @@ export class SpeakingPracticeService {
     const progress = await this.repository.findOrCreateProgress(userId);
     const successRate = await this.repository.calculateSuccessRate(userId);
 
-    // Check if next level is unlocked (≥75% success rate)
-    const nextLevelUnlocked = successRate >= 75 && progress.currentLevel < 5;
+    // REMOVED: Level unlock logic (replaced by topic-based progression)
+    // const nextLevelUnlocked = successRate >= 75 && progress.currentLevel < 5;
+    const nextLevelUnlocked = false; // Always false now
 
     return {
       id: progress.id,
@@ -75,7 +90,7 @@ export class SpeakingPracticeService {
       lastPracticedAt: progress.lastPracticedAt,
       totalPracticeTimeMinutes: Math.round(progress.totalPracticeTime / 60),
       successRate,
-      nextLevelUnlocked,
+      nextLevelUnlocked, // Always false now
     };
   }
 
@@ -228,16 +243,12 @@ export class SpeakingPracticeService {
     if (nextAction === 'next_lesson') {
       await this.repository.addCompletedLesson(userId, dto.lessonId);
 
-      // Check for level up
-      const successRate = await this.repository.calculateSuccessRate(userId);
-      if (successRate >= 75 && progress.currentLevel < 5) {
-        progressUpdate.levelChanged = true;
-        progressUpdate.newLevel = progress.currentLevel + 1;
-        await this.repository.updateProgress(userId, {
-          currentLevel: progress.currentLevel + 1,
-        });
-        nextAction = 'level_up';
-      }
+      // Update topic progress (replaces level unlock logic)
+      await this.updateTopicProgress(userId, lesson.category || 'Uncategorized', {
+        scorePercent: scoringResult.combinedScore,
+        performance: passed ? 'pass' : 'fail',
+        lessonId: dto.lessonId,
+      });
     }
 
     // Create attempt record
@@ -409,5 +420,296 @@ export class SpeakingPracticeService {
     }
 
     return items;
+  }
+
+  // ============ Topic-Based Methods ============
+
+  /**
+   * Get list of all topics with progress
+   */
+  async getTopicList(userId: string): Promise<TopicListResponseDto> {
+    this.logger.debug(`Getting topic list for user ${userId}`);
+
+    // Get all active lessons grouped by category
+    const lessons = await this.repository.findActiveLessons();
+    const categories = [...new Set(lessons.map((l) => l.category).filter(Boolean))];
+
+    // Get user's topic progress
+    const topicProgressList = await this.prisma.topicProgress.findMany({
+      where: { userId },
+    });
+    const progressMap = new Map(topicProgressList.map((tp) => [tp.category, tp]));
+
+    // Build response
+    const topics: TopicWithProgress[] = categories.map((category) => {
+      const lessonsInTopic = lessons.filter((l) => l.category === category);
+      const progress = progressMap.get(category);
+
+      // Calculate tier counts
+      const tierCounts = {
+        easy: { total: 0, completed: 0 },
+        medium: { total: 0, completed: 0 },
+        hard: { total: 0, completed: 0 },
+      };
+      lessonsInTopic.forEach((lesson) => {
+        if (lesson.difficultyTier === 1) tierCounts.easy.total++;
+        if (lesson.difficultyTier === 2) tierCounts.medium.total++;
+        if (lesson.difficultyTier === 3) tierCounts.hard.total++;
+      });
+
+      if (progress) {
+        tierCounts.easy.completed = progress.easyCompleted;
+        tierCounts.medium.completed = progress.mediumCompleted;
+        tierCounts.hard.completed = progress.hardCompleted;
+      }
+
+      const completedCount = progress?.completedLessons?.length || 0;
+      const progressPercent =
+        lessonsInTopic.length > 0 ? (completedCount / lessonsInTopic.length) * 100 : 0;
+
+      return {
+        category,
+        totalLessons: lessonsInTopic.length,
+        completedLessons: completedCount,
+        progress: Math.round(progressPercent),
+        avgScore: progress?.avgScore || 0,
+        lastPracticedAt: progress?.lastPracticedAt || null,
+        nextReviewDate: progress?.nextReviewDate || null,
+        tiers: tierCounts,
+      };
+    });
+
+    return { topics };
+  }
+
+  /**
+   * Get lessons by category with progress
+   */
+  async getLessonsByCategory(
+    userId: string,
+    category: string,
+  ): Promise<LessonsByCategoryResponseDto> {
+    this.logger.debug(`Getting lessons for category ${category}, user ${userId}`);
+
+    // Get lessons in category ordered by tier
+    const lessons = await this.prisma.speakingPracticeLesson.findMany({
+      where: { isActive: true, category },
+      orderBy: [{ difficultyTier: 'asc' }, { orderIndex: 'asc' }],
+    });
+
+    // Get user progress
+    const progress = await this.prisma.speakingPracticeProgress.findUnique({
+      where: { userId },
+    });
+    const completedIds = progress?.completedLessons || [];
+
+    // Get attempt history
+    const attempts = progress?.id
+      ? await this.prisma.speakingPracticeAttempt.findMany({
+          where: { progressId: progress.id, lessonId: { in: lessons.map((l) => l.id) } },
+          orderBy: { createdAt: 'desc' },
+        })
+      : [];
+    const attemptMap = new Map(
+      attempts.map((a) => [a.lessonId, { score: a.score, createdAt: a.createdAt }]),
+    );
+
+    return {
+      category,
+      lessons: lessons.map((lesson) => ({
+        id: lesson.id,
+        title: lesson.title,
+        difficultyTier: lesson.difficultyTier,
+        type: lesson.type,
+        isCompleted: completedIds.includes(lesson.id),
+        score: attemptMap.get(lesson.id)?.score ?? null,
+        lastAttemptedAt: attemptMap.get(lesson.id)?.createdAt ?? null,
+      })),
+    };
+  }
+
+  /**
+   * Get personalized lesson recommendations
+   */
+  async getRecommendations(userId: string, limit: number = 5): Promise<LessonRecommendation[]> {
+    this.logger.debug(`Getting recommendations for user ${userId}`);
+
+    const recommendations: LessonRecommendation[] = [];
+
+    // Get user progress
+    const progress = await this.prisma.speakingPracticeProgress.findUnique({
+      where: { userId },
+    });
+    const completedIds = progress?.completedLessons || [];
+
+    // Get topic progress
+    const topicProgress = await this.prisma.topicProgress.findMany({
+      where: { userId },
+      orderBy: { lastPracticedAt: 'asc' },
+    });
+
+    // Strategy 1: Topics due for review
+    for (const tp of topicProgress) {
+      if (tp.nextReviewDate && tp.nextReviewDate <= new Date()) {
+        const lessons = await this.prisma.speakingPracticeLesson.findMany({
+          where: {
+            isActive: true,
+            category: tp.category,
+            id: { notIn: completedIds },
+          },
+          take: 1,
+        });
+        if (lessons[0]) {
+          recommendations.push({
+            lessonId: lessons[0].id,
+            title: lessons[0].title,
+            category: lessons[0].category || 'Uncategorized',
+            difficultyTier: lessons[0].difficultyTier,
+            reason: 'Due for review',
+            priority: 1,
+          });
+        }
+      }
+    }
+
+    // Strategy 2: Continue current topic
+    if (progress?.currentLessonId) {
+      const currentLesson = await this.prisma.speakingPracticeLesson.findUnique({
+        where: { id: progress.currentLessonId },
+      });
+      if (currentLesson && !completedIds.includes(currentLesson.id)) {
+        recommendations.push({
+          lessonId: currentLesson.id,
+          title: currentLesson.title,
+          category: currentLesson.category || 'Uncategorized',
+          difficultyTier: currentLesson.difficultyTier,
+          reason: 'Continue where you left off',
+          priority: 2,
+        });
+      }
+    }
+
+    // Strategy 3: New uncompleted lessons
+    const uncompletedLessons = await this.prisma.speakingPracticeLesson.findMany({
+      where: {
+        isActive: true,
+        id: { notIn: completedIds },
+      },
+      orderBy: [{ difficultyTier: 'asc' }, { orderIndex: 'asc' }],
+      take: limit,
+    });
+
+    for (const lesson of uncompletedLessons) {
+      if (recommendations.length >= limit) break;
+      if (!recommendations.find((r) => r.lessonId === lesson.id)) {
+        recommendations.push({
+          lessonId: lesson.id,
+          title: lesson.title,
+          category: lesson.category || 'Uncategorized',
+          difficultyTier: lesson.difficultyTier,
+          reason: 'New lesson',
+          priority: 3,
+        });
+      }
+    }
+
+    return recommendations.slice(0, limit);
+  }
+
+  /**
+   * Update topic progress after lesson completion
+   */
+  private async updateTopicProgress(
+    userId: string,
+    category: string,
+    attempt: { scorePercent: number; performance: string; lessonId: string },
+  ): Promise<void> {
+    this.logger.debug(`Updating topic progress for ${category}, user ${userId}`);
+
+    // Upsert TopicProgress
+    const tp = await this.prisma.topicProgress.upsert({
+      where: { userId_category: { userId, category } },
+      update: {},
+      create: { userId, category, completedLessons: [], weakPhonemesInTopic: [] },
+    });
+
+    // Update completed lessons if passed
+    let completedLessons = [...(tp.completedLessons || [])];
+    if (attempt.performance === 'pass' && !completedLessons.includes(attempt.lessonId)) {
+      completedLessons.push(attempt.lessonId);
+    }
+
+    // Recalculate avgScore
+    const newTotal = tp.totalAttempts + 1;
+    const newAvg = (tp.avgScore * tp.totalAttempts + attempt.scorePercent) / newTotal;
+
+    // Get lesson tier for tier completion tracking
+    const lesson = await this.prisma.speakingPracticeLesson.findUnique({
+      where: { id: attempt.lessonId },
+    });
+
+    const updates: any = {
+      completedLessons,
+      avgScore: newAvg,
+      totalAttempts: newTotal,
+      lastPracticedAt: new Date(),
+    };
+
+    if (lesson && attempt.performance === 'pass') {
+      if (lesson.difficultyTier === 1 && !tp.completedLessons?.includes(attempt.lessonId)) {
+        updates.easyCompleted = tp.easyCompleted + 1;
+      } else if (lesson.difficultyTier === 2 && !tp.completedLessons?.includes(attempt.lessonId)) {
+        updates.mediumCompleted = tp.mediumCompleted + 1;
+      } else if (lesson.difficultyTier === 3 && !tp.completedLessons?.includes(attempt.lessonId)) {
+        updates.hardCompleted = tp.hardCompleted + 1;
+      }
+    }
+
+    await this.prisma.topicProgress.update({
+      where: { userId_category: { userId, category } },
+      data: updates,
+    });
+  }
+
+  /**
+   * Get topic progress summary
+   */
+  private async getTopicProgressSummary(
+    userId: string,
+    category: string,
+  ): Promise<TopicProgressSummary> {
+    const tp = await this.prisma.topicProgress.findUnique({
+      where: { userId_category: { userId, category } },
+    });
+
+    const lessons = await this.prisma.speakingPracticeLesson.findMany({
+      where: { isActive: true, category },
+    });
+
+    const tierCounts = {
+      easy: { total: 0, completed: 0 },
+      medium: { total: 0, completed: 0 },
+      hard: { total: 0, completed: 0 },
+    };
+    lessons.forEach((lesson) => {
+      if (lesson.difficultyTier === 1) tierCounts.easy.total++;
+      if (lesson.difficultyTier === 2) tierCounts.medium.total++;
+      if (lesson.difficultyTier === 3) tierCounts.hard.total++;
+    });
+
+    if (tp) {
+      tierCounts.easy.completed = tp.easyCompleted;
+      tierCounts.medium.completed = tp.mediumCompleted;
+      tierCounts.hard.completed = tp.hardCompleted;
+    }
+
+    return {
+      category,
+      completedCount: tp?.completedLessons?.length || 0,
+      totalInCategory: lessons.length,
+      avgScore: tp?.avgScore || 0,
+      tierProgress: tierCounts,
+      nextReviewDate: tp?.nextReviewDate || null,
+    };
   }
 }

@@ -47,6 +47,7 @@ import {
   UpdateClassroomDto,
   UpdateClassroomStatusDto,
 } from '../dto/classroom.dto';
+import { UpdateSessionTypeDto } from '../dto/session-type-change.dto';
 import { ClassroomService } from '../service/classroom.service';
 
 @ApiTags('Classrooms')
@@ -440,5 +441,20 @@ export class PrivateClassroomController {
       dto.newClassroomId,
       adminUserId,
     );
+  }
+
+  @Put('sessions/:sessionId/type')
+  @ApiOperation({
+    summary: 'Update session type directly (Admin only)',
+    description:
+      'Admin can directly change session type and optionally generate Google Meet link for online sessions',
+  })
+  @ResponseMessage('Session type updated successfully')
+  updateSessionType(
+    @Param('sessionId', new ParseUUIDPipe()) sessionId: string,
+    @Body() dto: UpdateSessionTypeDto,
+    @PayloadToken('sub') userId: string,
+  ) {
+    return this.classroomService.updateSessionType(sessionId, userId, dto);
   }
 }

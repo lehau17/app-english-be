@@ -6,6 +6,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Logger,
 } from '@nestjs/common';
 import {
   Classroom,
@@ -14,6 +15,7 @@ import {
   SessionStatus,
   TimezoneCode,
   UserRole,
+  SessionType,
 } from '@prisma/client';
 import { EventsGateway } from 'apps/client-api/src/events/events.gateway';
 import * as bcrypt from 'bcrypt';
@@ -31,6 +33,7 @@ import {
   StudentWeeklyScheduleQueryDto,
   UpdateClassroomDto,
 } from '../dto/classroom.dto';
+import { UpdateSessionTypeDto } from '../dto/session-type-change.dto';
 import { EnrollClassroomDto } from '../dto/enroll-classroom.dto';
 import { ClassroomRepository } from '../repository/classroom.repository';
 import { AutoExamCreationService } from '../services/auto-exam-creation.service';
@@ -43,6 +46,7 @@ import {
   getCsvTransformStream,
 } from '../utils/classroom.util';
 import { AttendanceBlockingService } from './attendance-blocking.service';
+import { VideoMeetingService } from '../../video-meeting/video-meeting.service';
 
 const TIMEZONE_OFFSETS: Record<TimezoneCode, number> = {
   [TimezoneCode.Asia_Ho_Chi_Minh]: 7 * 60,
@@ -56,6 +60,8 @@ const TIMEZONE_OFFSETS: Record<TimezoneCode, number> = {
 
 @Injectable()
 export class ClassroomService {
+  private readonly logger = new Logger(ClassroomService.name);
+
   constructor(
     private readonly classroomRepository: ClassroomRepository,
     private readonly gateway: EventsGateway,
@@ -63,6 +69,7 @@ export class ClassroomService {
     private readonly autoExamCreationService: AutoExamCreationService,
     private readonly paymentService: PaymentService,
     private readonly attendanceBlockingService?: AttendanceBlockingService,
+    private readonly videoMeetingService?: VideoMeetingService,
   ) {}
 
   async create(dto: CreateClassroomDto): Promise<Classroom> {
@@ -2185,5 +2192,93 @@ export class ClassroomService {
       paymentUrl: payment.paymentUrl,
       transactionId: payment.transactionId,
     };
+  }
+
+  /**
+   * Update session type (Admin direct change)
+   * Handles session type change and optional Google Meet link generation
+   */
+  async updateSessionType(
+    sessionId: string,
+    userId: string,
+    dto: UpdateSessionTypeDto,
+  ) {
+    const session = await this.prisma.classroomSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        instructor: {
+          select: {
+            email: true,
+            displayName: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException('Session not found');
+    }
+
+    let meetingUrl = session.meetingUrl;
+
+    // Generate Jitsi meeting link if switching to online and generateMeetLink is true
+    if (dto.type === SessionType.online && dto.generateMeetLink) {
+      if (this.videoMeetingService) {
+        // Use Jitsi self-hosted server (meet.haudev.io.vn)
+        const meetingInfo = this.videoMeetingService.generateMeetingUrl(
+          session.classroomId,
+          sessionId,
+        );
+        meetingUrl = meetingInfo.meetingUrl;
+        this.logger.log(
+          `Generated Jitsi meeting URL for session ${sessionId}: ${meetingUrl}`,
+        );
+      } else {
+        this.logger.warn('VideoMeetingService not available');
+        // Fallback to placeholder if service not injected
+        if (!meetingUrl) {
+          meetingUrl = `https://meet.haudev.io.vn/class-${session.classroomId}-session-${sessionId}`;
+        }
+      }
+    }
+
+    // Clear Meet link if switching to offline
+    if (dto.type === SessionType.offline) {
+      meetingUrl = null;
+    }
+
+    // Update session
+    const updatedSession = await this.prisma.classroomSession.update({
+      where: { id: sessionId },
+      data: {
+        type: dto.type,
+        meetingUrl,
+      },
+      include: {
+        instructor: {
+          select: {
+            id: true,
+            displayName: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        classroom: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    this.logger.log(
+      `Updated session ${sessionId} type to ${dto.type} by admin ${userId}`,
+    );
+
+    return updatedSession;
   }
 }

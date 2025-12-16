@@ -72,6 +72,13 @@ enum SessionRescheduleRequestStatus {
   cancelled
 }
 
+enum SessionTypeChangeStatus {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
 enum SessionType {
   online
 
@@ -578,6 +585,10 @@ model User {
   requestedReschedules SessionRescheduleRequest[] @relation("RequestedReschedules")
   reviewedReschedules  SessionRescheduleRequest[] @relation("ReviewedReschedules")
 
+  // Session type change requests
+  requestedTypeChanges SessionTypeChangeRequest[] @relation("RequestedTypeChanges")
+  reviewedTypeChanges  SessionTypeChangeRequest[] @relation("ReviewedTypeChanges")
+
   classroomsStudying ClassroomStudent[]
 
   assignmentsCreated Assignment[] @relation("TeacherAssignments")
@@ -652,6 +663,8 @@ model User {
   speakingPracticeProgress SpeakingPracticeProgress? @relation("SpeakingPracticeProgressUser")
   mispronounceWords        MispronounceWord[]        @relation("MispronounceWordUser")
   personalizedDrills       PersonalizedDrill[]       @relation("PersonalizedDrillUser")
+  topicProgress            TopicProgress[]           @relation("UserTopicProgress")
+  speakingPlacementTest    SpeakingPlacementTest?    @relation("SpeakingPlacementTestUser")
 
   @@index([status])
   @@index([provider, providerId])
@@ -1347,6 +1360,8 @@ model ClassroomSession {
 
   rescheduleRequests SessionRescheduleRequest[] @relation("SessionRescheduleRequests")
 
+  typeChangeRequests SessionTypeChangeRequest[] @relation("SessionTypeChangeRequests")
+
   @@index([classroomId])
   @@index([instructorId])
   @@index([startTime])
@@ -1429,6 +1444,33 @@ model SessionRescheduleRequest {
   session     ClassroomSession @relation("SessionRescheduleRequests", fields: [sessionId], references: [id], onDelete: Cascade)
   requestedBy User             @relation("RequestedReschedules", fields: [requestedById], references: [id], onDelete: Cascade)
   reviewedBy  User?            @relation("ReviewedReschedules", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([sessionId])
+  @@index([requestedById])
+  @@index([status])
+}
+
+model SessionTypeChangeRequest {
+  id            String                  @id @default(uuid())
+  sessionId     String
+  requestedById String                  // Teacher requesting change
+  currentType   SessionType             // Current session type
+  requestedType SessionType             // Requested new type
+  reason        String                  // Why change is needed
+  status        SessionTypeChangeStatus @default(pending)
+
+  // Review info
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  session     ClassroomSession @relation("SessionTypeChangeRequests", fields: [sessionId], references: [id], onDelete: Cascade)
+  requestedBy User             @relation("RequestedTypeChanges", fields: [requestedById], references: [id], onDelete: Cascade)
+  reviewedBy  User?            @relation("ReviewedTypeChanges", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   @@index([sessionId])
   @@index([requestedById])
@@ -3670,7 +3712,7 @@ model Topic {
   id          String          @id @default(uuid())
   name        String          @unique
   description String?         @db.Text
-  category    String?         // e.g., "daily_life", "business", "travel"
+  category    String? // e.g., "daily_life", "business", "travel"
   difficulty  DifficultyLevel @default(beginner)
   isActive    Boolean         @default(true)
   isFeatured  Boolean         @default(false)
@@ -3714,6 +3756,7 @@ model SpeakingPracticeProgress {
   currentLevel     Int     @default(1) // 1-5
   currentLessonId  String? // Bài đang làm dở
   currentItemIndex Int     @default(0) // Câu hỏi thứ mấy trong bài
+  currentCategory  String? // Which topic user is currently practicing
 
   // Completed tracking
   completedLessons String[] // IDs of finished lessons
@@ -3724,12 +3767,12 @@ model SpeakingPracticeProgress {
   strongPhonemes String[]
 
   // Stats
-  totalPracticeTime Int      @default(0) // seconds
-  totalAttempts     Int      @default(0)
-  totalCorrect      Int      @default(0)
-  successRate       Float    @default(0)
-  streak            Int      @default(0) // consecutive days
-  longestStreak     Int      @default(0)
+  totalPracticeTime Int       @default(0) // seconds
+  totalAttempts     Int       @default(0)
+  totalCorrect      Int       @default(0)
+  successRate       Float     @default(0)
+  streak            Int       @default(0) // consecutive days
+  longestStreak     Int       @default(0)
   lastPracticedAt   DateTime?
 
   // Relations
@@ -3776,10 +3819,14 @@ model SpeakingPracticeLesson {
   id String @id @default(uuid())
 
   // Level Configuration
-  level      Int             // 1-5 (Words, Phrases, Sentences, Dialogues, Free)
+  level      Int // 1-5 (Words, Phrases, Sentences, Dialogues, Free)
   levelName  String // "Words", "Phrases", etc.
   difficulty DifficultyLevel // beginner, elementary, etc.
   orderIndex Int             @default(0) // Order within level
+
+  // Topic-Based Fields (NEW)
+  category       String? @default("General") // "Animals", "Food", "Family", etc.
+  difficultyTier Int     @default(1) // 1=Easy, 2=Medium, 3=Hard
 
   // Content
   type    String // "word", "phrase", "sentence", "dialogue", "free"
@@ -3811,6 +3858,8 @@ model SpeakingPracticeLesson {
   @@index([level, difficulty, orderIndex])
   @@index([targetPhonemes])
   @@index([isActive, isTemplate])
+  @@index([category, difficultyTier])
+  @@index([isActive, category])
   @@map("speaking_practice_lessons")
 }
 
@@ -3838,10 +3887,10 @@ model MispronounceWord {
   problematicPhoneme String? // "/θ/", "/ð/", etc.
 
   // SM-2 for word review
-  easeFactor     Float    @default(2.5)
-  interval       Int      @default(1) // days
-  repetitions    Int      @default(0) // SM-2 consecutive correct count
-  nextReviewDate DateTime @default(now())
+  easeFactor     Float     @default(2.5)
+  interval       Int       @default(1) // days
+  repetitions    Int       @default(0) // SM-2 consecutive correct count
+  nextReviewDate DateTime  @default(now())
   lastReviewedAt DateTime? // Last time word was reviewed
 
   // Relations
@@ -3890,4 +3939,65 @@ model PersonalizedDrill {
   @@index([userId, status])
   @@index([progressId])
   @@map("personalized_drills")
+}
+
+model TopicProgress {
+  id       String @id @default(uuid())
+  userId   String
+  category String // "Animals", "Food", etc.
+
+  // Per-topic stats
+  completedLessons String[] @default([]) // Lesson IDs
+  easyCompleted    Int      @default(0)
+  mediumCompleted  Int      @default(0)
+  hardCompleted    Int      @default(0)
+
+  // Performance
+  avgScore            Float    @default(0)
+  totalAttempts       Int      @default(0)
+  weakPhonemesInTopic String[] @default([]) // Phonemes user struggles with in this topic
+
+  // Spaced repetition
+  lastPracticedAt DateTime?
+  nextReviewDate  DateTime? // When to recommend this topic again
+
+  // Relations
+  user User @relation("UserTopicProgress", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, category])
+  @@index([userId, nextReviewDate])
+  @@index([category])
+  @@map("topic_progress")
+}
+
+model SpeakingPlacementTest {
+  id     String @id @default(uuid())
+  userId String @unique // One placement test per user
+
+  // Test status
+  status      String    @default("not_started") // "not_started", "in_progress", "completed"
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  // Results
+  overallLevel         Int?  @default(1) // 1-3 recommended difficulty tier
+  phonemeAssessment    Json? // { "θ": 0.8, "ð": 0.6, ... } scores per phoneme
+  topicRecommendations Json? // { "Animals": 2, "Food": 1, ... } recommended tier per topic
+
+  // Test data
+  testItems  Json? // Items shown during test
+  responses  Json? // User responses with scores
+  totalScore Float? @default(0) // 0-100
+
+  user User @relation("SpeakingPlacementTestUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("speaking_placement_tests")
 }

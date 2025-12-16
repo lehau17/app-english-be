@@ -5,6 +5,7 @@ import {
   FileTypeValidator,
   Get,
   MaxFileSizeValidator,
+  Param,
   ParseFilePipe,
   Post,
   Query,
@@ -21,7 +22,20 @@ import {
   SubmitAttemptDto,
   SubmitResultDto,
 } from './dto/speaking-practice-api.dto';
+import {
+  TopicListResponseDto,
+  LessonsByCategoryResponseDto,
+  LessonRecommendation,
+} from './dto/topic-based.dto';
+import {
+  PlacementTestStatusDto,
+  StartPlacementTestResponseDto,
+  SubmitTestResponseDto,
+  PlacementTestResultDto,
+  ItemsRemainingDto,
+} from './dto/placement-test.dto';
 import { SpeakingPracticeService } from './service/speaking-practice.service';
+import { PlacementTestService } from './services/placement-test/placement-test.service';
 
 /**
  * Speaking Practice Controller
@@ -35,7 +49,10 @@ import { SpeakingPracticeService } from './service/speaking-practice.service';
  */
 @Controller('/private/v1/speaking-practice')
 export class SpeakingPracticeController {
-  constructor(private readonly service: SpeakingPracticeService) {}
+  constructor(
+    private readonly service: SpeakingPracticeService,
+    private readonly placementTestService: PlacementTestService,
+  ) {}
 
   /**
    * GET /speaking-practice/current
@@ -147,5 +164,105 @@ export class SpeakingPracticeController {
       limit: limit ? Number(limit) : 20,
       offset: offset ? Number(offset) : 0,
     });
+  }
+
+  /**
+   * GET /speaking-practice/topics
+   * Get all topic categories with progress summary
+   *
+   * @returns List of topics with completion status, scores, tier progress
+   */
+  @Get('topics')
+  async getTopics(@PayloadToken('sub') userId: string): Promise<TopicListResponseDto> {
+    return this.service.getTopicList(userId);
+  }
+
+  /**
+   * GET /speaking-practice/topics/:category/lessons
+   * Get lessons in a specific category with progress
+   *
+   * @param category Topic category name
+   * @returns Lessons in category ordered by tier
+   */
+  @Get('topics/:category/lessons')
+  async getLessonsByCategory(
+    @Param('category') category: string,
+    @PayloadToken('sub') userId: string,
+  ): Promise<LessonsByCategoryResponseDto> {
+    return this.service.getLessonsByCategory(userId, category);
+  }
+
+  /**
+   * GET /speaking-practice/recommendations
+   * Get personalized lesson recommendations based on performance
+   *
+   * @param query Optional: limit for number of recommendations
+   * @returns Recommended lessons with priority and reason
+   */
+  @Get('recommendations')
+  async getRecommendations(
+    @PayloadToken('sub') userId: string,
+    @Query('limit') limit?: number,
+  ): Promise<LessonRecommendation[]> {
+    return this.service.getRecommendations(userId, limit ? Number(limit) : 5);
+  }
+
+  /**
+   * GET /speaking-practice/placement-test
+   * Get placement test status for current user
+   *
+   * @returns Placement test status including completion status and results
+   */
+  @Get('placement-test')
+  async getPlacementTest(
+    @PayloadToken('sub') userId: string,
+  ): Promise<PlacementTestStatusDto> {
+    return await this.placementTestService.getPlacementTest(userId);
+  }
+
+  /**
+   * POST /speaking-practice/placement-test/start
+   * Start a new placement test
+   *
+   * @returns Test items for pronunciation assessment
+   */
+  @Post('placement-test/start')
+  async startPlacementTest(
+    @PayloadToken('sub') userId: string,
+  ): Promise<StartPlacementTestResponseDto> {
+    return await this.placementTestService.startPlacementTest(userId);
+  }
+
+  /**
+   * POST /speaking-practice/placement-test/submit
+   * Submit a single test item response
+   *
+   * @param dto Test response with itemId, score, transcript
+   * @returns Number of items remaining in test
+   */
+  @Post('placement-test/submit')
+  async submitTestResponse(
+    @PayloadToken('sub') userId: string,
+    @Body() dto: SubmitTestResponseDto,
+  ): Promise<ItemsRemainingDto> {
+    return await this.placementTestService.submitTestResponse(
+      userId,
+      dto.itemId,
+      dto.score,
+      dto.transcript,
+    );
+  }
+
+  /**
+   * POST /speaking-practice/placement-test/complete
+   * Complete the placement test and get results
+   *
+   * @returns Test results with overall level, phoneme scores, topic recommendations
+   */
+  @Post('placement-test/complete')
+  async completePlacementTest(
+    @PayloadToken('sub') userId: string,
+  ): Promise<PlacementTestResultDto> {
+    return await this.placementTestService.completePlacementTest(userId);
   }
 }

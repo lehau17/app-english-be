@@ -9,6 +9,7 @@ import { SpeakingPracticeController } from './speaking-practice.controller';
 import { FeedbackGeneratorService } from './service/feedback-generator.service';
 import { PronunciationScoringService } from './service/pronunciation-scoring.service';
 import { SpeakingPracticeService } from './service/speaking-practice.service';
+import { PlacementTestService } from './services/placement-test/placement-test.service';
 
 // Repository
 import { SpeakingPracticeRepository } from './repository/speaking-practice.repository';
@@ -44,6 +45,8 @@ import { SpeakingPracticeRepository } from './repository/speaking-practice.repos
     // Scoring & Feedback
     PronunciationScoringService,
     FeedbackGeneratorService,
+    // Placement Test
+    PlacementTestService,
     // Repository
     SpeakingPracticeRepository,
   ],
@@ -51,6 +54,7 @@ import { SpeakingPracticeRepository } from './repository/speaking-practice.repos
     SpeakingPracticeService,
     PronunciationScoringService,
     FeedbackGeneratorService,
+    PlacementTestService,
   ],
 })
 export class SpeakingPracticeModule {}

@@ -1,4 +1,5 @@
 import { DifficultyLevel, PrismaClient } from '@prisma/client';
+import { lessonCategoryMap } from '../../../../scripts/speaking-practice-category-mapping';
 
 const prisma = new PrismaClient();
 
@@ -883,18 +884,25 @@ export async function seedSpeakingPracticeLessons() {
 
   // Upsert all lessons
   for (const lesson of lessons) {
+    const lessonId = `sp-lesson-L${lesson.level}-${lesson.orderIndex}`;
+    const mapping = lessonCategoryMap[lessonId];
+
     await prisma.speakingPracticeLesson.upsert({
       where: {
-        id: `sp-lesson-L${lesson.level}-${lesson.orderIndex}`,
+        id: lessonId,
       },
       update: {
         ...lesson,
+        category: mapping?.category,
+        difficultyTier: mapping?.tier,
         isTemplate: true,
         isActive: true,
       },
       create: {
-        id: `sp-lesson-L${lesson.level}-${lesson.orderIndex}`,
+        id: lessonId,
         ...lesson,
+        category: mapping?.category,
+        difficultyTier: mapping?.tier,
         isTemplate: true,
         isActive: true,
       },

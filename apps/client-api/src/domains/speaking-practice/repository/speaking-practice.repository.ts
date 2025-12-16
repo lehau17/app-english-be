@@ -391,4 +391,31 @@ export class SpeakingPracticeRepository {
       averageEaseFactor: Number((avgEase._avg.easeFactor || 2.5).toFixed(2)),
     };
   }
+
+  // ============ Topic-Based Methods ============
+
+  /**
+   * Get all active lessons
+   */
+  async findActiveLessons(): Promise<SpeakingPracticeLesson[]> {
+    return this.prisma.speakingPracticeLesson.findMany({
+      where: {
+        isActive: true,
+      },
+      orderBy: [{ category: 'asc' }, { difficultyTier: 'asc' }, { orderIndex: 'asc' }],
+    });
+  }
+
+  /**
+   * Get lessons by category
+   */
+  async findLessonsByCategory(category: string): Promise<SpeakingPracticeLesson[]> {
+    return this.prisma.speakingPracticeLesson.findMany({
+      where: {
+        isActive: true,
+        category,
+      },
+      orderBy: [{ difficultyTier: 'asc' }, { orderIndex: 'asc' }],
+    });
+  }
 }

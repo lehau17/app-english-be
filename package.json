@@ -39,7 +39,9 @@
     "test:auto-reindex": "node scripts/test-auto-reindex.js",
     "mock:tts": "node mock-tts-server.js",
     "mock:asr": "node mock-asr-server.js",
-    "mock:ai-speaking": "npm run mock:tts & npm run mock:asr"
+    "mock:ai-speaking": "npm run mock:tts & npm run mock:asr",
+    "speaking:validate-categories": "ts-node scripts/speaking-practice-category-mapping.ts",
+    "speaking:apply-categories": "ts-node scripts/apply-lesson-categorization.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.872.0",
