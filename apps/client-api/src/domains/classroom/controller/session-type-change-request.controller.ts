@@ -33,9 +33,7 @@ import { SessionTypeChangeRequestService } from '../service/session-type-change-
 @ApiBearerAuth()
 @Controller('private/v1/sessions')
 export class SessionTypeChangeRequestTeacherController {
-  constructor(
-    private readonly service: SessionTypeChangeRequestService,
-  ) {}
+  constructor(private readonly service: SessionTypeChangeRequestService) {}
 
   @Post(':sessionId/request-type-change')
   @UseGuards(SessionInstructorGuard)
@@ -63,7 +61,10 @@ export class SessionTypeChangeRequestTeacherController {
     type: [SessionTypeChangeRequestResponseDto],
   })
   @ResponseMessage('Your session type change requests')
-  async getMyRequests(@Req() req, @Query() query: QuerySessionTypeChangeRequestDto) {
+  async getMyRequests(
+    @Req() req,
+    @Query() query: QuerySessionTypeChangeRequestDto,
+  ) {
     return this.service.getRequestsByTeacher(req.user.sub, query);
   }
 }
@@ -74,12 +75,12 @@ export class SessionTypeChangeRequestTeacherController {
 @ApiBearerAuth()
 @Controller('private/v1')
 export class SessionTypeChangeRequestAdminController {
-  constructor(
-    private readonly service: SessionTypeChangeRequestService,
-  ) {}
+  constructor(private readonly service: SessionTypeChangeRequestService) {}
 
   @Get('sessions/:sessionId/type-change-requests')
-  @ApiOperation({ summary: 'Get session type change requests for a session (Admin)' })
+  @ApiOperation({
+    summary: 'Get session type change requests for a session (Admin)',
+  })
   @ApiParam({ name: 'sessionId', description: 'Session ID' })
   @ApiResponse({
     status: 200,
@@ -132,7 +133,9 @@ export class SessionTypeChangeRequestAdminController {
   }
 
   @Put('type-change-requests/:id/review')
-  @ApiOperation({ summary: 'Review (approve/reject) type change request (Admin)' })
+  @ApiOperation({
+    summary: 'Review (approve/reject) type change request (Admin)',
+  })
   @ApiParam({ name: 'id', description: 'Request ID' })
   @ApiResponse({
     status: 200,

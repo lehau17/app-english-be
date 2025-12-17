@@ -76,7 +76,7 @@ export class SpeakingPracticeController {
    */
   @Get('next-item')
   async getNextItem(
-        @PayloadToken('sub') userId: string,
+    @PayloadToken('sub') userId: string,
 
     @Query() query: GetNextItemDto,
   ): Promise<NextPracticeItemDto> {
@@ -98,7 +98,7 @@ export class SpeakingPracticeController {
   @Post('submit')
   @UseInterceptors(FileInterceptor('audio'))
   async submitAttempt(
-       @PayloadToken('sub') userId: string,
+    @PayloadToken('sub') userId: string,
 
     @Body() dto: SubmitAttemptDto,
     @UploadedFile(
@@ -106,7 +106,8 @@ export class SpeakingPracticeController {
         validators: [
           new MaxFileSizeValidator({ maxSize: 10 * 1024 * 1024 }), // 10MB max
           new FileTypeValidator({
-            fileType: /(audio\/(webm|wav|mp3|ogg|mpeg)|application\/octet-stream)/,
+            fileType:
+              /(audio\/(webm|wav|mp3|ogg|mpeg)|application\/octet-stream)/,
           }),
         ],
         fileIsRequired: false, // Allow base64 alternative
@@ -173,7 +174,9 @@ export class SpeakingPracticeController {
    * @returns List of topics with completion status, scores, tier progress
    */
   @Get('topics')
-  async getTopics(@PayloadToken('sub') userId: string): Promise<TopicListResponseDto> {
+  async getTopics(
+    @PayloadToken('sub') userId: string,
+  ): Promise<TopicListResponseDto> {
     return this.service.getTopicList(userId);
   }
 

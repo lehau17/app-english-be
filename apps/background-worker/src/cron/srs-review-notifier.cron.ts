@@ -218,7 +218,9 @@ export class SRSReviewNotifierCron {
           },
         });
 
-        this.logger.log(`Cleaned up ${deleted.count} skill progress records for inactive users`);
+        this.logger.log(
+          `Cleaned up ${deleted.count} skill progress records for inactive users`,
+        );
       } else {
         this.logger.log('No skill progress records to clean up');
       }

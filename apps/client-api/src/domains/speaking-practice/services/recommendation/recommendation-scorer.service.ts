@@ -17,11 +17,21 @@ export class RecommendationScorerService {
     private srsTopicReviewer: SrsTopicReviewerService,
   ) {}
 
-  async getRecommendations(userId: string, limit?: number): Promise<LessonRecommendation[]> {
-    const recommendationCount = limit || recommendationConfig.defaultRecommendationCount;
+  async getRecommendations(
+    userId: string,
+    limit?: number,
+  ): Promise<LessonRecommendation[]> {
+    const recommendationCount =
+      limit || recommendationConfig.defaultRecommendationCount;
 
     // Gather all recommendation factors in parallel
-    const [weakPhonemes, topicFreshness, successRates, srsReviews, availableLessons] = await Promise.all([
+    const [
+      weakPhonemes,
+      topicFreshness,
+      successRates,
+      srsReviews,
+      availableLessons,
+    ] = await Promise.all([
       this.phonemeWeaknessAnalyzer.getUserWeakPhonemes(userId),
       this.topicFreshnessTracker.getTopicFreshness(userId),
       this.successRateCalculator.getTopicSuccessRates(userId),
@@ -34,13 +44,25 @@ export class RecommendationScorerService {
       const reasoning: string[] = [];
 
       // Factor 1: Weak phoneme match (0.4 weight)
-      const phonemeMatchScore = this.calculatePhonemeMatchScore(lesson, weakPhonemes, reasoning);
+      const phonemeMatchScore = this.calculatePhonemeMatchScore(
+        lesson,
+        weakPhonemes,
+        reasoning,
+      );
 
       // Factor 2: Topic freshness (0.3 weight)
-      const freshnessScore = this.calculateFreshnessScore(lesson, topicFreshness, reasoning);
+      const freshnessScore = this.calculateFreshnessScore(
+        lesson,
+        topicFreshness,
+        reasoning,
+      );
 
       // Factor 3: Success rate inverse (0.2 weight)
-      const successScore = this.calculateSuccessScore(lesson, successRates, reasoning);
+      const successScore = this.calculateSuccessScore(
+        lesson,
+        successRates,
+        reasoning,
+      );
 
       // Factor 4: SRS review due (0.1 weight)
       const srsScore = this.calculateSrsScore(lesson, srsReviews, reasoning);
@@ -63,7 +85,9 @@ export class RecommendationScorerService {
     });
 
     // Sort by score (descending) and return top N
-    return scoredLessons.sort((a, b) => b.score - a.score).slice(0, recommendationCount);
+    return scoredLessons
+      .sort((a, b) => b.score - a.score)
+      .slice(0, recommendationCount);
   }
 
   private async getAvailableLessons(userId: string) {
@@ -124,8 +148,14 @@ export class RecommendationScorerService {
     return 0;
   }
 
-  private calculateFreshnessScore(lesson: any, topicFreshness: any[], reasoning: string[]): number {
-    const freshness = topicFreshness.find((f) => f.category === lesson.category);
+  private calculateFreshnessScore(
+    lesson: any,
+    topicFreshness: any[],
+    reasoning: string[],
+  ): number {
+    const freshness = topicFreshness.find(
+      (f) => f.category === lesson.category,
+    );
 
     if (!freshness) {
       return 0;
@@ -137,27 +167,41 @@ export class RecommendationScorerService {
     }
 
     if (freshness.daysSinceLastPractice > 7) {
-      reasoning.push(`Last practiced ${freshness.daysSinceLastPractice} days ago`);
+      reasoning.push(
+        `Last practiced ${freshness.daysSinceLastPractice} days ago`,
+      );
     }
 
     return freshness.freshnessScore;
   }
 
-  private calculateSuccessScore(lesson: any, successRates: any[], reasoning: string[]): number {
-    const successRate = successRates.find((sr) => sr.category === lesson.category);
+  private calculateSuccessScore(
+    lesson: any,
+    successRates: any[],
+    reasoning: string[],
+  ): number {
+    const successRate = successRates.find(
+      (sr) => sr.category === lesson.category,
+    );
 
     if (!successRate || successRate.totalAttempts === 0) {
       return 0;
     }
 
     if (successRate.avgScore < 50) {
-      reasoning.push(`Low success rate (${successRate.avgScore.toFixed(0)}%) - needs practice`);
+      reasoning.push(
+        `Low success rate (${successRate.avgScore.toFixed(0)}%) - needs practice`,
+      );
     }
 
     return successRate.successRateInverseFactor;
   }
 
-  private calculateSrsScore(lesson: any, srsReviews: any[], reasoning: string[]): number {
+  private calculateSrsScore(
+    lesson: any,
+    srsReviews: any[],
+    reasoning: string[],
+  ): number {
     const srsReview = srsReviews.find((sr) => sr.category === lesson.category);
 
     if (!srsReview) {

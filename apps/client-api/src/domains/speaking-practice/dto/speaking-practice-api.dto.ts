@@ -1,4 +1,11 @@
-import { IsInt, IsString, IsOptional, IsBoolean, Min, Max } from 'class-validator';
+import {
+  IsInt,
+  IsString,
+  IsOptional,
+  IsBoolean,
+  Min,
+  Max,
+} from 'class-validator';
 import { DifficultyLevel } from '@prisma/client';
 
 /**

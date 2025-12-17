@@ -206,7 +206,6 @@ OUTPUT: Tra ve:
     try {
       const model = this.genAI.getGenerativeModel({
         model: 'gemini-2.0-flash',
-
       });
 
       const prompt = `Phân tích dữ liệu khóa học sau và đưa ra insights:

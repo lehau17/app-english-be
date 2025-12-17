@@ -13,8 +13,12 @@ import { SRSSpeakingService } from './srs-speaking.service';
     PersonalizationLLMService,
     DrillRetrievalService,
     SRSSpeakingService,
-    GeminiService
+    GeminiService,
   ],
-  exports: [PersonalizationLLMService, DrillRetrievalService, SRSSpeakingService],
+  exports: [
+    PersonalizationLLMService,
+    DrillRetrievalService,
+    SRSSpeakingService,
+  ],
 })
 export class SpeakingPracticeModule {}

@@ -34,7 +34,10 @@ export class TopicFreshnessTrackerService {
         // Calculate freshness score (0-1)
         // Higher score = more urgent to review
         // Cap at freshnessMaxDays for scoring
-        const cappedDays = Math.min(daysSinceLastPractice, recommendationConfig.freshnessMaxDays);
+        const cappedDays = Math.min(
+          daysSinceLastPractice,
+          recommendationConfig.freshnessMaxDays,
+        );
         freshnessScore = cappedDays / recommendationConfig.freshnessMaxDays;
       } else {
         // Never practiced = highest priority
@@ -53,7 +56,10 @@ export class TopicFreshnessTrackerService {
     return freshnessData;
   }
 
-  async getTopicFreshnessByCategory(userId: string, category: string): Promise<TopicFreshness | null> {
+  async getTopicFreshnessByCategory(
+    userId: string,
+    category: string,
+  ): Promise<TopicFreshness | null> {
     const allFreshness = await this.getTopicFreshness(userId);
     return allFreshness.find((f) => f.category === category) || null;
   }

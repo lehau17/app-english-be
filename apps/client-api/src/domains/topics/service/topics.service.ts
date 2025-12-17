@@ -43,11 +43,7 @@ export class TopicsService {
     const response = topics.map((topic) => this.toResponseDto(topic));
 
     try {
-      await this.redis.set(
-        cacheKey,
-        JSON.stringify(response),
-        this.CACHE_TTL,
-      );
+      await this.redis.set(cacheKey, JSON.stringify(response), this.CACHE_TTL);
     } catch (error) {
       this.logger.warn(`Redis set failed: ${error.message}`);
     }
@@ -75,11 +71,7 @@ export class TopicsService {
     const response = this.toResponseDto(topic);
 
     try {
-      await this.redis.set(
-        cacheKey,
-        JSON.stringify(response),
-        this.CACHE_TTL,
-      );
+      await this.redis.set(cacheKey, JSON.stringify(response), this.CACHE_TTL);
     } catch (error) {
       this.logger.warn(`Redis set failed: ${error.message}`);
     }

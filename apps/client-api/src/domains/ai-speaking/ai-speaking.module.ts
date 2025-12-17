@@ -40,6 +40,10 @@ import { SuggestionService } from './service/suggestion.service';
     UploadService,
     SuggestionService,
   ],
-  exports: [AiSpeakingService, LessonEngineService, PronunciationAssessmentService],
+  exports: [
+    AiSpeakingService,
+    LessonEngineService,
+    PronunciationAssessmentService,
+  ],
 })
 export class AiSpeakingModule {}

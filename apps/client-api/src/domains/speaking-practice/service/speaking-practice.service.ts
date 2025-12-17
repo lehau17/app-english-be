@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { SpeakingPracticeRepository } from '../repository/speaking-practice.repository';
 import { PronunciationScoringService } from './pronunciation-scoring.service';
@@ -67,7 +72,9 @@ export class SpeakingPracticeService {
    * Progress-Based: always returns existing or creates new
    * NOTE: Level unlock logic removed - now using topic-based progression
    */
-  async getCurrentProgress(userId: string): Promise<SpeakingPracticeProgressDto> {
+  async getCurrentProgress(
+    userId: string,
+  ): Promise<SpeakingPracticeProgressDto> {
     this.logger.debug(`Getting progress for user ${userId}`);
 
     const progress = await this.repository.findOrCreateProgress(userId);
@@ -100,7 +107,11 @@ export class SpeakingPracticeService {
    */
   async getNextItem(
     userId: string,
-    options: { level?: number; lessonId?: string; includeRemedial?: boolean } = {},
+    options: {
+      level?: number;
+      lessonId?: string;
+      includeRemedial?: boolean;
+    } = {},
   ): Promise<NextPracticeItemDto> {
     this.logger.debug(`Getting next item for user ${userId}`, options);
 
@@ -169,7 +180,9 @@ export class SpeakingPracticeService {
     dto: SubmitAttemptDto,
     audioBuffer: Buffer,
   ): Promise<SubmitResultDto> {
-    this.logger.debug(`Submitting attempt for user ${userId}, lesson ${dto.lessonId}`);
+    this.logger.debug(
+      `Submitting attempt for user ${userId}, lesson ${dto.lessonId}`,
+    );
 
     const progress = await this.repository.findOrCreateProgress(userId);
     const lesson = await this.repository.findLessonById(dto.lessonId);
@@ -186,11 +199,15 @@ export class SpeakingPracticeService {
     });
 
     // Map failed phonemes to pronunciation errors
-    const errors: PronunciationError[] = scoringResult.failedPhonemes.map((phoneme) => ({
-      phoneme,
-      word: dto.referenceText.split(' ')[0], // Simplified
-      suggestion: this.feedbackService.getPhonemeFeedback(phoneme)?.instruction || 'Practice more',
-    }));
+    const errors: PronunciationError[] = scoringResult.failedPhonemes.map(
+      (phoneme) => ({
+        phoneme,
+        word: dto.referenceText.split(' ')[0], // Simplified
+        suggestion:
+          this.feedbackService.getPhonemeFeedback(phoneme)?.instruction ||
+          'Practice more',
+      }),
+    );
 
     // Generate child-friendly feedback
     const feedback = this.feedbackService.generateFeedback({
@@ -201,7 +218,8 @@ export class SpeakingPracticeService {
     // Record mispronounced words
     const mispronounceWords: string[] = [];
     if (scoringResult.decision === 'retry') {
-      const words = scoringResult.words?.filter((w) => w.accuracyScore < 70) || [];
+      const words =
+        scoringResult.words?.filter((w) => w.accuracyScore < 70) || [];
       for (const word of words.slice(0, 3)) {
         await this.repository.recordMispronounceWord(userId, word.word, {
           phoneme: scoringResult.failedPhonemes[0],
@@ -244,11 +262,15 @@ export class SpeakingPracticeService {
       await this.repository.addCompletedLesson(userId, dto.lessonId);
 
       // Update topic progress (replaces level unlock logic)
-      await this.updateTopicProgress(userId, lesson.category || 'Uncategorized', {
-        scorePercent: scoringResult.combinedScore,
-        performance: passed ? 'pass' : 'fail',
-        lessonId: dto.lessonId,
-      });
+      await this.updateTopicProgress(
+        userId,
+        lesson.category || 'Uncategorized',
+        {
+          scorePercent: scoringResult.combinedScore,
+          performance: passed ? 'pass' : 'fail',
+          lessonId: dto.lessonId,
+        },
+      );
     }
 
     // Create attempt record
@@ -275,7 +297,9 @@ export class SpeakingPracticeService {
     // Update weak phonemes
     if (scoringResult.failedPhonemes.length > 0) {
       const currentWeak = progress.weakPhonemes || [];
-      const newWeak = [...new Set([...currentWeak, ...scoringResult.failedPhonemes])].slice(0, 10);
+      const newWeak = [
+        ...new Set([...currentWeak, ...scoringResult.failedPhonemes]),
+      ].slice(0, 10);
       await this.repository.updateWeakPhonemes(userId, newWeak);
     }
 
@@ -380,7 +404,9 @@ export class SpeakingPracticeService {
   /**
    * Extract practice items from lesson content
    */
-  private extractItems(content: any): Array<{ content: string; aiPrompt: string }> {
+  private extractItems(
+    content: any,
+  ): Array<{ content: string; aiPrompt: string }> {
     const items: Array<{ content: string; aiPrompt: string }> = [];
 
     if (content.items) {
@@ -432,13 +458,17 @@ export class SpeakingPracticeService {
 
     // Get all active lessons grouped by category
     const lessons = await this.repository.findActiveLessons();
-    const categories = [...new Set(lessons.map((l) => l.category).filter(Boolean))];
+    const categories = [
+      ...new Set(lessons.map((l) => l.category).filter(Boolean)),
+    ];
 
     // Get user's topic progress
     const topicProgressList = await this.prisma.topicProgress.findMany({
       where: { userId },
     });
-    const progressMap = new Map(topicProgressList.map((tp) => [tp.category, tp]));
+    const progressMap = new Map(
+      topicProgressList.map((tp) => [tp.category, tp]),
+    );
 
     // Build response
     const topics: TopicWithProgress[] = categories.map((category) => {
@@ -465,7 +495,9 @@ export class SpeakingPracticeService {
 
       const completedCount = progress?.completedLessons?.length || 0;
       const progressPercent =
-        lessonsInTopic.length > 0 ? (completedCount / lessonsInTopic.length) * 100 : 0;
+        lessonsInTopic.length > 0
+          ? (completedCount / lessonsInTopic.length) * 100
+          : 0;
 
       return {
         category,
@@ -489,7 +521,9 @@ export class SpeakingPracticeService {
     userId: string,
     category: string,
   ): Promise<LessonsByCategoryResponseDto> {
-    this.logger.debug(`Getting lessons for category ${category}, user ${userId}`);
+    this.logger.debug(
+      `Getting lessons for category ${category}, user ${userId}`,
+    );
 
     // Get lessons in category ordered by tier
     const lessons = await this.prisma.speakingPracticeLesson.findMany({
@@ -506,12 +540,18 @@ export class SpeakingPracticeService {
     // Get attempt history
     const attempts = progress?.id
       ? await this.prisma.speakingPracticeAttempt.findMany({
-          where: { progressId: progress.id, lessonId: { in: lessons.map((l) => l.id) } },
+          where: {
+            progressId: progress.id,
+            lessonId: { in: lessons.map((l) => l.id) },
+          },
           orderBy: { createdAt: 'desc' },
         })
       : [];
     const attemptMap = new Map(
-      attempts.map((a) => [a.lessonId, { score: a.score, createdAt: a.createdAt }]),
+      attempts.map((a) => [
+        a.lessonId,
+        { score: a.score, createdAt: a.createdAt },
+      ]),
     );
 
     return {
@@ -531,7 +571,10 @@ export class SpeakingPracticeService {
   /**
    * Get personalized lesson recommendations
    */
-  async getRecommendations(userId: string, limit: number = 5): Promise<LessonRecommendation[]> {
+  async getRecommendations(
+    userId: string,
+    limit: number = 5,
+  ): Promise<LessonRecommendation[]> {
     this.logger.debug(`Getting recommendations for user ${userId}`);
 
     const recommendations: LessonRecommendation[] = [];
@@ -574,9 +617,11 @@ export class SpeakingPracticeService {
 
     // Strategy 2: Continue current topic
     if (progress?.currentLessonId) {
-      const currentLesson = await this.prisma.speakingPracticeLesson.findUnique({
-        where: { id: progress.currentLessonId },
-      });
+      const currentLesson = await this.prisma.speakingPracticeLesson.findUnique(
+        {
+          where: { id: progress.currentLessonId },
+        },
+      );
       if (currentLesson && !completedIds.includes(currentLesson.id)) {
         recommendations.push({
           lessonId: currentLesson.id,
@@ -590,14 +635,15 @@ export class SpeakingPracticeService {
     }
 
     // Strategy 3: New uncompleted lessons
-    const uncompletedLessons = await this.prisma.speakingPracticeLesson.findMany({
-      where: {
-        isActive: true,
-        id: { notIn: completedIds },
-      },
-      orderBy: [{ difficultyTier: 'asc' }, { orderIndex: 'asc' }],
-      take: limit,
-    });
+    const uncompletedLessons =
+      await this.prisma.speakingPracticeLesson.findMany({
+        where: {
+          isActive: true,
+          id: { notIn: completedIds },
+        },
+        orderBy: [{ difficultyTier: 'asc' }, { orderIndex: 'asc' }],
+        take: limit,
+      });
 
     for (const lesson of uncompletedLessons) {
       if (recommendations.length >= limit) break;
@@ -624,24 +670,35 @@ export class SpeakingPracticeService {
     category: string,
     attempt: { scorePercent: number; performance: string; lessonId: string },
   ): Promise<void> {
-    this.logger.debug(`Updating topic progress for ${category}, user ${userId}`);
+    this.logger.debug(
+      `Updating topic progress for ${category}, user ${userId}`,
+    );
 
     // Upsert TopicProgress
     const tp = await this.prisma.topicProgress.upsert({
       where: { userId_category: { userId, category } },
       update: {},
-      create: { userId, category, completedLessons: [], weakPhonemesInTopic: [] },
+      create: {
+        userId,
+        category,
+        completedLessons: [],
+        weakPhonemesInTopic: [],
+      },
     });
 
     // Update completed lessons if passed
-    let completedLessons = [...(tp.completedLessons || [])];
-    if (attempt.performance === 'pass' && !completedLessons.includes(attempt.lessonId)) {
+    const completedLessons = [...(tp.completedLessons || [])];
+    if (
+      attempt.performance === 'pass' &&
+      !completedLessons.includes(attempt.lessonId)
+    ) {
       completedLessons.push(attempt.lessonId);
     }
 
     // Recalculate avgScore
     const newTotal = tp.totalAttempts + 1;
-    const newAvg = (tp.avgScore * tp.totalAttempts + attempt.scorePercent) / newTotal;
+    const newAvg =
+      (tp.avgScore * tp.totalAttempts + attempt.scorePercent) / newTotal;
 
     // Get lesson tier for tier completion tracking
     const lesson = await this.prisma.speakingPracticeLesson.findUnique({
@@ -656,11 +713,20 @@ export class SpeakingPracticeService {
     };
 
     if (lesson && attempt.performance === 'pass') {
-      if (lesson.difficultyTier === 1 && !tp.completedLessons?.includes(attempt.lessonId)) {
+      if (
+        lesson.difficultyTier === 1 &&
+        !tp.completedLessons?.includes(attempt.lessonId)
+      ) {
         updates.easyCompleted = tp.easyCompleted + 1;
-      } else if (lesson.difficultyTier === 2 && !tp.completedLessons?.includes(attempt.lessonId)) {
+      } else if (
+        lesson.difficultyTier === 2 &&
+        !tp.completedLessons?.includes(attempt.lessonId)
+      ) {
         updates.mediumCompleted = tp.mediumCompleted + 1;
-      } else if (lesson.difficultyTier === 3 && !tp.completedLessons?.includes(attempt.lessonId)) {
+      } else if (
+        lesson.difficultyTier === 3 &&
+        !tp.completedLessons?.includes(attempt.lessonId)
+      ) {
         updates.hardCompleted = tp.hardCompleted + 1;
       }
     }

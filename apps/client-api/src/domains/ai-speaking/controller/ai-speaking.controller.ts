@@ -1,12 +1,26 @@
 import { JwtPayload, PayloadToken, ResponseMessage } from '@app/shared';
-import { Body, Controller, Get, Param, Post, Query, Res, Header } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Res,
+  Header,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
 import { FinalizeAiSpeakingSessionDto } from '../dto/finalize-session.dto';
 import { AiSpeakingSessionResponseDto } from '../dto/session-response.dto';
 import { StartAiSpeakingSessionDto } from '../dto/start-session.dto';
 import { SuggestionResponseDto } from '../dto/suggestion.dto';
-import { VOICE_CATALOG, VoiceMetadata, VoicePreviewDto, parseVoice } from '../dto/tts-voice.dto';
+import {
+  VOICE_CATALOG,
+  VoiceMetadata,
+  VoicePreviewDto,
+  parseVoice,
+} from '../dto/tts-voice.dto';
 import { AiSpeakingService } from '../service/ai-speaking.service';
 import { SuggestionService } from '../service/suggestion.service';
 import { ConfigService } from '@nestjs/config';
@@ -52,7 +66,8 @@ export class AiSpeakingController {
     @Res() res: Response,
   ): Promise<void> {
     const { model, speakerId } = parseVoice(dto.voice);
-    const text = dto.text || 'Hello, this is a voice preview for AI speaking practice.';
+    const text =
+      dto.text || 'Hello, this is a voice preview for AI speaking practice.';
 
     try {
       const response = await axios.post(

@@ -7,7 +7,7 @@ import {
   LessonItem,
   TurnEvaluationDto,
   DifficultyReductionConfig,
-  ConversationMetrics
+  ConversationMetrics,
 } from '../dto/lesson.dto';
 
 @Injectable()
@@ -20,7 +20,7 @@ export class LessonEngineService {
     2: 75, // Phrases
     3: 70, // Sentences
     4: 65, // Dialogues
-    5: 60  // Free Talk
+    5: 60, // Free Talk
   };
 
   // Scoring weights
@@ -28,7 +28,7 @@ export class LessonEngineService {
     pronunciation: 0.4,
     relevance: 0.2,
     fluency: 0.2,
-    completeness: 0.2
+    completeness: 0.2,
   };
 
   constructor(private readonly lessonRepo: LessonRepository) {}
@@ -38,7 +38,9 @@ export class LessonEngineService {
    * Supports MULTIPLE lessons per level - picks next uncompleted lesson
    */
   async generateLesson(dto: GenerateLessonDto): Promise<LessonContentDto> {
-    this.logger.debug(`Generating lesson: level=${dto.level}, userId=${dto.userId}`);
+    this.logger.debug(
+      `Generating lesson: level=${dto.level}, userId=${dto.userId}`,
+    );
 
     // Map level to difficulty
     const difficulty = this.mapLevelToDifficulty(dto.level);
@@ -47,14 +49,21 @@ export class LessonEngineService {
     const template = await this.lessonRepo.findNextLessonForUser(
       dto.userId,
       dto.level,
-      difficulty
+      difficulty,
     );
     if (!template) {
       // All lessons at this level completed - return first lesson for review
-      this.logger.log(`User ${dto.userId} completed all lessons at level ${dto.level}, returning first for review`);
-      const allLessons = await this.lessonRepo.findAllLessonsAtLevel(dto.level, difficulty);
+      this.logger.log(
+        `User ${dto.userId} completed all lessons at level ${dto.level}, returning first for review`,
+      );
+      const allLessons = await this.lessonRepo.findAllLessonsAtLevel(
+        dto.level,
+        difficulty,
+      );
       if (allLessons.length === 0) {
-        throw new NotFoundException(`No lesson template found for level ${dto.level}`);
+        throw new NotFoundException(
+          `No lesson template found for level ${dto.level}`,
+        );
       }
       return this.buildLessonContent(allLessons[0], dto.weakPhonemes);
     }
@@ -67,7 +76,7 @@ export class LessonEngineService {
    */
   private async buildLessonContent(
     template: SpeakingPracticeLesson,
-    weakPhonemes?: string[]
+    weakPhonemes?: string[],
   ): Promise<LessonContentDto> {
     let items: LessonItem[] = this.extractLessonItems(template);
 
@@ -75,9 +84,11 @@ export class LessonEngineService {
     if (weakPhonemes && weakPhonemes.length > 0) {
       const remedialDrills = await this.lessonRepo.findRemedialDrills(
         weakPhonemes,
-        template.level
+        template.level,
       );
-      const remedialItems = remedialDrills.flatMap(drill => this.extractLessonItems(drill));
+      const remedialItems = remedialDrills.flatMap((drill) =>
+        this.extractLessonItems(drill),
+      );
       items = [...remedialItems.slice(0, 2), ...items]; // Insert 2 remedial items first
     }
 
@@ -88,7 +99,7 @@ export class LessonEngineService {
       type: template.type as any,
       items,
       passThreshold: template.passThreshold,
-      reductionConfig: template.reductionConfig as DifficultyReductionConfig
+      reductionConfig: template.reductionConfig as DifficultyReductionConfig,
     };
   }
 
@@ -98,13 +109,13 @@ export class LessonEngineService {
   evaluateTurn(
     metrics: ConversationMetrics,
     passThreshold: number,
-    attemptNumber: number
+    attemptNumber: number,
   ): TurnEvaluationDto {
     const weightedScore = this.calculateWeightedScore({
       pronunciation: metrics.pronunciationScore,
       relevance: metrics.relevanceScore,
       fluency: metrics.fluencyScore,
-      completeness: metrics.completenessScore
+      completeness: metrics.completenessScore,
     });
 
     const passed = weightedScore >= passThreshold;
@@ -126,11 +137,11 @@ export class LessonEngineService {
         pronunciation: metrics.pronunciationScore,
         relevance: metrics.relevanceScore,
         fluency: metrics.fluencyScore,
-        completeness: metrics.completenessScore
+        completeness: metrics.completenessScore,
       },
       shouldReduceDifficulty,
       nextAction,
-      feedback: this.generateFeedbackMessage(verdict, weightedScore)
+      feedback: this.generateFeedbackMessage(verdict, weightedScore),
     };
   }
 
@@ -150,12 +161,12 @@ export class LessonEngineService {
       showTranscript: true,
       allowRepeat: true,
       timeoutExtensionMs: 2000,
-      simplifyWords: true
+      simplifyWords: true,
     };
 
     return {
       ...lesson,
-      reductionConfig: lesson.reductionConfig || defaultReduction
+      reductionConfig: lesson.reductionConfig || defaultReduction,
     };
   }
 
@@ -170,9 +181,9 @@ export class LessonEngineService {
   }): number {
     return Math.round(
       scores.pronunciation * this.WEIGHTS.pronunciation +
-      scores.relevance * this.WEIGHTS.relevance +
-      scores.fluency * this.WEIGHTS.fluency +
-      scores.completeness * this.WEIGHTS.completeness
+        scores.relevance * this.WEIGHTS.relevance +
+        scores.fluency * this.WEIGHTS.fluency +
+        scores.completeness * this.WEIGHTS.completeness,
     );
   }
 
@@ -198,7 +209,7 @@ export class LessonEngineService {
       2: DifficultyLevel.elementary,
       3: DifficultyLevel.intermediate,
       4: DifficultyLevel.upper_intermediate,
-      5: DifficultyLevel.advanced
+      5: DifficultyLevel.advanced,
     };
     return mapping[level] || DifficultyLevel.beginner;
   }
@@ -216,11 +227,14 @@ export class LessonEngineService {
         const prompt = content.ai_prompts[index % content.ai_prompts.length];
         items.push({
           content: item,
-          aiPrompt: prompt.replace('{word}', item).replace('{phrase}', item).replace('{sentence}', item),
+          aiPrompt: prompt
+            .replace('{word}', item)
+            .replace('{phrase}', item)
+            .replace('{sentence}', item),
           expectedResponse: [item],
           targetPhonemes: template.targetPhonemes,
           attemptNumber: 1,
-          maxRetries: 3
+          maxRetries: 3,
         });
       });
     }
@@ -234,7 +248,7 @@ export class LessonEngineService {
           expectedResponse: exchange.expected_user,
           targetPhonemes: template.targetPhonemes,
           attemptNumber: 1,
-          maxRetries: 3
+          maxRetries: 3,
         });
       });
     }
@@ -248,7 +262,7 @@ export class LessonEngineService {
           expectedResponse: [], // Free talk has no fixed response
           targetPhonemes: template.targetPhonemes,
           attemptNumber: 1,
-          maxRetries: 3
+          maxRetries: 3,
         });
       });
     }

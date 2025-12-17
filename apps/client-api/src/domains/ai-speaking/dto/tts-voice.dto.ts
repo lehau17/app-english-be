@@ -1,4 +1,12 @@
-import { IsEnum, IsNotEmpty, IsOptional, IsString, IsInt, Min, Max } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 
 /**
  * Piper TTS voice models for AI Speaking
@@ -60,7 +68,10 @@ export class TtsRequestDto {
  * Helper: Parse voice string to extract model and speaker ID
  * e.g., 'en_US-libritts-medium:142' -> { model: 'en_US-libritts-medium', speakerId: 142 }
  */
-export function parseVoice(voice: TtsVoice): { model: string; speakerId: number } {
+export function parseVoice(voice: TtsVoice): {
+  model: string;
+  speakerId: number;
+} {
   const parts = voice.split(':');
   const parsedSpeakerId = parts[1] ? parseInt(parts[1], 10) : 0;
   return {
@@ -184,11 +195,11 @@ export const VOICE_CATALOG: VoiceMetadata[] = [
  * Includes best quality from US/GB male/female
  */
 export const MULTI_VOICE_SUBSET: TtsVoice[] = [
-  TtsVoice.US_FEMALE_AMY,     // US Female (primary)
-  TtsVoice.US_MALE_RYAN,      // US Male
-  TtsVoice.US_FEMALE_LESSAC,  // US Female (alternative)
-  TtsVoice.GB_MALE_ALAN,      // GB Male
-  TtsVoice.GB_FEMALE_JENNY,   // GB Female
+  TtsVoice.US_FEMALE_AMY, // US Female (primary)
+  TtsVoice.US_MALE_RYAN, // US Male
+  TtsVoice.US_FEMALE_LESSAC, // US Female (alternative)
+  TtsVoice.GB_MALE_ALAN, // GB Male
+  TtsVoice.GB_FEMALE_JENNY, // GB Female
 ];
 
 /** Concurrency limit for parallel TTS synthesis */

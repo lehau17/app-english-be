@@ -21,7 +21,11 @@ export async function seedSpeakingPracticeLessons() {
       title: 'Animals',
       content: {
         items: ['cat', 'dog', 'bird', 'fish', 'horse', 'cow', 'pig', 'duck'],
-        ai_prompts: ['Say: {word}', 'Repeat after me: {word}', 'Can you say: {word}?'],
+        ai_prompts: [
+          'Say: {word}',
+          'Repeat after me: {word}',
+          'Can you say: {word}?',
+        ],
       },
       passThreshold: 80,
       targetPhonemes: ['k', 't', 'd', 'g'],
@@ -35,7 +39,16 @@ export async function seedSpeakingPracticeLessons() {
       type: 'word',
       title: 'Colors',
       content: {
-        items: ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'pink', 'black'],
+        items: [
+          'red',
+          'blue',
+          'green',
+          'yellow',
+          'orange',
+          'purple',
+          'pink',
+          'black',
+        ],
         ai_prompts: ['What color is this? Say: {word}', 'Repeat: {word}'],
       },
       passThreshold: 80,
@@ -50,7 +63,18 @@ export async function seedSpeakingPracticeLessons() {
       type: 'word',
       title: 'Numbers 1-10',
       content: {
-        items: ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'],
+        items: [
+          'one',
+          'two',
+          'three',
+          'four',
+          'five',
+          'six',
+          'seven',
+          'eight',
+          'nine',
+          'ten',
+        ],
         ai_prompts: ['Say the number: {word}', 'Count: {word}'],
       },
       passThreshold: 80,
@@ -65,7 +89,15 @@ export async function seedSpeakingPracticeLessons() {
       type: 'word',
       title: 'Family',
       content: {
-        items: ['mom', 'dad', 'brother', 'sister', 'baby', 'grandma', 'grandpa'],
+        items: [
+          'mom',
+          'dad',
+          'brother',
+          'sister',
+          'baby',
+          'grandma',
+          'grandpa',
+        ],
         ai_prompts: ['Who is this? Say: {word}', 'Repeat: {word}'],
       },
       passThreshold: 80,
@@ -80,7 +112,16 @@ export async function seedSpeakingPracticeLessons() {
       type: 'word',
       title: 'Food',
       content: {
-        items: ['apple', 'banana', 'bread', 'milk', 'egg', 'rice', 'water', 'juice'],
+        items: [
+          'apple',
+          'banana',
+          'bread',
+          'milk',
+          'egg',
+          'rice',
+          'water',
+          'juice',
+        ],
         ai_prompts: ['Say the food: {word}', 'What is this? {word}'],
       },
       passThreshold: 80,
@@ -95,7 +136,17 @@ export async function seedSpeakingPracticeLessons() {
       type: 'word',
       title: 'Body Parts',
       content: {
-        items: ['head', 'hand', 'foot', 'eye', 'ear', 'nose', 'mouth', 'arm', 'leg'],
+        items: [
+          'head',
+          'hand',
+          'foot',
+          'eye',
+          'ear',
+          'nose',
+          'mouth',
+          'arm',
+          'leg',
+        ],
         ai_prompts: ['Point and say: {word}', 'What is this? {word}'],
       },
       passThreshold: 80,
@@ -172,7 +223,13 @@ export async function seedSpeakingPracticeLessons() {
       type: 'phrase',
       title: 'Greetings',
       content: {
-        items: ['Hello', 'Good morning', 'Good night', 'How are you', 'Nice to meet you'],
+        items: [
+          'Hello',
+          'Good morning',
+          'Good night',
+          'How are you',
+          'Nice to meet you',
+        ],
         ai_prompts: ['Say: {phrase}', 'Greet me: {phrase}'],
       },
       passThreshold: 75,
@@ -187,7 +244,13 @@ export async function seedSpeakingPracticeLessons() {
       type: 'phrase',
       title: 'Polite Words',
       content: {
-        items: ['Please', 'Thank you', 'You are welcome', 'Excuse me', 'I am sorry'],
+        items: [
+          'Please',
+          'Thank you',
+          'You are welcome',
+          'Excuse me',
+          'I am sorry',
+        ],
         ai_prompts: ['Be polite: {phrase}', 'Say: {phrase}'],
       },
       passThreshold: 75,
@@ -202,7 +265,13 @@ export async function seedSpeakingPracticeLessons() {
       type: 'phrase',
       title: 'Self Introduction',
       content: {
-        items: ['My name is', 'I am eight years old', 'I live in', 'I like', 'My favorite'],
+        items: [
+          'My name is',
+          'I am eight years old',
+          'I live in',
+          'I like',
+          'My favorite',
+        ],
         ai_prompts: ['Tell me about yourself: {phrase}', 'Say: {phrase}'],
       },
       passThreshold: 75,
@@ -217,7 +286,13 @@ export async function seedSpeakingPracticeLessons() {
       type: 'phrase',
       title: 'At School',
       content: {
-        items: ['Open your book', 'Close the door', 'Sit down please', 'Stand up', 'Raise your hand'],
+        items: [
+          'Open your book',
+          'Close the door',
+          'Sit down please',
+          'Stand up',
+          'Raise your hand',
+        ],
         ai_prompts: ['What does teacher say? {phrase}', 'Say: {phrase}'],
       },
       passThreshold: 75,
@@ -232,7 +307,13 @@ export async function seedSpeakingPracticeLessons() {
       type: 'phrase',
       title: 'Asking Questions',
       content: {
-        items: ['What is this', 'Where is it', 'How much', 'Can I have', 'May I go'],
+        items: [
+          'What is this',
+          'Where is it',
+          'How much',
+          'Can I have',
+          'May I go',
+        ],
         ai_prompts: ['Ask a question: {phrase}', 'Say: {phrase}'],
       },
       passThreshold: 75,
@@ -247,7 +328,13 @@ export async function seedSpeakingPracticeLessons() {
       type: 'phrase',
       title: 'Daily Activities',
       content: {
-        items: ['I wake up', 'I brush my teeth', 'I eat breakfast', 'I go to school', 'I do homework'],
+        items: [
+          'I wake up',
+          'I brush my teeth',
+          'I eat breakfast',
+          'I go to school',
+          'I do homework',
+        ],
         ai_prompts: ['What do you do? {phrase}', 'Say: {phrase}'],
       },
       passThreshold: 75,
@@ -262,7 +349,13 @@ export async function seedSpeakingPracticeLessons() {
       type: 'phrase',
       title: 'At Home',
       content: {
-        items: ['In the kitchen', 'On the table', 'Under the bed', 'Next to the door', 'Behind the chair'],
+        items: [
+          'In the kitchen',
+          'On the table',
+          'Under the bed',
+          'Next to the door',
+          'Behind the chair',
+        ],
         ai_prompts: ['Where is it? {phrase}', 'Say: {phrase}'],
       },
       passThreshold: 75,
@@ -277,7 +370,13 @@ export async function seedSpeakingPracticeLessons() {
       type: 'phrase',
       title: 'Feelings',
       content: {
-        items: ['I am happy', 'I am sad', 'I am tired', 'I am hungry', 'I am thirsty'],
+        items: [
+          'I am happy',
+          'I am sad',
+          'I am tired',
+          'I am hungry',
+          'I am thirsty',
+        ],
         ai_prompts: ['How do you feel? {phrase}', 'Say: {phrase}'],
       },
       passThreshold: 75,
@@ -292,7 +391,13 @@ export async function seedSpeakingPracticeLessons() {
       type: 'phrase',
       title: 'Shopping',
       content: {
-        items: ['How much is it', 'I want to buy', 'Do you have', 'Too expensive', 'I will take it'],
+        items: [
+          'How much is it',
+          'I want to buy',
+          'Do you have',
+          'Too expensive',
+          'I will take it',
+        ],
         ai_prompts: ['At the store: {phrase}', 'Say: {phrase}'],
       },
       passThreshold: 75,
@@ -537,9 +642,18 @@ export async function seedSpeakingPracticeLessons() {
       title: 'Meeting New Friends',
       content: {
         exchanges: [
-          { ai: 'Hi! What is your name?', expected_user: ['My name is...', 'I am...'] },
-          { ai: 'Nice to meet you! How old are you?', expected_user: ['I am ... years old', 'I am ...'] },
-          { ai: 'What school do you go to?', expected_user: ['I go to...', 'I study at...'] },
+          {
+            ai: 'Hi! What is your name?',
+            expected_user: ['My name is...', 'I am...'],
+          },
+          {
+            ai: 'Nice to meet you! How old are you?',
+            expected_user: ['I am ... years old', 'I am ...'],
+          },
+          {
+            ai: 'What school do you go to?',
+            expected_user: ['I go to...', 'I study at...'],
+          },
         ],
         ai_prompts: ['Let us have a conversation. Answer my question.'],
       },
@@ -556,9 +670,18 @@ export async function seedSpeakingPracticeLessons() {
       title: 'At the Restaurant',
       content: {
         exchanges: [
-          { ai: 'Welcome! How many people?', expected_user: ['Two people please', 'Just me', 'Three'] },
-          { ai: 'What would you like to order?', expected_user: ['I would like...', 'Can I have...'] },
-          { ai: 'Anything to drink?', expected_user: ['Water please', 'Orange juice', 'No thank you'] },
+          {
+            ai: 'Welcome! How many people?',
+            expected_user: ['Two people please', 'Just me', 'Three'],
+          },
+          {
+            ai: 'What would you like to order?',
+            expected_user: ['I would like...', 'Can I have...'],
+          },
+          {
+            ai: 'Anything to drink?',
+            expected_user: ['Water please', 'Orange juice', 'No thank you'],
+          },
         ],
         ai_prompts: ['You are at a restaurant. Answer the waiter.'],
       },
@@ -575,9 +698,22 @@ export async function seedSpeakingPracticeLessons() {
       title: 'Shopping for Clothes',
       content: {
         exchanges: [
-          { ai: 'Can I help you?', expected_user: ['I am looking for...', 'Do you have...'] },
-          { ai: 'What size do you need?', expected_user: ['Small please', 'Medium', 'Large'] },
-          { ai: 'How about this one?', expected_user: ['I like it', 'Do you have another color', 'Too expensive'] },
+          {
+            ai: 'Can I help you?',
+            expected_user: ['I am looking for...', 'Do you have...'],
+          },
+          {
+            ai: 'What size do you need?',
+            expected_user: ['Small please', 'Medium', 'Large'],
+          },
+          {
+            ai: 'How about this one?',
+            expected_user: [
+              'I like it',
+              'Do you have another color',
+              'Too expensive',
+            ],
+          },
         ],
         ai_prompts: ['You are shopping. Talk to the salesperson.'],
       },
@@ -594,9 +730,18 @@ export async function seedSpeakingPracticeLessons() {
       title: 'Asking for Directions',
       content: {
         exchanges: [
-          { ai: 'Excuse me, can I help you?', expected_user: ['Where is the...', 'How do I get to...'] },
-          { ai: 'Go straight and turn left at the corner.', expected_user: ['Thank you', 'Is it far', 'How long does it take'] },
-          { ai: 'You are welcome! Have a nice day!', expected_user: ['You too', 'Thank you', 'Goodbye'] },
+          {
+            ai: 'Excuse me, can I help you?',
+            expected_user: ['Where is the...', 'How do I get to...'],
+          },
+          {
+            ai: 'Go straight and turn left at the corner.',
+            expected_user: ['Thank you', 'Is it far', 'How long does it take'],
+          },
+          {
+            ai: 'You are welcome! Have a nice day!',
+            expected_user: ['You too', 'Thank you', 'Goodbye'],
+          },
         ],
         ai_prompts: ['You are lost. Ask for directions.'],
       },
@@ -613,9 +758,22 @@ export async function seedSpeakingPracticeLessons() {
       title: 'At the Doctor',
       content: {
         exchanges: [
-          { ai: 'What seems to be the problem?', expected_user: ['I have a headache', 'My stomach hurts', 'I feel sick'] },
-          { ai: 'How long have you felt this way?', expected_user: ['Since yesterday', 'For two days', 'This morning'] },
-          { ai: 'Take this medicine twice a day.', expected_user: ['Thank you doctor', 'Okay', 'How many times'] },
+          {
+            ai: 'What seems to be the problem?',
+            expected_user: [
+              'I have a headache',
+              'My stomach hurts',
+              'I feel sick',
+            ],
+          },
+          {
+            ai: 'How long have you felt this way?',
+            expected_user: ['Since yesterday', 'For two days', 'This morning'],
+          },
+          {
+            ai: 'Take this medicine twice a day.',
+            expected_user: ['Thank you doctor', 'Okay', 'How many times'],
+          },
         ],
         ai_prompts: ['You are at the doctor. Describe how you feel.'],
       },
@@ -632,9 +790,18 @@ export async function seedSpeakingPracticeLessons() {
       title: 'Making a Phone Call',
       content: {
         exchanges: [
-          { ai: 'Hello?', expected_user: ['Hi, this is...', 'Hello, may I speak to...'] },
-          { ai: 'How can I help you?', expected_user: ['I am calling about...', 'I wanted to ask...'] },
-          { ai: 'Sure, I can help with that.', expected_user: ['Thank you', 'That would be great'] },
+          {
+            ai: 'Hello?',
+            expected_user: ['Hi, this is...', 'Hello, may I speak to...'],
+          },
+          {
+            ai: 'How can I help you?',
+            expected_user: ['I am calling about...', 'I wanted to ask...'],
+          },
+          {
+            ai: 'Sure, I can help with that.',
+            expected_user: ['Thank you', 'That would be great'],
+          },
         ],
         ai_prompts: ['You are making a phone call.'],
       },
@@ -651,9 +818,22 @@ export async function seedSpeakingPracticeLessons() {
       title: 'Planning a Trip',
       content: {
         exchanges: [
-          { ai: 'Where do you want to go?', expected_user: ['I want to go to...', 'How about...', 'Let us go to...'] },
-          { ai: 'When should we go?', expected_user: ['This weekend', 'Next month', 'In summer'] },
-          { ai: 'How will we get there?', expected_user: ['By car', 'By plane', 'By train'] },
+          {
+            ai: 'Where do you want to go?',
+            expected_user: [
+              'I want to go to...',
+              'How about...',
+              'Let us go to...',
+            ],
+          },
+          {
+            ai: 'When should we go?',
+            expected_user: ['This weekend', 'Next month', 'In summer'],
+          },
+          {
+            ai: 'How will we get there?',
+            expected_user: ['By car', 'By plane', 'By train'],
+          },
         ],
         ai_prompts: ['Plan a trip with your friend.'],
       },
@@ -670,9 +850,18 @@ export async function seedSpeakingPracticeLessons() {
       title: 'Birthday Party',
       content: {
         exchanges: [
-          { ai: 'Happy birthday! How old are you now?', expected_user: ['Thank you', 'I am ... years old'] },
-          { ai: 'What present did you get?', expected_user: ['I got a...', 'My parents gave me...'] },
-          { ai: 'Let us cut the cake!', expected_user: ['Yes', 'I love cake', 'Make a wish'] },
+          {
+            ai: 'Happy birthday! How old are you now?',
+            expected_user: ['Thank you', 'I am ... years old'],
+          },
+          {
+            ai: 'What present did you get?',
+            expected_user: ['I got a...', 'My parents gave me...'],
+          },
+          {
+            ai: 'Let us cut the cake!',
+            expected_user: ['Yes', 'I love cake', 'Make a wish'],
+          },
         ],
         ai_prompts: ['It is your birthday party.'],
       },
@@ -689,9 +878,18 @@ export async function seedSpeakingPracticeLessons() {
       title: 'At the Library',
       content: {
         exchanges: [
-          { ai: 'Can I help you find something?', expected_user: ['I am looking for...', 'Where are the...'] },
-          { ai: 'You can find it in section B.', expected_user: ['Thank you', 'Where is section B'] },
-          { ai: 'Would you like to borrow this book?', expected_user: ['Yes please', 'How long can I keep it'] },
+          {
+            ai: 'Can I help you find something?',
+            expected_user: ['I am looking for...', 'Where are the...'],
+          },
+          {
+            ai: 'You can find it in section B.',
+            expected_user: ['Thank you', 'Where is section B'],
+          },
+          {
+            ai: 'Would you like to borrow this book?',
+            expected_user: ['Yes please', 'How long can I keep it'],
+          },
         ],
         ai_prompts: ['You are at the library.'],
       },
@@ -708,9 +906,18 @@ export async function seedSpeakingPracticeLessons() {
       title: 'Job Interview (Simple)',
       content: {
         exchanges: [
-          { ai: 'Tell me about yourself.', expected_user: ['My name is...', 'I am a student...'] },
-          { ai: 'Why do you want this job?', expected_user: ['I like...', 'I want to learn...', 'Because...'] },
-          { ai: 'When can you start?', expected_user: ['Right away', 'Next week', 'Anytime'] },
+          {
+            ai: 'Tell me about yourself.',
+            expected_user: ['My name is...', 'I am a student...'],
+          },
+          {
+            ai: 'Why do you want this job?',
+            expected_user: ['I like...', 'I want to learn...', 'Because...'],
+          },
+          {
+            ai: 'When can you start?',
+            expected_user: ['Right away', 'Next week', 'Anytime'],
+          },
         ],
         ai_prompts: ['Practice a simple job interview.'],
       },
@@ -776,7 +983,11 @@ export async function seedSpeakingPracticeLessons() {
       type: 'free',
       title: 'Weekend Activities',
       content: {
-        topics: ['what I did last weekend', 'my weekend plans', 'favorite weekend activity'],
+        topics: [
+          'what I did last weekend',
+          'my weekend plans',
+          'favorite weekend activity',
+        ],
         ai_prompts: ['Tell me about {topic}. What do you usually do?'],
         min_duration: 20,
       },

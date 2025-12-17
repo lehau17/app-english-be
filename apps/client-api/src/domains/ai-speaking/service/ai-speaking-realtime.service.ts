@@ -190,7 +190,8 @@ export class AiSpeakingRealtimeService {
       );
       this.gateway.emitToSession(sessionId, 'ai-speaking:tts-error', {
         turnId,
-        message: error instanceof Error ? error.message : 'Multi-voice TTS failed',
+        message:
+          error instanceof Error ? error.message : 'Multi-voice TTS failed',
       });
     }
   }
@@ -386,8 +387,11 @@ export class AiSpeakingRealtimeService {
     if (followUp?.followUpTurnId && followUp.followUpPrompt) {
       // Check session config for multiVoice preference
       const session = await this.repository.findSessionById(sessionId);
-      const multiVoice = (session?.config as Record<string, unknown>)?.multiVoice ?? false;
-      const voice = (session?.config as Record<string, unknown>)?.voice as TtsVoice | undefined;
+      const multiVoice =
+        (session?.config as Record<string, unknown>)?.multiVoice ?? false;
+      const voice = (session?.config as Record<string, unknown>)?.voice as
+        | TtsVoice
+        | undefined;
 
       if (multiVoice) {
         void this.streamAiTurnMultiVoice(
@@ -657,8 +661,11 @@ export class AiSpeakingRealtimeService {
       if (recovery.followUpTurnId && recovery.followUpPrompt) {
         // Check session config for multiVoice preference
         const session = await this.repository.findSessionById(sessionId);
-        const multiVoice = (session?.config as Record<string, unknown>)?.multiVoice ?? false;
-        const voice = (session?.config as Record<string, unknown>)?.voice as TtsVoice | undefined;
+        const multiVoice =
+          (session?.config as Record<string, unknown>)?.multiVoice ?? false;
+        const voice = (session?.config as Record<string, unknown>)?.voice as
+          | TtsVoice
+          | undefined;
 
         if (multiVoice) {
           void this.streamAiTurnMultiVoice(

@@ -149,7 +149,9 @@ export class FeedbackGeneratorService {
   generateFeedback(dto: GenerateFeedbackDto): FeedbackResult {
     const { score, errors } = dto;
 
-    this.logger.debug(`Generating feedback for score=${score}, errors=${errors.length}`);
+    this.logger.debug(
+      `Generating feedback for score=${score}, errors=${errors.length}`,
+    );
 
     // Determine score band
     const band = this.getScoreBand(score);
@@ -181,7 +183,9 @@ export class FeedbackGeneratorService {
       text = this.truncateFeedback(text);
     }
 
-    this.logger.log(`Generated ${band} feedback: "${text}" (${wordCount} words)`);
+    this.logger.log(
+      `Generated ${band} feedback: "${text}" (${wordCount} words)`,
+    );
 
     return {
       text,

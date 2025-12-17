@@ -74,7 +74,8 @@ export class StartAiSpeakingSessionDto {
   voice?: TtsVoice;
 
   @ApiPropertyOptional({
-    description: 'Enable multi-voice generation (generates audio in all voices per message)',
+    description:
+      'Enable multi-voice generation (generates audio in all voices per message)',
     default: false,
   })
   @IsOptional()

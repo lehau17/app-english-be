@@ -218,7 +218,9 @@ Return JSON:
       case 'fill_blank':
       case 'dictation':
         if (!content.questions || content.questions.length === 0) {
-          issues.push('Fill blank/dictation activity must have questions array');
+          issues.push(
+            'Fill blank/dictation activity must have questions array',
+          );
         }
         if (!content.answers || content.answers.length === 0) {
           issues.push('Fill blank/dictation activity must have answers array');

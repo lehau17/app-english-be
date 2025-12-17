@@ -10,7 +10,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiConsumes,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { VideoMeetingService } from './video-meeting.service';
 
 @ApiTags('Video Meeting')
@@ -26,15 +31,19 @@ export class VideoMeetingController {
    */
   @Get('session/:sessionId/url')
   @ApiOperation({ summary: 'Generate Jitsi meeting URL for session' })
-  @ApiResponse({ status: 200, description: 'Meeting URL generated successfully' })
-  public async generateMeetingUrl(
-    @Param('sessionId') sessionId: string,
-  ) {
+  @ApiResponse({
+    status: 200,
+    description: 'Meeting URL generated successfully',
+  })
+  public async generateMeetingUrl(@Param('sessionId') sessionId: string) {
     // In real implementation, fetch session to get classroomId
     // For now, using sessionId as placeholder
     const classroomId = 'placeholder'; // TODO: fetch from session
 
-    const meetingInfo = this.videoMeetingService.generateMeetingUrl(classroomId, sessionId);
+    const meetingInfo = this.videoMeetingService.generateMeetingUrl(
+      classroomId,
+      sessionId,
+    );
 
     return {
       success: true,
@@ -49,10 +58,9 @@ export class VideoMeetingController {
   @Get('session/:sessionId/recording')
   @ApiOperation({ summary: 'Get recording URL for session' })
   @ApiResponse({ status: 200, description: 'Recording metadata retrieved' })
-  async getRecording(
-    @Param('sessionId') sessionId: string,
-  ) {
-    const metadata = await this.videoMeetingService.getRecordingMetadata(sessionId);
+  async getRecording(@Param('sessionId') sessionId: string) {
+    const metadata =
+      await this.videoMeetingService.getRecordingMetadata(sessionId);
 
     return {
       success: true,
@@ -88,7 +96,10 @@ export class RecordingWebhookController {
     );
 
     try {
-      await this.videoMeetingService.handleRecordingComplete(file, file?.originalname);
+      await this.videoMeetingService.handleRecordingComplete(
+        file,
+        file?.originalname,
+      );
       return { success: true };
     } catch (error) {
       this.logger.error('Failed to process recording webhook:', error);

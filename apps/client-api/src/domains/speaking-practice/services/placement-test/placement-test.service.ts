@@ -123,7 +123,9 @@ export class PlacementTestService {
     }
 
     // Validate item exists
-    const itemIndex = PLACEMENT_TEST_ITEMS.findIndex((item) => item.id === response.itemId);
+    const itemIndex = PLACEMENT_TEST_ITEMS.findIndex(
+      (item) => item.id === response.itemId,
+    );
     if (itemIndex === -1) {
       throw new Error('Invalid item ID');
     }
@@ -187,13 +189,19 @@ export class PlacementTestService {
       return null;
     }
 
-    const phonemeAssessment = (test.phonemeAssessment as Record<string, number>) || {};
-    const topicRecommendations = (test.topicRecommendations as Record<string, number>) || {};
+    const phonemeAssessment =
+      (test.phonemeAssessment as Record<string, number>) || {};
+    const topicRecommendations =
+      (test.topicRecommendations as Record<string, number>) || {};
 
     // Identify weak and strong phonemes
     const phonemeEntries = Object.entries(phonemeAssessment);
-    const weakPhonemes = phonemeEntries.filter(([_, score]) => score < 60).map(([p]) => p);
-    const strongPhonemes = phonemeEntries.filter(([_, score]) => score >= 80).map(([p]) => p);
+    const weakPhonemes = phonemeEntries
+      .filter(([_, score]) => score < 60)
+      .map(([p]) => p);
+    const strongPhonemes = phonemeEntries
+      .filter(([_, score]) => score >= 80)
+      .map(([p]) => p);
 
     // Get recommended starting topics (tier 1 or user's level)
     const recommendedStartingTopics = Object.entries(topicRecommendations)
@@ -209,7 +217,10 @@ export class PlacementTestService {
       weakPhonemes,
       strongPhonemes,
       recommendedStartingTopics,
-      message: this.generateResultMessage(test.overallLevel || 1, weakPhonemes.length),
+      message: this.generateResultMessage(
+        test.overallLevel || 1,
+        weakPhonemes.length,
+      ),
     };
   }
 
@@ -232,18 +243,24 @@ export class PlacementTestService {
 
     // Calculate total score
     const totalScore =
-      responses.reduce((sum, r) => sum + r.pronunciationScore, 0) / responses.length;
+      responses.reduce((sum, r) => sum + r.pronunciationScore, 0) /
+      responses.length;
 
     // Determine overall level
     const overallLevel = this.determineOverallLevel(totalScore);
 
     // Generate topic recommendations
-    const topicRecommendations = this.generateTopicRecommendations(phonemeAssessment);
+    const topicRecommendations =
+      this.generateTopicRecommendations(phonemeAssessment);
 
     // Identify weak and strong phonemes
     const phonemeEntries = Object.entries(phonemeAssessment);
-    const weakPhonemes = phonemeEntries.filter(([_, score]) => score < 60).map(([p]) => p);
-    const strongPhonemes = phonemeEntries.filter(([_, score]) => score >= 80).map(([p]) => p);
+    const weakPhonemes = phonemeEntries
+      .filter(([_, score]) => score < 60)
+      .map(([p]) => p);
+    const strongPhonemes = phonemeEntries
+      .filter(([_, score]) => score >= 80)
+      .map(([p]) => p);
 
     // Get recommended starting topics
     const recommendedStartingTopics = Object.entries(topicRecommendations)
@@ -306,7 +323,10 @@ export class PlacementTestService {
       if (!item) continue;
 
       // Use phoneme scores from response if available
-      if (response.phonemeScores && Object.keys(response.phonemeScores).length > 0) {
+      if (
+        response.phonemeScores &&
+        Object.keys(response.phonemeScores).length > 0
+      ) {
         for (const [phoneme, score] of Object.entries(response.phonemeScores)) {
           if (!phonemeData[phoneme]) {
             phonemeData[phoneme] = { total: 0, sum: 0 };
@@ -374,7 +394,9 @@ export class PlacementTestService {
           recommendations[topic] = tier;
         } else {
           // Use average if multiple phonemes map to same topic
-          recommendations[topic] = Math.round((recommendations[topic] + tier) / 2);
+          recommendations[topic] = Math.round(
+            (recommendations[topic] + tier) / 2,
+          );
         }
       }
     }
@@ -400,7 +422,9 @@ export class PlacementTestService {
     ]);
 
     return (
-      (progress && progress.totalAttempts > 0) || mispronounceCount > 0 || aiSessionCount > 0
+      (progress && progress.totalAttempts > 0) ||
+      mispronounceCount > 0 ||
+      aiSessionCount > 0
     );
   }
 
@@ -433,7 +457,8 @@ export class PlacementTestService {
       const errorType = (word as any).errorType as string;
       if (errorType && errorType.includes('phoneme_')) {
         const phoneme = errorType.replace('phoneme_', '');
-        phonemeErrorCounts[phoneme] = (phonemeErrorCounts[phoneme] || 0) + word.errorCount;
+        phonemeErrorCounts[phoneme] =
+          (phonemeErrorCounts[phoneme] || 0) + word.errorCount;
       }
     }
 
@@ -442,7 +467,10 @@ export class PlacementTestService {
     const phonemeAssessment: Record<string, number> = {};
     for (const [phoneme, errors] of Object.entries(phonemeErrorCounts)) {
       // Convert error count to score (0-100, lower errors = higher score)
-      phonemeAssessment[phoneme] = Math.max(0, 100 - (errors / maxErrors) * 100);
+      phonemeAssessment[phoneme] = Math.max(
+        0,
+        100 - (errors / maxErrors) * 100,
+      );
     }
 
     // Calculate overall score from AI sessions
@@ -460,12 +488,17 @@ export class PlacementTestService {
     const overallLevel = this.determineOverallLevel(totalScore);
 
     // Generate topic recommendations
-    const topicRecommendations = this.generateTopicRecommendations(phonemeAssessment);
+    const topicRecommendations =
+      this.generateTopicRecommendations(phonemeAssessment);
 
     // Identify weak and strong phonemes
     const phonemeEntries = Object.entries(phonemeAssessment);
-    const weakPhonemes = phonemeEntries.filter(([_, score]) => score < 60).map(([p]) => p);
-    const strongPhonemes = phonemeEntries.filter(([_, score]) => score >= 80).map(([p]) => p);
+    const weakPhonemes = phonemeEntries
+      .filter(([_, score]) => score < 60)
+      .map(([p]) => p);
+    const strongPhonemes = phonemeEntries
+      .filter(([_, score]) => score >= 80)
+      .map(([p]) => p);
 
     // Get recommended starting topics
     const recommendedStartingTopics = Object.entries(topicRecommendations)

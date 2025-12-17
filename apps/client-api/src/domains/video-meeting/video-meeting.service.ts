@@ -22,10 +22,14 @@ export class VideoMeetingService {
     private prisma: PrismaRepository,
     private uploadService: UploadService,
   ) {
-    this.jitsiBaseUrl = this.config.get('videoMeeting.jitsiUrl') || 'http://localhost:8080';
-    this.enableRecording = this.config.get('videoMeeting.enableRecording') !== false;
-    this.autoRecordStartEnabled = this.config.get('videoMeeting.autoRecordStartEnabled') !== false;
-    this.recordingBucket = this.config.get('videoMeeting.recordingBucket') || 'class-recordings';
+    this.jitsiBaseUrl =
+      this.config.get('videoMeeting.jitsiUrl') || 'http://localhost:8080';
+    this.enableRecording =
+      this.config.get('videoMeeting.enableRecording') !== false;
+    this.autoRecordStartEnabled =
+      this.config.get('videoMeeting.autoRecordStartEnabled') !== false;
+    this.recordingBucket =
+      this.config.get('videoMeeting.recordingBucket') || 'class-recordings';
   }
 
   /**
@@ -49,7 +53,9 @@ export class VideoMeetingService {
 
     const meetingUrl = `${this.jitsiBaseUrl}/${roomName}?${configParams.toString()}`;
 
-    this.logger.log(`Generated meeting URL for session ${sessionId}: ${roomName}`);
+    this.logger.log(
+      `Generated meeting URL for session ${sessionId}: ${roomName}`,
+    );
 
     return {
       meetingUrl,
@@ -69,21 +75,21 @@ export class VideoMeetingService {
 
     if (!file) throw new BadRequestException('Recording file is required');
 
-  const original = (file.originalname || '').toLowerCase();
-  const ext = extname(original);
+    const original = (file.originalname || '').toLowerCase();
+    const ext = extname(original);
 
-  const allowedExt = new Set(['.mp4', '.webm', '.mkv', '.mov']);
-  const isVideoMime = !!file.mimetype && file.mimetype.startsWith('video/');
-  const isOctet = file.mimetype === 'application/octet-stream';
+    const allowedExt = new Set(['.mp4', '.webm', '.mkv', '.mov']);
+    const isVideoMime = !!file.mimetype && file.mimetype.startsWith('video/');
+    const isOctet = file.mimetype === 'application/octet-stream';
 
-  // ✅ Accept if:
-  // - real video mimetype
-  // - OR octet-stream but has a known video extension
-  if (!(isVideoMime || (isOctet && allowedExt.has(ext)))) {
-    throw new BadRequestException(
-      `Invalid file type: ${file.mimetype}. name=${file.originalname}`,
-    );
-  }
+    // ✅ Accept if:
+    // - real video mimetype
+    // - OR octet-stream but has a known video extension
+    if (!(isVideoMime || (isOctet && allowedExt.has(ext)))) {
+      throw new BadRequestException(
+        `Invalid file type: ${file.mimetype}. name=${file.originalname}`,
+      );
+    }
 
     // Parse sessionId from roomName: class-{classroomId}-session-{sessionId}
     // roomName = roomName.split(" - ")[1]
@@ -137,9 +143,14 @@ export class VideoMeetingService {
         },
       });
 
-      this.logger.log(`Recording saved for session ${sessionId}: ${uploadResult.url}`);
+      this.logger.log(
+        `Recording saved for session ${sessionId}: ${uploadResult.url}`,
+      );
     } catch (error) {
-      this.logger.error(`Failed to process recording for session ${sessionId}:`, error);
+      this.logger.error(
+        `Failed to process recording for session ${sessionId}:`,
+        error,
+      );
       throw error;
     }
   }
@@ -156,7 +167,10 @@ export class VideoMeetingService {
 
       return session?.recordingUrl || null;
     } catch (error) {
-      this.logger.error(`Failed to get recording URL for session ${sessionId}:`, error);
+      this.logger.error(
+        `Failed to get recording URL for session ${sessionId}:`,
+        error,
+      );
       return null;
     }
   }
@@ -193,7 +207,10 @@ export class VideoMeetingService {
         size: metadata?.recordingSize || null,
       };
     } catch (error) {
-      this.logger.error(`Failed to get recording metadata for session ${sessionId}:`, error);
+      this.logger.error(
+        `Failed to get recording metadata for session ${sessionId}:`,
+        error,
+      );
       return {
         recordingUrl: null,
         filename: null,

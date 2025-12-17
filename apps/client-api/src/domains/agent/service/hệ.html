@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poster Khoá Luận Tốt Nghiệp - Edutlingua</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        /* CORE VARIABLES */
+        :root {
+            --iuh-red: #B81D24;
+            --iuh-dark-red: #8a1217;
+            --section-bg: #ffffff;
+            --body-bg: #e5e5e5;
+            --text-main: #333;
+            --font-body: 'Roboto', sans-serif;
+            --font-head: 'Montserrat', sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #333;
+            font-family: var(--font-body);
+            display: flex;
+            justify-content: center;
+        }
+
+        /* A0 DIMENSIONS: 841mm x 1189mm */
+        /* Ratio approx 1 : 1.41 */
+        /* CSS Pixel Scale: Width 1200px -> Height ~1697px */
+        .poster-container {
+            width: 1200px;
+            height: 1697px;
+            background-color: #fff;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* --- 1. HEADER SECTION --- */
+        .poster-header {
+            background-color: var(--iuh-red);
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 5px solid #000;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo-placeholder {
+            width: 100px;
+            height: 100px;
+            background: white;
+            color: var(--iuh-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 20px;
+            border: 2px solid white;
+        }
+
+        .university-info h3 {
+            margin: 0;
+            font-size: 20px;
+            text-transform: uppercase;
+            font-weight: 400;
+            opacity: 0.9;
+        }
+        .university-info h1 {
+            margin: 5px 0 0 0;
+            font-size: 32px;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-family: var(--font-head);
+        }
+
+        .header-right {
+            text-align: right;
+            font-size: 16px;
+        }
+        .header-right strong {
+            display: block;
+            font-size: 18px;
+            margin-bottom: 5px;
+            color: #ffd700; /* Gold for headers */
+        }
+
+        /* --- 2. TITLE BAR --- */
+        .project-title-bar {
+            background-color: #f4f4f4;
+            padding: 20px 40px;
+            text-align: center;
+            border-bottom: 2px solid #ddd;
+        }
+        .project-title-bar h1 {
+            color: var(--iuh-red);
+            font-family: var(--font-head);
+            font-size: 48px;
+            margin: 0;
+            text-transform: uppercase;
+            line-height: 1.2;
+        }
+        .project-title-bar h2 {
+            color: #555;
+            font-size: 24px;
+            margin: 10px 0 0 0;
+            font-weight: 500;
+        }
+
+        /* --- 3. MAIN GRID --- */
+        .poster-body {
+            padding: 25px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 COLUMNS */
+            gap: 25px;
+            align-content: start;
+            background-color: #fff;
+        }
+
+        /* SECTION STYLING */
+        .section-box {
+            margin-bottom: 20px;
+            border: 2px solid #eee;
+            border-radius: 0px; /* Square corners for print look */
+            background: #fff;
+            height: fit-content;
+        }
+
+        .section-header {
+            background-color: var(--iuh-red);
+            color: white;
+            padding: 10px 15px;
+            font-family: var(--font-head);
+            font-size: 20px;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            border-bottom: 2px solid var(--iuh-dark-red);
+        }
+        .section-header i {
+            margin-right: 10px;
+            color: #ffd700;
+        }
+
+        .section-content {
+            padding: 15px;
+        }
+
+        /* TEXT CONTENT - FONT 18 */
+        p, li, .content-text {
+            font-size: 18px; /* REQUIRED SIZE */
+            line-height: 1.4;
+            color: #222;
+            margin-bottom: 10px;
+            text-align: justify;
+        }
+
+        ul {
+            padding-left: 25px;
+            margin: 0 0 10px 0;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: var(--iuh-red);
+            font-weight: 700;
+        }
+
+        /* DIAGRAMS */
+        .diagram-box {
+            width: 100%;
+            background: #f9f9f9;
+            border: 1px solid #ccc;
+            padding: 5px;
+            margin: 10px 0;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .diagram-box img {
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+        }
+
+        /* TECH STACK TAGS */
+        .tech-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .tag {
+            background: #eee;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: 600;
+            border-left: 3px solid var(--iuh-red);
+        }
+
+        /* --- 4. FOOTER --- */
+        .poster-footer {
+            background-color: var(--iuh-red);
+            color: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        /* Utility Helpers */
+        .col-span-2 { grid-column: span 2; }
+    </style>
+</head>
+<body>
+
+    <div class="poster-container">
+
+        <!-- HEADER -->
+        <div>
+            <div class="poster-header">
+                <div class="header-left">
+                    <div class="logo-placeholder">LOGO</div>
+                    <div class="university-info">
+                        <h3>Trường Đại học Công nghiệp TP.HCM</h3>
+                        <h1>Khoa Công nghệ Thông tin</h1>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <strong>GVHD: ThS. Nguyễn Thị Hoàng Khánh</strong>
+                    <div>SVTH: Lê Trung Hậu - 21101031</div>
+                    <div>SVTH: Phạm Thị Huyền Trang - 21071641</div>
+                </div>
+            </div>
+
+            <div class="project-title-bar">
+                <h1>Hệ thống Edutlingua</h1>
+                <h2>Phần mềm dạy tiếng Anh tương tác và cá nhân hóa cho trẻ em</h2>
+            </div>
+        </div>
+
+        <!-- BODY CONTENT -->
+        <div class="poster-body">
+
+            <!-- COLUMN 1: INTRO & SOLUTION -->
+            <div class="col-1">
+                <!-- 1. ĐẶT VẤN ĐỀ -->
+                <div class="section-box">
+                    <div class="section-header">
+                        <i class="fa-solid fa-triangle-exclamation"></i> 1. Đặt Vấn Đề
+                    </div>
+                    <div class="section-content">
+                        <p>Nhu cầu học tiếng Anh qua ứng dụng ngày càng tăng, tuy nhiên các giải pháp hiện tại còn hạn chế:</p>
+                        <ul>
+                            <li><strong>Thiếu cá nhân hóa:</strong> Nội dung đại trà, không thích ứng với khả năng từng trẻ.</li>
+                            <li><strong>Thiếu hấp dẫn:</strong> Ít yếu tố "vừa học vừa chơi" (Gamification), gây nhàm chán.</li>
+                            <li><strong>Thiếu tương tác:</strong> Mô hình một chiều, Phụ huynh và Giáo viên khó theo dõi sát sao.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 2. GIẢI PHÁP ĐỀ XUẤT -->
+                <div class="section-box">
+                    <div class="section-header">
+                        <i class="fa-solid fa-lightbulb"></i> 2. Giải Pháp Edutlingua
+                    </div>
+                    <div class="section-content">
+                        <p>Xây dựng hệ sinh thái toàn diện kết nối 4 đối tượng:</p>
+                        <ul>
+                            <li><strong>Học sinh (Mobile App):</strong> Học tương tác, luyện nói AI.</li>
+                            <li><strong>Phụ huynh (Web Portal):</strong> Theo dõi tiến độ, thanh toán.</li>
+                            <li><strong>Giáo viên (Web Portal):</strong> Quản lý lớp, chấm bài.</li>
+                            <li><strong>Admin (CMS):</strong> Quản trị hệ thống, báo cáo.</li>
+                        </ul>
+                        <div class="diagram-box">
+                            <img src="http://googleusercontent.com/image_collection/image_retrieval/13458100768867804169" alt="Sơ đồ tổng quan giải pháp">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMN 2: ARCHITECTURE & FUNCTION -->
+            <div class="col-2">
+                <!-- 3. KIẾN TRÚC HỆ THỐNG -->
+                <div class="section-box">
+                    <div class="section-header">
+                        <i class="fa-solid fa-server"></i> 3. Kiến Trúc Hệ Thống
+                    </div>
+                    <div class="section-content">
+                        <p>Hệ thống sử dụng kiến trúc hiện đại, đảm bảo hiệu năng và khả năng mở rộng:</p>
+                        <div class="tech-tags">
+                            <div class="tag">NestJS</div>
+                            <div class="tag">React/React Native</div>
+                            <div class="tag">PostgreSQL</div>
+                            <div class="tag">Redis</div>
+                            <div class="tag">Neo4J</div>
+                            <div class="tag">AI Service (Python)</div>
+                        </div>
+                        <div class="diagram-box" style="height: 180px; margin-top: 15px;">
+                            <img src="https://images.edrawmax.com/images/knowledge/software-architecture-diagram-1.jpg" alt="Sơ đồ Kiến trúc Hệ thống">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. CHỨC NĂNG CHÍNH -->
+                <div class="section-box">
+                    <div class="section-header">
+                        <i class="fa-solid fa-list-check"></i> 4. Chức Năng Chính
+                    </div>
+                    <div class="section-content">
+                        <p><strong>Dành cho Học sinh:</strong></p>
+                        <ul>
+                            <li><strong>AI Speaking:</strong> Luyện phát âm với chấm điểm AI theo thời gian thực.</li>
+                            <li><strong>Lộ trình cá nhân hóa:</strong> Bài học được gợi ý dựa trên năng lực.</li>
+                            <li><strong>Gamification:</strong> Bảng xếp hạng, huy hiệu, chuỗi ngày học.</li>
+                        </ul>
+                        <div class="diagram-box" style="height: 120px;">
+                            <img src="http://googleusercontent.com/image_collection/image_retrieval/4244514099337652271" alt="Giao diện Mobile App">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- COLUMN 3: ROLES & RESULT -->
+            <div class="col-3">
+                <!-- 5. PHỤ HUYNH & GIÁO VIÊN -->
+                <div class="section-box">
+                    <div class="section-header">
+                        <i class="fa-solid fa-users"></i> 5. Phụ Huynh & Giáo Viên
+                    </div>
+                    <div class="section-content">
+                        <ul>
+                            <li><strong>Phụ huynh:</strong> Liên kết tài khoản con qua QR, xem báo cáo chi tiết, đóng học phí (VNPay).</li>
+                            <li><strong>Giáo viên:</strong> Quản lý lớp học, giao bài tập về nhà (AI hỗ trợ), phản hồi trực tiếp cho học sinh.</li>
+                            <li><strong>Admin:</strong> Quản lý người dùng, khóa học, xem báo cáo tổng quan.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 6. KẾT QUẢ & HƯỚNG PHÁT TRIỂN -->
+                <div class="section-box">
+                    <div class="section-header">
+                        <i class="fa-solid fa-chart-line"></i> 6. Kết Quả & Hướng Phát Triển
+                    </div>
+                    <div class="section-content">
+                        <p><strong>Kết quả đạt được:</strong></p>
+                        <ul>
+                            <li>Xây dựng thành công hệ sinh thái 4 vai trò.</li>
+                            <li>Tích hợp AI (Speaking, RAG) hiệu quả vào giảng dạy.</li>
+                            <li>Kiến trúc Event-Driven đảm bảo hiệu năng cao.</li>
+                        </ul>
+                        <p><strong>Hạn chế & Phát triển:</strong></p>
+                        <ul>
+                            <li>Cải thiện AI để nhận diện ngữ điệu tốt hơn.</li>
+                            <li>Phát triển Mobile App cho Phụ huynh/GV.</li>
+                            <li>Mở rộng triển khai trên Kubernetes (K8s).</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- LỜI CẢM ƠN -->
+                <div style="margin-top: 20px; font-style: italic; text-align: center; border-top: 1px dashed #999; padding-top: 10px;">
+                    "Chúng em xin chân thành cảm ơn ThS. Nguyễn Thị Hoàng Khánh đã tận tình hướng dẫn trong suốt quá trình thực hiện."
+                </div>
+            </div>
+
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="poster-footer">
+            <div>Khóa luận tốt nghiệp Đại học - Ngành Kỹ thuật Phần mềm</div>
+            <div>Năm học: 2024 - 2025</div>
+        </footer>
+
+    </div>
+
+</body>
+</html>

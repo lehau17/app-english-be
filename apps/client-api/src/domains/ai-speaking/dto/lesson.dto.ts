@@ -1,4 +1,11 @@
-import { IsInt, IsString, IsArray, IsOptional, Min, Max } from 'class-validator';
+import {
+  IsInt,
+  IsString,
+  IsArray,
+  IsOptional,
+  Min,
+  Max,
+} from 'class-validator';
 import { DifficultyLevel } from '@prisma/client';
 
 export class GenerateLessonDto {
@@ -26,16 +33,16 @@ export class LessonContentDto {
 }
 
 export interface LessonItem {
-  content: string;             // "cat", "My name is", etc.
-  aiPrompt: string;            // What AI says before user speaks
-  expectedResponse: string[];  // Valid responses
-  targetPhonemes?: string[];   // Phonemes to assess
-  attemptNumber: number;       // Current attempt (1-3)
-  maxRetries: number;          // Max allowed retries
+  content: string; // "cat", "My name is", etc.
+  aiPrompt: string; // What AI says before user speaks
+  expectedResponse: string[]; // Valid responses
+  targetPhonemes?: string[]; // Phonemes to assess
+  attemptNumber: number; // Current attempt (1-3)
+  maxRetries: number; // Max allowed retries
 }
 
 export interface DifficultyReductionConfig {
-  speechRate: number;       // 0.8 = 20% slower
+  speechRate: number; // 0.8 = 20% slower
   showTranscript: boolean;
   allowRepeat: boolean;
   timeoutExtensionMs: number; // Extra thinking time
@@ -44,9 +51,9 @@ export interface DifficultyReductionConfig {
 
 export class TurnEvaluationDto {
   verdict: 'pass' | 'fail' | 'retry';
-  weightedScore: number;        // 0-100
+  weightedScore: number; // 0-100
   breakdown: {
-    pronunciation: number;      // 0-100
+    pronunciation: number; // 0-100
     relevance: number;
     fluency: number;
     completeness: number;

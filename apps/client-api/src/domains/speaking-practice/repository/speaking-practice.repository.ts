@@ -23,7 +23,9 @@ export class SpeakingPracticeRepository {
    * Find or create user's progress
    * Progress-Based: always 1 per user
    */
-  async findOrCreateProgress(userId: string): Promise<SpeakingPracticeProgress> {
+  async findOrCreateProgress(
+    userId: string,
+  ): Promise<SpeakingPracticeProgress> {
     return this.prisma.speakingPracticeProgress.upsert({
       where: { userId },
       update: {}, // Don't update anything on find
@@ -402,14 +404,20 @@ export class SpeakingPracticeRepository {
       where: {
         isActive: true,
       },
-      orderBy: [{ category: 'asc' }, { difficultyTier: 'asc' }, { orderIndex: 'asc' }],
+      orderBy: [
+        { category: 'asc' },
+        { difficultyTier: 'asc' },
+        { orderIndex: 'asc' },
+      ],
     });
   }
 
   /**
    * Get lessons by category
    */
-  async findLessonsByCategory(category: string): Promise<SpeakingPracticeLesson[]> {
+  async findLessonsByCategory(
+    category: string,
+  ): Promise<SpeakingPracticeLesson[]> {
     return this.prisma.speakingPracticeLesson.findMany({
       where: {
         isActive: true,

@@ -36,7 +36,10 @@ export class SrsTopicReviewerService {
     return reviewData;
   }
 
-  async getTopicReviewByCategory(userId: string, category: string): Promise<TopicReviewDue | null> {
+  async getTopicReviewByCategory(
+    userId: string,
+    category: string,
+  ): Promise<TopicReviewDue | null> {
     const allReviews = await this.getTopicReviews(userId);
     return allReviews.find((r) => r.category === category) || null;
   }
@@ -51,7 +54,11 @@ export class SrsTopicReviewerService {
    * @param category Topic category
    * @param score Score achieved (0-100)
    */
-  async updateSrsAfterCompletion(userId: string, category: string, score: number): Promise<void> {
+  async updateSrsAfterCompletion(
+    userId: string,
+    category: string,
+    score: number,
+  ): Promise<void> {
     // Determine interval based on score
     let intervalDays: number;
     if (score < 50) {

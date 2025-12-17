@@ -69,7 +69,10 @@ export class MispronounceWordListener implements OnModuleInit, OnModuleDestroy {
 
       this.logger.log('MispronounceWord consumer running');
     } catch (error) {
-      this.logger.error('Failed to initialize MispronounceWord listener', error);
+      this.logger.error(
+        'Failed to initialize MispronounceWord listener',
+        error,
+      );
       throw error;
     }
   }
@@ -79,7 +82,10 @@ export class MispronounceWordListener implements OnModuleInit, OnModuleDestroy {
       await this.consumer.disconnect();
       this.logger.log('MispronounceWord listener disconnected');
     } catch (error) {
-      this.logger.error('Failed to disconnect MispronounceWord listener', error);
+      this.logger.error(
+        'Failed to disconnect MispronounceWord listener',
+        error,
+      );
     }
   }
 
@@ -110,7 +116,9 @@ export class MispronounceWordListener implements OnModuleInit, OnModuleDestroy {
   /**
    * Handle Free Chat session completed - extract mispronounce words from turns
    */
-  private async handleFreeChatCompleted(event: AiSpeakingSessionCompletedEvent) {
+  private async handleFreeChatCompleted(
+    event: AiSpeakingSessionCompletedEvent,
+  ) {
     const { sessionId, userId } = event;
     this.logger.log(`Processing free chat session ${sessionId}`);
 
@@ -171,7 +179,10 @@ export class MispronounceWordListener implements OnModuleInit, OnModuleDestroy {
 
       // Calculate SM-2 for mispronounced word (quality is low since it's an error)
       const quality = this.srsService.getQualityForMispronounce(word.errorType);
-      const srsUpdate = this.srsService.calculateNextReview(existingWord, quality);
+      const srsUpdate = this.srsService.calculateNextReview(
+        existingWord,
+        quality,
+      );
 
       await this.prisma.mispronounceWord.upsert({
         where: { userId_word: { userId, word: normalizedWord } },
@@ -185,7 +196,9 @@ export class MispronounceWordListener implements OnModuleInit, OnModuleDestroy {
           nextReviewDate: srsUpdate.nextReviewDate,
           lastReviewedAt: srsUpdate.lastReviewedAt,
           // Update context if provided
-          ...(word.contextSentence && { contextSentence: word.contextSentence }),
+          ...(word.contextSentence && {
+            contextSentence: word.contextSentence,
+          }),
           ...(word.errorType && { errorType: word.errorType }),
           ...(word.problematicPhoneme && {
             problematicPhoneme: word.problematicPhoneme,

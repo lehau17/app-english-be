@@ -73,14 +73,13 @@ export class SessionTypeChangeRequestService {
     }
 
     // Check if there's already a pending request for this session
-    const existingPending = await this.prisma.sessionTypeChangeRequest.findFirst(
-      {
+    const existingPending =
+      await this.prisma.sessionTypeChangeRequest.findFirst({
         where: {
           sessionId,
           status: SessionTypeChangeStatus.pending,
         },
-      },
-    );
+      });
 
     if (existingPending) {
       throw new ConflictException(
@@ -429,7 +428,10 @@ export class SessionTypeChangeRequestService {
     }
 
     // Validate rejection note is required when rejecting
-    if (dto.status === 'rejected' && (!dto.reviewNote || !dto.reviewNote.trim())) {
+    if (
+      dto.status === 'rejected' &&
+      (!dto.reviewNote || !dto.reviewNote.trim())
+    ) {
       throw new BadRequestException(
         'Review note is required when rejecting a request',
       );

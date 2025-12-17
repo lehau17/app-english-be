@@ -13,12 +13,12 @@ export class LessonRepository {
   async findNextLessonForUser(
     userId: string,
     level: number,
-    difficulty: DifficultyLevel
+    difficulty: DifficultyLevel,
   ): Promise<SpeakingPracticeLesson | null> {
     // Get user's progress record
     const progress = await this.prisma.speakingPracticeProgress.findUnique({
       where: { userId },
-      select: { completedLessons: true }
+      select: { completedLessons: true },
     });
 
     const completedIds = progress?.completedLessons || [];
@@ -30,9 +30,9 @@ export class LessonRepository {
         difficulty,
         isTemplate: true,
         isActive: true,
-        id: { notIn: completedIds }
+        id: { notIn: completedIds },
       },
-      orderBy: { orderIndex: 'asc' } // Order by sequence
+      orderBy: { orderIndex: 'asc' }, // Order by sequence
     });
   }
 
@@ -41,16 +41,16 @@ export class LessonRepository {
    */
   async findAllLessonsAtLevel(
     level: number,
-    difficulty: DifficultyLevel
+    difficulty: DifficultyLevel,
   ): Promise<SpeakingPracticeLesson[]> {
     return this.prisma.speakingPracticeLesson.findMany({
       where: {
         level,
         difficulty,
         isTemplate: true,
-        isActive: true
+        isActive: true,
       },
-      orderBy: { orderIndex: 'asc' }
+      orderBy: { orderIndex: 'asc' },
     });
   }
 
@@ -59,16 +59,16 @@ export class LessonRepository {
    */
   async findRemedialDrills(
     phonemes: string[],
-    level: number
+    level: number,
   ): Promise<SpeakingPracticeLesson[]> {
     return this.prisma.speakingPracticeLesson.findMany({
       where: {
         targetPhonemes: { hasSome: phonemes },
         level: { lte: level },
-        isActive: true
+        isActive: true,
       },
       take: 5,
-      orderBy: { createdAt: 'desc' }
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -84,7 +84,7 @@ export class LessonRepository {
    */
   async findById(id: string): Promise<SpeakingPracticeLesson | null> {
     return this.prisma.speakingPracticeLesson.findUnique({
-      where: { id }
+      where: { id },
     });
   }
 
@@ -94,7 +94,7 @@ export class LessonRepository {
   async update(id: string, data: any): Promise<SpeakingPracticeLesson> {
     return this.prisma.speakingPracticeLesson.update({
       where: { id },
-      data
+      data,
     });
   }
 
@@ -103,7 +103,7 @@ export class LessonRepository {
    */
   async delete(id: string): Promise<SpeakingPracticeLesson> {
     return this.prisma.speakingPracticeLesson.delete({
-      where: { id }
+      where: { id },
     });
   }
 }

@@ -224,12 +224,16 @@ export class PronunciationScoringService {
 
     // Performance-based recommendations
     if (combinedScore >= 90) {
-      recommendations.push('Excellent pronunciation! You can move to harder exercises.');
+      recommendations.push(
+        'Excellent pronunciation! You can move to harder exercises.',
+      );
     } else if (combinedScore >= 75 && combinedScore < 90) {
-      recommendations.push('Good pronunciation! Keep practicing to reach excellence.');
+      recommendations.push(
+        'Good pronunciation! Keep practicing to reach excellence.',
+      );
     } else if (combinedScore >= 60 && combinedScore < 75) {
       recommendations.push(
-        'You\'re making progress! Focus on clarity and try speaking a bit slower.',
+        "You're making progress! Focus on clarity and try speaking a bit slower.",
       );
     } else {
       recommendations.push(
