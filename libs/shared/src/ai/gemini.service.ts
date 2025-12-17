@@ -257,80 +257,86 @@ LƯU Ý: Nội dung sai → điểm thấp (0-20), bất kể phát âm tốt. N
   }
 
   async evaluateSpeaking(params: {
-    audioBase64: string;
-    mimeType?: string;
-    prompt?: string;
-    minSeconds?: number;
-  }): Promise<EvaluationPayload> {
-    const { audioBase64, mimeType, prompt: taskPrompt, minSeconds } = params;
-    const prompt = `Bạn là giáo viên tiếng Anh chuyên nghiệp. Học sinh thực hành nói với yêu cầu: "${
-      taskPrompt ?? 'Nói tự do'
-    }".
+  audioBase64: string;
+  mimeType?: string;
+  prompt?: string;
+  minSeconds?: number;
+}): Promise<EvaluationPayload> {
+  const { audioBase64, mimeType, prompt: taskPrompt } = params;
 
-HƯỚNG DẪN ĐÁNH GIÁ THÔNG MINH:
+  // Prompt được thiết kế tối ưu cho Gemini 2.0 Flash xử lý Audio
+  const prompt = `
+VAI TRÒ: Bạn là một chuyên gia khảo thí IELTS và giáo viên bản ngữ cực kỳ khắt khe về phát âm.
+NHIỆM VỤ: Đánh giá bài nói của học sinh dựa trên yêu cầu: "${taskPrompt ?? 'Nói tự do'}".
 
-BƯỚC 1 - KIỂM TRA CHẤT LƯỢNG AUDIO:
-- Nếu HOÀN TOÀN KHÔNG có giọng nói (chỉ có im lặng hoặc tiếng ồn): score = 0
-- Nếu có giọng nói nhưng KHÔNG nghe rõ được từ nào: score = 10-20
-- Nếu có giọng nói và nghe được một số từ: tiếp tục đánh giá bình thường
+---
+GIAI ĐOẠN 1: BỘ LỌC KỸ THUẬT (QUAN TRỌNG NHẤT)
+Trước khi chấm điểm, hãy kiểm tra 2 điều kiện tiên quyết. Nếu vi phạm, dừng chấm và trả về kết quả lỗi ngay:
 
-BƯỚC 2 - ĐÁNH GIÁ NỘI DUNG (nếu có giọng nói):
-Dù audio ngắn hay dài, hãy đánh giá dựa trên CHẤT LƯỢNG thực tế:
-- Audio ngắn (1-3 giây) nhưng nói rõ ràng, đúng chủ đề: vẫn có thể đạt 50-70 điểm
-- Audio dài nhưng nói lắp bắp, sai nhiều: điểm thấp hơn
-- Thời lượng chỉ là 1 yếu tố, không phải yếu tố quyết định
+1. KIỂM TRA NGÔN NGỮ (LANGUAGE CHECK):
+- Chỉ chấp nhận TIẾNG ANH.
+- Nếu học sinh nói tiếng Việt, tiếng Hàn, tiếng Trung... hoặc pha trộn quá nhiều tiếng mẹ đẻ: Score = 0.
+- Lý do: "Vui lòng chỉ sử dụng tiếng Anh."
 
-TIÊU CHÍ CHẤM ĐIỂM (0-100):
-1. Fluency (Độ lưu loát): Nói trôi chảy, ít ngắc ngứ
-2. Pronunciation (Phát âm): Phát âm rõ ràng, đúng trọng âm
-3. Vocabulary (Từ vựng): Sử dụng từ phù hợp, đa dạng
-4. Grammar (Ngữ pháp): Cấu trúc câu chính xác
-5. Relevance (Liên quan): Nội dung đúng chủ đề yêu cầu
+2. KIỂM TRA CHẤT LƯỢNG ÂM THANH (QUALITY CHECK):
+- Nếu âm thanh chỉ là tiếng ồn, tiếng gió, tiếng xe cộ: Score = 0.
+- Nếu giọng nói bị "ồm" (muffled), quá vang (echo), hoặc bị tiếng ồn lấn át đến mức KHÔNG THỂ NGHE RÕ từ ngữ: Score = 0.
+- Lý do: "Âm thanh quá ồn hoặc không rõ lời, vui lòng thu âm lại ở nơi yên tĩnh."
 
-THANG ĐIỂM THAM KHẢO:
-- 0-20: Không có nội dung hoặc hoàn toàn không liên quan
-- 21-40: Cố gắng nói nhưng nhiều lỗi, khó hiểu
-- 41-60: Nói được ý cơ bản, có một số lỗi
-- 61-80: Nói tốt, ít lỗi, dễ hiểu
-- 81-100: Xuất sắc, tự nhiên như người bản xứ
+---
+GIAI ĐOẠN 2: CHẤM ĐIỂM CHI TIẾT (Nếu vượt qua Giai đoạn 1)
+Hãy nghe thật kỹ từng âm tiết (phonemes) để bắt lỗi:
 
-Hãy:
-1. Phiên âm chính xác phần nói của học sinh (transcript)
-2. Đánh giá từng tiêu chí cụ thể
-3. Đưa ra điểm công bằng dựa trên chất lượng thực tế
-4. Gợi ý cách cải thiện cụ thể
+1. Pronunciation (Phát âm - Rất quan trọng):
+- Bắt lỗi: Thiếu ending sounds (s, z, t, d, k...), sai trọng âm từ (word stress).
+- Bắt lỗi: Phát âm sai nguyên âm/phụ âm (ví dụ: /th/ thành /t/ hoặc /d/).
 
-Trả về JSON với cấu trúc:
+2. Fluency (Lưu loát):
+- Trừ điểm nếu ngập ngừng (uhm, ah) quá nhiều hoặc ngắt quãng không tự nhiên.
+
+3. Content & Vocabulary:
+- Nội dung phải trả lời đúng yêu cầu đề bài.
+- Từ vựng dùng sai ngữ cảnh sẽ bị trừ điểm.
+
+THANG ĐIỂM NGHIÊM KHẮC (0-100):
+- 0: Vi phạm bộ lọc kỹ thuật (Sai ngôn ngữ / Ồn).
+- 1-30: Nói tiếng Anh nhưng sai quá nhiều, gần như không hiểu được.
+- 31-50: Hiểu được ý chính nhưng sai ngữ pháp/phát âm nghiêm trọng.
+- 51-70: Khá, có lỗi nhưng giao tiếp được.
+- 71-90: Tốt, phát âm rõ, trôi chảy.
+- 91-100: Hoàn hảo như người bản xứ.
+
+---
+YÊU CẦU ĐẦU RA (JSON FORMAT):
+Trả về duy nhất 1 JSON object, không markdown:
 {
-  "score": number,
-  "feedback": string,
-  "transcript": string,
+  "score": number, // Điểm số (0-100)
+  "feedback": string, // Nhận xét tổng quan bằng TIẾNG VIỆT. Nếu điểm thấp, hãy nói thẳng thắn nhưng lịch sự.
+  "transcript": string, // Ghi lại chính xác những gì học sinh nói (kể cả lỗi sai). Nếu không nghe được đoạn nào, ghi [unclear].
   "categories": [
-    { "name": "Fluency", "comment": "..." },
-    { "name": "Pronunciation", "comment": "..." },
+    { "name": "Fluency", "comment": "Nhận xét chi tiết..." },
+    { "name": "Pronunciation", "comment": "Chỉ rõ từ phát âm sai (VD: 'think' phát âm thành 'tink')..." },
     { "name": "Vocabulary", "comment": "..." },
     { "name": "Grammar", "comment": "..." }
   ],
   "detail": {
-    "estimatedDuration": "short/medium/long",
-    "audioQuality": "clear/moderate/unclear",
-    "suggestedPhrases": ["..."],
-    "improvementTips": ["..."]
+    "estimatedDuration": "string", // short/medium/long
+    "audioQuality": "string", // 'good' | 'noisy' | 'muffled' (bị ồm) | 'silent'
+    "suggestedPhrases": ["..."], // Gợi ý câu đúng/hay hơn
+    "improvementTips": ["..."] // Mẹo sửa lỗi cụ thể
   }
-}
+}`;
 
-LƯU Ý QUAN TRỌNG: Đừng reject audio chỉ vì ngắn. Nếu học sinh nói được 1-2 câu rõ ràng trong 2-3 giây, hãy chấm điểm công bằng. Chỉ cho 0 điểm khi THỰC SỰ không có nội dung gì.
-Giữ phản hồi bằng tiếng Việt, thân thiện, khuyến khích học sinh.`;
+  return this.generateEvaluation(
+    [
+      {
+        inlineData: { mimeType: mimeType || 'audio/webm', data: audioBase64 },
+      },
+      { text: prompt },
+    ],
+    { schemaName: 'speakingEvaluation' }, // Đảm bảo schema của bạn match với JSON trên
+  );
 
-    return this.generateEvaluation(
-      [
-        {
-          inlineData: { mimeType: mimeType || 'audio/webm', data: audioBase64 },
-        },
-        { text: prompt },
-      ],
-      { schemaName: 'speakingEvaluation' },
-    );
   }
 
   async evaluateWriting(params: {
