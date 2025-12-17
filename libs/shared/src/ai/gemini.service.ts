@@ -263,18 +263,44 @@ LƯU Ý: Nội dung sai → điểm thấp (0-20), bất kể phát âm tốt. N
     minSeconds?: number;
   }): Promise<EvaluationPayload> {
     const { audioBase64, mimeType, prompt: taskPrompt, minSeconds } = params;
-    const prompt = `Bạn là giáo viên tiếng Anh. Học sinh thực hành nói với yêu cầu: "${
+    const prompt = `Bạn là giáo viên tiếng Anh chuyên nghiệp. Học sinh thực hành nói với yêu cầu: "${
       taskPrompt ?? 'Nói tự do'
     }".
-Nếu bạn không nghe thấy lời nói rõ ràng (file chỉ có tĩnh lặng/ồn nền hoặc quá ngắn < ${Math.max(
-      minSeconds ?? 0,
-      5,
-    )} giây), hãy đặt score = 0 và feedback = "Không nhận được ghi âm hợp lệ".
+
+HƯỚNG DẪN ĐÁNH GIÁ THÔNG MINH:
+
+BƯỚC 1 - KIỂM TRA CHẤT LƯỢNG AUDIO:
+- Nếu HOÀN TOÀN KHÔNG có giọng nói (chỉ có im lặng hoặc tiếng ồn): score = 0
+- Nếu có giọng nói nhưng KHÔNG nghe rõ được từ nào: score = 10-20
+- Nếu có giọng nói và nghe được một số từ: tiếp tục đánh giá bình thường
+
+BƯỚC 2 - ĐÁNH GIÁ NỘI DUNG (nếu có giọng nói):
+Dù audio ngắn hay dài, hãy đánh giá dựa trên CHẤT LƯỢNG thực tế:
+- Audio ngắn (1-3 giây) nhưng nói rõ ràng, đúng chủ đề: vẫn có thể đạt 50-70 điểm
+- Audio dài nhưng nói lắp bắp, sai nhiều: điểm thấp hơn
+- Thời lượng chỉ là 1 yếu tố, không phải yếu tố quyết định
+
+TIÊU CHÍ CHẤM ĐIỂM (0-100):
+1. Fluency (Độ lưu loát): Nói trôi chảy, ít ngắc ngứ
+2. Pronunciation (Phát âm): Phát âm rõ ràng, đúng trọng âm
+3. Vocabulary (Từ vựng): Sử dụng từ phù hợp, đa dạng
+4. Grammar (Ngữ pháp): Cấu trúc câu chính xác
+5. Relevance (Liên quan): Nội dung đúng chủ đề yêu cầu
+
+THANG ĐIỂM THAM KHẢO:
+- 0-20: Không có nội dung hoặc hoàn toàn không liên quan
+- 21-40: Cố gắng nói nhưng nhiều lỗi, khó hiểu
+- 41-60: Nói được ý cơ bản, có một số lỗi
+- 61-80: Nói tốt, ít lỗi, dễ hiểu
+- 81-100: Xuất sắc, tự nhiên như người bản xứ
+
 Hãy:
-1. Phiên âm hoặc ghi lại phần nói của học sinh.
-2. Đánh giá độ lưu loát, phát âm, từ vựng, ngữ pháp.
-3. Chấm điểm tổng thể (0-100), trong đó 70 là qua.
-4. Trả về JSON với cấu trúc:
+1. Phiên âm chính xác phần nói của học sinh (transcript)
+2. Đánh giá từng tiêu chí cụ thể
+3. Đưa ra điểm công bằng dựa trên chất lượng thực tế
+4. Gợi ý cách cải thiện cụ thể
+
+Trả về JSON với cấu trúc:
 {
   "score": number,
   "feedback": string,
@@ -286,11 +312,15 @@ Hãy:
     { "name": "Grammar", "comment": "..." }
   ],
   "detail": {
-    "duration": ${minSeconds ?? 0},
-    "suggestedPhrases": ["..."]
+    "estimatedDuration": "short/medium/long",
+    "audioQuality": "clear/moderate/unclear",
+    "suggestedPhrases": ["..."],
+    "improvementTips": ["..."]
   }
 }
-Giữ phản hồi bằng tiếng Việt, thân thiện, đưa gợi ý cải thiện.`;
+
+LƯU Ý QUAN TRỌNG: Đừng reject audio chỉ vì ngắn. Nếu học sinh nói được 1-2 câu rõ ràng trong 2-3 giây, hãy chấm điểm công bằng. Chỉ cho 0 điểm khi THỰC SỰ không có nội dung gì.
+Giữ phản hồi bằng tiếng Việt, thân thiện, khuyến khích học sinh.`;
 
     return this.generateEvaluation(
       [
@@ -349,10 +379,10 @@ Giữ phản hồi bằng tiếng Việt, cụ thể và tích cực.`;
   ): Promise<EvaluationPayload> {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.0-flash',
         generationConfig: {
           temperature: 0.2,
-          maxOutputTokens: 10000,
+          maxOutputTokens: 4000,
           responseMimeType: 'application/json',
         },
       });

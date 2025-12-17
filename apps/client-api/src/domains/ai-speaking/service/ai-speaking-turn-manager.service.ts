@@ -81,39 +81,36 @@ export class AiSpeakingTurnManager {
 
     const audioBase64 = audioBuffer.toString('base64');
 
-    const evaluation = await this.geminiService.evaluateSpeaking({
-      audioBase64,
-      mimeType,
-      prompt: session.goal ?? session.topic ?? 'Free speaking practice',
-      minSeconds: turn.userDurationSec ?? durationSec ?? 0,
-    });
+    // PERFORMANCE: Run Gemini evaluation and Pronunciation assessment in PARALLEL
+    const [evaluation, pronunciationFeedback] = await Promise.all([
+      // Gemini evaluation
+      this.geminiService.evaluateSpeaking({
+        audioBase64,
+        mimeType,
+        prompt: session.goal ?? session.topic ?? 'Free speaking practice',
+      }),
+      // Pronunciation assessment (no need to wait for transcript)
+      this.pronunciationService
+        .assessPronunciation(audioBuffer, undefined, 'en-US', mimeType)
+        .catch((error) => {
+          this.logger.warn(
+            `Pronunciation assessment failed for turn ${turnId}: ${error.message}. Continuing without phoneme feedback.`,
+          );
+          return null;
+        }),
+    ]);
 
     const suggestions = Array.isArray(evaluation.detail?.suggestedPhrases)
       ? (evaluation.detail?.suggestedPhrases as string[])
       : [];
 
-    // Pronunciation assessment với Google Cloud Speech-to-Text
-    let pronunciationFeedback: Awaited<
-      ReturnType<typeof this.pronunciationService.assessPronunciation>
-    > | null = null;
-    try {
-      const referenceText =
-        evaluation.transcript || turn.userTranscript || undefined;
-      pronunciationFeedback =
-        await this.pronunciationService.assessPronunciation(
-          audioBuffer,
-          referenceText,
-          'en-US',
-          mimeType,
-        );
-
+    // Emit pronunciation feedback to frontend if available
+    if (pronunciationFeedback) {
       this.logger.log(
         `Pronunciation assessed for turn ${turnId}: overall=${pronunciationFeedback.pronunciationScore}, ` +
           `accuracy=${pronunciationFeedback.accuracyScore}, fluency=${pronunciationFeedback.fluencyScore}, ` +
           `problematic=[${pronunciationFeedback.problematicPhonemes.join(', ')}]`,
       );
-
-      // Emit pronunciation feedback to frontend
       this.gateway.emitToSession(
         sessionId,
         'ai-speaking:pronunciation-feedback',
@@ -122,11 +119,6 @@ export class AiSpeakingTurnManager {
           pronunciationFeedback,
         },
       );
-    } catch (error) {
-      this.logger.warn(
-        `Pronunciation assessment failed for turn ${turnId}: ${error.message}. Continuing without phoneme feedback.`,
-      );
-      // Don't block flow if pronunciation fails
     }
 
     // NEW: Apply difficulty-weighted scoring
