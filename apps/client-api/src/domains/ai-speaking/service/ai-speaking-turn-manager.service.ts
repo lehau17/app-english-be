@@ -265,6 +265,7 @@ export class AiSpeakingTurnManager {
       turnId: nextTurn.id,
       prompt,
       difficulty: nextDifficulty,
+      suggestions: nextTurn.suggestions, // SEND SUGGESTIONS TO FRONTEND
     });
 
     return {
@@ -339,6 +340,7 @@ export class AiSpeakingTurnManager {
       turnId: nextTurn.id,
       prompt: promptPlan.prompt,
       difficulty: nextDifficulty,
+      suggestions: nextTurn.suggestions, // SEND SUGGESTIONS TO FRONTEND
     });
 
     return { followUpTurnId: nextTurn.id, followUpPrompt: promptPlan.prompt };
