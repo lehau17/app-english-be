@@ -52,7 +52,7 @@ export class PdfExportTool {
           type: z.enum(['chart']),
           chartType: z.enum(['bar', 'line', 'pie', 'area', 'doughnut']),
           title: z.string(),
-          data: z.array(z.any())
+          data: z.array(z.record(z.any()))
         })).optional().describe('Danh sach bieu do neu co'),
       }),
       func: async (input) => {
