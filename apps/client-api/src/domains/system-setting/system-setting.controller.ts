@@ -5,7 +5,7 @@ import { CreateSystemSettingDto, UpdateSystemSettingDto } from './dto/system-set
 import { SystemSettingService } from './system-setting.service';
 
 @ApiTags('System Settings')
-@Controller('system-settings')
+@Controller('/public/v1/system-settings')
 export class SystemSettingController implements OnModuleInit {
     constructor(private readonly service: SystemSettingService) { }
 
