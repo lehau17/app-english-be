@@ -36,7 +36,7 @@ Return JSON:
     }
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2048,
   },
@@ -54,7 +54,7 @@ Weakness area: {{weakness}}
 Context: {{context}}
 
 Return JSON with business-relevant words including collocations and usage notes.`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2048,
   },
@@ -70,7 +70,7 @@ Focus on formal language, academic writing, and specialized terminology.`,
     userPrompt: `Generate {{count}} academic vocabulary words for {{proficiencyLevel}} level learners.
 Subject area: {{skill}}
 Include synonyms, antonyms, and collocations where appropriate.`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2048,
   },
@@ -100,7 +100,7 @@ Return JSON:
     }
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.6,
     maxTokens: 1500,
   },
@@ -116,7 +116,7 @@ Focus on word stress, sentence stress, and intonation patterns.`,
     userPrompt: `Generate {{count}} sentence pronunciation exercises for {{proficiencyLevel}} level.
 Focus area: {{weakness}}
 Include stress markers and intonation notes.`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.6,
     maxTokens: 1500,
   },
@@ -147,7 +147,7 @@ Return JSON:
     }
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2048,
   },
@@ -163,7 +163,7 @@ Create news-style content with natural speed and complex vocabulary.`,
     userPrompt: `Generate a news listening exercise for {{proficiencyLevel}} level.
 Topic: {{context}}
 Include comprehension questions that test inference and detail understanding.`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2048,
   },
@@ -193,7 +193,7 @@ Return JSON:
     }
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.6,
     maxTokens: 2000,
   },
@@ -209,7 +209,7 @@ Focus on timeline relationships and contrasts with past simple.`,
     userPrompt: `Generate {{count}} past perfect grammar exercises for {{proficiencyLevel}} level.
 Weakness: {{weakness}}
 Include explanations of when to use past perfect vs past simple.`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.6,
     maxTokens: 2000,
   },
@@ -238,7 +238,7 @@ Return JSON:
     }
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2048,
   },
@@ -254,7 +254,7 @@ Include questions that test inference, nuance, and critical thinking.`,
     userPrompt: `Generate a {{count}}-question advanced quiz for {{proficiencyLevel}} level.
 Topic: {{skill}}
 Include distractors that require careful reading.`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2048,
   },
@@ -283,7 +283,7 @@ Return JSON:
     }
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.6,
     maxTokens: 1500,
   },
@@ -299,7 +299,7 @@ Remove key words that test grammar and vocabulary understanding.`,
     userPrompt: `Generate a cloze test passage for {{proficiencyLevel}} level.
 Topic: {{skill}}
 Remove {{count}} words strategically to test comprehension.`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2000,
   },
@@ -329,7 +329,7 @@ Return JSON:
     }
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2500,
   },
@@ -345,7 +345,7 @@ Use complex sentence structures, varied vocabulary, and nuanced content.`,
     userPrompt: `Generate a reading article (300-400 words) for {{proficiencyLevel}} level.
 Topic: {{skill}}
 Include questions that test inference and critical analysis.`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 3000,
   },
@@ -374,7 +374,7 @@ Return JSON:
     }
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 1500,
   },
@@ -390,7 +390,7 @@ Focus on coherence, organization, and variety in sentence structure.`,
     userPrompt: `Generate {{count}} paragraph writing prompts for {{proficiencyLevel}} level.
 Topic: {{skill}}
 Provide structure guidance (topic sentence, supporting details, conclusion).`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2000,
   },
@@ -407,7 +407,7 @@ Require argumentation, analysis, and formal register.`,
 Topic: {{skill}}
 Word count: 250-300 words
 Include evaluation criteria for coherence, vocabulary, grammar, and argumentation.`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2000,
   },
@@ -435,7 +435,7 @@ Return JSON:
     }
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.6,
     maxTokens: 1500,
   },
@@ -451,7 +451,7 @@ Use varied vocabulary and clear definitions.`,
     userPrompt: `Generate {{count}} word-definition matching pairs for {{proficiencyLevel}} level.
 Topic: {{skill}}
 Include some challenging vocabulary.`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 1500,
   },
@@ -489,7 +489,7 @@ Return JSON:
     "Ask about someone's day"
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2000,
   },
@@ -509,7 +509,7 @@ Include:
 - Arguments for both sides
 - Useful phrases for argumentation
 - Counterargument strategies`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2500,
   },
@@ -537,7 +537,7 @@ Return JSON:
     }
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.6,
     maxTokens: 1500,
   },
@@ -553,7 +553,7 @@ Use connected speech with natural rhythm and intonation.`,
     userPrompt: `Generate a dictation passage (50-80 words) for {{proficiencyLevel}} level.
 Topic: {{skill}}
 Include punctuation challenges and connected speech patterns.`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2000,
   },
@@ -583,7 +583,7 @@ Return JSON:
     }
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2000,
   },
@@ -612,7 +612,7 @@ Return JSON:
     }
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 1500,
   },
@@ -629,7 +629,7 @@ Require structured responses with introduction, body, and conclusion.`,
 Topic area: {{skill}}
 Duration: 2-3 minutes
 Include structure guidance and evaluation criteria.`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 2000,
   },
@@ -658,7 +658,7 @@ Return JSON:
     }
   ]
 }`,
-    modelName: 'gemini-2.5-pro',
+    modelName: 'gemini-2.0-flash',
     temperature: 0.7,
     maxTokens: 1500,
   },

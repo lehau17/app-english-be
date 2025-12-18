@@ -19,7 +19,7 @@ describe('ActivityVariantRepository', () => {
     mediaUrls: [],
     promptTemplateId: null,
     generationParams: null,
-    aiModel: 'gemini-2.5-pro',
+    aiModel: 'gemini-2.0-flash',
     usageCount: 5,
     averageScore: 75,
     feedbackCount: 2,
