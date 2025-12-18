@@ -15,7 +15,11 @@ export type AiSpeakingSessionWithRelations =
 
 @Injectable()
 export class AiSpeakingRepository {
-  constructor(private readonly prisma: PrismaRepository) {}
+  constructor(private readonly prisma: PrismaRepository) { }
+
+  get prismaClient() {
+    return this.prisma;
+  }
 
   private readonly sessionInclude = {
     turns: {

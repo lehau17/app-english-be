@@ -2,6 +2,7 @@ import { DatabaseModule } from '@app/database';
 import { ProfanityModule, SharedModule } from '@app/shared';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 import { UploadService } from '../upload/upload.service';
 import { AiSpeakingHealthController } from './controller/ai-speaking-health.controller';
 import { AiSpeakingController } from './controller/ai-speaking.controller';
@@ -19,9 +20,11 @@ import { PronunciationAssessmentService } from './service/pronunciation-assessme
 import { RealtimeAsrService } from './service/realtime-asr.service';
 import { RealtimeTtsService } from './service/realtime-tts.service';
 import { SuggestionService } from './service/suggestion.service';
+import { MispronunciationService } from './service/mispronunciation.service';
+import { RemedialGenerationService } from './service/remedial-generation.service';
 
 @Module({
-  imports: [DatabaseModule, SharedModule, ProfanityModule, ConfigModule],
+  imports: [DatabaseModule, SharedModule, ProfanityModule, ConfigModule, ScheduleModule.forRoot()],
   controllers: [AiSpeakingController, AiSpeakingHealthController],
   providers: [
     AiSpeakingService,
@@ -39,6 +42,8 @@ import { SuggestionService } from './service/suggestion.service';
     AiSpeakingGateway,
     UploadService,
     SuggestionService,
+    MispronunciationService,
+    RemedialGenerationService,
   ],
   exports: [
     AiSpeakingService,
@@ -46,4 +51,4 @@ import { SuggestionService } from './service/suggestion.service';
     PronunciationAssessmentService,
   ],
 })
-export class AiSpeakingModule {}
+export class AiSpeakingModule { }

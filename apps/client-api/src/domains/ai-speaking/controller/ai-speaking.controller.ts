@@ -11,6 +11,9 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UseInterceptors, UploadedFile } from '@nestjs/common';
+import { PronunciationAssessmentService } from '../service/pronunciation-assessment.service';
 import { FinalizeAiSpeakingSessionDto } from '../dto/finalize-session.dto';
 import { AiSpeakingSessionResponseDto } from '../dto/session-response.dto';
 import { StartAiSpeakingSessionDto } from '../dto/start-session.dto';
@@ -23,6 +26,8 @@ import {
 } from '../dto/tts-voice.dto';
 import { AiSpeakingService } from '../service/ai-speaking.service';
 import { SuggestionService } from '../service/suggestion.service';
+import { MispronunciationService } from '../service/mispronunciation.service';
+import { RemedialGenerationService } from '../service/remedial-generation.service';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
@@ -35,6 +40,9 @@ export class AiSpeakingController {
   constructor(
     private readonly aiSpeakingService: AiSpeakingService,
     private readonly suggestionService: SuggestionService,
+    private readonly mispronunciationService: MispronunciationService,
+    private readonly remedialService: RemedialGenerationService,
+    private readonly pronunciationService: PronunciationAssessmentService,
     private readonly configService: ConfigService,
   ) {
     this.piperHttpUrl = this.configService.get<string>(
@@ -187,5 +195,52 @@ export class AiSpeakingController {
   ): Promise<SuggestionResponseDto> {
     const suggestions = await this.suggestionService.getSuggestions(sessionId);
     return { suggestions };
+  }
+
+  @Get('mispronunciations/top')
+  @ApiOperation({ summary: 'Lấy danh sách từ phát âm sai nhiều nhất' })
+  @ResponseMessage('Danh sách từ phát âm sai')
+  async getTopMispronunciations(
+    @PayloadToken() payload: JwtPayload,
+    @Query('limit') limit?: number,
+  ) {
+    return this.mispronunciationService.getTopErrors(payload.sub, limit ? Number(limit) : 10);
+  }
+
+  @Get('remedial/exercises')
+  @ApiOperation({ summary: 'Lấy danh sách bài tập ôn luyện phát âm (Remedial)' })
+  @ResponseMessage('Danh sách bài tập Remedial')
+  async getRemedialExercises(
+    @PayloadToken() payload: JwtPayload,
+  ) {
+    return this.remedialService.listExercises(payload.sub);
+  }
+
+  @Post('verify-speech')
+  @ApiOperation({ summary: 'Kiểm tra phát âm (Pass/Fail)' })
+  @UseInterceptors(FileInterceptor('audio'))
+  @ResponseMessage('Kết quả kiểm tra phát âm')
+  async verifySpeech(
+    @UploadedFile() file: Express.Multer.File,
+    @Body('targetText') targetText: string,
+  ) {
+    if (!file || !targetText) {
+      throw new Error('Missing audio file or target text');
+    }
+
+    const result = await this.pronunciationService.assessPronunciation(
+      file.buffer,
+      targetText,
+    );
+
+    // Simple Pass/Fail Logic
+    const isPass = result.accuracyScore >= 70;
+
+    return {
+      passed: isPass,
+      score: result.accuracyScore,
+      transcript: result.transcript,
+      feedback: isPass ? 'Good job!' : 'Try again, clarity is key.',
+    };
   }
 }

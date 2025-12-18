@@ -18,6 +18,7 @@ import {
   getNextDifficulty,
   shouldAdjustDifficulty,
 } from './difficulty-scoring.util';
+import { MispronunciationService } from './mispronunciation.service';
 import { PronunciationAssessmentService } from './pronunciation-assessment.service';
 
 const DIFFICULTY_ORDER: DifficultyLevel[] = [
@@ -52,6 +53,7 @@ export class AiSpeakingTurnManager {
     private readonly geminiService: GeminiService,
     private readonly conversationDesigner: ConversationDesignerService,
     private readonly pronunciationService: PronunciationAssessmentService,
+    private readonly mispronunciationService: MispronunciationService,
     private readonly gateway: AiSpeakingGateway,
     private readonly coordinator: AiSpeakingCoordinator,
     private readonly configService: ConfigService,
@@ -108,8 +110,8 @@ export class AiSpeakingTurnManager {
     if (pronunciationFeedback) {
       this.logger.log(
         `Pronunciation assessed for turn ${turnId}: overall=${pronunciationFeedback.pronunciationScore}, ` +
-          `accuracy=${pronunciationFeedback.accuracyScore}, fluency=${pronunciationFeedback.fluencyScore}, ` +
-          `problematic=[${pronunciationFeedback.problematicPhonemes.join(', ')}]`,
+        `accuracy=${pronunciationFeedback.accuracyScore}, fluency=${pronunciationFeedback.fluencyScore}, ` +
+        `problematic=[${pronunciationFeedback.problematicPhonemes.join(', ')}]`,
       );
       this.gateway.emitToSession(
         sessionId,
@@ -119,6 +121,27 @@ export class AiSpeakingTurnManager {
           pronunciationFeedback,
         },
       );
+
+      // LOG MISPRONUNCIATIONS
+      // Iterate through words to find specific errors (< 70 accuracy)
+      if (pronunciationFeedback.words) {
+        for (const wordInfo of pronunciationFeedback.words) {
+          if (wordInfo.accuracyScore < 70) {
+            // Find problematic phonemes for this specific word if possible, or just log the word
+            // The service will handle deduplication and counting
+            this.mispronunciationService.logError({
+              userId: session.userId,
+              word: wordInfo.word,
+              phoneme: wordInfo.phonemes?.find(p => p.accuracyScore < 60)?.phoneme, // heuristic
+              contextSentence: pronunciationFeedback.transcript,
+              source: 'ai_speaking_session',
+              userPronunciation: '', // Not available directly yet
+            }).catch(e => {
+              console.log("Error", e)
+            })
+          }
+        }
+      }
     }
 
     // NEW: Apply difficulty-weighted scoring
