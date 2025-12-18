@@ -42,12 +42,14 @@ export class SystemSettingService {
                 value: dto.value,
                 description: dto.description,
                 isPublic: dto.isPublic,
+                type: dto.type,
             },
             create: {
                 key,
                 value: dto.value,
                 description: dto.description,
                 isPublic: dto.isPublic ?? false,
+                type: dto.type || 'system',
             },
         });
     }
@@ -55,8 +57,8 @@ export class SystemSettingService {
     // Initialize default settings if they don't exist
     async initializeDefaults() {
         const defaults = [
-            { key: 'center_open_time', value: '07:00', description: 'Center opening time', isPublic: true },
-            { key: 'center_close_time', value: '22:00', description: 'Center closing time', isPublic: true },
+            { key: 'center_open_time', value: '07:00', description: 'Center opening time', isPublic: true, type: 'time' },
+            { key: 'center_close_time', value: '22:00', description: 'Center closing time', isPublic: true, type: 'time' },
         ];
 
         for (const setting of defaults) {
