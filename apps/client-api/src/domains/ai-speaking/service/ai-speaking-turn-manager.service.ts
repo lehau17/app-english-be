@@ -250,7 +250,7 @@ export class AiSpeakingTurnManager {
       turn: { connect: { id: nextTurn.id } },
       role: AiSpeakingTurnRole.ai,
       orderNo: 0,
-      transcript: prompt,
+      transcript: promptPlan.prompt,
       payload: {
         followUpForTurn: updatedTurn.turnIndex,
       } as Prisma.JsonObject,
@@ -266,14 +266,14 @@ export class AiSpeakingTurnManager {
     this.gateway.emitToSession(sessionId, 'ai-speaking:next-turn', {
       sessionId,
       turnId: nextTurn.id,
-      prompt,
+      prompt: promptPlan.prompt,
       difficulty: nextDifficulty,
       suggestions: nextTurn.suggestions, // SEND SUGGESTIONS TO FRONTEND
     });
 
     return {
       followUpTurnId: nextTurn.id,
-      followUpPrompt: prompt,
+      followUpPrompt: promptPlan.prompt,
       followUpVoiceHint: null,
       evaluation,
     };
