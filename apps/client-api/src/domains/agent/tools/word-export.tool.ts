@@ -1,3 +1,4 @@
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import {
@@ -14,8 +15,8 @@ import {
   WidthType,
 } from 'docx';
 import { promises as fs } from 'fs';
-import { Tool } from 'langchain/tools';
 import { join } from 'path';
+import { z } from 'zod';
 
 interface ChartConfig {
   type: 'chart';
@@ -26,42 +27,37 @@ interface ChartConfig {
 }
 
 @Injectable()
-export class WordExportTool extends Tool {
-  name = 'word_export';
-  description = `
-Export data to Word document (.docx) with rich formatting. Supports embedding charts!
-
-Input should be a JSON string with:
-{
-  "filename": "ten_file",
-  "data": [...],
-  "title": "Báo cáo",
-  "description": "Mô tả",
-  "includeStatistics": true,
-  "charts": [
-    {
-      "type": "chart",
-      "chartType": "bar",
-      "title": "Biểu đồ doanh thu",
-      "data": [{"name": "Q1", "value": 100}, {"name": "Q2", "value": 200}]
-    }
-  ]
-}
-
-Returns:
-{
-  "success": true,
-  "filename": "ten_file.docx",
-  "downloadUrl": "/api/public/v1/ai/download/ten_file.docx"
-}
-`;
-
+export class WordExportTool {
   private readonly logger = new Logger(WordExportTool.name);
   private readonly uploadsDir = join(process.cwd(), 'uploads', 'reports');
 
   constructor() {
-    super();
     this.ensureUploadsDirExists();
+  }
+
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'word_export',
+      description: `Export data to Word document (.docx) with rich formatting. Supports embedding charts!
+      
+      Returns: JSON with "downloadUrl" (e.g. /api/public/v1/ai/download/filename.docx).`,
+      schema: z.object({
+        filename: z.string().describe('Ten file muon tao (khong can duoi .docx)'),
+        title: z.string().describe('Tieu de bao cao'),
+        description: z.string().optional().describe('Mo ta ngan gon'),
+        data: z.array(z.record(z.any())).describe('Mang du lieu (array of objects)'),
+        includeStatistics: z.boolean().optional().default(false).describe('Co them thong ke tong quan khong'),
+        charts: z.array(z.object({
+          type: z.literal('chart'),
+          chartType: z.enum(['bar', 'line', 'pie', 'area', 'doughnut']),
+          title: z.string(),
+          data: z.array(z.any())
+        })).optional().describe('Danh sach bieu do neu co'),
+      }),
+      func: async (input) => {
+        return this.generateWord(input);
+      },
+    });
   }
 
   private async ensureUploadsDirExists() {
@@ -193,11 +189,17 @@ Returns:
     };
   }
 
-  async _call(input: string): Promise<string> {
+  async generateWord(input: {
+    filename: string;
+    data: any[];
+    title: string;
+    description?: string;
+    includeStatistics?: boolean;
+    charts?: any[];
+  }): Promise<string> {
     try {
-      this.logger.log(`Word Export input: ${input.substring(0, 200)}...`);
+      this.logger.log(`Word Export input: ${JSON.stringify(input).substring(0, 200)}...`);
 
-      const parsedInput = JSON.parse(input);
       const {
         filename,
         data,
@@ -205,7 +207,7 @@ Returns:
         description,
         includeStatistics = false,
         charts = [],
-      } = parsedInput;
+      } = input;
 
       if (!Array.isArray(data) || data.length === 0) {
         return JSON.stringify({

@@ -1,8 +1,9 @@
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
 import { createWriteStream, promises as fs } from 'fs';
-import { Tool } from 'langchain/tools';
 import { join } from 'path';
+import { z } from 'zod';
 // Use require for CommonJS module pdfkit (pdfkit doesn't have default export)
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PDFDocument = require('pdfkit');
@@ -23,46 +24,41 @@ const FONT_URLS = {
 };
 
 @Injectable()
-export class PdfExportTool extends Tool {
-  name = 'pdf_export';
-  description = `
-Export data to PDF file with professional layout. Supports embedding charts!
-
-Input should be a JSON string with:
-{
-  "filename": "ten_file",
-  "data": [...],
-  "title": "Báo cáo",
-  "description": "Mô tả báo cáo",
-  "includeStatistics": true,
-  "pageOrientation": "portrait",
-  "charts": [
-    {
-      "type": "chart",
-      "chartType": "bar",
-      "title": "Biểu đồ doanh thu",
-      "data": [{"name": "Q1", "value": 100}, {"name": "Q2", "value": 200}]
-    }
-  ]
-}
-
-Returns:
-{
-  "success": true,
-  "filename": "ten_file.pdf",
-  "downloadUrl": "/api/public/v1/ai/download/ten_file.pdf"
-}
-`;
-
+export class PdfExportTool {
   private readonly logger = new Logger(PdfExportTool.name);
   private readonly uploadsDir = join(process.cwd(), 'uploads', 'reports');
   private readonly fontsDir = join(process.cwd(), 'uploads', 'fonts');
   private fontsLoaded = false;
 
   constructor() {
-    super();
     this.ensureUploadsDirExists();
     this.downloadFonts();
+  }
+
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'pdf_export',
+      description: `Export data to PDF file with professional layout. Supports embedding charts!
+      
+      Returns: JSON with "downloadUrl" (e.g. /api/public/v1/ai/download/filename.pdf).`,
+      schema: z.object({
+        filename: z.string().describe('Ten file muon tao (khong can duoi .pdf)'),
+        title: z.string().describe('Tieu de bao cao'),
+        description: z.string().optional().describe('Mo ta ngan gon'),
+        data: z.array(z.record(z.any())).describe('Mang du lieu (array of objects)'),
+        includeStatistics: z.boolean().optional().default(false).describe('Co them thong ke tong quan khong'),
+        pageOrientation: z.enum(['portrait', 'landscape']).optional().default('portrait').describe('Kho giay'),
+        charts: z.array(z.object({
+          type: z.literal('chart'),
+          chartType: z.enum(['bar', 'line', 'pie', 'area', 'doughnut']),
+          title: z.string(),
+          data: z.array(z.any())
+        })).optional().describe('Danh sach bieu do neu co'),
+      }),
+      func: async (input) => {
+        return this.generatePdf(input);
+      },
+    });
   }
 
   private async ensureUploadsDirExists() {
@@ -256,11 +252,19 @@ Returns:
     };
   }
 
-  async _call(input: string): Promise<string> {
+  // Renamed from _call to generatePdf and changed input type
+  async generatePdf(input: {
+    filename: string;
+    data: any[];
+    title: string;
+    description?: string;
+    includeStatistics?: boolean;
+    pageOrientation?: 'portrait' | 'landscape';
+    charts?: any[];
+  }): Promise<string> {
     try {
-      this.logger.log(`PDF Export input: ${input.substring(0, 200)}...`);
+      this.logger.log(`PDF Export input: ${JSON.stringify(input).substring(0, 200)}...`);
 
-      const parsedInput = JSON.parse(input);
       const {
         filename,
         data,
@@ -269,7 +273,7 @@ Returns:
         includeStatistics = false,
         pageOrientation = 'portrait',
         charts = [],
-      } = parsedInput;
+      } = input;
 
       if (!Array.isArray(data) || data.length === 0) {
         return JSON.stringify({

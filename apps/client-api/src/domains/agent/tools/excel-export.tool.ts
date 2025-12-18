@@ -1,42 +1,36 @@
+import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
 import { promises as fs } from 'fs';
-import { Tool } from 'langchain/tools';
 import { join } from 'path';
+import { z } from 'zod';
 
 @Injectable()
-export class ExcelExportTool extends Tool {
-  name = 'excel_export';
-  description = `
-Export data to Excel file (.xlsx).
-
-Input should be a JSON string with:
-{
-  "filename": "ten_file", // Tên file (không cần .xlsx)
-  "data": [ // Array of objects
-    {"name": "Nguyen Van A", "score": 95},
-    {"name": "Tran Thi B", "score": 90}
-  ],
-  "sheetName": "Sheet1", // Optional, default "Data"
-  "title": "Danh sách học viên" // Optional, title for the sheet
-}
-
-Returns a JSON object with public download URL (no auth required):
-{
-  "success": true,
-  "filename": "ten_file.xlsx",
-  "downloadUrl": "/api/public/v1/ai/download/ten_file.xlsx",
-  "message": "File Excel đã được tạo thành công"
-}
-`;
-
+export class ExcelExportTool {
   private readonly logger = new Logger(ExcelExportTool.name);
   private readonly uploadsDir = join(process.cwd(), 'uploads', 'exports');
 
   constructor() {
-    super();
     // Ensure uploads directory exists
     this.ensureUploadsDirExists();
+  }
+
+  getTool(): DynamicStructuredTool {
+    return new DynamicStructuredTool({
+      name: 'excel_export',
+      description: `Export data to Excel file (.xlsx) with professional layout.
+      
+      Returns: JSON with "downloadUrl" (e.g. /api/public/v1/ai/download/filename.xlsx).`,
+      schema: z.object({
+        filename: z.string().describe('Ten file muon tao (khong can duoi .xlsx)'),
+        data: z.array(z.record(z.any())).describe('Mang du lieu (array of objects)'),
+        sheetName: z.string().optional().default('Data').describe('Ten sheet'),
+        title: z.string().optional().default('Exported Data').describe('Tieu de trong sheet'),
+      }),
+      func: async (input) => {
+        return this.generateExcel(input);
+      },
+    });
   }
 
   private async ensureUploadsDirExists() {
@@ -48,17 +42,21 @@ Returns a JSON object with public download URL (no auth required):
     }
   }
 
-  async _call(input: string): Promise<string> {
+  async generateExcel(input: {
+    filename: string;
+    data: any[];
+    sheetName?: string;
+    title?: string;
+  }): Promise<string> {
     try {
-      this.logger.log(`Excel Export input: ${input}`);
+      this.logger.log(`Excel Export input: ${JSON.stringify(input)}`);
 
-      const parsedInput = JSON.parse(input);
       const {
         filename,
         data,
         sheetName = 'Data',
         title = 'Exported Data',
-      } = parsedInput;
+      } = input;
 
       // Validate data
       if (!Array.isArray(data) || data.length === 0) {
