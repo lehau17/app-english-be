@@ -245,7 +245,7 @@ OUTPUT:
         const avgScore =
           gradedSubmissions.length > 0
             ? gradedSubmissions.reduce((sum, s) => sum + (s.score || 0), 0) /
-              gradedSubmissions.length
+            gradedSubmissions.length
             : 0;
 
         const onTimeSubmissions = allSubmissions.filter(
@@ -289,10 +289,10 @@ OUTPUT:
         // 5. Calculate overall score (weighted)
         const overallScore = Math.round(
           avgScore * 0.35 + // 35% weight on average score
-            attendanceRate * 0.25 + // 25% on attendance
-            submissionRate * 0.2 + // 20% on submission rate
-            onTimeRate * 0.1 + // 10% on punctuality
-            engagementScore * 0.1, // 10% on engagement
+          attendanceRate * 0.25 + // 25% on attendance
+          submissionRate * 0.2 + // 20% on submission rate
+          onTimeRate * 0.1 + // 10% on punctuality
+          engagementScore * 0.1, // 10% on engagement
         );
 
         // Identify highlights and issues
@@ -471,7 +471,7 @@ OUTPUT:
             0,
           ) /
             classes.length) *
-            10,
+          10,
         ) / 10,
       attendanceRate:
         Math.round(
@@ -480,7 +480,7 @@ OUTPUT:
             0,
           ) /
             classes.length) *
-            10,
+          10,
         ) / 10,
       submissionRate:
         Math.round(
@@ -489,7 +489,7 @@ OUTPUT:
             0,
           ) /
             classes.length) *
-            10,
+          10,
         ) / 10,
       engagementScore:
         Math.round(
@@ -498,13 +498,13 @@ OUTPUT:
             0,
           ) /
             classes.length) *
-            10,
+          10,
         ) / 10,
       overallScore:
         Math.round(
           (classes.reduce((sum: number, c: any) => sum + c.overallScore, 0) /
             classes.length) *
-            10,
+          10,
         ) / 10,
     };
 
@@ -540,7 +540,7 @@ OUTPUT:
   ): Promise<any> {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
       });
 
       const prompt = `Phân tích hiệu suất các lớp học và đưa ra insights chi tiết:

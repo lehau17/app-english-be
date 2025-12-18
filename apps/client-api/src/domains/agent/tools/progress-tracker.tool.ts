@@ -291,11 +291,11 @@ export class ProgressTrackerTool {
       avgScore:
         podcastAttempts.length > 0
           ? Math.round(
-              podcastAttempts.reduce(
-                (sum, p) => sum + (p.scorePercent || 0),
-                0,
-              ) / podcastAttempts.length,
-            )
+            podcastAttempts.reduce(
+              (sum, p) => sum + (p.scorePercent || 0),
+              0,
+            ) / podcastAttempts.length,
+          )
           : 0,
     };
 
@@ -305,11 +305,11 @@ export class ProgressTrackerTool {
       avgScore:
         submissions.filter((s) => s.score !== null).length > 0
           ? Math.round(
-              submissions
-                .filter((s) => s.score !== null)
-                .reduce((sum, s) => sum + (s.score || 0), 0) /
-                submissions.filter((s) => s.score !== null).length,
-            )
+            submissions
+              .filter((s) => s.score !== null)
+              .reduce((sum, s) => sum + (s.score || 0), 0) /
+            submissions.filter((s) => s.score !== null).length,
+          )
           : 0,
       onTime: submissions.filter((s) => !s.isLate).length,
       late: submissions.filter((s) => s.isLate).length,
@@ -397,11 +397,11 @@ export class ProgressTrackerTool {
         avgScore:
           attempts.filter((a) => a.score !== null).length > 0
             ? Math.round(
-                attempts
-                  .filter((a) => a.score !== null)
-                  .reduce((sum, a) => sum + (a.score || 0), 0) /
-                  attempts.filter((a) => a.score !== null).length,
-              )
+              attempts
+                .filter((a) => a.score !== null)
+                .reduce((sum, a) => sum + (a.score || 0), 0) /
+              attempts.filter((a) => a.score !== null).length,
+            )
             : 0,
         streak,
         totalStudyTimeMinutes: totalStudyTime,
@@ -422,7 +422,7 @@ export class ProgressTrackerTool {
   private async analyzeWithAI(data: any): Promise<any> {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
       });
 
       const prompt = `Phân tích tiến độ học tập của học viên và đưa ra nhận xét, gợi ý:
@@ -528,8 +528,8 @@ Trả về JSON với format:
         score:
           data.vocabulary.totalLearned > 0
             ? Math.round(
-                (data.vocabulary.mastered / data.vocabulary.totalLearned) * 100,
-              )
+              (data.vocabulary.mastered / data.vocabulary.totalLearned) * 100,
+            )
             : 0,
         fullMark: 100,
       },
@@ -538,8 +538,8 @@ Trả về JSON với format:
         score:
           data.speaking.totalSessions > 0
             ? Math.round(
-                (data.speaking.completed / data.speaking.totalSessions) * 100,
-              )
+              (data.speaking.completed / data.speaking.totalSessions) * 100,
+            )
             : 0,
         fullMark: 100,
       },

@@ -227,16 +227,16 @@ OUTPUT: Tra ve:
     const avgAttendance =
       classroomStats.length > 0
         ? Math.round(
-            classroomStats.reduce((sum, c) => sum + c.attendanceRate, 0) /
-              classroomStats.length,
-          )
+          classroomStats.reduce((sum, c) => sum + c.attendanceRate, 0) /
+          classroomStats.length,
+        )
         : 0;
     const avgScore =
       classroomStats.length > 0
         ? Math.round(
-            classroomStats.reduce((sum, c) => sum + c.avgScore, 0) /
-              classroomStats.length,
-          )
+          classroomStats.reduce((sum, c) => sum + c.avgScore, 0) /
+          classroomStats.length,
+        )
         : 0;
 
     return {
@@ -250,7 +250,7 @@ OUTPUT: Tra ve:
   private async analyzeWithAI(data: any): Promise<any> {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
       });
 
       const prompt = `Phân tích dữ liệu lớp học sau và đưa ra insights:

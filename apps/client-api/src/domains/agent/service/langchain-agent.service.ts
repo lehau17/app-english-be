@@ -82,7 +82,7 @@ export class LangChainAgentService {
       this.logger.log('🤖 Khởi tạo LangChain Agent...');
 
       const llm = new ChatGoogleGenerativeAI({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
         apiKey: process.env.GEMINI_API_KEY,
         temperature: 0.1,
         streaming: true, // Enable streaming

@@ -54,7 +54,7 @@ export class GeminiService {
   async generateResponse(prompt: string): Promise<string> {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         generationConfig: { temperature: 0.7, maxOutputTokens: 10000 },
       });
       const result = await model.generateContent(prompt);
@@ -73,7 +73,7 @@ export class GeminiService {
   async generateJSONResponse(prompt: string): Promise<string> {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         generationConfig: {
           temperature: 0.7,
           maxOutputTokens: 10000,
@@ -161,7 +161,7 @@ Yêu cầu:
 Nhận xét:`;
 
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.5-pro',
+        model: 'gemini-2.5-flash',
         generationConfig: {
           temperature: 0.7,
           maxOutputTokens: 10000,
@@ -257,15 +257,15 @@ LƯU Ý: Nội dung sai → điểm thấp (0-20), bất kể phát âm tốt. N
   }
 
   async evaluateSpeaking(params: {
-  audioBase64: string;
-  mimeType?: string;
-  prompt?: string;
-  minSeconds?: number;
-}): Promise<EvaluationPayload> {
-  const { audioBase64, mimeType, prompt: taskPrompt } = params;
+    audioBase64: string;
+    mimeType?: string;
+    prompt?: string;
+    minSeconds?: number;
+  }): Promise<EvaluationPayload> {
+    const { audioBase64, mimeType, prompt: taskPrompt } = params;
 
-  // Prompt được thiết kế tối ưu cho Gemini 2.0 Flash xử lý Audio
-  const prompt = `
+    // Prompt được thiết kế tối ưu cho Gemini 2.0 Flash xử lý Audio
+    const prompt = `
 VAI TRÒ: Bạn là một chuyên gia khảo thí IELTS và giáo viên bản ngữ cực kỳ khắt khe về phát âm.
 NHIỆM VỤ: Đánh giá bài nói của học sinh dựa trên yêu cầu: "${taskPrompt ?? 'Nói tự do'}".
 
@@ -327,15 +327,15 @@ Trả về duy nhất 1 JSON object, không markdown:
   }
 }`;
 
-  return this.generateEvaluation(
-    [
-      {
-        inlineData: { mimeType: mimeType || 'audio/webm', data: audioBase64 },
-      },
-      { text: prompt },
-    ],
-    { schemaName: 'speakingEvaluation' }, // Đảm bảo schema của bạn match với JSON trên
-  );
+    return this.generateEvaluation(
+      [
+        {
+          inlineData: { mimeType: mimeType || 'audio/webm', data: audioBase64 },
+        },
+        { text: prompt },
+      ],
+      { schemaName: 'speakingEvaluation' }, // Đảm bảo schema của bạn match với JSON trên
+    );
 
   }
 
@@ -385,7 +385,7 @@ Giữ phản hồi bằng tiếng Việt, cụ thể và tích cực.`;
   ): Promise<EvaluationPayload> {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
         generationConfig: {
           temperature: 0.2,
           maxOutputTokens: 4000,
@@ -563,7 +563,7 @@ Giữ phản hồi bằng tiếng Việt, cụ thể và tích cực.`;
 
     const contentMatch =
       raw?.contentMatch &&
-      ['none', 'partial', 'full'].includes(raw.contentMatch)
+        ['none', 'partial', 'full'].includes(raw.contentMatch)
         ? raw.contentMatch
         : undefined;
 
@@ -572,9 +572,9 @@ Giữ phản hồi bằng tiếng Việt, cụ thể và tích cực.`;
       feedback: feedbackText,
       categories: Array.isArray(raw?.categories)
         ? raw.categories.map((item: any) => ({
-            name: String(item?.name ?? ''),
-            comment: String(item?.comment ?? ''),
-          }))
+          name: String(item?.name ?? ''),
+          comment: String(item?.comment ?? ''),
+        }))
         : undefined,
       transcript:
         typeof raw?.transcript === 'string' && raw.transcript.trim().length > 0

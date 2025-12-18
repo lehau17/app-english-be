@@ -17,7 +17,7 @@ describe('PromptTemplateService', () => {
     skill: null,
     systemPrompt: 'You are a teacher creating {{activityType}} exercises.',
     userPrompt: 'Generate {{count}} words for {{proficiencyLevel}} level.',
-    modelName: 'gemini-2.0-flash',
+    modelName: 'gemini-2.5-flash',
     temperature: 0.7,
     maxTokens: 2048,
     parameters: null,

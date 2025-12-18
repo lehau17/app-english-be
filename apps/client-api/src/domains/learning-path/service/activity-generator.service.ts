@@ -32,7 +32,7 @@ interface GenerationResult {
 @Injectable()
 export class ActivityGeneratorService {
   private readonly logger = new Logger(ActivityGeneratorService.name);
-  private readonly DEFAULT_MODEL = 'gemini-2.0-flash';
+  private readonly DEFAULT_MODEL = 'gemini-2.5-flash';
   private readonly GENERATION_TIMEOUT = 30000; // 30 seconds
 
   constructor(

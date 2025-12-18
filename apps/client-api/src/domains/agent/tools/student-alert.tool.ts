@@ -466,8 +466,8 @@ OUTPUT: Danh sach canh bao theo muc do uu tien voi goi y hanh dong.`,
 
         const daysSinceActivity = lastActivity
           ? Math.floor(
-              (Date.now() - lastActivity.getTime()) / (1000 * 60 * 60 * 24),
-            )
+            (Date.now() - lastActivity.getTime()) / (1000 * 60 * 60 * 24),
+          )
           : 999;
 
         if (daysSinceActivity > 14) {
@@ -546,7 +546,7 @@ OUTPUT: Danh sach canh bao theo muc do uu tien voi goi y hanh dong.`,
   private async getAIRecommendations(criticalAlerts: any[]): Promise<any> {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
       });
 
       const prompt = `Phân tích các cảnh báo học sinh cần hỗ trợ và đưa ra gợi ý:

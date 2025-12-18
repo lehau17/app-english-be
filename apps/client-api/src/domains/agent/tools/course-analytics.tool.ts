@@ -4,6 +4,12 @@ import { DynamicStructuredTool } from '@langchain/core/tools';
 import { Injectable, Logger } from '@nestjs/common';
 import { z } from 'zod';
 
+
+const AnalyzeCourseSchema = z.object({
+  courseId: z.string().optional().describe('ID khoa hoc cu the'),
+  courseName: z.string().optional().describe('Ten khoa hoc de tim'),
+  compareAll: z.boolean().optional().describe('So sanh tat ca khoa hoc'),
+});
 @Injectable()
 export class CourseAnalyticsTool {
   private readonly logger = new Logger(CourseAnalyticsTool.name);
@@ -29,17 +35,15 @@ OUTPUT: Tra ve:
 - Thong ke enrollment, completion rate, diem TB
 - 3-4 bieu do truc quan
 - AI insights va de xuat cai thien`,
-      schema: z.object({
-        courseId: z.string().optional().describe('ID khoa hoc cu the'),
-        courseName: z.string().optional().describe('Ten khoa hoc de tim'),
-        compareAll: z
-          .boolean()
-          .optional()
-          .default(true)
-          .describe('So sanh tat ca khoa hoc'),
-      }),
-      func: async ({ courseId, courseName, compareAll = true }) => {
-        return this._call(JSON.stringify({ courseId, courseName, compareAll }));
+      schema: AnalyzeCourseSchema as any,
+      func: async ({ courseId, courseName, compareAll }: any) => {
+        // ✅ default ở runtime
+        const normalized = {
+          courseId,
+          courseName,
+          compareAll: compareAll ?? true,
+        };
+        return this._call(JSON.stringify(normalized));
       },
     });
   }
@@ -182,16 +186,16 @@ OUTPUT: Tra ve:
     const avgCompletionRate =
       courseStats.length > 0
         ? Math.round(
-            courseStats.reduce((sum, c) => sum + c.completionRate, 0) /
-              courseStats.length,
-          )
+          courseStats.reduce((sum, c) => sum + c.completionRate, 0) /
+          courseStats.length,
+        )
         : 0;
     const avgScore =
       courseStats.length > 0
         ? Math.round(
-            courseStats.reduce((sum, c) => sum + c.avgScore, 0) /
-              courseStats.length,
-          )
+          courseStats.reduce((sum, c) => sum + c.avgScore, 0) /
+          courseStats.length,
+        )
         : 0;
 
     return {
@@ -205,7 +209,7 @@ OUTPUT: Tra ve:
   private async analyzeWithAI(data: any): Promise<any> {
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
       });
 
       const prompt = `Phân tích dữ liệu khóa học sau và đưa ra insights:

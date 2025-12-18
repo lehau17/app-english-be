@@ -46,7 +46,7 @@ describe('ActivityGeneratorService', () => {
     mediaUrls: [],
     promptTemplateId: 'template-1',
     generationParams: {},
-    aiModel: 'gemini-2.0-flash',
+    aiModel: 'gemini-2.5-flash',
     usageCount: 0,
     averageScore: null,
     feedbackCount: 0,
