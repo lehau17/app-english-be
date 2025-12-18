@@ -206,9 +206,12 @@ export const VOICE_CATALOG: VoiceMetadata[] = [
  */
 export const MULTI_VOICE_SUBSET: TtsVoice[] = [
   TtsVoice.US_FEMALE_AMY, // US Female (primary)
-  TtsVoice.US_MALE_RYAN, // US Male
+  TtsVoice.US_MALE_JOHN,
   TtsVoice.US_FEMALE_LESSAC, // US Female (alternative)
+  TtsVoice.US_MALE_RYAN, // US Male
+  TtsVoice.US_FEMALE_KRISTIN,
   TtsVoice.GB_MALE_ALAN, // GB Male
+  TtsVoice.GB_FEMALE_CORI,
   TtsVoice.GB_FEMALE_JENNY, // GB Female
 ];
 
