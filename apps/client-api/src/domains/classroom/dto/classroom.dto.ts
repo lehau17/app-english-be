@@ -1,7 +1,7 @@
 import { RequestPagingDto } from '@app/shared';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ClassroomStatus, TimezoneCode } from '@prisma/client';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -269,7 +269,6 @@ export class SystemScheduleQueryDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  @Max(31)
   days?: number;
 
   @ApiPropertyOptional({
@@ -277,6 +276,7 @@ export class SystemScheduleQueryDto {
     description: 'Preferred timezone. Defaults to Asia_Ho_Chi_Minh.',
   })
   @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.replace('/', '_') : value)
   @IsEnum(TimezoneCode)
   timezone?: TimezoneCode;
 
