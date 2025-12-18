@@ -1,8 +1,14 @@
 import { PrismaRepository } from '@app/database';
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  RequestTimeoutException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { extname } from 'path';
 import { UploadService } from '../upload/upload.service';
+
 export interface MeetingInfo {
   meetingUrl: string;
   roomName: string;
@@ -16,6 +22,9 @@ export class VideoMeetingService {
   private readonly enableRecording: boolean;
   private readonly autoRecordStartEnabled: boolean;
   private readonly recordingBucket: string;
+
+  // Locking mechanism: Set of sessionIds currently being processed
+  private readonly processingSessions = new Set<string>();
 
   constructor(
     private config: ConfigService,
@@ -66,6 +75,7 @@ export class VideoMeetingService {
 
   /**
    * Webhook handler - receives file from Jibri, uploads to MinIO, saves URL to session
+   * Implements locking (wait max 10s) and video merging if multiple parts arrive.
    */
   async handleRecordingComplete(
     file: Express.Multer.File,
@@ -99,12 +109,34 @@ export class VideoMeetingService {
     }
 
     const sessionId = sessionIdMatch[1];
+    const lockTimeout = 10000; // 10 seconds
+    const retryInterval = 100; // 100 ms
+
+    // === LOCKING MECHANISM ===
+    const startTime = Date.now();
+    while (this.processingSessions.has(sessionId)) {
+      if (Date.now() - startTime > lockTimeout) {
+        this.logger.error(`Timeout waiting for lock on session ${sessionId}`);
+        throw new RequestTimeoutException(
+          `System busy processing another recording for this session. Please try again later.`,
+        );
+      }
+      // Wait 100ms
+      await new Promise((resolve) => setTimeout(resolve, retryInterval));
+    }
+
+    // Acquire lock
+    this.processingSessions.add(sessionId);
 
     try {
       // Check if session exists
       const session = await this.prisma.classroomSession.findUnique({
         where: { id: sessionId },
-        select: { id: true, metadata: true },
+        select: {
+          id: true,
+          metadata: true,
+          recordingUrl: true,
+        },
       });
 
       if (!session) {
@@ -112,16 +144,53 @@ export class VideoMeetingService {
         throw new BadRequestException(`Session not found: ${sessionId}`);
       }
 
+      const existingRecordingUrl = session.recordingUrl;
+      let bufferToUpload = file.buffer;
+      let finalFilename = `recording-${sessionId}-${Date.now()}.mp4`;
+
+      // If there is an existing recording, MERGE IT
+      if (existingRecordingUrl && existingRecordingUrl.startsWith('http')) {
+        this.logger.log(
+          `Existing recording found for session ${sessionId}. Merging...`,
+        );
+        try {
+          const mergedResult = await this.mergeWithExistingVideo(
+            sessionId,
+            existingRecordingUrl,
+            file.buffer,
+            ext || '.mp4',
+          );
+          bufferToUpload = mergedResult.buffer;
+          this.logger.log(
+            `Merge successful. New size: ${(
+              bufferToUpload.length /
+              1024 /
+              1024
+            ).toFixed(2)}MB`,
+          );
+          // finalFilename = `merged-${sessionId}-${Date.now()}.mp4`;
+        } catch (mergeError) {
+          this.logger.error(
+            `Failed to merge videos for session ${sessionId}. Falling back to standard upload (overwrite).`,
+            mergeError,
+          );
+          // Fallback handled by just skipping the buffer update
+        }
+      }
+
       // Upload file to MinIO
-      const filename = `recording-${sessionId}-${Date.now()}.mp4`;
       this.logger.log(
-        `Uploading recording: ${filename} (${(file.size / 1024 / 1024).toFixed(2)}MB)`,
+        `Uploading recording: ${finalFilename} (${(
+          bufferToUpload.length /
+          1024 /
+          1024
+        ).toFixed(2)}MB)`,
       );
 
       const uploadResult = await this.uploadService.uploadBuffer(
-        file.buffer,
-        filename,
-        file.mimetype,
+        bufferToUpload,
+        finalFilename,
+        file.mimetype || 'video/mp4',
       );
 
       this.logger.log(`Recording uploaded to MinIO: ${uploadResult.url}`);
@@ -130,9 +199,10 @@ export class VideoMeetingService {
       const existingMetadata = (session.metadata as Record<string, any>) || {};
       const updatedMetadata = {
         ...existingMetadata,
-        recordingFilename: file.originalname || filename,
+        recordingFilename: file.originalname || finalFilename,
         recordingUploadedAt: new Date().toISOString(),
-        recordingSize: file.size,
+        recordingSize: bufferToUpload.length,
+        recordingMerged: !!existingRecordingUrl,
       };
 
       await this.prisma.classroomSession.update({
@@ -152,6 +222,104 @@ export class VideoMeetingService {
         error,
       );
       throw error;
+    } finally {
+      // Release lock
+      this.processingSessions.delete(sessionId);
+    }
+  }
+
+  /**
+   * Helper: Download existing video, save new buffer to temp, merge using ffmpeg, return Buffer
+   */
+  private async mergeWithExistingVideo(
+    sessionId: string,
+    existingUrl: string,
+    newBuffer: Buffer,
+    ext: string,
+  ): Promise<{ buffer: Buffer }> {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const fs = require('fs');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const path = require('path');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const axios = require('axios');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ffmpeg = require('fluent-ffmpeg');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const ffmpegPath = require('ffmpeg-static');
+
+    if (ffmpegPath) {
+      ffmpeg.setFfmpegPath(ffmpegPath);
+    }
+
+    const tempDir = path.join(process.cwd(), 'temp-uploads');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const file1Path = path.join(tempDir, `${sessionId}-part1${ext}`);
+    const file2Path = path.join(tempDir, `${sessionId}-part2${ext}`);
+    const outputPath = path.join(
+      tempDir,
+      `${sessionId}-merged-${Date.now()}${ext}`,
+    );
+
+    try {
+      // 1. Download existing video
+      this.logger.log(`Downloading existing video from ${existingUrl}...`);
+      const response = await axios.get(existingUrl, {
+        responseType: 'arraybuffer',
+        timeout: 30000,
+      });
+      fs.writeFileSync(file1Path, response.data);
+
+      // 2. Save new video buffer
+      fs.writeFileSync(file2Path, newBuffer);
+
+      // 3. Merge
+      this.logger.log(`Merging videos with ffmpeg...`);
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg()
+          .input(file1Path)
+          .input(file2Path)
+          .on('error', (err) => {
+            this.logger.error('Ffmpeg error:', err);
+            reject(err);
+          })
+          .on('end', () => {
+            this.logger.log('Ffmpeg merge finished successfully');
+            resolve();
+          })
+          .mergeToFile(outputPath, tempDir);
+      });
+
+      // 4. Read merged file back to buffer
+      if (!fs.existsSync(outputPath)) {
+        throw new Error('Merged file not found at ' + outputPath);
+      }
+      const mergedBuffer = fs.readFileSync(outputPath);
+
+      // 5. Cleanup temp files
+      try {
+        if (fs.existsSync(file1Path)) fs.unlinkSync(file1Path);
+        if (fs.existsSync(file2Path)) fs.unlinkSync(file2Path);
+        if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+      } catch (cleanupErr) {
+        this.logger.warn('Failed to cleanup temp files', cleanupErr);
+      }
+
+      return { buffer: mergedBuffer };
+    } catch (err) {
+      this.logger.error('Merge helper failed', err);
+      // Try cleanup even on error
+      try {
+        if (fs.existsSync(file1Path)) fs.unlinkSync(file1Path);
+        if (fs.existsSync(file2Path)) fs.unlinkSync(file2Path);
+        if (fs.existsSync(outputPath)) fs.unlinkSync(outputPath);
+      } catch (e) {
+        /* ignore */
+      }
+      throw err;
     }
   }
 
