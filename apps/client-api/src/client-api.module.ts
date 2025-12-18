@@ -49,6 +49,7 @@ import { LearningPathModule } from './domains/learning-path/learning-path.module
 import { RecommendationModule } from './domains/recommendation/recommendation.module';
 import { TopicsModule } from './domains/topics/topics.module';
 import { SpeakingPracticeModule } from './domains/speaking-practice/speaking-practice.module';
+import { SystemSettingModule } from './domains/system-setting/system-setting.module';
 
 @Module({
   imports: [
@@ -98,6 +99,7 @@ import { SpeakingPracticeModule } from './domains/speaking-practice/speaking-pra
     TopicsModule,
     SpeakingPracticeModule,
     HolidayModule,
+    SystemSettingModule,
   ],
   controllers: [ClientApiController],
   providers: [ClientApiService, UploadService],

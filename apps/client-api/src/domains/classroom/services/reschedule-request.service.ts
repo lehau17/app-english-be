@@ -1220,6 +1220,60 @@ export class RescheduleRequestService {
       throw new BadRequestException('Chỉ có thể hủy yêu cầu đang chờ duyệt');
     }
 
-    return this.rescheduleRequestRepository.delete(id);
+    // Update status to cancelled
+    const cancelledRequest = await this.rescheduleRequestRepository.review(
+      id,
+      requestedById,
+      SessionRescheduleRequestStatus.cancelled,
+      'Người yêu cầu đã rút lại yêu cầu',
+    );
+
+    // Update notifications to indicate cancellation
+    // We look for notifications with data.requestId === id
+    try {
+      // Find notifications related to this request
+      // Since data is Json, we need to exact match the requestId inside it
+      // Prisma JSON filtering depend on DB, but for PostgreSQL we can use path
+      const notifications = await this.prisma.notification.findMany({
+        where: {
+          OR: [
+            {
+              data: {
+                path: ['requestId'],
+                equals: id,
+              },
+            },
+            // Also check for stringified data (legacy/fallback)
+            {
+              data: {
+                path: [],
+                string_contains: id,
+              }
+            }
+          ]
+        },
+      });
+
+      // Update their body/title
+      for (const notification of notifications) {
+        let newBody = notification.body;
+        if (!newBody.includes('[ĐÃ HỦY]')) {
+          newBody = `[ĐÃ HỦY] ${newBody}`;
+        }
+
+        await this.prisma.notification.update({
+          where: { id: notification.id },
+          data: {
+            title: notification.title + ' (Đã hủy)',
+            body: newBody,
+            readAt: new Date(), // Mark as read so it doesn't bother admin
+          },
+        });
+      }
+    } catch (error) {
+      this.logger.warn(`Failed to update notifications for cancelled request ${id}: ${error.message}`);
+    }
+
+    return cancelledRequest;
   }
 }

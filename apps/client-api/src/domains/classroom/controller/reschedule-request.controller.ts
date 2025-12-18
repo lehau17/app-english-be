@@ -36,7 +36,7 @@ import { RescheduleRequestService } from '../services/reschedule-request.service
 export class RescheduleRequestTeacherController {
   constructor(
     private readonly rescheduleRequestService: RescheduleRequestService,
-  ) {}
+  ) { }
 
   @Post(':sessionId/reschedule-request')
   @ApiOperation({ summary: 'Tạo yêu cầu dời lịch buổi học' })
@@ -111,8 +111,8 @@ export class RescheduleRequestTeacherController {
     return this.rescheduleRequestService.updateRequest(id, req.user.sub, dto);
   }
 
-  @Delete('reschedule-requests/:id')
-  @ApiOperation({ summary: 'Hủy yêu cầu dời lịch (chỉ khi pending)' })
+  @Put('reschedule-requests/:id/cancel')
+  @ApiOperation({ summary: 'Hủy/Rút lại yêu cầu dời lịch (chỉ khi pending)' })
   @ApiParam({ name: 'id', description: 'ID yêu cầu' })
   @ApiResponse({ status: 200, description: 'Đã hủy yêu cầu' })
   @ResponseMessage('Đã hủy yêu cầu dời lịch')
@@ -132,7 +132,7 @@ export class RescheduleRequestTeacherController {
 export class RescheduleRequestAdminController {
   constructor(
     private readonly rescheduleRequestService: RescheduleRequestService,
-  ) {}
+  ) { }
 
   @Get('sessions/:sessionId/reschedule-requests')
   @ApiOperation({ summary: 'Lấy danh sách yêu cầu dời lịch của buổi học' })

@@ -13,9 +13,16 @@ export class AccessTokenGuard implements CanActivate {
   constructor(
     private readonly tokenRepository: TokenRepository,
     private readonly reflector: Reflector,
-  ) {}
+  ) { }
+
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    const isPublic = this.reflector.getAllAndOverride<boolean>('isPublic', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) return true;
+
     const req = context.switchToHttp().getRequest();
     console.log('Request URL:', req.url);
     const path = req.path || req.url || '';
