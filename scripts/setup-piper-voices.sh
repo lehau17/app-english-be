@@ -12,24 +12,27 @@ mkdir -p "$VOICES_DIR"
 
 # Voice models - VERIFIED to exist in HuggingFace rhasspy/piper-voices
 # Reference: https://github.com/rhasspy/piper/blob/master/VOICES.md
-declare -A VOICES=(
+# Voice models - List format "voice_name:speaker_id_list"
+VOICES=(
   # US English voices
-  ["en_US-amy-medium"]="0"
-  ["en_US-john-medium"]="0"
-  ["en_US-lessac-medium"]="0"
-  ["en_US-ryan-medium"]="0"
-  # British English voices (no Australian voices available in Piper)
-  ["en_GB-alan-medium"]="0"
-  ["en_GB-cori-medium"]="0"
-  ["en_GB-jenny_dioco-medium"]="0"
-  # Multi-speaker LibriTTS (US) - NOTE: libritts_r for medium quality
-  ["en_US-libritts_r-medium"]="0,142,508,721"
+  "en_US-amy-medium:0"
+  "en_US-john-medium:0"
+  "en_US-lessac-medium:0"
+  "en_US-ryan-medium:0"
+  # British English voices
+  "en_GB-alan-medium:0"
+  "en_GB-cori-medium:0"
+  "en_GB-jenny_dioco-medium:0"
+  # Multi-speaker LibriTTS (US)
+  "en_US-libritts_r-medium:0,142,508,721"
+  # Child-like voice
+  "en_US-kristin-medium:0"
 )
 
 download_voice() {
   local voice=$1
-
-  # Parse voice name: en_US-amy-medium -> en/en_US/amy/medium
+  
+  # Parse voice info
   local lang_full=$(echo "$voice" | cut -d'-' -f1)      # en_US
   local lang_short=$(echo "$lang_full" | cut -d'_' -f1)  # en
   local speaker=$(echo "$voice" | cut -d'-' -f2)         # amy
@@ -66,7 +69,9 @@ download_voice() {
 }
 
 # Download all voices
-for voice in "${!VOICES[@]}"; do
+for entry in "${VOICES[@]}"; do
+  voice="${entry%%:*}"
+  
   if [[ -f "${VOICES_DIR}/${voice}.onnx" ]]; then
     echo "⊙ $voice already exists, skipping..."
   else

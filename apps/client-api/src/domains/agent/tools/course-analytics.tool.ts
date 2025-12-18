@@ -112,7 +112,7 @@ OUTPUT: Tra ve:
     courseName?: string;
     compareAll?: boolean;
   }) {
-    const where: any = { isPublished: true };
+    const where: any = {}; // Removed isPublished: true to allow analyzing draft courses
 
     if (params.courseId) {
       where.id = params.courseId;
@@ -174,6 +174,7 @@ OUTPUT: Tra ve:
           enrollments,
           completionRate,
           avgScore,
+          isPublished: course.isPublished,
           createdAt: course.createdAt,
         };
       }),

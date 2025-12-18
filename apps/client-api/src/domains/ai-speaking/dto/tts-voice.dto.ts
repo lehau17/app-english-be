@@ -20,6 +20,7 @@ export enum TtsVoice {
   US_MALE_JOHN = 'en_US-john-medium',
   US_FEMALE_LESSAC = 'en_US-lessac-medium',
   US_MALE_RYAN = 'en_US-ryan-medium',
+  US_FEMALE_KRISTIN = 'en_US-kristin-medium', // Child-like voice
 
   // British English
   GB_MALE_ALAN = 'en_GB-alan-medium',
@@ -132,6 +133,15 @@ export const VOICE_CATALOG: VoiceMetadata[] = [
     model: 'en_US-ryan-medium',
     speakerId: 0,
     description: 'Natural US male voice',
+  },
+  {
+    id: TtsVoice.US_FEMALE_KRISTIN,
+    label: 'American Girl (Kristin)',
+    accent: 'US',
+    gender: 'F',
+    model: 'en_US-kristin-medium',
+    speakerId: 0,
+    description: 'Young, energetic US female voice',
   },
   {
     id: TtsVoice.GB_MALE_ALAN,
