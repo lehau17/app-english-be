@@ -48,7 +48,7 @@ export class WordExportTool {
         data: z.array(z.record(z.any())).describe('Mang du lieu (array of objects)'),
         includeStatistics: z.boolean().optional().default(false).describe('Co them thong ke tong quan khong'),
         charts: z.array(z.object({
-          type: z.literal('chart'),
+          type: z.enum(['chart']),
           chartType: z.enum(['bar', 'line', 'pie', 'area', 'doughnut']),
           title: z.string(),
           data: z.array(z.any())
