@@ -24,6 +24,7 @@ export function calculateClassroomSchedule(
   periodStart: Date,
   periodEnd: Date,
   slots: CreateClassroomSlotDto[],
+  holidayDates: string[] = [],
 ): ScheduleCalculation {
   const sessions: SessionEstimate[] = [];
 
@@ -68,6 +69,10 @@ export function calculateClassroomSchedule(
     cursor <= end;
     cursor.setDate(cursor.getDate() + 1)
   ) {
+    // Check if current date is holiday
+    const dateString = cursor.toISOString().split('T')[0];
+    if (holidayDates.includes(dateString)) continue;
+
     const daySlots = slotsByDay[cursor.getDay()] || [];
 
     for (const slot of daySlots) {

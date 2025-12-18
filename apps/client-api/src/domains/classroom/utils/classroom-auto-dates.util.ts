@@ -14,6 +14,7 @@ export function autoCalculateClassroomPeriod(
   slots: { dayOfWeek: string }[],
   startDate?: Date,
   endDate?: Date,
+  holidayDates: string[] = [],
 ): { periodStart: Date; periodEnd: Date } {
   // Nếu không có slots hoặc plannedSessions, không thể tính toán
   if (!slots.length || !plannedSessions) {
@@ -71,6 +72,7 @@ export function autoCalculateClassroomPeriod(
       result.periodStart,
       daysOfWeek,
       plannedSessions,
+      holidayDates,
     );
 
     // Thêm 1 ngày để đảm bảo kết thúc vào cuối ngày
@@ -78,7 +80,7 @@ export function autoCalculateClassroomPeriod(
     endDate.setDate(endDate.getDate() + 1);
     result.periodEnd = endDate;
   }
-  // Nếu có endDate, tính startDate
+  // Nếu có endDate, tính startDate (NOT SUPPORTING HOLIDAYS YET FOR BACKWARD CALCULATION AS IT IS RARELY USED)
   else if (endDate) {
     result.periodEnd = new Date(endDate);
 
@@ -107,6 +109,7 @@ export function autoCalculateClassroomPeriod(
       result.periodStart,
       daysOfWeek,
       plannedSessions,
+      holidayDates,
     );
 
     // Thêm 1 ngày để đảm bảo kết thúc vào cuối ngày
@@ -125,19 +128,31 @@ function findLastSessionDate(
   startDate: Date,
   daysOfWeek: number[],
   plannedSessions: number,
+  holidayDates: string[] = [],
 ): Date {
   const currentDate = new Date(startDate);
   let sessionCount = 0;
 
+  // Safety break to prevent infinite loops
+  let safetyCounter = 0;
+  const MAX_ITERATIONS = plannedSessions * 7 + 365;
+
   while (sessionCount < plannedSessions) {
+    safetyCounter++;
+    if (safetyCounter > MAX_ITERATIONS) break;
+
     const dayOfWeek = currentDate.getDay();
+    const dateString = currentDate.toISOString().split('T')[0];
 
+    // Check if valid day AND not a holiday
     if (daysOfWeek.includes(dayOfWeek)) {
-      sessionCount++;
+      if (!holidayDates.includes(dateString)) {
+        sessionCount++;
 
-      // Nếu đây là buổi cuối cùng, trả về ngày này
-      if (sessionCount === plannedSessions) {
-        return new Date(currentDate);
+        // Nếu đây là buổi cuối cùng, trả về ngày này
+        if (sessionCount === plannedSessions) {
+          return new Date(currentDate);
+        }
       }
     }
 

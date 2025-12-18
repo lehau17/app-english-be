@@ -4027,3 +4027,14 @@ model SpeakingPlacementTest {
   @@index([status])
   @@map("speaking_placement_tests")
 }
+
+// ===================== HOLIDAY MANAGEMENT =====================
+model YearlyHoliday {
+  id        String   @id @default(uuid())
+  year      Int      @unique
+  holidays  Json     // Array of { date: string (ISO), name: string }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("yearly_holidays")
+}

@@ -22,6 +22,7 @@ import { DictionaryModule } from './domains/dictionary/dictionary.module';
 import { EvaluationModule } from './domains/evaluation';
 import { GoogleTranslateModule } from './domains/google-translate/google-translate.module';
 import { GradebookModule } from './domains/gradebook';
+import { HolidayModule } from './domains/holiday/holiday.module';
 import { LandingPageModule } from './domains/landing-page/landing-page.module';
 import { LeaderboardModule } from './domains/leaderboard';
 import { LessonModule } from './domains/lesson';
@@ -96,6 +97,7 @@ import { SpeakingPracticeModule } from './domains/speaking-practice/speaking-pra
     RecommendationModule,
     TopicsModule,
     SpeakingPracticeModule,
+    HolidayModule,
   ],
   controllers: [ClientApiController],
   providers: [ClientApiService, UploadService],

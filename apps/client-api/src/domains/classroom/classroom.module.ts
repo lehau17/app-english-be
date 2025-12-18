@@ -8,6 +8,7 @@ import { LessonRepository } from '../lesson/repository';
 import { NotificationModule } from '../notification/notification.module';
 import { PaymentModule } from '../payment/payment.module';
 import { VideoMeetingModule } from '../video-meeting/video-meeting.module';
+import { HolidayModule } from '../holiday/holiday.module';
 import { PrivateClassroomController } from './controller';
 import { AttendanceBlockingController } from './controller/attendance-blocking.controller';
 import {
@@ -47,6 +48,7 @@ import { SessionInstructorGuard } from './guards/session-instructor.guard';
     NotificationModule,
     SharedModule,
     VideoMeetingModule,
+    HolidayModule,
   ],
   controllers: [
     PrivateClassroomController,
@@ -95,4 +97,4 @@ import { SessionInstructorGuard } from './guards/session-instructor.guard';
     SessionTypeChangeRequestService,
   ],
 })
-export class ClassroomModule {}
+export class ClassroomModule { }

@@ -47,6 +47,7 @@ import {
 } from '../utils/classroom.util';
 import { AttendanceBlockingService } from './attendance-blocking.service';
 import { VideoMeetingService } from '../../video-meeting/video-meeting.service';
+import { HolidayService } from '../../holiday/holiday.service';
 
 const TIMEZONE_OFFSETS: Record<TimezoneCode, number> = {
   [TimezoneCode.Asia_Ho_Chi_Minh]: 7 * 60,
@@ -70,7 +71,8 @@ export class ClassroomService {
     private readonly paymentService: PaymentService,
     private readonly attendanceBlockingService?: AttendanceBlockingService,
     private readonly videoMeetingService?: VideoMeetingService,
-  ) {}
+    private readonly holidayService?: HolidayService,
+  ) { }
 
   async create(dto: CreateClassroomDto): Promise<Classroom> {
     // Lấy thông tin khóa học bao gồm session schedules
@@ -96,6 +98,26 @@ export class ClassroomService {
       throw new NotFoundException(`Course with id ${dto.courseId} not found`);
     }
 
+    // Fetch holidays for schedule calculation
+    let holidayDates: string[] = [];
+    if (this.holidayService) {
+      try {
+        const currentYear = new Date().getFullYear();
+        // Ensure holidays exist for current and next year (service handles creation if missing)
+        await this.holidayService.ensureYearHolidays(currentYear);
+        await this.holidayService.ensureYearHolidays(currentYear + 1);
+
+        const holidaysCurrent = await this.holidayService.getHolidays(currentYear);
+        const holidaysNext = await this.holidayService.getHolidays(currentYear + 1);
+
+        const dates1 = (holidaysCurrent?.holidays as any[])?.map((h) => h.date) || [];
+        const dates2 = (holidaysNext?.holidays as any[])?.map((h) => h.date) || [];
+        holidayDates = [...dates1, ...dates2];
+      } catch (error) {
+        this.logger.warn(`Failed to fetch holidays: ${error.message}`);
+      }
+    }
+
     // Nếu người dùng yêu cầu tính toán tự động thời gian dựa trên khóa học
     let periodStart = dto.periodStart;
     let periodEnd = dto.periodEnd;
@@ -109,6 +131,7 @@ export class ClassroomService {
           dto.slots,
           periodStart,
           periodEnd,
+          holidayDates,
         );
 
         periodStart = calculatedDates.periodStart;
@@ -121,6 +144,7 @@ export class ClassroomService {
       periodStart,
       periodEnd,
       dto.slots,
+      holidayDates,
     );
 
     const createPayload: Prisma.ClassroomCreateInput = {
@@ -889,23 +913,23 @@ export class ClassroomService {
 
       const instructor = session.instructor
         ? {
-            id: session.instructor.id,
-            displayName:
-              session.instructor.displayName ||
-              [session.instructor.firstName, session.instructor.lastName]
-                .filter(Boolean)
-                .join(' ')
-                .trim(),
-            avatarUrl: session.instructor.avatarUrl,
-          }
+          id: session.instructor.id,
+          displayName:
+            session.instructor.displayName ||
+            [session.instructor.firstName, session.instructor.lastName]
+              .filter(Boolean)
+              .join(' ')
+              .trim(),
+          avatarUrl: session.instructor.avatarUrl,
+        }
         : null;
 
       const courseInfo = session.classroom.course
         ? {
-            id: session.classroom.course.id,
-            title: session.classroom.course.title,
-            description: session.classroom.course.description,
-          }
+          id: session.classroom.course.id,
+          title: session.classroom.course.title,
+          description: session.classroom.course.description,
+        }
         : null;
 
       // Parse metadata for session schedule info and activities
@@ -1089,15 +1113,15 @@ export class ClassroomService {
 
       const instructor = session.instructor
         ? {
-            id: session.instructor.id,
-            displayName:
-              session.instructor.displayName ||
-              [session.instructor.firstName, session.instructor.lastName]
-                .filter(Boolean)
-                .join(' ')
-                .trim(),
-            avatarUrl: session.instructor.avatarUrl,
-          }
+          id: session.instructor.id,
+          displayName:
+            session.instructor.displayName ||
+            [session.instructor.firstName, session.instructor.lastName]
+              .filter(Boolean)
+              .join(' ')
+              .trim(),
+          avatarUrl: session.instructor.avatarUrl,
+        }
         : null;
 
       return {
@@ -1294,24 +1318,24 @@ export class ClassroomService {
 
       const instructor = session.instructor
         ? {
-            id: session.instructor.id,
-            displayName:
-              session.instructor.displayName ||
-              [session.instructor.firstName, session.instructor.lastName]
-                .filter(Boolean)
-                .join(' ')
-                .trim(),
-            avatarUrl: session.instructor.avatarUrl,
-          }
+          id: session.instructor.id,
+          displayName:
+            session.instructor.displayName ||
+            [session.instructor.firstName, session.instructor.lastName]
+              .filter(Boolean)
+              .join(' ')
+              .trim(),
+          avatarUrl: session.instructor.avatarUrl,
+        }
         : null;
 
       // Extract course và lesson info từ metadata và classroom
       const courseInfo = session.classroom.course
         ? {
-            id: session.classroom.course.id,
-            title: session.classroom.course.title,
-            description: session.classroom.course.description,
-          }
+          id: session.classroom.course.id,
+          title: session.classroom.course.title,
+          description: session.classroom.course.description,
+        }
         : null;
 
       // Parse metadata để lấy session schedule info và activities (giáo trình)

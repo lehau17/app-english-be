@@ -23,6 +23,7 @@ import {
   UpdateRescheduleRequestDto,
 } from '../dto/reschedule-request.dto';
 import { RescheduleRequestRepository } from '../repository/reschedule-request.repository';
+import { HolidayService } from '../../holiday/holiday.service';
 
 @Injectable()
 export class RescheduleRequestService {
@@ -34,7 +35,8 @@ export class RescheduleRequestService {
     private readonly prisma: PrismaRepository,
     private readonly assignmentRepository: AssignmentRepository,
     private readonly kafkaService?: KafkaService,
-  ) {}
+    private readonly holidayService?: HolidayService,
+  ) { }
 
   /**
    * Create a new session reschedule request
@@ -129,6 +131,16 @@ export class RescheduleRequestService {
     // Validate exam date
     await this.validateExamDate(session.classroomId, dto.newStartTime);
 
+    // Validate holiday
+    if (this.holidayService) {
+      const isHoliday = await this.holidayService.isHoliday(dto.newStartTime);
+      if (isHoliday) {
+        throw new BadRequestException(
+          'Không thể dời lịch vào ngày lễ. Vui lòng chọn ngày khác.',
+        );
+      }
+    }
+
     // Check availability conflicts
     const conflicts = await this.checkAvailabilityConflicts(
       session.instructorId,
@@ -194,11 +206,11 @@ export class RescheduleRequestService {
 
       const sessionDate = session.startTime
         ? new Date(session.startTime).toLocaleDateString('vi-VN', {
-            weekday: 'long',
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-          })
+          weekday: 'long',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        })
         : '';
 
       // Find all admins
@@ -445,6 +457,16 @@ export class RescheduleRequestService {
       // Validate exam date
       await this.validateExamDate(session.classroomId, newStartTime);
 
+      // Validate holiday
+      if (this.holidayService) {
+        const isHoliday = await this.holidayService.isHoliday(newStartTime);
+        if (isHoliday) {
+          throw new BadRequestException(
+            'Không thể dời lịch vào ngày lễ. Vui lòng chọn ngày khác.',
+          );
+        }
+      }
+
       // Validate classroom period
       const periodValidation = await this.validateClassroomPeriod(
         session.classroomId,
@@ -592,20 +614,20 @@ export class RescheduleRequestService {
 
       const oldStartTime = session.startTime
         ? new Date(session.startTime).toLocaleString('vi-VN', {
-            weekday: 'long',
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-          })
+          weekday: 'long',
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
         : 'N/A';
 
       const oldEndTime = session.endTime
         ? new Date(session.endTime).toLocaleString('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })
+          hour: '2-digit',
+          minute: '2-digit',
+        })
         : 'N/A';
 
       const newStartTime = new Date(request.newStartTime).toLocaleString(
