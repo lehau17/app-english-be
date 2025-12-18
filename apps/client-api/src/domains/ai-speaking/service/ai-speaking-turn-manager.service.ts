@@ -12,6 +12,7 @@ import { AiSpeakingGateway } from '../gateway/ai-speaking.gateway';
 import { AiSpeakingRepository } from '../repository/ai-speaking.repository';
 import { AiSpeakingCoordinator } from './ai-speaking-coordinator.service';
 import { ConversationDesignerService } from './conversation-designer.service';
+import { SuggestionService } from './suggestion.service';
 import {
   calculateNormalizedScore,
   getDifficultyMultiplier,
@@ -57,6 +58,7 @@ export class AiSpeakingTurnManager {
     private readonly gateway: AiSpeakingGateway,
     private readonly coordinator: AiSpeakingCoordinator,
     private readonly configService: ConfigService,
+    private readonly suggestionService: SuggestionService,
   ) {
     this.maxAutoTurns = Number(
       this.configService.get<string>('AI_SPEAKING_MAX_FOLLOWUP_TURNS', '12'),
@@ -102,9 +104,8 @@ export class AiSpeakingTurnManager {
         }),
     ]);
 
-    const suggestions = Array.isArray(evaluation.detail?.suggestedPhrases)
-      ? (evaluation.detail?.suggestedPhrases as string[])
-      : [];
+    // We don't need old suggestions anymore
+    const suggestions: string[] = [];
 
     // Emit pronunciation feedback to frontend if available
     if (pronunciationFeedback) {
@@ -227,7 +228,9 @@ export class AiSpeakingTurnManager {
     }
 
     const nextTurnIndex = session.turnCount + 1;
-    const prompt = await this.buildFollowUpPrompt({
+
+    // GENERATE PROMPT + SUGGESTIONS IN ONE CALL
+    const promptPlan = await this.buildFollowUpPrompt({
       sessionTopic: session.topic,
       goal: session.goal,
       transcript: transcript ?? '',
@@ -239,8 +242,8 @@ export class AiSpeakingTurnManager {
       session: { connect: { id: sessionId } },
       turnIndex: nextTurnIndex,
       state: AiSpeakingTurnStatus.streaming,
-      aiPrompt: prompt,
-      suggestions,
+      aiPrompt: promptPlan.prompt,
+      suggestions: promptPlan.suggestions,
     });
 
     await this.repository.createTurnSegment({
@@ -420,7 +423,7 @@ export class AiSpeakingTurnManager {
     transcript: string;
     evaluation: Record<string, any>;
     difficulty: DifficultyLevel;
-  }): Promise<string> {
+  }): Promise<{ prompt: string; suggestions: string[] }> {
     const { sessionTopic, goal, transcript, evaluation, difficulty } = params;
     const contextParts: string[] = [];
     if (sessionTopic) {
@@ -430,28 +433,45 @@ export class AiSpeakingTurnManager {
       contextParts.push(`Goal: ${goal}`);
     }
 
-    const prompt = `Bạn là trợ giảng tiếng Anh thân thiện. Đây là câu trả lời gần nhất của học viên:
-"${transcript}".
-Điểm tạm đánh giá: ${evaluation?.score ?? 'không có'}.
-${contextParts.join('\n')}
+    const prompt = `You are a friendly English Tutor.
+Context:
+- User's last response: "${transcript}"
+- Evaluation score: ${evaluation?.score ?? 'N/A'}
+- ${contextParts.join('\n')}
+- Current Level: ${difficulty.replace('_', ' ')}
 
-Hãy phản hồi trong tối đa 70 từ bằng tiếng Anh đơn giản phù hợp trình độ ${difficulty.replace('_', ' ')}.
-- Ghi nhận điểm mạnh hoặc nội dung thú vị.
-- Chỉ gợi ý một cải thiện nhỏ.
-- Đặt một câu hỏi tiếp theo để học viên nói tiếp.
-Trả về văn bản thuần không cần định dạng.`;
+Task:
+1. Generate a short, encouraging follow-up response (max 40 words) that includes a question to keep the conversation going.
+2. Generate 3 short, natural sample replies (suggestions) that the user could say to answer your new question.
+
+Output Requirement:
+Return ONLY a valid JSON object:
+{
+  "prompt": "Your follow-up response and question here",
+  "suggestions": ["Option 1", "Option 2", "Option 3"]
+}`;
 
     try {
-      const response = await this.geminiService.generateResponse(prompt);
-      return response.trim();
+      const result = await this.geminiService.generateJSONResponse(prompt);
+      const parsed = JSON.parse(result);
+
+      return {
+        prompt: parsed.prompt || result,
+        suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+      };
     } catch (error) {
       this.logger.warn(
         `Gemini generate follow-up failed: ${(error as Error).message}. Fallback to template`,
       );
-      return this.conversationDesigner.buildOpeningPrompt({
+      // Fallback
+      const fallback = this.conversationDesigner.buildOpeningPrompt({
         topic: sessionTopic ?? 'daily life',
         difficulty,
-      }).prompt;
+      });
+      return {
+        prompt: fallback.prompt,
+        suggestions: [], // Empty suggestions on fallback to avoid blocking
+      };
     }
   }
 }

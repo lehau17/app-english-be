@@ -9,7 +9,7 @@ export class SuggestionService {
   constructor(
     private readonly geminiService: GeminiService,
     private readonly repository: AiSpeakingRepository,
-  ) {}
+  ) { }
 
   async getSuggestions(sessionId: string): Promise<string[]> {
     const session = await this.repository.findSessionById(sessionId);
@@ -62,6 +62,53 @@ Examples:
       return this.getFallbackSuggestions(
         session.currentDifficulty || 'intermediate',
       );
+    }
+  }
+
+  async generateSuggestionsForPrompt(
+    promptText: string,
+    topic: string,
+    difficulty: string,
+  ): Promise<string[]> {
+    const prompt = `You are an English conversation assistant.
+
+Context:
+- Topic: ${topic || 'General conversation'}
+- Difficulty: ${difficulty || 'intermediate'}
+- AI just said: "${promptText}"
+
+Task: Generate 3 natural English response options (1-2 sentences each) that the user could say in response to the AI.
+1. Options should be diverse (e.g., agreeing, disagreeing, asking for clarification, or answering the question)
+2. Appropriate for ${difficulty || 'intermediate'} level learners
+3. Respond naturally to what the AI just said
+4. Use simple, practical language
+
+Return ONLY a valid JSON array of 3 strings, nothing else:
+["Option 1", "Option 2", "Option 3"]`;
+
+    try {
+      const result = await this.geminiService.generateJSONResponse(prompt);
+
+      let suggestions: string[] = [];
+      try {
+        suggestions = JSON.parse(result);
+      } catch (e) {
+        if (result.includes('[')) {
+          const match = result.match(/\[.*\]/s);
+          if (match) {
+            suggestions = JSON.parse(match[0]);
+          }
+        }
+      }
+
+      if (Array.isArray(suggestions) && suggestions.length > 0) {
+        return suggestions.slice(0, 3);
+      }
+
+      return this.getFallbackSuggestions(difficulty);
+    } catch (error) {
+      this.logger.error('Error generating suggestions with Gemini:', error);
+      return this.getFallbackSuggestions(difficulty);
     }
   }
 
