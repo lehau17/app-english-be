@@ -1,5 +1,7 @@
 import {
   JwtPayload,
+  KafkaProducerService,
+  KafkaTopic,
   PayloadToken,
   ResponseMessage,
   Roles,
@@ -122,7 +124,10 @@ export class PaymentController {
 export class PaymentWebhookController {
   private readonly logger = new Logger(PaymentWebhookController.name);
 
-  constructor(private readonly paymentService: PaymentService) {}
+  constructor(
+    private readonly paymentService: PaymentService,
+    private readonly kafkaProducerService: KafkaProducerService,
+  ) {}
 
   @Get('/vnpay/return')
   @ApiOperation({ summary: 'VNPay return URL (webhook)' })
@@ -158,13 +163,23 @@ export class PaymentWebhookController {
   async handleVNPayIPN(@Body() returnData: VNPayReturnDto) {
     this.logger.log(`VNPay IPN called for ${returnData.vnp_TxnRef}`);
 
-    const result = await this.paymentService.handleVNPayReturn(returnData);
-
-    // VNPay expects specific response format for IPN
-    if (result.success) {
-      return { RspCode: '00', Message: 'Success' };
-    } else {
-      return { RspCode: '99', Message: result.message };
+    // Verify signature before processing to prevent spam/abuse
+    const isValid = this.paymentService.verifyVNPaySignature(returnData);
+    if (!isValid) {
+      this.logger.error(
+        `Invalid signature for VNPay IPN: ${returnData.vnp_TxnRef}`,
+      );
+      return { RspCode: '97', Message: 'Invalid Checksum' };
     }
+
+    // Push to Kafka for async processing to ensure data safety
+    await this.kafkaProducerService.send(
+      KafkaTopic.PAYMENT_VNPAY_RETURN,
+      returnData,
+    );
+
+    // Return success to VNPay immediately
+    // Note: VNPay expects standard response structure
+    return { RspCode: '00', Message: 'Confirm Success' };
   }
 }

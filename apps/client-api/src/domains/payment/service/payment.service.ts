@@ -1060,4 +1060,11 @@ export class PaymentService {
   ) {
     return this.paymentRepository.getAllTransactions(limit, cursor, filters);
   }
+
+  /**
+   * Xác thực chữ ký VNPay
+   */
+  verifyVNPaySignature(returnData: VNPayReturnData): boolean {
+    return this.vnpayService.verifyReturnData(returnData);
+  }
 }

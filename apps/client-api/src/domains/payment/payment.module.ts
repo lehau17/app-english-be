@@ -7,6 +7,7 @@ import {
   PaymentController,
   PaymentWebhookController,
 } from './controller/payment.controller';
+import { PaymentConsumer } from './controller/payment.consumer';
 import { PaymentRepository } from './repository/payment.repository';
 import { PaymentService } from './service/payment.service';
 import { VNPayService } from './service/vnpay.service';
@@ -14,7 +15,7 @@ import { VNPayService } from './service/vnpay.service';
 @Module({
   imports: [DatabaseModule, SharedModule, ConfigModule],
   controllers: [PaymentController, PaymentWebhookController],
-  providers: [PaymentService, VNPayService, PaymentRepository],
+  providers: [PaymentService, VNPayService, PaymentRepository, PaymentConsumer],
   exports: [PaymentService, PaymentRepository],
 })
 export class PaymentModule {}
