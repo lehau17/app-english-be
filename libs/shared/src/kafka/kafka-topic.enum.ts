@@ -11,4 +11,5 @@ export enum KafkaTopic {
   AI_SPEAKING_SESSION_COMPLETED = 'ai-speaking.session.completed',
   SPEAKING_PRACTICE_ATTEMPT_COMPLETED = 'speaking-practice.attempt.completed',
   PAYMENT_VNPAY_RETURN = 'payment.vnpay.return',
+  PAYMENT_VNPAY_RETURN_DLQ = 'payment.vnpay.return.dlq',
 }

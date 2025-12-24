@@ -1,4 +1,8 @@
-import { KafkaConfigService, KafkaTopic } from '@app/shared';
+import {
+  KafkaConfigService,
+  KafkaProducerService,
+  KafkaTopic,
+} from '@app/shared';
 import {
   Injectable,
   Logger,
@@ -17,6 +21,7 @@ export class PaymentConsumer implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly kafkaConfigService: KafkaConfigService,
+    private readonly kafkaProducerService: KafkaProducerService,
     private readonly paymentService: PaymentService,
   ) {
     this.kafka = new Kafka(this.kafkaConfigService.getConsumerConfig());
@@ -63,18 +68,53 @@ export class PaymentConsumer implements OnModuleInit, OnModuleDestroy {
 
     try {
       const returnData: VNPayReturnData = JSON.parse(raw);
-      this.logger.log(`Processing VNPay return from Kafka: ${returnData.vnp_TxnRef}`);
+      this.logger.log(
+        `Processing VNPay return from Kafka: ${returnData.vnp_TxnRef}`,
+      );
 
-      await this.paymentService.handleVNPayReturn(returnData);
-
-      this.logger.log(`Successfully processed VNPay return for ${returnData.vnp_TxnRef}`);
+      const MAX_RETRIES = 3;
+      for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+        try {
+          await this.paymentService.handleVNPayReturn(returnData);
+          this.logger.log(
+            `Successfully processed VNPay return for ${returnData.vnp_TxnRef}`,
+          );
+          return; // Success
+        } catch (err) {
+          if (attempt <= MAX_RETRIES) {
+            const delay = 1000 * Math.pow(2, attempt - 1); // Exponential backoff: 1s, 2s, 4s
+            this.logger.warn(
+              `Attempt ${attempt} failed for ${returnData.vnp_TxnRef}. Retrying in ${delay}ms...`,
+              err,
+            );
+            await new Promise((resolve) => setTimeout(resolve, delay));
+          } else {
+            // All attempts failed
+            throw err;
+          }
+        }
+      }
     } catch (error) {
       this.logger.error(
-        `Failed to process payment message: ${error.message}`,
+        `Failed to process payment message after retries: ${error.message}`,
         error.stack,
       );
-      // Rethrow error to trigger Kafka retry
-      throw error;
+
+      // Send to DLQ
+      try {
+        await this.kafkaProducerService.send(
+          KafkaTopic.PAYMENT_VNPAY_RETURN_DLQ,
+          JSON.parse(raw), // Ensure valid JSON structure for DLQ
+        );
+        this.logger.log(
+          `Message moved to DLQ: ${KafkaTopic.PAYMENT_VNPAY_RETURN_DLQ}`,
+        );
+      } catch (dlqError) {
+        this.logger.error(
+          `Failed to send message to DLQ: ${dlqError.message}`,
+          dlqError.stack,
+        );
+      }
     }
   }
 }
