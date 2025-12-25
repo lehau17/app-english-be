@@ -1,5 +1,6 @@
 global:
   scrape_interval: 15s
+  scrape_timeout: 10s
   evaluation_interval: 15s
 
 scrape_configs:
@@ -10,11 +11,14 @@ scrape_configs:
 
   # Host/VPS metrics (node-exporter)
   - job_name: 'node'
+    scrape_interval: 30s
+    scrape_timeout: 25s
     static_configs:
       - targets: ['node-exporter:9100']
 
   # PostgreSQL exporter metrics
   - job_name: 'postgres'
+    scrape_timeout: 15s
     static_configs:
       - targets: ['postgres-exporter:9187']
 

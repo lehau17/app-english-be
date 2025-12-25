@@ -60,7 +60,7 @@ services:
       PG_EXPORTER_DISABLE_DEFAULT_METRICS: "false"
       PG_EXPORTER_DISABLE_SETTINGS_METRICS: "false"
     command:
-      - '--collector.stat_bgwriter=false'
+      - '--no-collector.stat_bgwriter'
     ports:
       - "${POSTGRES_EXPORTER_PORT:-9187}:9187"
     networks:
@@ -97,6 +97,25 @@ services:
       - '--path.procfs=/host/proc'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--no-collector.arp'
+      - '--no-collector.bcache'
+      - '--no-collector.bonding'
+      - '--no-collector.btrfs'
+      - '--no-collector.infiniband'
+      - '--no-collector.ipvs'
+      - '--no-collector.nfs'
+      - '--no-collector.nfsd'
+      - '--no-collector.powersupplyclass'
+      - '--no-collector.pressure'
+      - '--no-collector.rapl'
+      - '--no-collector.schedstat'
+      - '--no-collector.sockstat'
+      - '--no-collector.softnet'
+      - '--no-collector.tapestats'
+      - '--no-collector.thermal_zone'
+      - '--no-collector.timex'
+      - '--no-collector.zfs'
+      - '--web.max-requests=5'
     ports:
       - "${NODE_EXPORTER_PORT:-9100}:9100"
     volumes:
@@ -107,9 +126,9 @@ services:
       - hau_default
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9100/metrics"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   prometheus_data:
