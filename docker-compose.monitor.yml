@@ -56,7 +56,7 @@ services:
     container_name: postgres_exporter
     restart: unless-stopped
     environment:
-      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@${POSTGRES_HOST:-postgres}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-english_learning}?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-3881016Hau@}@${POSTGRES_HOST:-english_learning_db}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-english_learning}?sslmode=disable"
     ports:
       - "${POSTGRES_EXPORTER_PORT:-9187}:9187"
     networks:
@@ -73,7 +73,7 @@ services:
     restart: unless-stopped
     environment:
       REDIS_ADDR: "redis://${REDIS_HOST:-redis}:${REDIS_PORT:-6379}"
-      REDIS_PASSWORD: "${REDIS_PASSWORD:-}"
+      REDIS_PASSWORD: "${REDIS_PASSWORD:-3881016Hau@}"
     ports:
       - "${REDIS_EXPORTER_PORT:-9121}:9121"
     networks:
