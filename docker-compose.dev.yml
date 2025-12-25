@@ -67,9 +67,124 @@ services:
       timeout: 5s
       retries: 10
 
+
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: prometheus_dev
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data_dev:/prometheus
+    networks:
+      - app-network-dev
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: grafana_dev
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_HTTP_PORT=3001
+    ports:
+      - "3001:3001"
+    volumes:
+      - grafana_data_dev:/var/lib/grafana
+      - ./docker/monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./docker/monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./docker/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - app-network-dev
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:3001/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: postgres_exporter_dev
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-english_learning}?sslmode=disable"
+    ports:
+      - "9187:9187"
+    networks:
+      - app-network-dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9187/metrics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: redis_exporter_dev
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: "redis://redis:6379"
+    ports:
+      - "9121:9121"
+    networks:
+      - app-network-dev
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9121/metrics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: node_exporter_dev
+    restart: unless-stopped
+    command:
+      - '--path.rootfs=/host'
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/host:ro,rslave
+    networks:
+      - app-network-dev
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9100/metrics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   pg_data_dev:
   redis_data_dev:
+  prometheus_data_dev:
+  grafana_data_dev:
 
 networks:
   app-network-dev:
