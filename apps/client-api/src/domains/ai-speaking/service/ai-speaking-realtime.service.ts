@@ -583,6 +583,15 @@ export class AiSpeakingRealtimeService {
       if (pcmStream) {
         pcmStream.closing = true;
       }
+
+      // [JULES] FIX: Remove all listeners to prevent memory leaks.
+      // ChildProcess instances can hold references if their event listeners
+      // are not explicitly removed, leading to memory accumulation over time
+      // as many short-lived processes are created.
+      ffmpeg.stdout.removeAllListeners();
+      ffmpeg.stderr.removeAllListeners();
+      ffmpeg.removeAllListeners('error');
+      ffmpeg.removeAllListeners('close');
     });
 
     return pcmStream;
